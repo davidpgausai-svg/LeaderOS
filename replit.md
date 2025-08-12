@@ -1,0 +1,93 @@
+# StrategicFlow - Strategic Planning Platform
+
+## Overview
+
+StrategicFlow is a comprehensive strategic planning platform designed for organizational management and execution. The application provides a hierarchical system for managing strategies and tactics, allowing executives to create high-level strategies and leaders to implement specific tactics. The platform features role-based views, progress tracking, activity monitoring, and comprehensive reporting capabilities for strategic initiatives.
+
+## User Preferences
+
+Preferred communication style: Simple, everyday language.
+
+## System Architecture
+
+### Frontend Architecture
+The frontend is built using React with TypeScript, implementing a modern component-based architecture:
+
+- **Framework**: React 18 with TypeScript for type safety and modern React features
+- **Routing**: Wouter for lightweight client-side routing
+- **State Management**: Zustand for role management and user state
+- **UI Components**: Radix UI primitives with custom styling via Tailwind CSS
+- **Design System**: shadcn/ui component library for consistent UI patterns
+- **Forms**: React Hook Form with Zod validation for type-safe form handling
+- **Data Fetching**: TanStack Query for server state management and caching
+
+### Backend Architecture
+The backend follows a REST API design with Express.js:
+
+- **Framework**: Express.js for HTTP server and API endpoints
+- **Language**: TypeScript with ES modules for modern JavaScript features
+- **Storage**: Abstracted storage interface with in-memory implementation for development
+- **Schema Validation**: Zod schemas for request/response validation
+- **Error Handling**: Centralized error handling middleware
+
+### Data Storage Solutions
+The application uses a flexible storage abstraction:
+
+- **ORM**: Drizzle ORM for type-safe database interactions
+- **Database**: PostgreSQL as the primary database (configured via Drizzle)
+- **Development Storage**: In-memory storage implementation with seed data
+- **Schema Management**: Drizzle migrations for database schema versioning
+
+### Authentication and Authorization
+Role-based access control system:
+
+- **Roles**: Executive and Leader roles with different capabilities
+- **User Management**: User profiles with role-based permissions
+- **Session Management**: Express sessions with PostgreSQL session store
+
+### Key Data Models
+The platform centers around four core entities:
+
+1. **Users**: Role-based user accounts (executives and leaders)
+2. **Strategies**: High-level organizational objectives with metrics and timelines
+3. **Tactics**: Specific actionable items assigned to users under strategies
+4. **Activities**: Audit trail and activity feed for tracking changes and progress
+
+### Development and Build System
+Modern development toolchain:
+
+- **Build Tool**: Vite for fast development and optimized production builds
+- **Styling**: Tailwind CSS with CSS variables for theming
+- **Development**: Hot module replacement and runtime error handling
+- **Bundling**: ESBuild for server-side bundling and deployment
+
+## External Dependencies
+
+### Core Framework Dependencies
+- **@tanstack/react-query**: Server state management and caching
+- **wouter**: Lightweight routing library for React
+- **react-hook-form**: Form handling and validation
+- **zustand**: Client-side state management
+
+### UI and Styling
+- **@radix-ui/***: Accessible UI primitives (dialogs, dropdowns, forms, etc.)
+- **tailwindcss**: Utility-first CSS framework
+- **class-variance-authority**: Type-safe component variants
+- **lucide-react**: Icon library
+
+### Backend Services
+- **drizzle-orm**: Type-safe ORM for database operations
+- **@neondatabase/serverless**: Serverless PostgreSQL driver
+- **connect-pg-simple**: PostgreSQL session store
+- **express**: Web framework for Node.js
+
+### Validation and Type Safety
+- **zod**: Runtime type validation and schema definition
+- **drizzle-zod**: Integration between Drizzle ORM and Zod
+- **@hookform/resolvers**: Form validation resolvers
+
+### Development Tools
+- **vite**: Build tool and development server
+- **typescript**: Static type checking
+- **@replit/vite-plugin-runtime-error-modal**: Development error handling
+- **@replit/vite-plugin-cartographer**: Replit-specific development tools
