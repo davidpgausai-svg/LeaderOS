@@ -7,6 +7,7 @@ import Dashboard from "@/pages/dashboard";
 import Strategies from "@/pages/strategies";
 import Tactics from "@/pages/tactics";
 import Reports from "@/pages/reports";
+import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -16,6 +17,7 @@ function Router() {
       <Route path="/strategies" component={Strategies} />
       <Route path="/tactics" component={Tactics} />
       <Route path="/reports" component={Reports} />
+      <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
   );
