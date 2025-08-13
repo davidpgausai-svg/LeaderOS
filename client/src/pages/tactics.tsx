@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRole } from "@/hooks/use-role";
 import { Sidebar } from "@/components/layout/sidebar";
 import { CreateTacticModal } from "@/components/modals/create-tactic-modal";
+import { EditTacticModal } from "@/components/modals/edit-tactic-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -50,7 +51,8 @@ import {
   Trash2,
   Filter,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Edit
 } from "lucide-react";
 
 type Strategy = {
@@ -94,6 +96,8 @@ export default function Tactics() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isCreateTacticOpen, setIsCreateTacticOpen] = useState(false);
+  const [isEditTacticOpen, setIsEditTacticOpen] = useState(false);
+  const [editingTactic, setEditingTactic] = useState<Tactic | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [strategyFilter, setStrategyFilter] = useState("all");
@@ -245,6 +249,16 @@ export default function Tactics() {
 
   const handleDeleteTactic = (tacticId: string) => {
     deleteTacticMutation.mutate(tacticId);
+  };
+
+  const handleEditTactic = (tactic: Tactic) => {
+    setEditingTactic(tactic);
+    setIsEditTacticOpen(true);
+  };
+
+  const closeEditModal = () => {
+    setIsEditTacticOpen(false);
+    setEditingTactic(null);
   };
 
   if (tacticsLoading) {
@@ -425,17 +439,25 @@ export default function Tactics() {
                                       </DropdownMenuTrigger>
                                       <DropdownMenuContent align="end">
                                         {canEditTactic(tactic) && (
-                                          <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                              <DropdownMenuItem 
-                                                onSelect={(e) => e.preventDefault()}
-                                                className="text-red-600"
-                                                data-testid={`button-delete-${tactic.id}`}
-                                              >
-                                                <Trash2 className="w-4 h-4 mr-2" />
-                                                Delete
-                                              </DropdownMenuItem>
-                                            </AlertDialogTrigger>
+                                          <>
+                                            <DropdownMenuItem 
+                                              onClick={() => handleEditTactic(tactic)}
+                                              data-testid={`button-edit-${tactic.id}`}
+                                            >
+                                              <Edit className="w-4 h-4 mr-2" />
+                                              Edit Tactic
+                                            </DropdownMenuItem>
+                                            <AlertDialog>
+                                              <AlertDialogTrigger asChild>
+                                                <DropdownMenuItem 
+                                                  onSelect={(e) => e.preventDefault()}
+                                                  className="text-red-600"
+                                                  data-testid={`button-delete-${tactic.id}`}
+                                                >
+                                                  <Trash2 className="w-4 h-4 mr-2" />
+                                                  Delete
+                                                </DropdownMenuItem>
+                                              </AlertDialogTrigger>
                                             <AlertDialogContent>
                                               <AlertDialogHeader>
                                                 <AlertDialogTitle>Delete Tactic</AlertDialogTitle>
@@ -454,6 +476,7 @@ export default function Tactics() {
                                               </AlertDialogFooter>
                                             </AlertDialogContent>
                                           </AlertDialog>
+                                          </>
                                         )}
                                       </DropdownMenuContent>
                                     </DropdownMenu>
@@ -587,6 +610,12 @@ export default function Tactics() {
       <CreateTacticModal 
         isOpen={isCreateTacticOpen} 
         onClose={() => setIsCreateTacticOpen(false)} 
+      />
+      
+      <EditTacticModal 
+        isOpen={isEditTacticOpen} 
+        onClose={closeEditModal}
+        tactic={editingTactic}
       />
     </div>
   );
