@@ -36,8 +36,9 @@ The application uses a flexible storage abstraction:
 
 - **ORM**: Drizzle ORM for type-safe database interactions
 - **Database**: PostgreSQL as the primary database (configured via Drizzle)
-- **Development Storage**: In-memory storage implementation with seed data
+- **Production Storage**: DatabaseStorage implementation using PostgreSQL for persistent data
 - **Schema Management**: Drizzle migrations for database schema versioning
+- **Data Seeding**: Automatic seeding of initial users, strategies, and tactics on first run
 
 ### Authentication and Authorization
 Role-based access control system with granular permissions:

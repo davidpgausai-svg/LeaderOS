@@ -1,5 +1,7 @@
-import { type User, type InsertUser, type Strategy, type InsertStrategy, type Tactic, type InsertTactic, type Activity, type InsertActivity } from "@shared/schema";
+import { type User, type InsertUser, type Strategy, type InsertStrategy, type Tactic, type InsertTactic, type Activity, type InsertActivity, users, strategies, tactics, activities } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -297,4 +299,212 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// DatabaseStorage implementation
+export class DatabaseStorage implements IStorage {
+  // User methods
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
+  // Strategy methods
+  async getStrategy(id: string): Promise<Strategy | undefined> {
+    const [strategy] = await db.select().from(strategies).where(eq(strategies.id, id));
+    return strategy || undefined;
+  }
+
+  async getAllStrategies(): Promise<Strategy[]> {
+    return await db.select().from(strategies);
+  }
+
+  async getStrategiesByCreator(creatorId: string): Promise<Strategy[]> {
+    return await db.select().from(strategies).where(eq(strategies.createdBy, creatorId));
+  }
+
+  async createStrategy(insertStrategy: InsertStrategy): Promise<Strategy> {
+    const [strategy] = await db
+      .insert(strategies)
+      .values(insertStrategy)
+      .returning();
+    
+    // Create activity
+    await this.createActivity({
+      type: "strategy_created",
+      description: `Created strategy "${strategy.title}"`,
+      userId: strategy.createdBy,
+      strategyId: strategy.id
+    });
+
+    return strategy;
+  }
+
+  async updateStrategy(id: string, updates: Partial<Strategy>): Promise<Strategy | undefined> {
+    const [updated] = await db
+      .update(strategies)
+      .set(updates)
+      .where(eq(strategies.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteStrategy(id: string): Promise<boolean> {
+    const result = await db.delete(strategies).where(eq(strategies.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Tactic methods
+  async getTactic(id: string): Promise<Tactic | undefined> {
+    const [tactic] = await db.select().from(tactics).where(eq(tactics.id, id));
+    return tactic || undefined;
+  }
+
+  async getAllTactics(): Promise<Tactic[]> {
+    return await db.select().from(tactics);
+  }
+
+  async getTacticsByStrategy(strategyId: string): Promise<Tactic[]> {
+    return await db.select().from(tactics).where(eq(tactics.strategyId, strategyId));
+  }
+
+  async getTacticsByAssignee(assigneeId: string): Promise<Tactic[]> {
+    return await db.select().from(tactics).where(eq(tactics.assignedTo, assigneeId));
+  }
+
+  async createTactic(insertTactic: InsertTactic): Promise<Tactic> {
+    const [tactic] = await db
+      .insert(tactics)
+      .values(insertTactic)
+      .returning();
+
+    // Create activity
+    await this.createActivity({
+      type: "tactic_created",
+      description: `Created tactic "${tactic.title}"`,
+      userId: tactic.createdBy,
+      strategyId: tactic.strategyId,
+      tacticId: tactic.id
+    });
+
+    return tactic;
+  }
+
+  async updateTactic(id: string, updates: Partial<Tactic>): Promise<Tactic | undefined> {
+    const [updated] = await db
+      .update(tactics)
+      .set(updates)
+      .where(eq(tactics.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteTactic(id: string): Promise<boolean> {
+    const result = await db.delete(tactics).where(eq(tactics.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Activity methods
+  async getActivity(id: string): Promise<Activity | undefined> {
+    const [activity] = await db.select().from(activities).where(eq(activities.id, id));
+    return activity || undefined;
+  }
+
+  async getAllActivities(): Promise<Activity[]> {
+    return await db.select().from(activities);
+  }
+
+  async getActivitiesByUser(userId: string): Promise<Activity[]> {
+    return await db.select().from(activities).where(eq(activities.userId, userId));
+  }
+
+  async createActivity(insertActivity: InsertActivity): Promise<Activity> {
+    const [activity] = await db
+      .insert(activities)
+      .values(insertActivity)
+      .returning();
+    return activity;
+  }
+
+  async seedData() {
+    // Check if data already exists
+    const existingUsers = await this.getAllUsers();
+    if (existingUsers.length > 0) {
+      return; // Data already seeded
+    }
+
+    // Create sample users
+    const adminUser = await this.createUser({
+      username: "john.doe",
+      name: "John Doe",
+      role: "administrator",
+      initials: "JD"
+    });
+    
+    const executiveUser = await this.createUser({
+      username: "mike.wilson",
+      name: "Mike Wilson",
+      role: "executive",
+      initials: "MW"
+    });
+    
+    const leaderUser = await this.createUser({
+      username: "sarah.johnson",
+      name: "Sarah Johnson",
+      role: "leader",
+      initials: "SJ"
+    });
+
+    // Create sample strategy
+    const strategy = await this.createStrategy({
+      title: "Market Expansion Initiative",
+      description: "Expand our market presence in target regions through strategic partnerships and enhanced digital marketing",
+      startDate: new Date("2024-01-01"),
+      targetDate: new Date("2024-12-31"),
+      metrics: "Increase market share by 15%, establish 5 new partnerships, achieve 30% growth in target regions",
+      createdBy: executiveUser.id
+    });
+
+    // Create sample tactics
+    await this.createTactic({
+      title: "Market Research Analysis",
+      description: "Conduct comprehensive market research for target regions",
+      strategyId: strategy.id,
+      assignedTo: leaderUser.id,
+      startDate: new Date("2024-01-01"),
+      dueDate: new Date("2024-03-14"),
+      status: "completed",
+      progress: 100,
+      createdBy: executiveUser.id
+    });
+
+    await this.createTactic({
+      title: "Regional Partnership Development",
+      description: "Establish partnerships with local businesses in target markets",
+      strategyId: strategy.id,
+      assignedTo: leaderUser.id,
+      startDate: new Date("2024-03-15"),
+      dueDate: new Date("2024-06-29"),
+      status: "in-progress",
+      progress: 65,
+      createdBy: executiveUser.id
+    });
+  }
+}
+
+export const storage = new DatabaseStorage();

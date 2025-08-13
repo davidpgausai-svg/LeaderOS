@@ -5,6 +5,10 @@ import { insertStrategySchema, insertTacticSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize database with seed data on first run
+  if (storage && 'seedData' in storage) {
+    await (storage as any).seedData();
+  }
   // User routes
   app.get("/api/users", async (req, res) => {
     try {

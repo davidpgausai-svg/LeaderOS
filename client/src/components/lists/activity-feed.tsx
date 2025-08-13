@@ -34,11 +34,12 @@ export function ActivityFeed({ activities }: ActivityFeedProps) {
     }
   };
 
-  const formatTimeAgo = (date: Date | undefined) => {
+  const formatTimeAgo = (date: Date | string | undefined) => {
     if (!date) return 'Unknown time';
     
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
     const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    const diffInHours = Math.floor((now.getTime() - dateObj.getTime()) / (1000 * 60 * 60));
     
     if (diffInHours === 0) {
       return 'Just now';
@@ -63,7 +64,7 @@ export function ActivityFeed({ activities }: ActivityFeedProps) {
               {activity.description}
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              {formatTimeAgo(activity.createdAt || undefined)}
+              {formatTimeAgo(activity.createdAt)}
             </p>
           </div>
         </div>
