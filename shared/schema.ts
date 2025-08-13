@@ -19,19 +19,23 @@ export const strategies = pgTable("strategies", {
   targetDate: timestamp("target_date").notNull(),
   metrics: text("metrics").notNull(),
   status: text("status").notNull().default('active'), // 'active', 'completed', 'on-hold'
+  colorCode: text("color_code").notNull().default('#3B82F6'), // Hex color for strategy grouping
   createdBy: varchar("created_by").notNull(),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
 export const tactics = pgTable("tactics", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  title: text("title").notNull(),
-  description: text("description").notNull(),
-  strategyId: varchar("strategy_id").notNull(),
-  assignedTo: varchar("assigned_to"),
-  startDate: timestamp("start_date").notNull(),
-  dueDate: timestamp("due_date").notNull(),
-  status: text("status").notNull().default('not-started'), // 'not-started', 'in-progress', 'completed', 'overdue'
+  title: text("title").notNull(), // Component 2: Tactic name
+  description: text("description").notNull(), // Component 3: Tactic description
+  strategyId: varchar("strategy_id").notNull(), // Component 1: Strategy it is linked to
+  kpi: text("kpi").notNull(), // Component 4: Key Performance Indicator
+  kpiTracking: text("kpi_tracking"), // Component 5: Tracking the KPI (current value/measurement)
+  accountableLeaders: text("accountable_leaders").notNull(), // Component 6: Accountable Leaders (JSON array of user IDs)
+  resourcesRequired: text("resources_required"), // Component 7: Resources Required (open text field)
+  startDate: timestamp("start_date").notNull(), // Component 8: Timeline - Start Date
+  dueDate: timestamp("due_date").notNull(), // Component 8: Timeline - End Date
+  status: text("status").notNull().default('NYS'), // Component 9: Status (C, OT, OH, B, NYS)
   progress: integer("progress").notNull().default(0), // 0-100
   createdBy: varchar("created_by").notNull(),
   createdAt: timestamp("created_at").default(sql`now()`),
@@ -65,6 +69,13 @@ export const insertTacticSchema = createInsertSchema(tactics).omit({
 }).extend({
   startDate: z.coerce.date(),
   dueDate: z.coerce.date(),
+  accountableLeaders: z.string().transform((str) => {
+    try {
+      return JSON.stringify(JSON.parse(str));
+    } catch {
+      return JSON.stringify([str]);
+    }
+  }),
 });
 
 export const insertActivitySchema = createInsertSchema(activities).omit({

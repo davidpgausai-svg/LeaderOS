@@ -83,6 +83,7 @@ export class MemStorage implements IStorage {
       targetDate: new Date("2024-12-31"),
       metrics: "25% revenue increase, 3 new markets",
       status: "active",
+      colorCode: "#22C55E",
       createdBy: adminUser.id,
       createdAt: new Date()
     };
@@ -95,6 +96,7 @@ export class MemStorage implements IStorage {
       targetDate: new Date("2024-10-31"),
       metrics: "50% efficiency improvement, 95% system uptime",
       status: "active",
+      colorCode: "#3B82F6",
       createdBy: executiveUser.id,
       createdAt: new Date()
     };
@@ -108,10 +110,13 @@ export class MemStorage implements IStorage {
       title: "Market Research Analysis",
       description: "Conduct comprehensive market research for target regions",
       strategyId: strategy1.id,
-      assignedTo: leaderUser.id,
+      kpi: "Number of markets analyzed",
+      kpiTracking: "3 out of 5 markets completed",
+      accountableLeaders: JSON.stringify([leaderUser.id]),
+      resourcesRequired: "Research team, market analysis tools, $50k budget",
       startDate: new Date("2024-01-15"),
       dueDate: new Date("2024-03-15"),
-      status: "completed",
+      status: "C",
       progress: 100,
       createdBy: executiveUser.id,
       createdAt: new Date()
@@ -122,10 +127,13 @@ export class MemStorage implements IStorage {
       title: "Regional Partnership Development",
       description: "Establish partnerships with local businesses in target markets",
       strategyId: strategy1.id,
-      assignedTo: leaderUser.id,
+      kpi: "Number of strategic partnerships established",
+      kpiTracking: "2 partnerships signed, 3 in negotiation",
+      accountableLeaders: JSON.stringify([leaderUser.id, executiveUser.id]),
+      resourcesRequired: "Legal team, business development resources, travel budget",
       startDate: new Date("2024-03-01"),
       dueDate: new Date("2024-06-30"),
-      status: "in-progress",
+      status: "OT",
       progress: 65,
       createdBy: executiveUser.id,
       createdAt: new Date()
@@ -174,6 +182,7 @@ export class MemStorage implements IStorage {
       ...insertStrategy, 
       id,
       status: insertStrategy.status || 'active',
+      colorCode: insertStrategy.colorCode || '#3B82F6',
       createdAt: new Date()
     };
     this.strategies.set(id, strategy);
@@ -216,7 +225,14 @@ export class MemStorage implements IStorage {
   }
 
   async getTacticsByAssignee(assigneeId: string): Promise<Tactic[]> {
-    return Array.from(this.tactics.values()).filter(tactic => tactic.assignedTo === assigneeId);
+    return Array.from(this.tactics.values()).filter(tactic => {
+      try {
+        const leaders = JSON.parse(tactic.accountableLeaders);
+        return Array.isArray(leaders) && leaders.includes(assigneeId);
+      } catch {
+        return tactic.accountableLeaders === assigneeId;
+      }
+    });
   }
 
   async createTactic(insertTactic: InsertTactic): Promise<Tactic> {
@@ -224,9 +240,10 @@ export class MemStorage implements IStorage {
     const tactic: Tactic = { 
       ...insertTactic, 
       id,
-      status: insertTactic.status || 'not-started',
+      status: insertTactic.status || 'NYS',
       progress: insertTactic.progress || 0,
-      assignedTo: insertTactic.assignedTo || null,
+      kpiTracking: insertTactic.kpiTracking || null,
+      resourcesRequired: insertTactic.resourcesRequired || null,
       createdAt: new Date()
     };
     this.tactics.set(id, tactic);
@@ -255,7 +272,7 @@ export class MemStorage implements IStorage {
       await this.createActivity({
         type: "tactic_completed",
         description: `Completed tactic "${updated.title}"`,
-        userId: updated.assignedTo || updated.createdBy,
+        userId: updated.createdBy,
         strategyId: updated.strategyId,
         tacticId: id
       });
@@ -384,7 +401,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTacticsByAssignee(assigneeId: string): Promise<Tactic[]> {
-    return await db.select().from(tactics).where(eq(tactics.assignedTo, assigneeId));
+    const allTactics = await db.select().from(tactics);
+    return allTactics.filter(tactic => {
+      try {
+        const leaders = JSON.parse(tactic.accountableLeaders);
+        return Array.isArray(leaders) && leaders.includes(assigneeId);
+      } catch {
+        return tactic.accountableLeaders === assigneeId;
+      }
+    });
   }
 
   async createTactic(insertTactic: InsertTactic): Promise<Tactic> {
@@ -485,10 +510,13 @@ export class DatabaseStorage implements IStorage {
       title: "Market Research Analysis",
       description: "Conduct comprehensive market research for target regions",
       strategyId: strategy.id,
-      assignedTo: leaderUser.id,
+      kpi: "Number of markets analyzed",
+      kpiTracking: "3 out of 5 markets completed",
+      accountableLeaders: JSON.stringify([leaderUser.id]),
+      resourcesRequired: "Research team, market analysis tools, $50k budget",
       startDate: new Date("2024-01-01"),
       dueDate: new Date("2024-03-14"),
-      status: "completed",
+      status: "C",
       progress: 100,
       createdBy: executiveUser.id
     });
@@ -497,10 +525,13 @@ export class DatabaseStorage implements IStorage {
       title: "Regional Partnership Development",
       description: "Establish partnerships with local businesses in target markets",
       strategyId: strategy.id,
-      assignedTo: leaderUser.id,
+      kpi: "Number of strategic partnerships established",
+      kpiTracking: "2 partnerships signed, 3 in negotiation",
+      accountableLeaders: JSON.stringify([leaderUser.id, executiveUser.id]),
+      resourcesRequired: "Legal team, business development resources, travel budget",
       startDate: new Date("2024-03-15"),
       dueDate: new Date("2024-06-29"),
-      status: "in-progress",
+      status: "OT",
       progress: 65,
       createdBy: executiveUser.id
     });
