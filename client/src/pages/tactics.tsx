@@ -281,13 +281,13 @@ export default function Tactics() {
         <header className="bg-white dark:bg-gray-800 shadow-sm border-b px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Tactics</h1>
-              <p className="text-gray-600 dark:text-gray-400">Track your assigned tactics and progress</p>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Strategies</h1>
+              <p className="text-gray-600 dark:text-gray-400">Track your assigned strategies and progress</p>
             </div>
             {canCreateTactics() && (
               <Button onClick={() => setIsCreateTacticOpen(true)} data-testid="button-create-tactic">
                 <Plus className="w-4 h-4 mr-2" />
-                New Tactic
+                New Strategy
               </Button>
             )}
           </div>

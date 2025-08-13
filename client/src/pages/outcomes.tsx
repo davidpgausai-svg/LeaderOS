@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRole } from "@/hooks/use-role";
 import { Sidebar } from "@/components/layout/sidebar";
+import { CreateOutcomeModal } from "@/components/modals/create-outcome-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -91,6 +92,7 @@ export default function Outcomes() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [strategyFilter, setStrategyFilter] = useState("all");
   const [collapsedStrategies, setCollapsedStrategies] = useState<Set<string>>(new Set());
+  const [isCreateOutcomeOpen, setIsCreateOutcomeOpen] = useState(false);
 
   const { data: outcomes, isLoading: outcomesLoading } = useQuery({
     queryKey: ["/api/outcomes"],
@@ -176,7 +178,7 @@ export default function Outcomes() {
               <p className="text-gray-600 dark:text-gray-400">Track measurable results and achievements</p>
             </div>
             {canCreateTactics() && (
-              <Button data-testid="button-create-outcome">
+              <Button onClick={() => setIsCreateOutcomeOpen(true)} data-testid="button-create-outcome">
                 <Plus className="w-4 h-4 mr-2" />
                 New Outcome
               </Button>
@@ -244,7 +246,7 @@ export default function Outcomes() {
                 }
               </p>
               {canCreateTactics() && !searchTerm && statusFilter === "all" && strategyFilter === "all" && (
-                <Button>
+                <Button onClick={() => setIsCreateOutcomeOpen(true)}>
                   <Plus className="w-4 h-4 mr-2" />
                   Create Your First Outcome
                 </Button>
@@ -417,6 +419,11 @@ export default function Outcomes() {
           )}
         </div>
       </div>
+
+      <CreateOutcomeModal 
+        open={isCreateOutcomeOpen} 
+        onOpenChange={setIsCreateOutcomeOpen} 
+      />
     </div>
   );
 }

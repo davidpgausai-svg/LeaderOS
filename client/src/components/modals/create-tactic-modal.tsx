@@ -253,6 +253,7 @@ export function CreateTacticModal({ isOpen, onClose, strategyId }: CreateTacticM
                       <Input
                         placeholder="e.g., 2 out of 5 partnerships signed"
                         {...field}
+                        value={field.value || ""}
                         data-testid="input-kpi-tracking"
                       />
                     </FormControl>
@@ -309,6 +310,7 @@ export function CreateTacticModal({ isOpen, onClose, strategyId }: CreateTacticM
                       <Textarea
                         placeholder="e.g., Legal team, budget of $50k, marketing materials"
                         {...field}
+                        value={field.value || ""}
                         data-testid="textarea-resources"
                       />
                     </FormControl>

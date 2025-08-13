@@ -15,8 +15,8 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
-      <Route path="/strategies" component={Strategies} />
-      <Route path="/tactics" component={Tactics} />
+      <Route path="/framework" component={Strategies} />
+      <Route path="/strategies" component={Tactics} />
       <Route path="/outcomes" component={Outcomes} />
       <Route path="/reports" component={Reports} />
       <Route path="/settings" component={Settings} />

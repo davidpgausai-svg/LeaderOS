@@ -11,8 +11,8 @@ import {
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: ChartLine },
-  { name: "Strategies", href: "/strategies", icon: Target },
-  { name: "Tactics", href: "/tactics", icon: CheckSquare },
+  { name: "Framework", href: "/framework", icon: Target },
+  { name: "Strategies", href: "/strategies", icon: CheckSquare },
   { name: "Outcomes", href: "/outcomes", icon: TrendingUp },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Settings", href: "/settings", icon: Settings },

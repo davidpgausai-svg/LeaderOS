@@ -121,7 +121,7 @@ export default function Strategies() {
         <header className="bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800 px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Strategies</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Framework</h2>
               <p className="text-gray-600 dark:text-gray-400 mt-1">
                 Manage and track strategic initiatives
               </p>
@@ -129,7 +129,7 @@ export default function Strategies() {
             {canCreateStrategies() && (
               <Button onClick={() => setIsCreateStrategyOpen(true)} data-testid="button-create-strategy">
                 <Plus className="mr-2 h-4 w-4" />
-                New Strategy
+                New Framework
               </Button>
             )}
           </div>
@@ -267,7 +267,7 @@ export default function Strategies() {
                         onClick={() => handleCreateTactic(strategy.id)}
                       >
                         <Plus className="mr-1 h-3 w-3" />
-                        Add Tactic
+                        Add Strategy
                       </Button>
                     </div>
                   </div>
@@ -283,8 +283,8 @@ export default function Strategies() {
         onOpenChange={setIsCreateStrategyOpen}
       />
       <CreateTacticModal
-        open={isCreateTacticOpen}
-        onOpenChange={setIsCreateTacticOpen}
+        isOpen={isCreateTacticOpen}
+        onClose={() => setIsCreateTacticOpen(false)}
         strategyId={selectedStrategyId}
       />
     </div>
