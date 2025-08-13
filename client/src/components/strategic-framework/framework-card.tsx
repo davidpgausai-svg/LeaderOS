@@ -68,7 +68,6 @@ export function FrameworkCard({
           </div>
         </div>
       </CardHeader>
-
       <CardContent className="space-y-6">
         {/* Goal Section */}
         <div className="space-y-2">
@@ -96,9 +95,7 @@ export function FrameworkCard({
                 className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: colorCode }}
               />
-              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                TACTICS
-              </span>
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">STRATEGIES</span>
             </div>
             <Badge variant="secondary" className="text-xs">
               {completedTactics}/{tactics.length}
