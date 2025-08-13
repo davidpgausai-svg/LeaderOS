@@ -218,7 +218,38 @@ export class MemStorage implements IStorage {
   }
 
   async deleteStrategy(id: string): Promise<boolean> {
-    return this.strategies.delete(id);
+    // First delete all related tactics
+    const relatedTactics = Array.from(this.tactics.values()).filter(tactic => tactic.strategyId === id);
+    for (const tactic of relatedTactics) {
+      this.tactics.delete(tactic.id);
+    }
+    
+    // Delete all related outcomes
+    const relatedOutcomes = Array.from(this.outcomes.values()).filter(outcome => outcome.strategyId === id);
+    for (const outcome of relatedOutcomes) {
+      this.outcomes.delete(outcome.id);
+    }
+    
+    // Delete all related activities
+    const relatedActivities = Array.from(this.activities.values()).filter(activity => activity.strategyId === id);
+    for (const activity of relatedActivities) {
+      this.activities.delete(activity.id);
+    }
+    
+    // Finally delete the strategy
+    const deleted = this.strategies.delete(id);
+    
+    if (deleted) {
+      // Create deletion activity
+      await this.createActivity({
+        type: "strategy_deleted",
+        description: `Deleted strategy and ${relatedTactics.length} tactics, ${relatedOutcomes.length} outcomes`,
+        userId: "system",
+        strategyId: null
+      });
+    }
+    
+    return deleted;
   }
 
   // Tactic methods
@@ -434,8 +465,34 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteStrategy(id: string): Promise<boolean> {
+    // First get counts for activity logging
+    const relatedTactics = await db.select().from(tactics).where(eq(tactics.strategyId, id));
+    const relatedOutcomes = await db.select().from(outcomes).where(eq(outcomes.strategyId, id));
+    
+    // Delete all related tactics (cascade)
+    await db.delete(tactics).where(eq(tactics.strategyId, id));
+    
+    // Delete all related outcomes (cascade)
+    await db.delete(outcomes).where(eq(outcomes.strategyId, id));
+    
+    // Delete all related activities (cascade)
+    await db.delete(activities).where(eq(activities.strategyId, id));
+    
+    // Finally delete the strategy
     const result = await db.delete(strategies).where(eq(strategies.id, id));
-    return (result.rowCount ?? 0) > 0;
+    const deleted = (result.rowCount ?? 0) > 0;
+    
+    if (deleted) {
+      // Create deletion activity
+      await this.createActivity({
+        type: "strategy_deleted",
+        description: `Deleted strategy and ${relatedTactics.length} tactics, ${relatedOutcomes.length} outcomes`,
+        userId: "system",
+        strategyId: null
+      });
+    }
+    
+    return deleted;
   }
 
   // Tactic methods
