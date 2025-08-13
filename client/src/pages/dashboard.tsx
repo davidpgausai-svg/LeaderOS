@@ -62,13 +62,12 @@ export default function Dashboard() {
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar />
-      
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <header className="bg-white dark:bg-gray-800 shadow-sm border-b px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Strategic Dashboard</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Strategic Dashboard (FY26 - FY30)</h1>
               <p className="text-gray-600 dark:text-gray-400">Organizational Strategic Framework & Performance Overview</p>
             </div>
             <div className="flex space-x-3">
@@ -173,12 +172,10 @@ export default function Dashboard() {
           </div>
         </main>
       </div>
-
       <CreateStrategyModal 
         open={isCreateStrategyOpen} 
         onOpenChange={setIsCreateStrategyOpen} 
       />
-      
       <CreateTacticModal 
         isOpen={isCreateTacticOpen} 
         onClose={() => setIsCreateTacticOpen(false)} 
