@@ -191,11 +191,11 @@ export function CreateTacticModal({ isOpen, onClose, strategyId }: CreateTacticM
                 name="strategyId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Strategy *</FormLabel>
+                    <FormLabel>Framework *</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger data-testid="select-strategy">
-                          <SelectValue placeholder="Select a strategy" />
+                          <SelectValue placeholder="Select a strategic framework" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
