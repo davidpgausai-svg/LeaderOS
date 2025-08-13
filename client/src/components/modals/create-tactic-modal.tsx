@@ -140,7 +140,7 @@ export function CreateTacticModal({ isOpen, onClose, strategyId }: CreateTacticM
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <Target className="w-5 h-5 text-blue-500" />
-            <span>Create New Strategy</span>
+            <span>Create New Tactic</span>
           </DialogTitle>
         </DialogHeader>
 
@@ -155,7 +155,7 @@ export function CreateTacticModal({ isOpen, onClose, strategyId }: CreateTacticM
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Strategy Title *</FormLabel>
+                    <FormLabel>Tactic Title *</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="Enter tactic title"
