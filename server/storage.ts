@@ -44,12 +44,20 @@ export class MemStorage implements IStorage {
 
   private seedData() {
     // Create sample users
-    const executiveUser: User = {
+    const adminUser: User = {
       id: randomUUID(),
       username: "john.doe",
       name: "John Doe",
-      role: "executive",
+      role: "administrator",
       initials: "JD"
+    };
+    
+    const executiveUser: User = {
+      id: randomUUID(),
+      username: "mike.wilson",
+      name: "Mike Wilson",
+      role: "executive",
+      initials: "MW"
     };
     
     const leaderUser: User = {
@@ -60,6 +68,7 @@ export class MemStorage implements IStorage {
       initials: "SJ"
     };
 
+    this.users.set(adminUser.id, adminUser);
     this.users.set(executiveUser.id, executiveUser);
     this.users.set(leaderUser.id, leaderUser);
 
@@ -72,7 +81,7 @@ export class MemStorage implements IStorage {
       targetDate: new Date("2024-12-31"),
       metrics: "25% revenue increase, 3 new markets",
       status: "active",
-      createdBy: executiveUser.id,
+      createdBy: adminUser.id,
       createdAt: new Date()
     };
 

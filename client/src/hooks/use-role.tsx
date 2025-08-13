@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-type Role = 'executive' | 'leader';
+type Role = 'administrator' | 'executive' | 'leader';
 
 interface RoleStore {
   currentRole: Role;
@@ -23,15 +23,16 @@ interface RoleStore {
   canCreateTactics: () => boolean;
   canWriteReports: () => boolean;
   canManageUsers: () => boolean;
+  canEditTactic: (tactic: any) => boolean;
 }
 
 export const useRole = create<RoleStore>((set, get) => ({
-  currentRole: 'executive',
+  currentRole: 'administrator',
   currentUser: {
     id: '1',
     name: 'John Doe',
     initials: 'JD',
-    role: 'executive'
+    role: 'administrator'
   },
   setCurrentUser: (user) => set({ 
     currentUser: user, 
@@ -41,7 +42,7 @@ export const useRole = create<RoleStore>((set, get) => ({
   // Permission methods
   canEditStrategies: () => {
     const { currentUser } = get();
-    return currentUser?.role === 'executive';
+    return currentUser?.role === 'administrator' || currentUser?.role === 'executive';
   },
   
   canEditTactics: () => {
@@ -51,21 +52,29 @@ export const useRole = create<RoleStore>((set, get) => ({
   
   canCreateStrategies: () => {
     const { currentUser } = get();
-    return currentUser?.role === 'executive';
+    return currentUser?.role === 'administrator' || currentUser?.role === 'executive';
   },
   
   canCreateTactics: () => {
-    // Both roles can create tactics
-    return true;
+    const { currentUser } = get();
+    return currentUser?.role === 'administrator' || currentUser?.role === 'executive';
   },
   
   canWriteReports: () => {
-    // Both executives and leaders can write reports
+    // All roles can write reports
     return true;
   },
   
   canManageUsers: () => {
     const { currentUser } = get();
-    return currentUser?.role === 'executive';
+    return currentUser?.role === 'administrator';
+  },
+  
+  canEditTactic: (tactic) => {
+    const { currentUser } = get();
+    if (currentUser?.role === 'administrator' || currentUser?.role === 'executive') {
+      return true;
+    }
+    return currentUser?.id === tactic.assignedTo;
   },
 }));

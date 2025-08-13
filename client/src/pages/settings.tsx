@@ -466,7 +466,7 @@ export default function Settings() {
                     </CardTitle>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                       As an administrator, you can assign roles to control access permissions. 
-                      Executives can edit all strategies and tactics, while leaders can only edit tactics assigned to them.
+                      Administrators have full modification power, Executives can edit all strategies and tactics, while Leaders can only edit tactics assigned to them.
                     </p>
                   </CardHeader>
                   <CardContent>
@@ -485,17 +485,24 @@ export default function Settings() {
                               <p className="font-medium text-gray-900 dark:text-white" data-testid="text-admin-user-name">{user.name}</p>
                               <p className="text-sm text-gray-500 dark:text-gray-400">{user.username}</p>
                               <p className="text-xs text-gray-400 dark:text-gray-500">
-                                {user.role === 'executive' ? 'Can edit all strategies & tactics' : 'Can edit assigned tactics only'}
+                                {user.role === 'administrator' 
+                                  ? 'Full modification power over the app'
+                                  : user.role === 'executive' 
+                                    ? 'Can edit all strategies & tactics'
+                                    : 'Can edit assigned tactics only'
+                                }
                               </p>
                             </div>
                           </div>
                           <div className="flex items-center space-x-3">
                             <Badge className={
-                              user.role === 'executive' 
-                                ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' 
-                                : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                              user.role === 'administrator'
+                                ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                : user.role === 'executive' 
+                                  ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' 
+                                  : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
                             }>
-                              {user.role === 'executive' ? 'Executive' : 'Leader'}
+                              {user.role === 'administrator' ? 'Administrator' : user.role === 'executive' ? 'Executive' : 'Leader'}
                             </Badge>
                             <Select 
                               value={user.role} 
@@ -505,6 +512,7 @@ export default function Settings() {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
+                                <SelectItem value="administrator">Administrator</SelectItem>
                                 <SelectItem value="executive">Executive</SelectItem>
                                 <SelectItem value="leader">Leader</SelectItem>
                               </SelectContent>
