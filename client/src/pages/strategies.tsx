@@ -4,6 +4,7 @@ import { useRole } from "@/hooks/use-role";
 import { Sidebar } from "@/components/layout/sidebar";
 import { StrategyCard } from "@/components/cards/strategy-card";
 import { CreateStrategyModal } from "@/components/modals/create-strategy-modal";
+import { EditStrategyModal } from "@/components/modals/edit-strategy-modal";
 import { CreateTacticModal } from "@/components/modals/create-tactic-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +32,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Trash2, MoreVertical } from "lucide-react";
+import { Plus, Search, Trash2, MoreVertical, Edit } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -40,8 +41,10 @@ export default function Strategies() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isCreateStrategyOpen, setIsCreateStrategyOpen] = useState(false);
+  const [isEditStrategyOpen, setIsEditStrategyOpen] = useState(false);
   const [isCreateTacticOpen, setIsCreateTacticOpen] = useState(false);
   const [selectedStrategyId, setSelectedStrategyId] = useState<string>();
+  const [selectedStrategy, setSelectedStrategy] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -94,6 +97,11 @@ export default function Strategies() {
       });
     },
   });
+
+  const handleEditStrategy = (strategy: any) => {
+    setSelectedStrategy(strategy);
+    setIsEditStrategyOpen(true);
+  };
 
   const handleDeleteStrategy = (strategyId: string) => {
     deleteStrategyMutation.mutate(strategyId);
@@ -203,6 +211,13 @@ export default function Strategies() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => handleEditStrategy(strategy)}
+                            data-testid={`button-edit-strategy-${strategy.id}`}
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit Strategy
+                          </DropdownMenuItem>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <DropdownMenuItem
@@ -281,6 +296,11 @@ export default function Strategies() {
       <CreateStrategyModal
         open={isCreateStrategyOpen}
         onOpenChange={setIsCreateStrategyOpen}
+      />
+      <EditStrategyModal
+        open={isEditStrategyOpen}
+        onOpenChange={setIsEditStrategyOpen}
+        strategy={selectedStrategy}
       />
       <CreateTacticModal
         isOpen={isCreateTacticOpen}
