@@ -32,7 +32,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Trash2, MoreVertical, Edit, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Search, Trash2, MoreVertical, Edit } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -47,7 +47,6 @@ export default function Strategies() {
   const [selectedStrategy, setSelectedStrategy] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [expandedStrategies, setExpandedStrategies] = useState<Set<string>>(new Set());
 
   const { data: strategies, isLoading: strategiesLoading } = useQuery({
     queryKey: ["/api/strategies"],
@@ -77,17 +76,7 @@ export default function Strategies() {
     setIsCreateTacticOpen(true);
   };
 
-  const toggleStrategyExpanded = (strategyId: string) => {
-    setExpandedStrategies(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(strategyId)) {
-        newSet.delete(strategyId);
-      } else {
-        newSet.add(strategyId);
-      }
-      return newSet;
-    });
-  };
+
 
   const deleteStrategyMutation = useMutation({
     mutationFn: async (strategyId: string) => {
@@ -205,33 +194,17 @@ export default function Strategies() {
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filteredStrategies.map((strategy: any) => {
-                const isExpanded = expandedStrategies.has(strategy.id);
-                return (
-                  <div key={strategy.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                            {strategy.title}
-                          </h3>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleStrategyExpanded(strategy.id)}
-                            data-testid={`button-toggle-strategy-${strategy.id}`}
-                          >
-                            {isExpanded ? (
-                              <ChevronDown className="h-4 w-4" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
-                        <p className="text-gray-600 text-sm mb-4">
-                          {strategy.description}
-                        </p>
-                      </div>
+              {filteredStrategies.map((strategy: any) => (
+                <div key={strategy.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                        {strategy.title}
+                      </h3>
+                      <p className="text-gray-600 text-sm mb-4">
+                        {strategy.description}
+                      </p>
+                    </div>
                     {canEditAllStrategies() && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -282,46 +255,41 @@ export default function Strategies() {
                     )}
                   </div>
 
-                  {isExpanded && (
-                    <>
-                      <div className="space-y-3">
-                        <div className="flex items-center text-sm text-gray-500">
-                          <span className="font-medium">Start:</span>
-                          <span className="ml-2">
-                            {new Date(strategy.startDate).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <div className="flex items-center text-sm text-gray-500">
-                          <span className="font-medium">Target:</span>
-                          <span className="ml-2">
-                            {new Date(strategy.targetDate).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <div className="flex items-center text-sm text-gray-500">
-                          <span className="font-medium">Metrics:</span>
-                          <span className="ml-2">{strategy.metrics}</span>
-                        </div>
-                      </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center text-sm text-gray-500">
+                      <span className="font-medium">Start:</span>
+                      <span className="ml-2">
+                        {new Date(strategy.startDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center text-sm text-gray-500">
+                      <span className="font-medium">Target:</span>
+                      <span className="ml-2">
+                        {new Date(strategy.targetDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center text-sm text-gray-500">
+                      <span className="font-medium">Metrics:</span>
+                      <span className="ml-2">{strategy.metrics}</span>
+                    </div>
+                  </div>
 
-                      <div className="mt-6 pt-4 border-t border-gray-200">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-500">
-                            {strategy.tactics.length} tactics
-                          </span>
-                          <Button
-                            size="sm"
-                            onClick={() => handleCreateTactic(strategy.id)}
-                          >
-                            <Plus className="mr-1 h-3 w-3" />
-                            Add Strategy
-                          </Button>
-                        </div>
-                      </div>
-                    </>
-                  )}
+                  <div className="mt-6 pt-4 border-t border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-500">
+                        {strategy.tactics.length} tactics
+                      </span>
+                      <Button
+                        size="sm"
+                        onClick={() => handleCreateTactic(strategy.id)}
+                      >
+                        <Plus className="mr-1 h-3 w-3" />
+                        Add Strategy
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-                );
-              })}
+              ))}
             </div>
           )}
         </div>

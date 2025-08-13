@@ -101,7 +101,10 @@ export default function Tactics() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [strategyFilter, setStrategyFilter] = useState("all");
-  const [collapsedStrategies, setCollapsedStrategies] = useState<Set<string>>(new Set());
+  // Initialize all strategies as collapsed by default
+  const [collapsedStrategies, setCollapsedStrategies] = useState<Set<string>>(() => {
+    return new Set((strategies as Strategy[])?.map(s => s.id) || []);
+  });
 
   const { data: tactics, isLoading: tacticsLoading } = useQuery({
     queryKey: ["/api/tactics"],
@@ -223,14 +226,17 @@ export default function Tactics() {
     return groups;
   }, {} as Record<string, Tactic[]>);
 
+  // Toggle strategy collapse/expand - start with all strategies collapsed
   const toggleStrategyCollapse = (strategyId: string) => {
-    const newCollapsed = new Set(collapsedStrategies);
-    if (newCollapsed.has(strategyId)) {
-      newCollapsed.delete(strategyId);
-    } else {
-      newCollapsed.add(strategyId);
-    }
-    setCollapsedStrategies(newCollapsed);
+    setCollapsedStrategies(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(strategyId)) {
+        newSet.delete(strategyId);
+      } else {
+        newSet.add(strategyId);
+      }
+      return newSet;
+    });
   };
 
   const handleStatusChange = (tacticId: string, newStatus: string) => {
