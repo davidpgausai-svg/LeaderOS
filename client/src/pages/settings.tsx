@@ -69,7 +69,8 @@ export default function Settings() {
 
   const updateUserMutation = useMutation({
     mutationFn: async (userData: any) => {
-      return await apiRequest("PATCH", `/api/users/${userData.id}`, userData);
+      const response = await apiRequest("PATCH", `/api/users/${userData.id}`, userData);
+      return await response.json();
     },
     onSuccess: (updatedUser) => {
       toast({
@@ -82,11 +83,20 @@ export default function Settings() {
   });
 
   const handleProfileUpdate = (formData: FormData) => {
+    if (!currentUser?.id) {
+      toast({
+        title: "Error",
+        description: "User ID not found. Please refresh the page.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const profileData = {
-      id: currentUser?.id,
+      id: currentUser.id,
       name: formData.get('name') as string,
       initials: formData.get('initials') as string,
-      role: currentUser?.role,
+      role: currentUser.role,
     };
     updateUserMutation.mutate(profileData);
   };
