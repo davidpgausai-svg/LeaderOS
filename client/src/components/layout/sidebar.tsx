@@ -25,10 +25,9 @@ export function Sidebar() {
   return (
     <aside className="w-64 bg-white dark:bg-black border-r border-gray-200 dark:border-gray-800 flex flex-col">
       <div className="p-6 border-b border-gray-200 dark:border-gray-800">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white">StrategicFlow</h1>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white">MUHC Strategy</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Strategic Planning Platform</p>
       </div>
-
       {/* Navigation Menu */}
       <nav className="flex-1 p-4 space-y-2">
         {navigation.map((item) => {
@@ -51,7 +50,6 @@ export function Sidebar() {
           );
         })}
       </nav>
-
       {/* User Profile */}
       <div className="p-4 border-t border-gray-200 dark:border-gray-800">
         <div className="flex items-center">
