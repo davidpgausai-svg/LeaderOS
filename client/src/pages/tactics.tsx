@@ -21,7 +21,24 @@ import {
   CardContent,
   CardHeader,
 } from "@/components/ui/card";
-import { Plus, Search, Clock, CheckCircle, AlertTriangle } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Plus, Search, Clock, CheckCircle, AlertTriangle, Trash2, MoreVertical } from "lucide-react";
 
 export default function Tactics() {
   const { currentRole, currentUser, canCreateTactics, canEditTactics } = useRole();
@@ -127,6 +144,32 @@ export default function Tactics() {
       id: tacticId,
       updates: { progress: newProgress, status }
     });
+  };
+
+  const deleteTacticMutation = useMutation({
+    mutationFn: async (tacticId: string) => {
+      const response = await apiRequest("DELETE", `/api/tactics/${tacticId}`);
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tactics"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
+      toast({
+        title: "Success",
+        description: "Tactic deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete tactic",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteTactic = (tacticId: string) => {
+    deleteTacticMutation.mutate(tacticId);
   };
 
   if (tacticsLoading) {
@@ -263,7 +306,8 @@ export default function Tactics() {
                       </div>
                     </div>
                     
-                    <div className="ml-6 flex flex-col space-y-2">
+                    <div className="ml-6 flex items-start space-x-2">
+                      <div className="flex flex-col space-y-2">
                       {canEditTactic(tactic) && (
                         <>
                           <Select
@@ -296,6 +340,49 @@ export default function Tactics() {
                             </SelectContent>
                           </Select>
                         </>
+                      )}
+                      </div>
+                      
+                      {canEditTactic(tactic) && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" data-testid={`button-tactic-menu-${tactic.id}`}>
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <DropdownMenuItem
+                                  className="text-red-600 focus:text-red-600"
+                                  onSelect={(e) => e.preventDefault()}
+                                  data-testid={`button-delete-tactic-${tactic.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete Tactic
+                                </DropdownMenuItem>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Tactic</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete "{tactic.title}"? This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDeleteTactic(tactic.id)}
+                                    className="bg-red-600 hover:bg-red-700"
+                                    data-testid={`button-confirm-delete-tactic-${tactic.id}`}
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       )}
                     </div>
                   </div>

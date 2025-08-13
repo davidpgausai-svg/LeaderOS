@@ -54,11 +54,17 @@ export const insertUserSchema = createInsertSchema(users).omit({
 export const insertStrategySchema = createInsertSchema(strategies).omit({
   id: true,
   createdAt: true,
+}).extend({
+  startDate: z.coerce.date(),
+  targetDate: z.coerce.date(),
 });
 
 export const insertTacticSchema = createInsertSchema(tactics).omit({
   id: true,
   createdAt: true,
+}).extend({
+  startDate: z.coerce.date(),
+  dueDate: z.coerce.date(),
 });
 
 export const insertActivitySchema = createInsertSchema(activities).omit({

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRole } from "@/hooks/use-role";
 import { Sidebar } from "@/components/layout/sidebar";
 import { StrategyCard } from "@/components/cards/strategy-card";
@@ -14,10 +14,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Plus, Search, Trash2, MoreVertical } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Strategies() {
-  const { canCreateStrategies } = useRole();
+  const { canCreateStrategies, canEditAllStrategies } = useRole();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isCreateStrategyOpen, setIsCreateStrategyOpen] = useState(false);
   const [isCreateTacticOpen, setIsCreateTacticOpen] = useState(false);
   const [selectedStrategyId, setSelectedStrategyId] = useState<string>();
@@ -50,6 +71,32 @@ export default function Strategies() {
   const handleCreateTactic = (strategyId: string) => {
     setSelectedStrategyId(strategyId);
     setIsCreateTacticOpen(true);
+  };
+
+  const deleteStrategyMutation = useMutation({
+    mutationFn: async (strategyId: string) => {
+      const response = await apiRequest("DELETE", `/api/strategies/${strategyId}`);
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tactics"] });
+      toast({
+        title: "Success",
+        description: "Strategy deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete strategy",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteStrategy = (strategyId: string) => {
+    deleteStrategyMutation.mutate(strategyId);
   };
 
   if (strategiesLoading) {
@@ -148,6 +195,47 @@ export default function Strategies() {
                         {strategy.description}
                       </p>
                     </div>
+                    {canEditAllStrategies() && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" data-testid={`button-strategy-menu-${strategy.id}`}>
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <DropdownMenuItem
+                                className="text-red-600 focus:text-red-600"
+                                onSelect={(e) => e.preventDefault()}
+                                data-testid={`button-delete-strategy-${strategy.id}`}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete Strategy
+                              </DropdownMenuItem>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Strategy</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete "{strategy.title}"? This action cannot be undone and will also delete all associated tactics.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeleteStrategy(strategy.id)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                  data-testid={`button-confirm-delete-strategy-${strategy.id}`}
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
 
                   <div className="space-y-3">

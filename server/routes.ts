@@ -80,7 +80,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!deleted) {
         return res.status(404).json({ message: "Strategy not found" });
       }
-      res.status(204).send();
+      res.json({ message: "Strategy deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Failed to delete strategy" });
     }
