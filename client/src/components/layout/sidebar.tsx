@@ -6,15 +6,7 @@ import {
   CheckSquare,
   BarChart3,
   Settings,
-  User,
 } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: ChartLine },
@@ -26,27 +18,13 @@ const navigation = [
 
 export function Sidebar() {
   const [location] = useLocation();
-  const { currentRole, setRole, currentUser } = useRole();
+  const { currentRole, currentUser } = useRole();
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
-      <div className="p-6 border-b border-gray-200">
-        <h1 className="text-xl font-bold text-gray-900">StrategicFlow</h1>
-        <p className="text-sm text-gray-500 mt-1">Strategic Planning Platform</p>
-      </div>
-      
-      {/* Role Switcher */}
-      <div className="p-4 border-b border-gray-200">
-        <label className="block text-sm font-medium text-gray-700 mb-2">View As:</label>
-        <Select value={currentRole} onValueChange={(value: 'executive' | 'leader') => setRole(value)}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="executive">Executive</SelectItem>
-            <SelectItem value="leader">Leader</SelectItem>
-          </SelectContent>
-        </Select>
+    <aside className="w-64 bg-white dark:bg-black border-r border-gray-200 dark:border-gray-800 flex flex-col">
+      <div className="p-6 border-b border-gray-200 dark:border-gray-800">
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white">StrategicFlow</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Strategic Planning Platform</p>
       </div>
 
       {/* Navigation Menu */}
@@ -61,7 +39,7 @@ export function Sidebar() {
                 className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                   isActive
                     ? "text-white bg-primary"
-                    : "text-gray-700 hover:bg-gray-100"
+                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
                 }`}
               >
                 <Icon className="mr-3 h-4 w-4" />
@@ -73,14 +51,14 @@ export function Sidebar() {
       </nav>
 
       {/* User Profile */}
-      <div className="p-4 border-t border-gray-200">
+      <div className="p-4 border-t border-gray-200 dark:border-gray-800">
         <div className="flex items-center">
           <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
             {currentUser?.initials || "JD"}
           </div>
           <div className="ml-3">
-            <p className="text-sm font-medium text-gray-900">{currentUser?.name || "John Doe"}</p>
-            <p className="text-xs text-gray-500 capitalize">{currentRole}</p>
+            <p className="text-sm font-medium text-gray-900 dark:text-white">{currentUser?.name || "John Doe"}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{currentRole}</p>
           </div>
         </div>
       </div>

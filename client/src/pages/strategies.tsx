@@ -17,7 +17,7 @@ import {
 import { Plus, Search } from "lucide-react";
 
 export default function Strategies() {
-  const { currentRole } = useRole();
+  const { canCreateStrategies } = useRole();
   const [isCreateStrategyOpen, setIsCreateStrategyOpen] = useState(false);
   const [isCreateTacticOpen, setIsCreateTacticOpen] = useState(false);
   const [selectedStrategyId, setSelectedStrategyId] = useState<string>();
@@ -71,16 +71,16 @@ export default function Strategies() {
       <Sidebar />
       <main className="flex-1 overflow-auto">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 px-6 py-4">
+        <header className="bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800 px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Strategies</h2>
-              <p className="text-gray-600 mt-1">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Strategies</h2>
+              <p className="text-gray-600 dark:text-gray-400 mt-1">
                 Manage and track strategic initiatives
               </p>
             </div>
-            {currentRole === 'executive' && (
-              <Button onClick={() => setIsCreateStrategyOpen(true)}>
+            {canCreateStrategies() && (
+              <Button onClick={() => setIsCreateStrategyOpen(true)} data-testid="button-create-strategy">
                 <Plus className="mr-2 h-4 w-4" />
                 New Strategy
               </Button>
@@ -89,7 +89,7 @@ export default function Strategies() {
         </header>
 
         {/* Filters */}
-        <div className="p-6 border-b border-gray-200 bg-gray-50">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
           <div className="flex items-center space-x-4">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -98,10 +98,11 @@ export default function Strategies() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
+                data-testid="input-search-strategies"
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48">
+              <SelectTrigger className="w-48" data-testid="select-status-filter">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -127,8 +128,8 @@ export default function Strategies() {
                   ? "Try adjusting your search or filters"
                   : "Get started by creating your first strategy"}
               </p>
-              {currentRole === 'executive' && !searchTerm && statusFilter === "all" && (
-                <Button onClick={() => setIsCreateStrategyOpen(true)}>
+              {canCreateStrategies() && !searchTerm && statusFilter === "all" && (
+                <Button onClick={() => setIsCreateStrategyOpen(true)} data-testid="button-create-first-strategy">
                   <Plus className="mr-2 h-4 w-4" />
                   Create Strategy
                 </Button>

@@ -24,7 +24,7 @@ import {
 import { Plus, Search, Clock, CheckCircle, AlertTriangle } from "lucide-react";
 
 export default function Tactics() {
-  const { currentRole, currentUser } = useRole();
+  const { currentRole, currentUser, canCreateTactics, canEditTactics } = useRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isCreateTacticOpen, setIsCreateTacticOpen] = useState(false);
@@ -105,6 +105,12 @@ export default function Tactics() {
     }
   };
 
+  const canEditTactic = (tactic: any) => {
+    // Executives can edit all tactics, leaders can only edit tactics assigned to them
+    if (currentRole === 'executive') return true;
+    return tactic.assignedTo === currentUser?.id;
+  };
+
   const handleStatusChange = (tacticId: string, newStatus: string) => {
     updateTacticMutation.mutate({
       id: tacticId,
@@ -138,30 +144,32 @@ export default function Tactics() {
   }
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex bg-white dark:bg-black">
       <Sidebar />
       <main className="flex-1 overflow-auto">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 px-6 py-4">
+        <header className="bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800 px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Tactics</h2>
-              <p className="text-gray-600 mt-1">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Tactics</h2>
+              <p className="text-gray-600 dark:text-gray-400 mt-1">
                 {currentRole === 'executive' 
                   ? 'Manage and assign tactical initiatives'
                   : 'Track your assigned tactics and progress'
                 }
               </p>
             </div>
-            <Button onClick={() => setIsCreateTacticOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Tactic
-            </Button>
+            {canCreateTactics() && (
+              <Button onClick={() => setIsCreateTacticOpen(true)} data-testid="button-create-tactic">
+                <Plus className="mr-2 h-4 w-4" />
+                New Tactic
+              </Button>
+            )}
           </div>
         </header>
 
         {/* Filters */}
-        <div className="p-6 border-b border-gray-200 bg-gray-50">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
           <div className="flex items-center space-x-4">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -170,10 +178,11 @@ export default function Tactics() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
+                data-testid="input-search-tactics"
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48">
+              <SelectTrigger className="w-48" data-testid="select-status-filter">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -194,8 +203,8 @@ export default function Tactics() {
               <div className="w-12 h-12 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
                 <Search className="h-6 w-6 text-gray-400" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No tactics found</h3>
-              <p className="text-gray-500 mb-4">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No tactics found</h3>
+              <p className="text-gray-500 dark:text-gray-400 mb-4">
                 {searchTerm || statusFilter !== "all"
                   ? "Try adjusting your search or filters"
                   : currentRole === 'executive' 
@@ -203,10 +212,12 @@ export default function Tactics() {
                     : "No tactics have been assigned to you yet"
                 }
               </p>
-              <Button onClick={() => setIsCreateTacticOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Create Tactic
-              </Button>
+              {canCreateTactics() && (
+                <Button onClick={() => setIsCreateTacticOpen(true)} data-testid="button-create-first-tactic">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Tactic
+                </Button>
+              )}
             </div>
           ) : (
             <div className="space-y-4">
@@ -216,7 +227,7 @@ export default function Tactics() {
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
                         {getStatusIcon(tactic.status)}
-                        <h3 className="text-lg font-semibold text-gray-900">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                           {tactic.title}
                         </h3>
                         <Badge className={getStatusColor(tactic.status)}>
@@ -224,9 +235,9 @@ export default function Tactics() {
                         </Badge>
                       </div>
                       
-                      <p className="text-gray-600 mb-4">{tactic.description}</p>
+                      <p className="text-gray-600 dark:text-gray-400 mb-4">{tactic.description}</p>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-500 mb-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-500 dark:text-gray-400 mb-4">
                         <div>
                           <span className="font-medium">Strategy:</span>
                           <span className="ml-2">{tactic.strategy?.title}</span>
@@ -245,7 +256,7 @@ export default function Tactics() {
 
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">Progress</span>
+                          <span className="text-gray-600 dark:text-gray-400">Progress</span>
                           <span className="font-medium">{tactic.progress}%</span>
                         </div>
                         <Progress value={tactic.progress} className="h-2" />
@@ -253,13 +264,13 @@ export default function Tactics() {
                     </div>
                     
                     <div className="ml-6 flex flex-col space-y-2">
-                      {(currentRole === 'executive' || tactic.assignedTo === currentUser?.id) && (
+                      {canEditTactic(tactic) && (
                         <>
                           <Select
                             value={tactic.status}
                             onValueChange={(value) => handleStatusChange(tactic.id, value)}
                           >
-                            <SelectTrigger className="w-40">
+                            <SelectTrigger className="w-40" data-testid={`select-status-${tactic.id}`}>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -273,7 +284,7 @@ export default function Tactics() {
                             value={tactic.progress.toString()}
                             onValueChange={(value) => handleProgressChange(tactic.id, parseInt(value))}
                           >
-                            <SelectTrigger className="w-40">
+                            <SelectTrigger className="w-40" data-testid={`select-progress-${tactic.id}`}>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>

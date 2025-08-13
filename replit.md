@@ -7,6 +7,7 @@ StrategicFlow is a comprehensive strategic planning platform designed for organi
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+Access Control: Removed "Executive vs Leader" role switcher in favor of enhanced settings-based permissions. Executives get full edit access to strategies and tactics, leaders only edit tactics. Both roles have report writing capability.
 
 ## System Architecture
 
@@ -15,7 +16,7 @@ The frontend is built using React with TypeScript, implementing a modern compone
 
 - **Framework**: React 18 with TypeScript for type safety and modern React features
 - **Routing**: Wouter for lightweight client-side routing
-- **State Management**: Zustand for role management and user state
+- **State Management**: Zustand for role management, user state, and permission checking
 - **UI Components**: Radix UI primitives with custom styling via Tailwind CSS
 - **Design System**: shadcn/ui component library for consistent UI patterns
 - **Forms**: React Hook Form with Zod validation for type-safe form handling
@@ -39,11 +40,13 @@ The application uses a flexible storage abstraction:
 - **Schema Management**: Drizzle migrations for database schema versioning
 
 ### Authentication and Authorization
-Role-based access control system:
+Role-based access control system with granular permissions:
 
 - **Roles**: Executive and Leader roles with different capabilities
-- **User Management**: User profiles with role-based permissions
+- **Permission System**: Executives have full edit access to all strategies and tactics; Leaders can only edit tactics assigned to them
+- **User Management**: User profiles with role-based permissions managed through Settings
 - **Session Management**: Express sessions with PostgreSQL session store
+- **Access Controls**: Permission-based UI controls that hide/show functionality based on user role
 
 ### Key Data Models
 The platform centers around four core entities:
