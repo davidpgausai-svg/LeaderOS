@@ -68,7 +68,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Strategic Dashboard (FY26 - FY30)</h1>
-              <p className="text-gray-600 dark:text-gray-400">Organizational Strategic Framework & Performance Overview</p>
+              <p className="text-gray-600 dark:text-gray-400">MU Health Care Strategic Framework</p>
             </div>
             <div className="flex space-x-3">
               <Button variant="outline" size="sm">
