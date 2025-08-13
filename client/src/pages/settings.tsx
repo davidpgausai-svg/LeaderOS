@@ -69,8 +69,7 @@ export default function Settings() {
 
   const updateUserMutation = useMutation({
     mutationFn: async (userData: any) => {
-      // In a real app, this would update the user profile
-      return Promise.resolve(userData);
+      return await apiRequest("PATCH", `/api/users/${userData.id}`, userData);
     },
     onSuccess: (updatedUser) => {
       toast({
@@ -78,6 +77,7 @@ export default function Settings() {
         description: "Profile updated successfully",
       });
       setCurrentUser(updatedUser);
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
     },
   });
 
