@@ -89,6 +89,7 @@ export class MemStorage implements IStorage {
       id: randomUUID(),
       title: "Market Expansion Initiative",
       description: "Expand into new geographic markets to increase revenue by 25%",
+      goal: "Increase revenue by 25% through geographic expansion",
       startDate: new Date("2024-01-01"),
       targetDate: new Date("2024-12-31"),
       metrics: "25% revenue increase, 3 new markets",
@@ -102,6 +103,7 @@ export class MemStorage implements IStorage {
       id: randomUUID(),
       title: "Digital Transformation",
       description: "Modernize core systems and improve operational efficiency",
+      goal: "Achieve 50% efficiency improvement through modernization",
       startDate: new Date("2024-02-01"),
       targetDate: new Date("2024-10-31"),
       metrics: "50% efficiency improvement, 95% system uptime",
@@ -191,6 +193,7 @@ export class MemStorage implements IStorage {
     const strategy: Strategy = { 
       ...insertStrategy, 
       id,
+      goal: insertStrategy.goal || null,
       status: insertStrategy.status || 'active',
       colorCode: insertStrategy.colorCode || '#3B82F6',
       createdAt: new Date()
@@ -378,7 +381,12 @@ export class MemStorage implements IStorage {
     const outcome: Outcome = { 
       ...insertOutcome, 
       id,
-      status: insertOutcome.status || 'not_started',
+      status: insertOutcome.status || 'in_progress',
+      dueDate: insertOutcome.dueDate || null,
+      tacticId: insertOutcome.tacticId || null,
+      targetValue: insertOutcome.targetValue || null,
+      currentValue: insertOutcome.currentValue || null,
+      measurementUnit: insertOutcome.measurementUnit || null,
       createdAt: new Date()
     };
     this.outcomes.set(id, outcome);

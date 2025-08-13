@@ -85,7 +85,7 @@ export default function Dashboard() {
                 <Download className="w-4 h-4 mr-2" />
                 Export Report
               </Button>
-              {currentRole === 'admin' && (
+              {currentRole === 'administrator' && (
                 <Button onClick={() => setIsCreateStrategyOpen(true)}>
                   <Plus className="w-4 h-4 mr-2" />
                   New Strategy
@@ -223,8 +223,8 @@ export default function Dashboard() {
       </div>
 
       <CreateStrategyModal 
-        isOpen={isCreateStrategyOpen} 
-        onClose={() => setIsCreateStrategyOpen(false)} 
+        open={isCreateStrategyOpen} 
+        onOpenChange={setIsCreateStrategyOpen} 
       />
       
       <CreateTacticModal 
