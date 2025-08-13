@@ -123,8 +123,8 @@ export default function Tactics() {
   };
 
   const canEditTactic = (tactic: any) => {
-    // Executives can edit all tactics, leaders can only edit tactics assigned to them
-    if (currentRole === 'executive') return true;
+    // Administrators and executives can edit all tactics, leaders can only edit tactics assigned to them
+    if (currentRole === 'administrator' || currentRole === 'executive') return true;
     return tactic.assignedTo === currentUser?.id;
   };
 
