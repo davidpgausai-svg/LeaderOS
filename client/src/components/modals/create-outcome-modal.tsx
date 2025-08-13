@@ -77,7 +77,7 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
     defaultValues: {
       title: "",
       description: "",
-      strategyId: strategyId || "",
+      strategyId: strategyId || undefined,
       tacticId: tacticId || undefined,
       targetValue: "",
       currentValue: "",
@@ -115,6 +115,7 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
     // Filter out empty optional fields
     const cleanData = {
       ...data,
+      strategyId: data.strategyId === "placeholder" ? undefined : data.strategyId,
       tacticId: data.tacticId === "none" ? undefined : data.tacticId || undefined,
       targetValue: data.targetValue || undefined,
       currentValue: data.currentValue || undefined,
@@ -186,13 +187,14 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Framework Strategy</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value || "placeholder"}>
                         <FormControl>
                           <SelectTrigger data-testid="select-outcome-strategy">
                             <SelectValue placeholder="Select a framework strategy" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
+                          <SelectItem value="placeholder">Select a framework strategy</SelectItem>
                           {(strategies as Strategy[])?.map((strategy) => (
                             <SelectItem key={strategy.id} value={strategy.id}>
                               <div className="flex items-center space-x-2">
