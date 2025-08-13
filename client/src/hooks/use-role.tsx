@@ -29,12 +29,7 @@ interface RoleStore {
 
 export const useRole = create<RoleStore>((set, get) => ({
   currentRole: 'administrator',
-  currentUser: {
-    id: '7af78a41-748f-40b4-bd2a-722dd64eb0f1',
-    name: 'John Doe',
-    initials: 'JD',
-    role: 'administrator'
-  },
+  currentUser: null,
   setCurrentUser: (user) => set({ 
     currentUser: user, 
     currentRole: user.role 
