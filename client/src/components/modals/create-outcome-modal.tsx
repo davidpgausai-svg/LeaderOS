@@ -115,7 +115,7 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
     // Filter out empty optional fields
     const cleanData = {
       ...data,
-      tacticId: data.tacticId || undefined,
+      tacticId: data.tacticId === "none" ? undefined : data.tacticId || undefined,
       targetValue: data.targetValue || undefined,
       currentValue: data.currentValue || undefined,
       measurementUnit: data.measurementUnit || undefined,
@@ -219,7 +219,7 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
                       <FormLabel>Related Strategy (Optional)</FormLabel>
                       <Select 
                         onValueChange={field.onChange} 
-                        defaultValue={field.value || ""}
+                        defaultValue={field.value || "none"}
                         disabled={!selectedStrategy || filteredTactics.length === 0}
                       >
                         <FormControl>
@@ -228,7 +228,7 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">No specific strategy</SelectItem>
+                          <SelectItem value="none">No specific strategy</SelectItem>
                           {filteredTactics.map((tactic) => (
                             <SelectItem key={tactic.id} value={tactic.id}>
                               {tactic.title}
