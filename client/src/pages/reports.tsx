@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRole } from "@/hooks/use-role";
 import { Sidebar } from "@/components/layout/sidebar";
+import { ActivityFeed } from "@/components/lists/activity-feed";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -45,6 +46,12 @@ export default function Reports() {
   const { data: activities } = useQuery({
     queryKey: ["/api/activities"],
   });
+
+  // Enhance activities with users for change log
+  const activitiesWithUsers = (activities as any[])?.map((activity: any) => ({
+    ...activity,
+    user: (users as any[])?.find((user: any) => user.id === activity.userId)
+  })) || [];
 
   // Enhance data for reporting
   const strategiesWithTactics = (strategies as any[])?.map((strategy: any) => ({
@@ -148,6 +155,18 @@ export default function Reports() {
               </p>
             </div>
             <div className="flex items-center space-x-4">
+              <Select value={reportType} onValueChange={setReportType}>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="overview">Overview</SelectItem>
+                  <SelectItem value="strategies">Strategies</SelectItem>
+                  <SelectItem value="team">Team Performance</SelectItem>
+                  <SelectItem value="progress">Progress Report</SelectItem>
+                  <SelectItem value="changelog">Change Log</SelectItem>
+                </SelectContent>
+              </Select>
               <Select value={timeRange} onValueChange={setTimeRange}>
                 <SelectTrigger className="w-40">
                   <SelectValue />
@@ -168,8 +187,36 @@ export default function Reports() {
         </header>
 
         <div className="p-6 space-y-6">
-          {/* Key Metrics Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {reportType === 'changelog' ? (
+            // Change Log Report
+            <Card data-testid="card-change-log">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Clock className="mr-2 h-5 w-5" />
+                  Change Log
+                </CardTitle>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Track all strategic framework activities and changes
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {activitiesWithUsers.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Clock className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white">No activity yet</h3>
+                      <p className="text-gray-500">Activities will appear here as changes are made to strategies and tactics.</p>
+                    </div>
+                  ) : (
+                    <ActivityFeed activities={activitiesWithUsers} />
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              {/* Key Metrics Overview */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card data-testid="card-total-strategies">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Strategies</CardTitle>
@@ -416,6 +463,8 @@ export default function Reports() {
                 </div>
               </CardContent>
             </Card>
+          )}
+            </>
           )}
         </div>
       </main>

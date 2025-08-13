@@ -4,7 +4,7 @@ import { useRole } from "@/hooks/use-role";
 import { Sidebar } from "@/components/layout/sidebar";
 import { MetricCard } from "@/components/cards/metric-card";
 import { FrameworkCard } from "@/components/strategic-framework/framework-card";
-import { ActivityFeed } from "@/components/lists/activity-feed";
+
 import { CreateStrategyModal } from "@/components/modals/create-strategy-modal";
 import { CreateTacticModal } from "@/components/modals/create-tactic-modal";
 import { Button } from "@/components/ui/button";
@@ -33,10 +33,6 @@ export default function Dashboard() {
     queryKey: ["/api/tactics"],
   });
 
-  const { data: activities, isLoading: activitiesLoading } = useQuery({
-    queryKey: ["/api/activities"],
-  });
-
   const { data: users } = useQuery({
     queryKey: ["/api/users"],
   });
@@ -51,13 +47,7 @@ export default function Dashboard() {
   const completedTactics = (tactics as any[])?.filter((t: any) => t.status === 'completed').length || 0;
   const completionRate = totalTactics > 0 ? Math.round((completedTactics / totalTactics) * 100) : 0;
 
-  // Enhance activities with users
-  const activitiesWithUsers = (activities as any[])?.map((activity: any) => ({
-    ...activity,
-    user: (users as any[])?.find((user: any) => user.id === activity.userId)
-  })) || [];
-
-  if (strategiesLoading || tacticsLoading || activitiesLoading) {
+  if (strategiesLoading || tacticsLoading) {
     return (
       <div className="flex h-screen">
         <Sidebar />
@@ -178,46 +168,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Activity Feed and Quick Actions */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Recent Activity */}
-              <div className="lg:col-span-2">
-                <ActivityFeed activities={activitiesWithUsers} />
-              </div>
 
-              {/* Quick Actions Panel */}
-              <div className="space-y-4">
-                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h3>
-                  <div className="space-y-3">
-                    <Button 
-                      className="w-full justify-start" 
-                      variant="outline"
-                      onClick={() => setIsCreateStrategyOpen(true)}
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create New Strategy
-                    </Button>
-                    <Button 
-                      className="w-full justify-start" 
-                      variant="outline"
-                      onClick={() => setIsCreateTacticOpen(true)}
-                    >
-                      <CheckSquare className="w-4 h-4 mr-2" />
-                      Add New Tactic
-                    </Button>
-                    <Button className="w-full justify-start" variant="outline">
-                      <TrendingUp className="w-4 h-4 mr-2" />
-                      Track New Outcome
-                    </Button>
-                    <Button className="w-full justify-start" variant="outline">
-                      <BarChart3 className="w-4 h-4 mr-2" />
-                      Generate Report
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </main>
       </div>
