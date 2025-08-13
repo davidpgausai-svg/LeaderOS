@@ -112,10 +112,19 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
   });
 
   const onSubmit = (data: InsertOutcome) => {
+    // Ensure strategyId is provided (required field)
+    if (!data.strategyId || data.strategyId === "placeholder") {
+      toast({
+        title: "Error",
+        description: "Please select a framework strategy",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Filter out empty optional fields
     const cleanData = {
       ...data,
-      strategyId: data.strategyId === "placeholder" ? undefined : data.strategyId,
       tacticId: data.tacticId === "none" ? undefined : data.tacticId || undefined,
       targetValue: data.targetValue || undefined,
       currentValue: data.currentValue || undefined,
