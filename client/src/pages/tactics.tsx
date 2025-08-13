@@ -90,8 +90,8 @@ export default function Tactics() {
                          tactic.strategy?.title.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || tactic.status === statusFilter;
     
-    // If user is a leader, only show tactics assigned to them
-    const matchesRole = currentRole === 'executive' || tactic.assignedTo === currentUser?.id;
+    // Role-based filtering: administrators and executives see all tactics, leaders see only assigned tactics
+    const matchesRole = currentRole === 'administrator' || currentRole === 'executive' || tactic.assignedTo === currentUser?.id;
     
     return matchesSearch && matchesStatus && matchesRole;
   });

@@ -24,6 +24,7 @@ interface RoleStore {
   canWriteReports: () => boolean;
   canManageUsers: () => boolean;
   canEditTactic: (tactic: any) => boolean;
+  canEditAllStrategies: () => boolean;
 }
 
 export const useRole = create<RoleStore>((set, get) => ({
@@ -76,5 +77,10 @@ export const useRole = create<RoleStore>((set, get) => ({
       return true;
     }
     return currentUser?.id === tactic.assignedTo;
+  },
+
+  canEditAllStrategies: () => {
+    const { currentUser } = get();
+    return currentUser?.role === 'administrator' || currentUser?.role === 'executive';
   },
 }));
