@@ -7,7 +7,7 @@ StrategicFlow is a comprehensive strategic planning platform designed for organi
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
-Access Control: Removed "Executive vs Leader" role switcher in favor of enhanced settings-based permissions. Executives get full edit access to strategies and tactics, leaders only edit tactics. Both roles have report writing capability.
+Access Control: Removed "Executive vs Leader" role switcher in favor of two-layer settings system: 1) Administrator layer for managing user roles and permissions, 2) User layer for personal preferences. Executives get full edit access to strategies and tactics, leaders only edit tactics. Both roles have report writing capability.
 
 ## System Architecture
 

@@ -45,10 +45,11 @@ import {
 } from "lucide-react";
 
 export default function Settings() {
-  const { currentRole, currentUser, setCurrentUser } = useRole();
+  const { currentRole, currentUser, setCurrentUser, canManageUsers } = useRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("profile");
+  const [adminActiveTab, setAdminActiveTab] = useState("user-management");
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [notifications, setNotifications] = useState({
     email: true,
@@ -135,44 +136,59 @@ export default function Settings() {
             <div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h2>
               <p className="text-gray-600 dark:text-gray-400 mt-1">
-                Manage your account and application preferences
+                {!activeTab.startsWith("admin") 
+                  ? "Manage your personal preferences and profile settings"
+                  : "Manage organization-wide settings and user permissions"
+                }
               </p>
             </div>
           </div>
         </header>
 
         <div className="p-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid grid-cols-4 lg:grid-cols-6 w-full max-w-4xl">
-              <TabsTrigger value="profile" className="flex items-center space-x-2" data-testid="tab-profile">
-                <User className="w-4 h-4" />
-                <span className="hidden sm:inline">Profile</span>
-              </TabsTrigger>
-              <TabsTrigger value="notifications" className="flex items-center space-x-2" data-testid="tab-notifications">
-                <Bell className="w-4 h-4" />
-                <span className="hidden sm:inline">Notifications</span>
-              </TabsTrigger>
-              <TabsTrigger value="appearance" className="flex items-center space-x-2" data-testid="tab-appearance">
-                <Palette className="w-4 h-4" />
-                <span className="hidden sm:inline">Appearance</span>
-              </TabsTrigger>
-              {currentRole === 'executive' && (
-                <>
-                  <TabsTrigger value="users" className="flex items-center space-x-2" data-testid="tab-users">
-                    <Users className="w-4 h-4" />
-                    <span className="hidden sm:inline">Users</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="security" className="flex items-center space-x-2" data-testid="tab-security">
-                    <Shield className="w-4 h-4" />
-                    <span className="hidden sm:inline">Security</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="data" className="flex items-center space-x-2" data-testid="tab-data">
-                    <SettingsIcon className="w-4 h-4" />
-                    <span className="hidden sm:inline">Data</span>
-                  </TabsTrigger>
-                </>
+          {/* Settings Layer Selector */}
+          <div className="mb-6">
+            <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+              <Button
+                variant={activeTab.startsWith("user") ? "secondary" : "ghost"}
+                onClick={() => setActiveTab("profile")}
+                className="flex-1"
+                data-testid="button-user-settings"
+              >
+                <User className="w-4 h-4 mr-2" />
+                User Settings
+              </Button>
+              {canManageUsers() && (
+                <Button
+                  variant={activeTab.startsWith("admin") ? "secondary" : "ghost"}
+                  onClick={() => setActiveTab("admin-user-management")}
+                  className="flex-1"
+                  data-testid="button-admin-settings"
+                >
+                  <Shield className="w-4 h-4 mr-2" />
+                  Administrator Settings
+                </Button>
               )}
-            </TabsList>
+            </div>
+          </div>
+
+          {/* User Settings */}
+          {!activeTab.startsWith("admin") && (
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+              <TabsList className="grid grid-cols-3 w-full max-w-2xl">
+                <TabsTrigger value="profile" className="flex items-center space-x-2" data-testid="tab-profile">
+                  <User className="w-4 h-4" />
+                  <span className="hidden sm:inline">Profile</span>
+                </TabsTrigger>
+                <TabsTrigger value="notifications" className="flex items-center space-x-2" data-testid="tab-notifications">
+                  <Bell className="w-4 h-4" />
+                  <span className="hidden sm:inline">Notifications</span>
+                </TabsTrigger>
+                <TabsTrigger value="appearance" className="flex items-center space-x-2" data-testid="tab-appearance">
+                  <Palette className="w-4 h-4" />
+                  <span className="hidden sm:inline">Appearance</span>
+                </TabsTrigger>
+              </TabsList>
 
             {/* Profile Settings */}
             <TabsContent value="profile" className="space-y-6">
@@ -418,46 +434,74 @@ export default function Settings() {
               </Card>
             </TabsContent>
 
-            {/* User Management (Executive Only) */}
-            {currentRole === 'executive' && (
-              <TabsContent value="users" className="space-y-6">
-                <Card data-testid="card-user-management">
+
+            </Tabs>
+          )}
+
+          {/* Administrator Settings */}
+          {canManageUsers() && activeTab.startsWith("admin") && (
+            <Tabs value={adminActiveTab} onValueChange={setAdminActiveTab} className="space-y-6">
+              <TabsList className="grid grid-cols-3 w-full max-w-2xl">
+                <TabsTrigger value="user-management" className="flex items-center space-x-2" data-testid="tab-admin-users">
+                  <Users className="w-4 h-4" />
+                  <span className="hidden sm:inline">User Roles</span>
+                </TabsTrigger>
+                <TabsTrigger value="security" className="flex items-center space-x-2" data-testid="tab-admin-security">
+                  <Shield className="w-4 h-4" />
+                  <span className="hidden sm:inline">Security</span>
+                </TabsTrigger>
+                <TabsTrigger value="data" className="flex items-center space-x-2" data-testid="tab-admin-data">
+                  <SettingsIcon className="w-4 h-4" />
+                  <span className="hidden sm:inline">Data Management</span>
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Administrator User Management */}
+              <TabsContent value="user-management" className="space-y-6">
+                <Card data-testid="card-admin-user-management">
                   <CardHeader>
                     <CardTitle className="flex items-center">
                       <Users className="mr-2 h-5 w-5" />
-                      User Management
+                      User Role Management
                     </CardTitle>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                      As an administrator, you can assign roles to control access permissions. 
+                      Executives can edit all strategies and tactics, while leaders can only edit tactics assigned to them.
+                    </p>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
                       {(users as any[])?.map((user: any) => (
                         <div 
                           key={user.id} 
-                          className="flex items-center justify-between p-4 border rounded-lg"
-                          data-testid={`user-item-${user.id}`}
+                          className="flex items-center justify-between p-4 border dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
+                          data-testid={`admin-user-item-${user.id}`}
                         >
                           <div className="flex items-center space-x-3">
                             <Avatar>
                               <AvatarFallback>{user.initials}</AvatarFallback>
                             </Avatar>
                             <div>
-                              <p className="font-medium" data-testid="text-user-name">{user.name}</p>
-                              <p className="text-sm text-gray-500">{user.username}</p>
+                              <p className="font-medium text-gray-900 dark:text-white" data-testid="text-admin-user-name">{user.name}</p>
+                              <p className="text-sm text-gray-500 dark:text-gray-400">{user.username}</p>
+                              <p className="text-xs text-gray-400 dark:text-gray-500">
+                                {user.role === 'executive' ? 'Can edit all strategies & tactics' : 'Can edit assigned tactics only'}
+                              </p>
                             </div>
                           </div>
                           <div className="flex items-center space-x-3">
                             <Badge className={
                               user.role === 'executive' 
-                                ? 'bg-purple-100 text-purple-800' 
-                                : 'bg-blue-100 text-blue-800'
+                                ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' 
+                                : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
                             }>
-                              {user.role}
+                              {user.role === 'executive' ? 'Executive' : 'Leader'}
                             </Badge>
                             <Select 
                               value={user.role} 
                               onValueChange={(value) => handleUserRoleChange(user.id, value)}
                             >
-                              <SelectTrigger className="w-32" data-testid={`select-user-role-${user.id}`}>
+                              <SelectTrigger className="w-32" data-testid={`select-admin-user-role-${user.id}`}>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -468,20 +512,28 @@ export default function Settings() {
                           </div>
                         </div>
                       ))}
+                      
+                      <div className="p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-center">
+                        <Button variant="outline" className="w-full" data-testid="button-invite-user">
+                          <User className="w-4 h-4 mr-2" />
+                          Invite New User
+                        </Button>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                          Invite team members to join the strategic planning platform
+                        </p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
               </TabsContent>
-            )}
 
-            {/* Security (Executive Only) */}
-            {currentRole === 'executive' && (
+              {/* Administrator Security */}
               <TabsContent value="security" className="space-y-6">
-                <Card data-testid="card-security">
+                <Card data-testid="card-admin-security">
                   <CardHeader>
                     <CardTitle className="flex items-center">
                       <Shield className="mr-2 h-5 w-5" />
-                      Security Settings
+                      Security & Access Control
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-6">
@@ -499,40 +551,52 @@ export default function Settings() {
                       </div>
 
                       <div className="space-y-3">
-                        <h4 className="font-medium">Password Policy</h4>
-                        <div className="text-sm text-gray-600 space-y-1">
-                          <p>• Minimum 8 characters</p>
+                        <h4 className="font-medium">Organization Password Policy</h4>
+                        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                          <p>• Minimum 8 characters required</p>
                           <p>• Must include uppercase and lowercase letters</p>
                           <p>• Must include at least one number</p>
                           <p>• Must include at least one special character</p>
                         </div>
+                        <Button variant="outline" data-testid="button-admin-change-policy">
+                          Update Password Policy
+                        </Button>
                       </div>
 
-                      <Button variant="outline" data-testid="button-change-password">
-                        Change Password
-                      </Button>
+                      <div className="space-y-3">
+                        <h4 className="font-medium">Session Management</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Control user session timeouts and security settings
+                        </p>
+                        <div className="flex space-x-2">
+                          <Button variant="outline" data-testid="button-admin-session-settings">
+                            Session Settings
+                          </Button>
+                          <Button variant="outline" data-testid="button-admin-force-logout">
+                            Force All Logout
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
               </TabsContent>
-            )}
 
-            {/* Data Management (Executive Only) */}
-            {currentRole === 'executive' && (
+              {/* Administrator Data Management */}
               <TabsContent value="data" className="space-y-6">
-                <Card data-testid="card-data-management">
+                <Card data-testid="card-admin-data-management">
                   <CardHeader>
                     <CardTitle className="flex items-center">
                       <SettingsIcon className="mr-2 h-5 w-5" />
-                      Data Management
+                      Organization Data Management
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="space-y-4">
                       <div className="p-4 border rounded-lg">
                         <h4 className="font-medium mb-2">Strategy Cleanup</h4>
-                        <p className="text-sm text-gray-600 mb-3">
-                          Remove completed or outdated strategies to keep your workspace organized.
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                          Remove completed or outdated strategies to keep the organization's workspace clean.
                         </p>
                         <div className="space-y-2">
                           {(strategies as any[])?.filter((s: any) => s.status === 'completed').map((strategy: any) => (
@@ -540,7 +604,7 @@ export default function Settings() {
                               <span className="text-sm">{strategy.title}</span>
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                  <Button variant="outline" size="sm" data-testid={`button-delete-strategy-${strategy.id}`}>
+                                  <Button variant="outline" size="sm" data-testid={`button-admin-delete-strategy-${strategy.id}`}>
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
                                 </AlertDialogTrigger>
@@ -548,13 +612,13 @@ export default function Settings() {
                                   <AlertDialogHeader>
                                     <AlertDialogTitle>Delete Strategy</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      Are you sure you want to delete "{strategy.title}"? This action cannot be undone.
+                                      Are you sure you want to delete "{strategy.title}"? This action cannot be undone and will affect all associated tactics.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                                     <AlertDialogAction onClick={() => handleDeleteStrategy(strategy.id)}>
-                                      Delete
+                                      Delete Strategy
                                     </AlertDialogAction>
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
@@ -565,28 +629,38 @@ export default function Settings() {
                       </div>
 
                       <div className="p-4 border rounded-lg">
-                        <h4 className="font-medium mb-2">Export Data</h4>
-                        <p className="text-sm text-gray-600 mb-3">
-                          Download your strategic planning data for backup or analysis.
+                        <h4 className="font-medium mb-2">Organization Data Export</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                          Export all organizational strategic planning data for backup, compliance, or analysis.
                         </p>
                         <div className="flex space-x-2">
-                          <Button variant="outline" data-testid="button-export-strategies">
-                            Export Strategies
+                          <Button variant="outline" data-testid="button-admin-export-strategies">
+                            Export All Strategies
                           </Button>
-                          <Button variant="outline" data-testid="button-export-tactics">
-                            Export Tactics
+                          <Button variant="outline" data-testid="button-admin-export-tactics">
+                            Export All Tactics
                           </Button>
-                          <Button variant="outline" data-testid="button-export-all">
-                            Export All Data
+                          <Button variant="outline" data-testid="button-admin-export-everything">
+                            Complete Data Export
                           </Button>
                         </div>
+                      </div>
+
+                      <div className="p-4 border rounded-lg bg-red-50 dark:bg-red-900/20">
+                        <h4 className="font-medium mb-2 text-red-800 dark:text-red-200">Danger Zone</h4>
+                        <p className="text-sm text-red-600 dark:text-red-300 mb-3">
+                          These actions are permanent and cannot be undone.
+                        </p>
+                        <Button variant="destructive" data-testid="button-admin-reset-all">
+                          Reset All Data
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               </TabsContent>
-            )}
-          </Tabs>
+            </Tabs>
+          )}
         </div>
       </main>
     </div>
