@@ -39,6 +39,7 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
     defaultValues: {
       title: "",
       description: "",
+      goal: "",
       startDate: new Date(),
       targetDate: new Date(),
       metrics: "",
@@ -106,6 +107,24 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
                     <Textarea
                       rows={4}
                       placeholder="Describe the strategy and its objectives"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="goal"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Goal</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={3}
+                      placeholder="Define the strategic goal and desired outcome"
                       {...field}
                     />
                   </FormControl>

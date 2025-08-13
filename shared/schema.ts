@@ -15,6 +15,7 @@ export const strategies = pgTable("strategies", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
   description: text("description").notNull(),
+  goal: text("goal"), // Strategic goal statement
   startDate: timestamp("start_date").notNull(),
   targetDate: timestamp("target_date").notNull(),
   metrics: text("metrics").notNull(),
