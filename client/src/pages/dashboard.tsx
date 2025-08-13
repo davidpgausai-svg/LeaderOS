@@ -14,7 +14,6 @@ import {
   TrendingUp,
   Users,
   Plus,
-  Download,
   BarChart3,
 } from "lucide-react";
 
@@ -71,10 +70,6 @@ export default function Dashboard() {
               <p className="text-gray-600 dark:text-gray-400">MU Health Care Strategic Framework</p>
             </div>
             <div className="flex space-x-3">
-              <Button variant="outline" size="sm">
-                <Download className="w-4 h-4 mr-2" />
-                Export Report
-              </Button>
               {currentRole === 'administrator' && (
                 <Button onClick={() => setIsCreateStrategyOpen(true)}>
                   <Plus className="w-4 h-4 mr-2" />
