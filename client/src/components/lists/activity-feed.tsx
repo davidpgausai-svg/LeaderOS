@@ -34,7 +34,7 @@ export function ActivityFeed({ activities }: ActivityFeedProps) {
     }
   };
 
-  const formatTimeAgo = (date: Date | string | undefined) => {
+  const formatTimeAgo = (date: Date | string | null | undefined) => {
     if (!date) return 'Unknown time';
     
     const dateObj = typeof date === 'string' ? new Date(date) : date;
