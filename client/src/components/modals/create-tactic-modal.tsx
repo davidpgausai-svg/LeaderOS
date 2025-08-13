@@ -155,7 +155,7 @@ export function CreateTacticModal({ isOpen, onClose, strategyId }: CreateTacticM
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tactic Title *</FormLabel>
+                    <FormLabel>Strategy Title *</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="Enter tactic title"
