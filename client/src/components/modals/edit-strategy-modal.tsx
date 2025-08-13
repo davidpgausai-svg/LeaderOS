@@ -96,6 +96,7 @@ export function EditStrategyModal({ open, onOpenChange, strategy }: EditStrategy
       onOpenChange(false);
     },
     onError: (error) => {
+      console.error("Strategy update error:", error);
       toast({
         title: "Error", 
         description: "Failed to update strategy",
@@ -163,7 +164,7 @@ export function EditStrategyModal({ open, onOpenChange, strategy }: EditStrategy
                     <FormItem>
                       <FormLabel>Strategic Goal</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Increase revenue by 25%" {...field} data-testid="input-edit-strategy-goal" />
+                        <Input placeholder="e.g., Increase revenue by 25%" {...field} value={field.value || ""} data-testid="input-edit-strategy-goal" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

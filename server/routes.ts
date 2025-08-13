@@ -80,12 +80,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/strategies/:id", async (req, res) => {
     try {
-      const strategy = await storage.updateStrategy(req.params.id, req.body);
+      const validatedData = insertStrategySchema.parse(req.body);
+      const strategy = await storage.updateStrategy(req.params.id, validatedData);
       if (!strategy) {
         return res.status(404).json({ message: "Strategy not found" });
       }
       res.json(strategy);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Strategy update error:", error);
       res.status(500).json({ message: "Failed to update strategy" });
     }
   });
