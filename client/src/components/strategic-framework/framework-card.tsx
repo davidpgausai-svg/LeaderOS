@@ -15,11 +15,12 @@ interface FrameworkCardProps {
   title: string;
   goal: string;
   description: string;
-  tactics: string[];
-  outcomes: string[];
+  tactics: any[];
+  outcomes: any[];
   colorCode: string;
   icon: React.ReactNode;
   status: string;
+  actualProgress?: number;
 }
 
 export function FrameworkCard({ 
@@ -30,10 +31,13 @@ export function FrameworkCard({
   outcomes, 
   colorCode, 
   icon, 
-  status 
+  status,
+  actualProgress = 0
 }: FrameworkCardProps) {
-  const completedTactics = Math.floor(tactics.length * 0.6); // Sample progress
-  const completedOutcomes = Math.floor(outcomes.length * 0.4); // Sample progress
+  // Calculate completed tactics based on their actual progress (>= 100%)
+  const completedTactics = tactics.filter(t => (t.progress || 0) >= 100).length;
+  // Calculate completed outcomes based on their status
+  const completedOutcomes = outcomes.filter(o => o.status === 'achieved').length;
 
   return (
     <Card className="h-full hover:shadow-lg transition-shadow duration-200">
@@ -102,11 +106,16 @@ export function FrameworkCard({
           </div>
           <div className="space-y-2">
             {tactics.slice(0, 3).map((tactic, index) => (
-              <div key={index} className="flex items-start space-x-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-gray-400 mt-2 flex-shrink-0" />
-                <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                  {tactic}
-                </p>
+              <div key={index} className="flex items-start justify-between">
+                <div className="flex items-start space-x-2 flex-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-gray-400 mt-2 flex-shrink-0" />
+                  <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                    {tactic.title}
+                  </p>
+                </div>
+                <span className="text-xs text-gray-500 font-medium">
+                  {tactic.progress || 0}%
+                </span>
               </div>
             ))}
             {tactics.length > 3 && (
@@ -133,9 +142,13 @@ export function FrameworkCard({
           <div className="space-y-2">
             {outcomes.slice(0, 4).map((outcome, index) => (
               <div key={index} className="flex items-start space-x-2">
-                <CheckCircle className="w-3 h-3 text-green-500 mt-0.5 flex-shrink-0" />
+                <CheckCircle className={`w-3 h-3 mt-0.5 flex-shrink-0 ${
+                  outcome.status === 'achieved' ? 'text-green-500' : 
+                  outcome.status === 'at_risk' ? 'text-red-500' : 
+                  'text-gray-400'
+                }`} />
                 <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                  {outcome}
+                  {outcome.title}
                 </p>
               </div>
             ))}
@@ -148,18 +161,17 @@ export function FrameworkCard({
         </div>
 
         {/* Progress Indicator */}
-        {/* Progress Indicator */}
         <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
           <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-500 mb-2">
             <span>Overall Progress</span>
-            <span>{tactics.length + outcomes.length > 0 ? Math.round(((completedTactics + completedOutcomes) / (tactics.length + outcomes.length)) * 100) : 0}%</span>
+            <span>{actualProgress}%</span>
           </div>
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
             <div 
               className="h-2 rounded-full transition-all duration-300"
               style={{ 
                 backgroundColor: colorCode,
-                width: `${tactics.length + outcomes.length > 0 ? Math.round(((completedTactics + completedOutcomes) / (tactics.length + outcomes.length)) * 100) : 0}%`
+                width: `${actualProgress}%`
               }}
             />
           </div>

@@ -156,17 +156,22 @@ export default function Dashboard() {
                   const strategyTactics = (tactics as any[])?.filter(t => t.strategyId === strategy.id) || [];
                   const strategyOutcomes = (outcomes as any[])?.filter(o => o.strategyId === strategy.id) || [];
                   
+                  // Calculate actual progress based on tactic progress values
+                  const totalTacticProgress = strategyTactics.reduce((sum, tactic) => sum + (tactic.progress || 0), 0);
+                  const averageProgress = strategyTactics.length > 0 ? Math.round(totalTacticProgress / strategyTactics.length) : 0;
+                  
                   return (
                     <FrameworkCard
                       key={strategy.id}
                       title={strategy.title.toUpperCase()}
                       goal={strategy.goal || strategy.description}
                       description={strategy.description}
-                      tactics={strategyTactics.map(t => t.title)}
-                      outcomes={strategyOutcomes.map(o => o.title)}
+                      tactics={strategyTactics}
+                      outcomes={strategyOutcomes}
                       colorCode={strategy.colorCode || "#3B82F6"}
                       icon={<Target className="w-5 h-5" />}
                       status={strategy.status}
+                      actualProgress={averageProgress}
                     />
                   );
                 })}
