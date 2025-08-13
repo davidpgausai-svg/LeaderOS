@@ -15,7 +15,7 @@ interface FrameworkCardProps {
   title: string;
   goal: string;
   description: string;
-  strategies: string[];
+  tactics: string[];
   outcomes: string[];
   colorCode: string;
   icon: React.ReactNode;
@@ -26,13 +26,13 @@ export function FrameworkCard({
   title, 
   goal, 
   description, 
-  strategies, 
+  tactics, 
   outcomes, 
   colorCode, 
   icon, 
   status 
 }: FrameworkCardProps) {
-  const completedStrategies = Math.floor(strategies.length * 0.6); // Sample progress
+  const completedTactics = Math.floor(tactics.length * 0.6); // Sample progress
   const completedOutcomes = Math.floor(outcomes.length * 0.4); // Sample progress
 
   return (
@@ -84,7 +84,7 @@ export function FrameworkCard({
           </p>
         </div>
 
-        {/* Strategies Section */}
+        {/* Tactics Section */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
@@ -93,25 +93,25 @@ export function FrameworkCard({
                 style={{ backgroundColor: colorCode }}
               />
               <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                STRATEGIES
+                TACTICS
               </span>
             </div>
             <Badge variant="secondary" className="text-xs">
-              {completedStrategies}/{strategies.length}
+              {completedTactics}/{tactics.length}
             </Badge>
           </div>
           <div className="space-y-2">
-            {strategies.slice(0, 3).map((strategy, index) => (
+            {tactics.slice(0, 3).map((tactic, index) => (
               <div key={index} className="flex items-start space-x-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-gray-400 mt-2 flex-shrink-0" />
                 <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                  {strategy}
+                  {tactic}
                 </p>
               </div>
             ))}
-            {strategies.length > 3 && (
+            {tactics.length > 3 && (
               <p className="text-xs text-gray-500 dark:text-gray-500 italic">
-                +{strategies.length - 3} more strategies
+                +{tactics.length - 3} more tactics
               </p>
             )}
           </div>
@@ -148,17 +148,18 @@ export function FrameworkCard({
         </div>
 
         {/* Progress Indicator */}
+        {/* Progress Indicator */}
         <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
           <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-500 mb-2">
             <span>Overall Progress</span>
-            <span>{Math.round(((completedStrategies + completedOutcomes) / (strategies.length + outcomes.length)) * 100)}%</span>
+            <span>{tactics.length + outcomes.length > 0 ? Math.round(((completedTactics + completedOutcomes) / (tactics.length + outcomes.length)) * 100) : 0}%</span>
           </div>
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
             <div 
               className="h-2 rounded-full transition-all duration-300"
               style={{ 
                 backgroundColor: colorCode,
-                width: `${Math.round(((completedStrategies + completedOutcomes) / (strategies.length + outcomes.length)) * 100)}%`
+                width: `${tactics.length + outcomes.length > 0 ? Math.round(((completedTactics + completedOutcomes) / (tactics.length + outcomes.length)) * 100) : 0}%`
               }}
             />
           </div>

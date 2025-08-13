@@ -126,6 +126,7 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
                       rows={3}
                       placeholder="Define the strategic goal and desired outcome"
                       {...field}
+                      value={field.value || ""}
                     />
                   </FormControl>
                   <FormMessage />

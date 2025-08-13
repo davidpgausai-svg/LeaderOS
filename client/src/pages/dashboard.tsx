@@ -16,9 +16,6 @@ import {
   Plus,
   Download,
   BarChart3,
-  Award,
-  Heart,
-  Shield,
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -26,116 +23,7 @@ export default function Dashboard() {
   const [isCreateStrategyOpen, setIsCreateStrategyOpen] = useState(false);
   const [isCreateTacticOpen, setIsCreateTacticOpen] = useState(false);
 
-  // Strategic Framework Data based on your organizational framework
-  const strategicFramework = [
-    {
-      title: "QUALITY",
-      goal: "Deliver outstanding clinical care, research and education through continuous improvement and innovation.",
-      description: "Achieve Exemplary Performance",
-      icon: <Award className="w-5 h-5" />,
-      colorCode: "#D4A574", // Gold/Bronze
-      status: "Active",
-      strategies: [
-        "Establish clear performance measures across the full organizational spectrum",
-        "Accelerate time to implementation for innovations and patient academic programs and clinical care",
-        "Enhance reliability of care through use of best practices to reduce clinical variability",
-        "Promote exceptional MU Health as an exemplary organization"
-      ],
-      outcomes: [
-        "Improved Quality Metrics",
-        "Research Excellence & Advancements", 
-        "Educational Program Design",
-        "Innovative Care Delivery Models",
-        "Programs of Distinction",
-        "Health Outcomes"
-      ]
-    },
-    {
-      title: "ENGAGEMENT",
-      goal: "Attract, develop and retain a committed team.",
-      description: "Cultivate an Inspirational Environment",
-      icon: <Users className="w-5 h-5" />,
-      colorCode: "#8DB4D2", // Blue
-      status: "Active",
-      strategies: [
-        "Build a culture that encourages communication, improves patient satisfaction",
-        "Modernize compensation and staffing models to be competitive",
-        "Recognize, develop and retain talent",
-        "Implement leadership development and succession planning programs",
-        "Establish the systems and processes to improve growth and efficiency"
-      ],
-      outcomes: [
-        "Recruitment and Retention",
-        "Wellbeing",
-        "Engagement",
-        "Responsive Staffing"
-      ]
-    },
-    {
-      title: "SERVICE",
-      goal: "Exceed expectations of those we serve.",
-      description: "Deliver an Exceptional Experience", 
-      icon: <Heart className="w-5 h-5" />,
-      colorCode: "#A67C5A", // Brown
-      status: "Active",
-      strategies: [
-        "Create a clear vision for the exemplary experience and service orientation",
-        "Foster a collaborative, team-based approach that enhances the patient experience",
-        "Transform the digital experience to be best-in-class, accessible and convenient",
-        "Invest in infrastructure improvements that positively impact the overall experience and ease access"
-      ],
-      outcomes: [
-        "Patient Experience",
-        "Brand Perception/Patient Loyalty",
-        "Learner, Clinician, Staff and Resident Experience",
-        "Community Partnerships",
-        "Access",
-        "Hassle-Free Environment",
-        "Enrollment/Success Rates"
-      ]
-    },
-    {
-      title: "STEWARDSHIP", 
-      goal: "Create and maintain an aligned, efficient, and sustainable organization.",
-      description: "Ensure Organizational Resilience and Success",
-      icon: <Shield className="w-5 h-5" />,
-      colorCode: "#B8860B", // Dark Golden Rod
-      status: "Active", 
-      strategies: [
-        "Invest in the infrastructure required to support organizational growth",
-        "Establish formal partnerships and align resources to ensure sustainable financial efficiency",
-        "Align resources and enterprise to ensure value is realized",
-        "Evolve financial strategies in new market financial strategies"
-      ],
-      outcomes: [
-        "Philanthropic Metrics",
-        "Focused Infrastructure Investment", 
-        "Financial Performance"
-      ]
-    },
-    {
-      title: "GROWTH",
-      goal: "Expand to meet the evolving healthcare needs of Missourians and beyond.",
-      description: "Deepen and Broaden Our Impact",
-      icon: <TrendingUp className="w-5 h-5" />,
-      colorCode: "#4A90A4", // Steel Blue
-      status: "Active",
-      strategies: [
-        "Develop a scalable framework to support healthcare facilities",
-        "Strengthen and grow research and clinical excellence where our expertise yields",
-        "Collaborate with organizations that share values to address gaps and expand access"
-      ],
-      outcomes: [
-        "Market Share",
-        "Clinical Trials",
-        "Publications", 
-        "Research Expenditures",
-        "Size and Number of Training Programs",
-        "International Collaboration",
-        "Intentional Expansion"
-      ]
-    }
-  ];
+
 
   const { data: strategies, isLoading: strategiesLoading } = useQuery({
     queryKey: ["/api/strategies"],
@@ -151,6 +39,10 @@ export default function Dashboard() {
 
   const { data: users } = useQuery({
     queryKey: ["/api/users"],
+  });
+
+  const { data: outcomes } = useQuery({
+    queryKey: ["/api/outcomes"],
   });
 
   // Calculate metrics
@@ -241,13 +133,13 @@ export default function Dashboard() {
               />
             </div>
 
-            {/* Strategic Framework Section */}
+            {/* Strategies Overview Section */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Strategic Framework</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Strategies Overview</h2>
                   <p className="text-gray-600 dark:text-gray-400 mt-1">
-                    Organizational strategy overview with goals, strategies, and measurable outcomes
+                    Current organizational strategies with tactics and outcomes tracking
                   </p>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -258,21 +150,26 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Framework Cards Grid */}
+              {/* Strategy Cards Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                {strategicFramework.map((framework, index) => (
-                  <FrameworkCard
-                    key={index}
-                    title={framework.title}
-                    goal={framework.goal}
-                    description={framework.description}
-                    strategies={framework.strategies}
-                    outcomes={framework.outcomes}
-                    colorCode={framework.colorCode}
-                    icon={framework.icon}
-                    status={framework.status}
-                  />
-                ))}
+                {(strategies as any[])?.map((strategy) => {
+                  const strategyTactics = (tactics as any[])?.filter(t => t.strategyId === strategy.id) || [];
+                  const strategyOutcomes = (outcomes as any[])?.filter(o => o.strategyId === strategy.id) || [];
+                  
+                  return (
+                    <FrameworkCard
+                      key={strategy.id}
+                      title={strategy.title.toUpperCase()}
+                      goal={strategy.goal || strategy.description}
+                      description={strategy.description}
+                      tactics={strategyTactics.map(t => t.title)}
+                      outcomes={strategyOutcomes.map(o => o.title)}
+                      colorCode={strategy.colorCode || "#3B82F6"}
+                      icon={<Target className="w-5 h-5" />}
+                      status={strategy.status}
+                    />
+                  );
+                })}
               </div>
             </div>
 
