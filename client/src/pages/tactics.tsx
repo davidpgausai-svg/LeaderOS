@@ -348,7 +348,7 @@ export default function Tactics() {
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No strategies found</h3>
               <p className="text-gray-600 dark:text-gray-400 mb-6">
                 {searchTerm || statusFilter !== "all" || strategyFilter !== "all" 
-                  ? "Try adjusting your filters to see more tactics."
+                  ? "Try adjusting your filters to see more strategies."
                   : "Get started by creating your first tactic."
                 }
               </p>
