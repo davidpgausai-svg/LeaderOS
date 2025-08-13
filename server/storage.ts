@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Strategy, type InsertStrategy, type Tactic, type InsertTactic, type Activity, type InsertActivity, users, strategies, tactics, activities } from "@shared/schema";
+import { type User, type InsertUser, type Strategy, type InsertStrategy, type Tactic, type InsertTactic, type Activity, type InsertActivity, type Outcome, type InsertOutcome, users, strategies, tactics, activities, outcomes } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -32,6 +32,15 @@ export interface IStorage {
   getAllActivities(): Promise<Activity[]>;
   getActivitiesByUser(userId: string): Promise<Activity[]>;
   createActivity(activity: InsertActivity): Promise<Activity>;
+
+  // Outcome methods
+  getOutcome(id: string): Promise<Outcome | undefined>;
+  getAllOutcomes(): Promise<Outcome[]>;
+  getOutcomesByStrategy(strategyId: string): Promise<Outcome[]>;
+  getOutcomesByTactic(tacticId: string): Promise<Outcome[]>;
+  createOutcome(outcome: InsertOutcome): Promise<Outcome>;
+  updateOutcome(id: string, updates: Partial<Outcome>): Promise<Outcome | undefined>;
+  deleteOutcome(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -39,6 +48,7 @@ export class MemStorage implements IStorage {
   private strategies: Map<string, Strategy> = new Map();
   private tactics: Map<string, Tactic> = new Map();
   private activities: Map<string, Activity> = new Map();
+  private outcomes: Map<string, Outcome> = new Map();
 
   constructor() {
     this.seedData();
@@ -314,6 +324,48 @@ export class MemStorage implements IStorage {
     this.activities.set(id, activity);
     return activity;
   }
+
+  // Outcome methods
+  async getOutcome(id: string): Promise<Outcome | undefined> {
+    return this.outcomes.get(id);
+  }
+
+  async getAllOutcomes(): Promise<Outcome[]> {
+    return Array.from(this.outcomes.values());
+  }
+
+  async getOutcomesByStrategy(strategyId: string): Promise<Outcome[]> {
+    return Array.from(this.outcomes.values()).filter(outcome => outcome.strategyId === strategyId);
+  }
+
+  async getOutcomesByTactic(tacticId: string): Promise<Outcome[]> {
+    return Array.from(this.outcomes.values()).filter(outcome => outcome.tacticId === tacticId);
+  }
+
+  async createOutcome(insertOutcome: InsertOutcome): Promise<Outcome> {
+    const id = randomUUID();
+    const outcome: Outcome = { 
+      ...insertOutcome, 
+      id,
+      status: insertOutcome.status || 'not_started',
+      createdAt: new Date()
+    };
+    this.outcomes.set(id, outcome);
+    return outcome;
+  }
+
+  async updateOutcome(id: string, updates: Partial<Outcome>): Promise<Outcome | undefined> {
+    const existing = this.outcomes.get(id);
+    if (!existing) return undefined;
+    
+    const updated = { ...existing, ...updates };
+    this.outcomes.set(id, updated);
+    return updated;
+  }
+
+  async deleteOutcome(id: string): Promise<boolean> {
+    return this.outcomes.delete(id);
+  }
 }
 
 // DatabaseStorage implementation
@@ -464,6 +516,46 @@ export class DatabaseStorage implements IStorage {
       .values(insertActivity)
       .returning();
     return activity;
+  }
+
+  // Outcome methods
+  async getOutcome(id: string): Promise<Outcome | undefined> {
+    const [outcome] = await db.select().from(outcomes).where(eq(outcomes.id, id));
+    return outcome || undefined;
+  }
+
+  async getAllOutcomes(): Promise<Outcome[]> {
+    return await db.select().from(outcomes);
+  }
+
+  async getOutcomesByStrategy(strategyId: string): Promise<Outcome[]> {
+    return await db.select().from(outcomes).where(eq(outcomes.strategyId, strategyId));
+  }
+
+  async getOutcomesByTactic(tacticId: string): Promise<Outcome[]> {
+    return await db.select().from(outcomes).where(eq(outcomes.tacticId, tacticId));
+  }
+
+  async createOutcome(insertOutcome: InsertOutcome): Promise<Outcome> {
+    const [outcome] = await db
+      .insert(outcomes)
+      .values(insertOutcome)
+      .returning();
+    return outcome;
+  }
+
+  async updateOutcome(id: string, updates: Partial<Outcome>): Promise<Outcome | undefined> {
+    const [outcome] = await db
+      .update(outcomes)
+      .set(updates)
+      .where(eq(outcomes.id, id))
+      .returning();
+    return outcome || undefined;
+  }
+
+  async deleteOutcome(id: string): Promise<boolean> {
+    const result = await db.delete(outcomes).where(eq(outcomes.id, id));
+    return (result.rowCount ?? 0) > 0;
   }
 
   async seedData() {

@@ -51,6 +51,21 @@ export const activities = pgTable("activities", {
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
+export const outcomes = pgTable("outcomes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  strategyId: varchar("strategy_id").notNull(),
+  tacticId: varchar("tactic_id"), // Optional - outcomes can be linked to tactics
+  targetValue: text("target_value"),
+  currentValue: text("current_value"),
+  measurementUnit: text("measurement_unit"),
+  status: text("status").notNull().default('in_progress'), // 'in_progress', 'achieved', 'at_risk', 'not_started'
+  dueDate: timestamp("due_date"),
+  createdBy: varchar("created_by").notNull(),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
 });
@@ -83,6 +98,13 @@ export const insertActivitySchema = createInsertSchema(activities).omit({
   createdAt: true,
 });
 
+export const insertOutcomeSchema = createInsertSchema(outcomes).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  dueDate: z.coerce.date().optional(),
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertStrategy = z.infer<typeof insertStrategySchema>;
@@ -91,3 +113,5 @@ export type InsertTactic = z.infer<typeof insertTacticSchema>;
 export type Tactic = typeof tactics.$inferSelect;
 export type InsertActivity = z.infer<typeof insertActivitySchema>;
 export type Activity = typeof activities.$inferSelect;
+export type InsertOutcome = z.infer<typeof insertOutcomeSchema>;
+export type Outcome = typeof outcomes.$inferSelect;

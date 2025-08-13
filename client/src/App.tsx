@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Dashboard from "@/pages/dashboard";
 import Strategies from "@/pages/strategies";
 import Tactics from "@/pages/tactics";
+import Outcomes from "@/pages/outcomes";
 import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
@@ -16,6 +17,7 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/strategies" component={Strategies} />
       <Route path="/tactics" component={Tactics} />
+      <Route path="/outcomes" component={Outcomes} />
       <Route path="/reports" component={Reports} />
       <Route path="/settings" component={Settings} />
       <Route component={NotFound} />

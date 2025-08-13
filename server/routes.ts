@@ -177,6 +177,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Outcomes routes
+  app.get("/api/outcomes", async (req, res) => {
+    try {
+      const outcomes = await storage.getAllOutcomes();
+      res.json(outcomes);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch outcomes" });
+    }
+  });
+
+  app.post("/api/outcomes", async (req, res) => {
+    try {
+      const outcome = await storage.createOutcome(req.body);
+      
+      await storage.createActivity({
+        type: "outcome_created",
+        description: `Created outcome: ${outcome.title}`,
+        userId: outcome.createdBy,
+        strategyId: outcome.strategyId,
+        tacticId: outcome.tacticId,
+      });
+      
+      res.status(201).json(outcome);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create outcome" });
+    }
+  });
+
+  app.patch("/api/outcomes/:id", async (req, res) => {
+    try {
+      const outcome = await storage.updateOutcome(req.params.id, req.body);
+      if (!outcome) {
+        return res.status(404).json({ message: "Outcome not found" });
+      }
+      
+      await storage.createActivity({
+        type: "outcome_updated", 
+        description: `Updated outcome: ${outcome.title}`,
+        userId: outcome.createdBy,
+        strategyId: outcome.strategyId,
+        tacticId: outcome.tacticId,
+      });
+      
+      res.json(outcome);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update outcome" });
+    }
+  });
+
+  app.delete("/api/outcomes/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteOutcome(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Outcome not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete outcome" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

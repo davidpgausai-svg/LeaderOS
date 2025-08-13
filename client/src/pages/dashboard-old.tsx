@@ -19,6 +19,8 @@ import {
   Award,
   Heart,
   Shield,
+  Sparkles,
+  Settings,
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -159,6 +161,12 @@ export default function Dashboard() {
   const completedTactics = (tactics as any[])?.filter((t: any) => t.status === 'completed').length || 0;
   const completionRate = totalTactics > 0 ? Math.round((completedTactics / totalTactics) * 100) : 0;
 
+  // Enhance strategies with tactics
+  const strategiesWithTactics = (strategies as any[])?.map((strategy: any) => ({
+    ...strategy,
+    tactics: (tactics as any[])?.filter((tactic: any) => tactic.strategyId === strategy.id) || []
+  })) || [];
+
   // Enhance activities with users
   const activitiesWithUsers = (activities as any[])?.map((activity: any) => ({
     ...activity,
@@ -167,167 +175,183 @@ export default function Dashboard() {
 
   if (strategiesLoading || tacticsLoading || activitiesLoading) {
     return (
-      <div className="flex h-screen">
+      <div className="min-h-screen flex">
         <Sidebar />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-lg">Loading dashboard...</div>
-        </div>
+        <main className="flex-1 p-6">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2 mb-6"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-32 bg-gray-200 rounded"></div>
+              ))}
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen flex">
       <Sidebar />
-      
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 overflow-auto">
         {/* Header */}
-        <header className="bg-white dark:bg-gray-800 shadow-sm border-b px-6 py-4">
+        <header className="bg-white border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Strategic Dashboard</h1>
-              <p className="text-gray-600 dark:text-gray-400">Organizational Strategic Framework & Performance Overview</p>
+              <h2 className="text-2xl font-bold text-gray-900">
+                {currentRole === 'executive' ? 'Executive Dashboard' : 'Leader Dashboard'}
+              </h2>
+              <p className="text-gray-600 mt-1">
+                {currentRole === 'executive' 
+                  ? 'Manage strategies and track organizational alignment'
+                  : 'View assigned strategies and track progress'
+                }
+              </p>
             </div>
-            <div className="flex space-x-3">
-              <Button variant="outline" size="sm">
-                <Download className="w-4 h-4 mr-2" />
-                Export Report
-              </Button>
-              {currentRole === 'admin' && (
+            <div className="flex items-center space-x-4">
+              {currentRole === 'executive' && (
                 <Button onClick={() => setIsCreateStrategyOpen(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
+                  <Plus className="mr-2 h-4 w-4" />
                   New Strategy
                 </Button>
               )}
+              <Button variant="outline">
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </Button>
             </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto p-6">
-          <div className="max-w-7xl mx-auto space-y-6">
-            {/* Key Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <MetricCard
-                title="Active Strategies"
-                value={activeStrategies}
-                change={{ value: "+12%", label: "from last quarter", trend: "up" }}
-                icon={Target}
-                iconBgColor="bg-blue-100"
-                iconColor="text-blue-600"
-              />
-              <MetricCard
-                title="Total Tactics"
-                value={totalTactics}
-                change={{ value: "+8%", label: "from last month", trend: "up" }}
-                icon={CheckSquare}
-                iconBgColor="bg-green-100"
-                iconColor="text-green-600"
-              />
-              <MetricCard
-                title="Completion Rate"
-                value={`${completionRate}%`}
-                change={{ value: "+5%", label: "this quarter", trend: "up" }}
-                icon={TrendingUp}
-                iconBgColor="bg-purple-100"
-                iconColor="text-purple-600"
-              />
-              <MetricCard
-                title="Team Members"
-                value={(users as any[])?.length || 0}
-                change={{ value: "+3%", label: "this month", trend: "up" }}
-                icon={Users}
-                iconBgColor="bg-orange-100"
-                iconColor="text-orange-600"
-              />
-            </div>
+        {/* Dashboard Content */}
+        <div className="p-6 space-y-6">
+          {/* Key Metrics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <MetricCard
+              title="Active Strategies"
+              value={activeStrategies}
+              change={{ value: "+8.2%", label: "from last quarter", trend: "up" }}
+              icon={Target}
+              iconBgColor="bg-blue-100"
+              iconColor="text-blue-600"
+            />
+            <MetricCard
+              title="Total Tactics"
+              value={totalTactics}
+              change={{ value: "+15.3%", label: "from last month", trend: "up" }}
+              icon={CheckSquare}
+              iconBgColor="bg-green-100"
+              iconColor="text-green-600"
+            />
+            <MetricCard
+              title="Completion Rate"
+              value={`${completionRate}%`}
+              change={{ value: "+5.1%", label: "this quarter", trend: "up" }}
+              icon={TrendingUp}
+              iconBgColor="bg-yellow-100"
+              iconColor="text-yellow-600"
+            />
+            <MetricCard
+              title="Team Alignment"
+              value="92%"
+              change={{ value: "+2.8%", label: "this month", trend: "up" }}
+              icon={Users}
+              iconBgColor="bg-purple-100"
+              iconColor="text-purple-600"
+            />
+          </div>
 
-            {/* Strategic Framework Section */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Strategic Framework</h2>
-                  <p className="text-gray-600 dark:text-gray-400 mt-1">
-                    Organizational strategy overview with goals, strategies, and measurable outcomes
-                  </p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Button variant="outline" size="sm">
-                    <BarChart3 className="w-4 h-4 mr-2" />
-                    View Analytics
+          {/* Strategy Overview Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Active Strategies List */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900">Active Strategies</h3>
+                  <Button variant="ghost" size="sm">
+                    View All
                   </Button>
                 </div>
               </div>
-
-              {/* Framework Cards Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                {strategicFramework.map((framework, index) => (
-                  <FrameworkCard
-                    key={index}
-                    title={framework.title}
-                    goal={framework.goal}
-                    description={framework.description}
-                    strategies={framework.strategies}
-                    outcomes={framework.outcomes}
-                    colorCode={framework.colorCode}
-                    icon={framework.icon}
-                    status={framework.status}
-                  />
+              <div className="p-6 space-y-4">
+                {strategiesWithTactics.slice(0, 5).map((strategy) => (
+                  <StrategyCard key={strategy.id} strategy={strategy} />
                 ))}
               </div>
             </div>
 
-            {/* Activity Feed and Quick Actions */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Recent Activity */}
-              <div className="lg:col-span-2">
-                <ActivityFeed activities={activitiesWithUsers} />
+            {/* Strategy Flow Visualization */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+              <div className="p-6 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">Strategy Flow</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Hierarchical view of strategies and tactics
+                </p>
               </div>
-
-              {/* Quick Actions Panel */}
-              <div className="space-y-4">
-                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h3>
-                  <div className="space-y-3">
-                    <Button 
-                      className="w-full justify-start" 
-                      variant="outline"
-                      onClick={() => setIsCreateStrategyOpen(true)}
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create New Strategy
-                    </Button>
-                    <Button 
-                      className="w-full justify-start" 
-                      variant="outline"
-                      onClick={() => setIsCreateTacticOpen(true)}
-                    >
-                      <CheckSquare className="w-4 h-4 mr-2" />
-                      Add New Tactic
-                    </Button>
-                    <Button className="w-full justify-start" variant="outline">
-                      <TrendingUp className="w-4 h-4 mr-2" />
-                      Track New Outcome
-                    </Button>
-                    <Button className="w-full justify-start" variant="outline">
-                      <BarChart3 className="w-4 h-4 mr-2" />
-                      Generate Report
-                    </Button>
-                  </div>
-                </div>
+              <div className="p-6">
+                <StrategyFlow strategies={strategiesWithTactics} />
               </div>
             </div>
           </div>
-        </main>
-      </div>
 
-      <CreateStrategyModal 
-        isOpen={isCreateStrategyOpen} 
-        onClose={() => setIsCreateStrategyOpen(false)} 
+          {/* Recent Activity & Quick Actions */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Recent Activity */}
+            <div className="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200">
+              <div className="p-6 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
+              </div>
+              <div className="p-6">
+                <ActivityFeed activities={activitiesWithUsers} />
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+              <div className="p-6 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
+              </div>
+              <div className="p-6 space-y-3">
+                {currentRole === 'executive' && (
+                  <Button
+                    className="w-full justify-start"
+                    onClick={() => setIsCreateStrategyOpen(true)}
+                  >
+                    <Target className="mr-3 h-4 w-4" />
+                    Create Strategy
+                  </Button>
+                )}
+                <Button
+                  className="w-full justify-start"
+                  variant="secondary"
+                  onClick={() => setIsCreateTacticOpen(true)}
+                >
+                  <CheckSquare className="mr-3 h-4 w-4" />
+                  Assign Tactic
+                </Button>
+                <Button className="w-full justify-start" variant="secondary">
+                  <BarChart3 className="mr-3 h-4 w-4" />
+                  View Reports
+                </Button>
+                <Button className="w-full justify-start" variant="secondary">
+                  <Users className="mr-3 h-4 w-4" />
+                  Manage Team
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <CreateStrategyModal
+        open={isCreateStrategyOpen}
+        onOpenChange={setIsCreateStrategyOpen}
       />
-      
-      <CreateTacticModal 
-        isOpen={isCreateTacticOpen} 
-        onClose={() => setIsCreateTacticOpen(false)} 
+      <CreateTacticModal
+        open={isCreateTacticOpen}
+        onOpenChange={setIsCreateTacticOpen}
       />
     </div>
   );
