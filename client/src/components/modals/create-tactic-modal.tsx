@@ -158,7 +158,7 @@ export function CreateTacticModal({ isOpen, onClose, strategyId }: CreateTacticM
                     <FormLabel>Tactic Title *</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Enter tactic title"
+                        placeholder="Enter strategy title"
                         {...field}
                         data-testid="input-tactic-title"
                       />
@@ -176,7 +176,7 @@ export function CreateTacticModal({ isOpen, onClose, strategyId }: CreateTacticM
                     <FormLabel>Description *</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Describe this tactic and its objectives"
+                        placeholder="Describe this strategy and its objectives"
                         {...field}
                         data-testid="textarea-tactic-description"
                       />
