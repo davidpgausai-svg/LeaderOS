@@ -43,6 +43,7 @@ export default function Dashboard() {
 
   // Calculate metrics
   const activeStrategies = (strategies as any[])?.filter((s: any) => s.status === 'active').length || 0;
+  const totalStrategies = (strategies as any[])?.length || 0;
   const totalTactics = (tactics as any[])?.length || 0;
   const completedTactics = (tactics as any[])?.filter((t: any) => t.status === 'completed').length || 0;
   const completionRate = totalTactics > 0 ? Math.round((completedTactics / totalTactics) * 100) : 0;
@@ -98,10 +99,10 @@ export default function Dashboard() {
                 iconColor="text-blue-600"
               />
               <MetricCard
-                title="Total Tactics"
-                value={totalTactics}
+                title="Total Strategies"
+                value={totalStrategies}
                 change={{ value: "+8%", label: "from last month", trend: "up" }}
-                icon={CheckSquare}
+                icon={Target}
                 iconBgColor="bg-green-100"
                 iconColor="text-green-600"
               />
