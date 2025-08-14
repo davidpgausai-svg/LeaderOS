@@ -1,5 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useRole } from "@/hooks/use-role";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 import {
   ChartLine,
   Target,
@@ -7,6 +9,7 @@ import {
   TrendingUp,
   BarChart3,
   Settings,
+  LogOut,
 } from "lucide-react";
 
 const navigation = [
@@ -21,6 +24,11 @@ const navigation = [
 export function Sidebar() {
   const [location] = useLocation();
   const { currentRole, currentUser } = useRole();
+  const { user } = useAuth();
+
+  const handleLogout = () => {
+    window.location.href = "/api/logout";
+  };
 
   return (
     <aside className="w-64 bg-white dark:bg-black border-r border-gray-200 dark:border-gray-800 flex flex-col">
@@ -51,16 +59,28 @@ export function Sidebar() {
         })}
       </nav>
       {/* User Profile */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-800">
+      <div className="p-4 border-t border-gray-200 dark:border-gray-800 space-y-3">
         <div className="flex items-center">
           <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
-            {currentUser?.initials || "JD"}
+            {user?.firstName?.[0] || user?.lastName?.[0] || "U"}
           </div>
-          <div className="ml-3">
-            <p className="text-sm font-medium text-gray-900 dark:text-white">{currentUser?.name || "John Doe"}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{currentRole}</p>
+          <div className="ml-3 flex-1">
+            <p className="text-sm font-medium text-gray-900 dark:text-white">
+              {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.email || "User"}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{user?.role || currentRole}</p>
           </div>
         </div>
+        <Button
+          onClick={handleLogout}
+          variant="outline"
+          size="sm"
+          className="w-full justify-start text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+          data-testid="button-logout"
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          Sign Out
+        </Button>
       </div>
     </aside>
   );
