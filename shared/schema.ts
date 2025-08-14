@@ -21,6 +21,7 @@ export const strategies = pgTable("strategies", {
   metrics: text("metrics").notNull(),
   status: text("status").notNull().default('active'), // 'active', 'completed', 'on-hold'
   colorCode: text("color_code").notNull().default('#3B82F6'), // Hex color for strategy grouping
+  displayOrder: integer("display_order").notNull().default(0), // Order for framework ranking
   createdBy: varchar("created_by").notNull(),
   createdAt: timestamp("created_at").default(sql`now()`),
 });

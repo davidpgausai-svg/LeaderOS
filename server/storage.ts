@@ -1,7 +1,7 @@
 import { type User, type InsertUser, type Strategy, type InsertStrategy, type Tactic, type InsertTactic, type Activity, type InsertActivity, type Outcome, type InsertOutcome, users, strategies, tactics, activities, outcomes } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, asc } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -96,6 +96,7 @@ export class MemStorage implements IStorage {
       metrics: "25% revenue increase, 3 new markets",
       status: "active",
       colorCode: "#22C55E",
+      displayOrder: 0,
       createdBy: adminUser.id,
       createdAt: new Date()
     };
@@ -110,6 +111,7 @@ export class MemStorage implements IStorage {
       metrics: "50% efficiency improvement, 95% system uptime",
       status: "active",
       colorCode: "#3B82F6",
+      displayOrder: 1,
       createdBy: executiveUser.id,
       createdAt: new Date()
     };
@@ -206,6 +208,7 @@ export class MemStorage implements IStorage {
       goal: insertStrategy.goal || null,
       status: insertStrategy.status || 'active',
       colorCode: insertStrategy.colorCode || '#3B82F6',
+      displayOrder: insertStrategy.displayOrder ?? 0,
       createdAt: new Date()
     };
     this.strategies.set(id, strategy);
@@ -458,7 +461,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllStrategies(): Promise<Strategy[]> {
-    return await db.select().from(strategies);
+    return await db.select().from(strategies).orderBy(asc(strategies.displayOrder));
   }
 
   async getStrategiesByCreator(creatorId: string): Promise<Strategy[]> {

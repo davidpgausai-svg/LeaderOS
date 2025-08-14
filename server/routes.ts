@@ -95,6 +95,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk reorder strategies endpoint
+  app.post("/api/strategies/reorder", async (req, res) => {
+    try {
+      const { strategyOrders } = req.body;
+      if (!Array.isArray(strategyOrders)) {
+        return res.status(400).json({ message: "strategyOrders must be an array" });
+      }
+      
+      for (const { id, displayOrder } of strategyOrders) {
+        if (typeof id !== 'string' || typeof displayOrder !== 'number') {
+          return res.status(400).json({ message: "Each item must have id (string) and displayOrder (number)" });
+        }
+        await storage.updateStrategy(id, { displayOrder });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Strategy reorder error:", error);
+      res.status(500).json({ message: "Failed to reorder strategies" });
+    }
+  });
+
+  app.delete("/api/strategies/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteStrategy(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Strategy not found" });
+      }
+      res.json({ message: "Strategy deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete strategy" });
+    }
+  });
+
   app.delete("/api/strategies/:id", async (req, res) => {
     try {
       const deleted = await storage.deleteStrategy(req.params.id);

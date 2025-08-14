@@ -1,4 +1,5 @@
 import { useState } from "react";
+import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRole } from "@/hooks/use-role";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -42,6 +43,8 @@ import {
   Moon,
   Sun,
   Globe,
+  GripVertical,
+  Target,
 } from "lucide-react";
 
 export default function Settings() {
@@ -50,6 +53,7 @@ export default function Settings() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("profile");
   const [adminActiveTab, setAdminActiveTab] = useState("user-management");
+  const [frameworkOrder, setFrameworkOrder] = useState<any[]>([]);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [notifications, setNotifications] = useState({
     email: true,
@@ -67,6 +71,15 @@ export default function Settings() {
     queryKey: ["/api/strategies"],
   });
 
+  // Initialize framework order when strategies load
+  React.useEffect(() => {
+    if (strategies) {
+      const sortedStrategies = [...(strategies as any[])]
+        .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+      setFrameworkOrder(sortedStrategies);
+    }
+  }, [strategies]);
+
   const updateUserMutation = useMutation({
     mutationFn: async (userData: any) => {
       const response = await apiRequest("PATCH", `/api/users/${userData.id}`, userData);
@@ -79,6 +92,26 @@ export default function Settings() {
       });
       setCurrentUser(updatedUser);
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+    },
+  });
+
+  const reorderFrameworksMutation = useMutation({
+    mutationFn: async (strategyOrders: { id: string; displayOrder: number }[]) => {
+      await apiRequest("POST", "/api/strategies/reorder", { strategyOrders });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Framework order updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update framework order",
+        variant: "destructive",
+      });
     },
   });
 
@@ -125,6 +158,21 @@ export default function Settings() {
         variant: "destructive",
       });
     }
+  };
+
+  const moveFramework = (fromIndex: number, toIndex: number) => {
+    const updatedOrder = [...frameworkOrder];
+    const [movedItem] = updatedOrder.splice(fromIndex, 1);
+    updatedOrder.splice(toIndex, 0, movedItem);
+    setFrameworkOrder(updatedOrder);
+  };
+
+  const saveFrameworkOrder = () => {
+    const strategyOrders = frameworkOrder.map((framework, index) => ({
+      id: framework.id,
+      displayOrder: index
+    }));
+    reorderFrameworksMutation.mutate(strategyOrders);
   };
 
   const toggleTheme = () => {
@@ -451,10 +499,14 @@ export default function Settings() {
           {/* Administrator Settings */}
           {canManageUsers() && activeTab.startsWith("admin") && (
             <Tabs value={adminActiveTab} onValueChange={setAdminActiveTab} className="space-y-6">
-              <TabsList className="grid grid-cols-3 w-full max-w-2xl">
+              <TabsList className="grid grid-cols-4 w-full max-w-3xl">
                 <TabsTrigger value="user-management" className="flex items-center space-x-2" data-testid="tab-admin-users">
                   <Users className="w-4 h-4" />
                   <span className="hidden sm:inline">User Roles</span>
+                </TabsTrigger>
+                <TabsTrigger value="framework-management" className="flex items-center space-x-2" data-testid="tab-admin-frameworks">
+                  <Target className="w-4 h-4" />
+                  <span className="hidden sm:inline">Framework Order</span>
                 </TabsTrigger>
                 <TabsTrigger value="security" className="flex items-center space-x-2" data-testid="tab-admin-security">
                   <Shield className="w-4 h-4" />
@@ -541,6 +593,98 @@ export default function Settings() {
                         </p>
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Framework Management */}
+              <TabsContent value="framework-management" className="space-y-6">
+                <Card data-testid="card-admin-framework-management">
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Target className="mr-2 h-5 w-5" />
+                      Strategic Framework Priority Order
+                    </CardTitle>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                      Set the display order for your strategic frameworks. The order you set here will be reflected 
+                      across all pages including Dashboard, Framework, Strategies, and Outcomes. This helps establish 
+                      organizational priority and focus for your strategic initiatives.
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {frameworkOrder.map((framework, index) => (
+                        <div 
+                          key={framework.id} 
+                          className="flex items-center justify-between p-4 border dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 transition-colors"
+                          data-testid={`framework-item-${framework.id}`}
+                          style={{ borderLeft: `4px solid ${framework.colorCode}` }}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="flex items-center space-x-2">
+                              <GripVertical className="h-4 w-4 text-gray-400 cursor-move" />
+                              <div 
+                                className="w-4 h-4 rounded-full"
+                                style={{ backgroundColor: framework.colorCode }}
+                              />
+                            </div>
+                            <div>
+                              <h4 className="font-medium text-gray-900 dark:text-white">{framework.title}</h4>
+                              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                {framework.description.substring(0, 80)}...
+                              </p>
+                              <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                Priority #{index + 1} • {framework.status}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => moveFramework(index, Math.max(0, index - 1))}
+                              disabled={index === 0}
+                              data-testid={`button-move-up-${framework.id}`}
+                            >
+                              ↑
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => moveFramework(index, Math.min(frameworkOrder.length - 1, index + 1))}
+                              disabled={index === frameworkOrder.length - 1}
+                              data-testid={`button-move-down-${framework.id}`}
+                            >
+                              ↓
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                      
+                      {frameworkOrder.length === 0 && (
+                        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                          <Target className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                          <p>No strategic frameworks found.</p>
+                          <p className="text-sm">Create frameworks on the Framework page to manage their display order.</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {frameworkOrder.length > 0 && (
+                      <div className="mt-6 pt-4 border-t dark:border-gray-700">
+                        <Button 
+                          onClick={saveFrameworkOrder}
+                          disabled={reorderFrameworksMutation.isPending}
+                          data-testid="button-save-framework-order"
+                        >
+                          <Save className="mr-2 h-4 w-4" />
+                          {reorderFrameworksMutation.isPending ? 'Saving...' : 'Save Framework Order'}
+                        </Button>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                          Changes will be reflected across Dashboard, Framework, Strategies, and Outcomes pages.
+                        </p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
