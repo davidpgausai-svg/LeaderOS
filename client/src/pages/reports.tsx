@@ -17,8 +17,6 @@ import {
 import {
   BarChart3,
   TrendingUp,
-  Download,
-  Calendar,
   Target,
   Users,
   CheckCircle,
@@ -28,7 +26,6 @@ import {
 
 export default function Reports() {
   const { currentRole } = useRole();
-  const [timeRange, setTimeRange] = useState("all");
   const [reportType, setReportType] = useState("overview");
 
   const { data: strategies, isLoading: strategiesLoading } = useQuery({
@@ -157,34 +154,16 @@ export default function Reports() {
                 Strategic planning performance and insights
               </p>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center">
               <Select value={reportType} onValueChange={setReportType}>
                 <SelectTrigger className="w-40">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="overview">Overview</SelectItem>
-                  <SelectItem value="strategies">Strategies</SelectItem>
-                  <SelectItem value="team">Team Performance</SelectItem>
-                  <SelectItem value="progress">Progress Report</SelectItem>
                   <SelectItem value="changelog">Change Log</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={timeRange} onValueChange={setTimeRange}>
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Time</SelectItem>
-                  <SelectItem value="quarter">This Quarter</SelectItem>
-                  <SelectItem value="month">This Month</SelectItem>
-                  <SelectItem value="week">This Week</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button variant="outline" data-testid="button-export">
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
             </div>
           </div>
         </header>
