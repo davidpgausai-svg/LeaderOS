@@ -71,19 +71,22 @@ export default function Reports() {
   const completedStrategies = (strategies as any[])?.filter((s: any) => s.status === 'completed').length || 0;
   
   const totalTactics = (tactics as any[])?.length || 0;
-  const completedTactics = (tactics as any[])?.filter((t: any) => t.status === 'completed').length || 0;
-  const inProgressTactics = (tactics as any[])?.filter((t: any) => t.status === 'in-progress').length || 0;
+  const completedTactics = (tactics as any[])?.filter((t: any) => (t.progress || 0) >= 100).length || 0;
+  const inProgressTactics = (tactics as any[])?.filter((t: any) => (t.progress || 0) > 0 && (t.progress || 0) < 100).length || 0;
   const overdueTactics = (tactics as any[])?.filter((t: any) => {
-    if (t.status === 'completed') return false;
+    if ((t.progress || 0) >= 100) return false;
     return new Date(t.dueDate) < new Date();
   }).length || 0;
 
-  const completionRate = totalTactics > 0 ? Math.round((completedTactics / totalTactics) * 100) : 0;
+  // Calculate overall completion rate to match dashboard (strategies + tactics combined)
+  const totalItems = totalStrategies + totalTactics;
+  const completedItems = completedStrategies + completedTactics;
+  const completionRate = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
   // Team performance metrics
   const teamPerformance = (users as any[])?.map((user: any) => {
     const assignedTactics = tacticsWithDetails.filter(t => t.assignedTo === user.id);
-    const completedCount = assignedTactics.filter(t => t.status === 'completed').length;
+    const completedCount = assignedTactics.filter(t => (t.progress || 0) >= 100).length;
     const totalCount = assignedTactics.length;
     const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
     
@@ -97,7 +100,7 @@ export default function Reports() {
 
   // Strategy progress breakdown
   const strategyProgress = strategiesWithTactics.map((strategy: any) => {
-    const completed = strategy.tactics.filter((t: any) => t.status === 'completed').length;
+    const completed = strategy.tactics.filter((t: any) => (t.progress || 0) >= 100).length;
     const total = strategy.tactics.length;
     const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
     
