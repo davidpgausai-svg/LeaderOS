@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRole } from "@/hooks/use-role";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -101,10 +101,7 @@ export default function Tactics() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [strategyFilter, setStrategyFilter] = useState("all");
-  // Initialize all strategies as collapsed by default
-  const [collapsedStrategies, setCollapsedStrategies] = useState<Set<string>>(() => {
-    return new Set((strategies as Strategy[])?.map(s => s.id) || []);
-  });
+  const [collapsedStrategies, setCollapsedStrategies] = useState<Set<string>>(new Set());
 
   const { data: tactics, isLoading: tacticsLoading } = useQuery({
     queryKey: ["/api/tactics"],
@@ -117,6 +114,16 @@ export default function Tactics() {
   const { data: users } = useQuery({
     queryKey: ["/api/users"],
   });
+
+  // Initialize all strategies as collapsed by default when strategies data loads
+  const [hasInitializedCollapsed, setHasInitializedCollapsed] = useState(false);
+  
+  useEffect(() => {
+    if (strategies && !hasInitializedCollapsed) {
+      setCollapsedStrategies(new Set((strategies as Strategy[]).map(s => s.id)));
+      setHasInitializedCollapsed(true);
+    }
+  }, [strategies, hasInitializedCollapsed]);
 
   const updateTacticMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
