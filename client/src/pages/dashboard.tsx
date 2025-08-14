@@ -43,7 +43,7 @@ export default function Dashboard() {
   // Calculate metrics
   const activeStrategies = (strategies as any[])?.filter((s: any) => s.status === 'active').length || 0;
   const totalTactics = (tactics as any[])?.length || 0;
-  const completedTactics = (tactics as any[])?.filter((t: any) => t.status === 'completed').length || 0;
+  const completedTactics = (tactics as any[])?.filter((t: any) => (t.progress || 0) >= 100).length || 0;
   const completedStrategies = (strategies as any[])?.filter((s: any) => s.status === 'completed').length || 0;
   const totalStrategies = (strategies as any[])?.length || 0;
   
