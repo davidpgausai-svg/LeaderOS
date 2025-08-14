@@ -195,12 +195,18 @@ export default function Strategies() {
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
               {filteredStrategies.map((strategy: any) => (
-                <div key={strategy.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div key={strategy.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6" style={{ borderTop: `4px solid ${strategy.colorCode}` }}>
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        {strategy.title}
-                      </h3>
+                      <div className="flex items-center space-x-2 mb-2">
+                        <div 
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: strategy.colorCode }}
+                        />
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          {strategy.title}
+                        </h3>
+                      </div>
                       <p className="text-gray-600 text-sm mb-4">
                         {strategy.description}
                       </p>
@@ -282,6 +288,8 @@ export default function Strategies() {
                       <Button
                         size="sm"
                         onClick={() => handleCreateTactic(strategy.id)}
+                        style={{ backgroundColor: strategy.colorCode, borderColor: strategy.colorCode }}
+                        className="text-white hover:opacity-90"
                       >
                         <Plus className="mr-1 h-3 w-3" />
                         Add Strategy
