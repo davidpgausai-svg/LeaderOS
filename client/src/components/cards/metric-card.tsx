@@ -34,13 +34,7 @@ export function MetricCard({
       </div>
       {change && (
         <div className="mt-4 flex items-center">
-          <span className={`text-sm font-medium ${
-            change.trend === 'up' ? 'text-green-600' : 
-            change.trend === 'down' ? 'text-red-600' : 
-            'text-gray-600'
-          }`}>
-            {change.value}
-          </span>
+          
           <span className="text-gray-500 text-sm ml-2">{change.label}</span>
         </div>
       )}
