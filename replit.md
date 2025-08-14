@@ -41,13 +41,15 @@ The application uses a flexible storage abstraction:
 - **Data Seeding**: Automatic seeding of initial users, strategies, and tactics on first run
 
 ### Authentication and Authorization
-Role-based access control system with granular permissions:
+Role-based access control system with Replit Auth integration:
 
+- **Authentication**: Replit OpenID Connect for secure user authentication and session management
 - **Roles**: Administrator, Executive, and Leader roles with different capabilities
 - **Permission System**: Administrators have full modification power; Executives can edit all strategies and tactics; Leaders can only edit tactics assigned to them
 - **User Management**: User profiles with role-based permissions managed through Settings
-- **Session Management**: Express sessions with PostgreSQL session store
+- **Session Management**: Express sessions with PostgreSQL session store and Replit Auth integration
 - **Access Controls**: Permission-based UI controls that hide/show functionality based on user role
+- **Default Admin**: David Gaus (dpgaus@outlook.com) is set as the default administrator
 
 ### Key Data Models
 The platform centers around four core entities:

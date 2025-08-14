@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Strategy, type InsertStrategy, type Tactic, type InsertTactic, type Activity, type InsertActivity, type Outcome, type InsertOutcome, users, strategies, tactics, activities, outcomes } from "@shared/schema";
+import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Tactic, type InsertTactic, type Activity, type InsertActivity, type Outcome, type InsertOutcome, users, strategies, tactics, activities, outcomes } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, asc } from "drizzle-orm";
@@ -6,7 +6,7 @@ import { eq, asc } from "drizzle-orm";
 export interface IStorage {
   // User methods
   getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
@@ -59,26 +59,35 @@ export class MemStorage implements IStorage {
     // Create sample users
     const adminUser: User = {
       id: randomUUID(),
-      username: "john.doe",
-      name: "John Doe",
+      email: "dpgaus@outlook.com",
+      firstName: "David",
+      lastName: "Gaus",
+      profileImageUrl: null,
       role: "administrator",
-      initials: "JD"
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
     
     const executiveUser: User = {
       id: randomUUID(),
-      username: "mike.wilson",
-      name: "Mike Wilson",
+      email: "mike.wilson@example.com",
+      firstName: "Mike",
+      lastName: "Wilson",
+      profileImageUrl: null,
       role: "executive",
-      initials: "MW"
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
     
     const leaderUser: User = {
       id: randomUUID(),
-      username: "sarah.johnson",
-      name: "Sarah Johnson",
+      email: "sarah.johnson@example.com",
+      firstName: "Sarah",
+      lastName: "Johnson",
+      profileImageUrl: null,
       role: "leader",
-      initials: "SJ"
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
 
     this.users.set(adminUser.id, adminUser);
@@ -163,13 +172,24 @@ export class MemStorage implements IStorage {
     return this.users.get(id);
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.username === username);
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const user: User = {
+      ...userData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.users.set(user.id, user);
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id };
+    const user: User = { 
+      ...insertUser, 
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
     this.users.set(id, user);
     return user;
   }
@@ -428,9 +448,19 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user || undefined;
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
