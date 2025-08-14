@@ -44,7 +44,13 @@ export default function Dashboard() {
   const activeStrategies = (strategies as any[])?.filter((s: any) => s.status === 'active').length || 0;
   const totalTactics = (tactics as any[])?.length || 0;
   const completedTactics = (tactics as any[])?.filter((t: any) => t.status === 'completed').length || 0;
-  const completionRate = totalTactics > 0 ? Math.round((completedTactics / totalTactics) * 100) : 0;
+  const completedStrategies = (strategies as any[])?.filter((s: any) => s.status === 'completed').length || 0;
+  const totalStrategies = (strategies as any[])?.length || 0;
+  
+  // Calculate overall strategic completion rate (strategies + tactics combined)
+  const totalItems = totalStrategies + totalTactics;
+  const completedItems = completedStrategies + completedTactics;
+  const completionRate = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
   if (strategiesLoading || tacticsLoading) {
     return (
@@ -95,7 +101,7 @@ export default function Dashboard() {
               <MetricCard
                 title="Completion Rate"
                 value={`${completionRate}%`}
-                change={{ value: "+5%", label: "this quarter", trend: "up" }}
+                change={{ value: `${completedItems}/${totalItems}`, label: "overall progress", trend: "neutral" }}
                 icon={TrendingUp}
                 iconBgColor="bg-purple-100"
                 iconColor="text-purple-600"
