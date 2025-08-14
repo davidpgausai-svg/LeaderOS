@@ -676,41 +676,79 @@ export class DatabaseStorage implements IStorage {
   }
 
   async seedData() {
-    // Check if data already exists
-    const existingUsers = await this.getAllUsers();
-    if (existingUsers.length > 0) {
+    // Check if strategies already exist (don't re-seed if data exists)
+    const existingStrategies = await this.getAllStrategies();
+    if (existingStrategies.length > 1) {
       return; // Data already seeded
     }
 
-    // Create sample users
-    const adminUser = await this.createUser({
-      username: "john.doe",
-      name: "John Doe",
-      role: "administrator",
-      initials: "JD"
-    });
+    // Get or create users with proper schema
+    let adminUser = await this.getUser("admin-1");
+    if (!adminUser) {
+      adminUser = await this.createUser({
+        id: "admin-1",
+        email: "admin@example.com",
+        firstName: "Admin",
+        lastName: "User",
+        profileImageUrl: null,
+        role: "administrator",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+    }
     
-    const executiveUser = await this.createUser({
-      username: "mike.wilson",
-      name: "Mike Wilson",
-      role: "executive",
-      initials: "MW"
-    });
+    let executiveUser = await this.getUser("exec-1");
+    if (!executiveUser) {
+      executiveUser = await this.createUser({
+        id: "exec-1",
+        email: "exec@example.com",
+        firstName: "Executive",
+        lastName: "User",
+        profileImageUrl: null,
+        role: "executive",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+    }
     
-    const leaderUser = await this.createUser({
-      username: "sarah.johnson",
-      name: "Sarah Johnson",
-      role: "leader",
-      initials: "SJ"
-    });
+    let leaderUser = await this.getUser("leader-1");
+    if (!leaderUser) {
+      leaderUser = await this.createUser({
+        id: "leader-1",
+        email: "leader@example.com",
+        firstName: "Leader",
+        lastName: "User",
+        profileImageUrl: null,
+        role: "leader",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+    }
 
-    // Create sample strategy
-    const strategy = await this.createStrategy({
-      title: "Market Expansion Initiative",
-      description: "Expand our market presence in target regions through strategic partnerships and enhanced digital marketing",
+    // Create sample strategies to restore the missing frameworks
+    await this.createStrategy({
+      title: "Digital Transformation Framework",
+      description: "Comprehensive digital transformation initiative to modernize operations and improve customer experience",
+      goal: "Transform business operations through digital innovation",
       startDate: new Date("2024-01-01"),
       targetDate: new Date("2024-12-31"),
-      metrics: "Increase market share by 15%, establish 5 new partnerships, achieve 30% growth in target regions",
+      metrics: "Reduce operational costs by 20%, improve customer satisfaction to 90%, achieve 95% digital process adoption",
+      status: "active",
+      colorCode: "#10B981",
+      displayOrder: 0,
+      createdBy: executiveUser.id
+    });
+
+    await this.createStrategy({
+      title: "Customer Experience Excellence",
+      description: "Focus on delivering exceptional customer experiences across all touchpoints",
+      goal: "Become the industry leader in customer satisfaction",
+      startDate: new Date("2024-02-01"),
+      targetDate: new Date("2024-11-30"),
+      metrics: "Achieve NPS score of 80+, reduce complaint resolution time by 50%, increase customer retention to 95%",
+      status: "active",
+      colorCode: "#F59E0B",
+      displayOrder: 1,
       createdBy: executiveUser.id
     });
 
