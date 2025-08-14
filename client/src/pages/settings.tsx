@@ -541,11 +541,18 @@ export default function Settings() {
                         >
                           <div className="flex items-center space-x-3">
                             <Avatar>
-                              <AvatarFallback>{user.initials}</AvatarFallback>
+                              <AvatarFallback>
+                                {user.firstName?.[0] || user.lastName?.[0] || user.email?.[0]?.toUpperCase() || 'U'}
+                              </AvatarFallback>
                             </Avatar>
                             <div>
-                              <p className="font-medium text-gray-900 dark:text-white" data-testid="text-admin-user-name">{user.name}</p>
-                              <p className="text-sm text-gray-500 dark:text-gray-400">{user.username}</p>
+                              <p className="font-medium text-gray-900 dark:text-white" data-testid="text-admin-user-name">
+                                {user.firstName && user.lastName 
+                                  ? `${user.firstName} ${user.lastName}` 
+                                  : user.email || 'Unknown User'
+                                }
+                              </p>
+                              <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
                               <p className="text-xs text-gray-400 dark:text-gray-500">
                                 {user.role === 'administrator' 
                                   ? 'Full modification power over the app'
