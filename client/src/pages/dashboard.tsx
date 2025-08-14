@@ -125,12 +125,7 @@ export default function Dashboard() {
                     Current organizational strategies with tactics and outcomes tracking
                   </p>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Button variant="outline" size="sm">
-                    <BarChart3 className="w-4 h-4 mr-2" />
-                    View Analytics
-                  </Button>
-                </div>
+
               </div>
 
               {/* Strategy Cards Grid */}
