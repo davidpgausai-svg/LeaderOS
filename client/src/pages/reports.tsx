@@ -325,7 +325,7 @@ export default function Reports() {
             <Card data-testid="card-recent-activity">
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <Calendar className="mr-2 h-5 w-5" />
+                  <BarChart3 className="mr-2 h-5 w-5" />
                   Status Distribution
                 </CardTitle>
               </CardHeader>
