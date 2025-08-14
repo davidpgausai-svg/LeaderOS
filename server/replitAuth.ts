@@ -57,12 +57,16 @@ function updateUserSession(
 async function upsertUser(
   claims: any,
 ) {
+  // Determine role: dpgaus@outlook.com is administrator, everyone else is leader by default
+  const role = claims["email"] === "dpgaus@outlook.com" ? "administrator" : "leader";
+  
   await storage.upsertUser({
     id: claims["sub"],
     email: claims["email"],
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
+    role: role,
   });
 }
 
