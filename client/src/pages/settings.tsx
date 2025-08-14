@@ -208,7 +208,7 @@ export default function Settings() {
           <div className="mb-6">
             <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
               <Button
-                variant={activeTab.startsWith("user") ? "secondary" : "ghost"}
+                variant={!activeTab.startsWith("admin") ? "secondary" : "ghost"}
                 onClick={() => setActiveTab("profile")}
                 className="flex-1"
                 data-testid="button-user-settings"
