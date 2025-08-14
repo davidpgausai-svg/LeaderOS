@@ -127,20 +127,29 @@ export default function Settings() {
 
     const profileData = {
       id: currentUser.id,
-      name: formData.get('name') as string,
-      initials: formData.get('initials') as string,
-      role: currentUser.role,
+      firstName: formData.get('firstName') as string,
+      lastName: formData.get('lastName') as string,
+      email: currentUser.email, // Keep existing email
+      role: currentUser.role, // Keep existing role
     };
     updateUserMutation.mutate(profileData);
   };
 
   const handleUserRoleChange = async (userId: string, newRole: string) => {
-    // In a real app, this would update user roles via API
-    toast({
-      title: "Success", 
-      description: "User role updated successfully",
-    });
-    queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+    try {
+      await apiRequest("PATCH", `/api/users/${userId}`, { role: newRole });
+      toast({
+        title: "Success", 
+        description: "User role updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update user role",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDeleteStrategy = async (strategyId: string) => {
@@ -266,7 +275,7 @@ export default function Settings() {
                     <div className="flex items-center space-x-6">
                       <Avatar className="w-20 h-20">
                         <AvatarFallback className="text-lg">
-                          {currentUser?.initials || 'U'}
+                          {currentUser?.firstName?.[0] || currentUser?.lastName?.[0] || currentUser?.email?.[0]?.toUpperCase() || 'U'}
                         </AvatarFallback>
                       </Avatar>
                       <Button variant="outline" data-testid="button-change-photo">
@@ -276,24 +285,38 @@ export default function Settings() {
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="name">Full Name</Label>
+                        <Label htmlFor="firstName">First Name</Label>
                         <Input 
-                          id="name" 
-                          name="name"
-                          defaultValue={currentUser?.name || ''}
-                          data-testid="input-name"
+                          id="firstName" 
+                          name="firstName"
+                          defaultValue={currentUser?.firstName || ''}
+                          data-testid="input-firstName"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="initials">Initials</Label>
+                        <Label htmlFor="lastName">Last Name</Label>
                         <Input 
-                          id="initials" 
-                          name="initials"
-                          defaultValue={currentUser?.initials || ''}
-                          maxLength={3}
-                          data-testid="input-initials"
+                          id="lastName" 
+                          name="lastName"
+                          defaultValue={currentUser?.lastName || ''}
+                          data-testid="input-lastName"
                         />
                       </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input 
+                        id="email" 
+                        name="email"
+                        value={currentUser?.email || ''}
+                        disabled
+                        data-testid="input-email"
+                        className="bg-gray-50 dark:bg-gray-800"
+                      />
+                      <p className="text-sm text-gray-500">
+                        Email is managed by your Replit account
+                      </p>
                     </div>
 
                     <div className="space-y-2">
