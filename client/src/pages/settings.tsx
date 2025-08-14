@@ -591,12 +591,19 @@ export default function Settings() {
                       ))}
                       
                       <div className="p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-center">
-                        <Button variant="outline" className="w-full" data-testid="button-invite-user">
-                          <User className="w-4 h-4 mr-2" />
-                          Invite New User
-                        </Button>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                          Invite team members to join the strategic planning platform
+                        <div className="flex items-center justify-center mb-2">
+                          <User className="w-5 h-5 text-gray-400 mr-2" />
+                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                            New User Access
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Users can join by signing in with their Replit account. New users are automatically assigned the 
+                          <span className="font-medium text-blue-600 dark:text-blue-400"> Leader </span> 
+                          role and will appear here once they sign in.
+                        </p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                          Share your app URL with team members to get started
                         </p>
                       </div>
                     </div>
