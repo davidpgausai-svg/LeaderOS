@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRole } from "@/hooks/use-role";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -105,6 +105,16 @@ export default function Outcomes() {
   const { data: tactics } = useQuery({
     queryKey: ["/api/tactics"],
   });
+
+  // Initialize all strategies as collapsed by default when strategies data loads
+  const [hasInitializedCollapsed, setHasInitializedCollapsed] = useState(false);
+  
+  useEffect(() => {
+    if (strategies && !hasInitializedCollapsed) {
+      setCollapsedStrategies(new Set((strategies as Strategy[]).map(s => s.id)));
+      setHasInitializedCollapsed(true);
+    }
+  }, [strategies, hasInitializedCollapsed]);
 
   // Enhance outcomes with strategy and tactic data
   const outcomesWithDetails = (outcomes as Outcome[])?.map((outcome) => ({
