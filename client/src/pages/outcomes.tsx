@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRole } from "@/hooks/use-role";
 import { Sidebar } from "@/components/layout/sidebar";
 import { CreateOutcomeModal } from "@/components/modals/create-outcome-modal";
+import { EditOutcomeModal } from "@/components/modals/edit-outcome-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -93,6 +94,8 @@ export default function Outcomes() {
   const [strategyFilter, setStrategyFilter] = useState("all");
   const [collapsedStrategies, setCollapsedStrategies] = useState<Set<string>>(new Set());
   const [isCreateOutcomeOpen, setIsCreateOutcomeOpen] = useState(false);
+  const [isEditOutcomeOpen, setIsEditOutcomeOpen] = useState(false);
+  const [selectedOutcome, setSelectedOutcome] = useState<Outcome | null>(null);
 
   const { data: outcomes, isLoading: outcomesLoading } = useQuery({
     queryKey: ["/api/outcomes"],
@@ -122,6 +125,35 @@ export default function Outcomes() {
     strategy: (strategies as Strategy[])?.find((s) => s.id === outcome.strategyId),
     tactic: (tactics as Tactic[])?.find((t) => t.id === outcome.tacticId),
   })) || [];
+
+  const deleteOutcomeMutation = useMutation({
+    mutationFn: async (outcomeId: string) => {
+      await apiRequest("DELETE", `/api/outcomes/${outcomeId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/outcomes"] });
+      toast({
+        title: "Success",
+        description: "Outcome deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete outcome",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleEditOutcome = (outcome: Outcome) => {
+    setSelectedOutcome(outcome);
+    setIsEditOutcomeOpen(true);
+  };
+
+  const handleDeleteOutcome = (outcomeId: string) => {
+    deleteOutcomeMutation.mutate(outcomeId);
+  };
 
   const getStatusDisplay = (status: string) => {
     const statusMap = {
@@ -339,16 +371,42 @@ export default function Outcomes() {
                                         </Button>
                                       </DropdownMenuTrigger>
                                       <DropdownMenuContent align="end">
-                                        <DropdownMenuItem data-testid={`button-edit-${outcome.id}`}>
+                                        <DropdownMenuItem 
+                                          onClick={() => handleEditOutcome(outcome)}
+                                          data-testid={`button-edit-${outcome.id}`}
+                                        >
                                           Edit Outcome
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem 
-                                          className="text-red-600"
-                                          data-testid={`button-delete-${outcome.id}`}
-                                        >
-                                          <Trash2 className="w-4 h-4 mr-2" />
-                                          Delete
-                                        </DropdownMenuItem>
+                                        <AlertDialog>
+                                          <AlertDialogTrigger asChild>
+                                            <DropdownMenuItem 
+                                              className="text-red-600 focus:text-red-600"
+                                              onSelect={(e) => e.preventDefault()}
+                                              data-testid={`button-delete-${outcome.id}`}
+                                            >
+                                              <Trash2 className="w-4 h-4 mr-2" />
+                                              Delete
+                                            </DropdownMenuItem>
+                                          </AlertDialogTrigger>
+                                          <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                              <AlertDialogTitle>Delete Outcome</AlertDialogTitle>
+                                              <AlertDialogDescription>
+                                                Are you sure you want to delete "{outcome.title}"? This action cannot be undone.
+                                              </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                              <AlertDialogAction
+                                                onClick={() => handleDeleteOutcome(outcome.id)}
+                                                className="bg-red-600 hover:bg-red-700"
+                                                data-testid={`button-confirm-delete-${outcome.id}`}
+                                              >
+                                                Delete
+                                              </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                          </AlertDialogContent>
+                                        </AlertDialog>
                                       </DropdownMenuContent>
                                     </DropdownMenu>
                                   </div>
@@ -433,6 +491,11 @@ export default function Outcomes() {
       <CreateOutcomeModal 
         open={isCreateOutcomeOpen} 
         onOpenChange={setIsCreateOutcomeOpen} 
+      />
+      <EditOutcomeModal
+        open={isEditOutcomeOpen}
+        onOpenChange={setIsEditOutcomeOpen}
+        outcome={selectedOutcome}
       />
     </div>
   );
