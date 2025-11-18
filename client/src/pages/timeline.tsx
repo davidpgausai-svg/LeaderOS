@@ -1,18 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Sidebar } from "@/components/layout/sidebar";
 import { useMemo } from "react";
-import { format, parseISO, min, max, differenceInDays } from "date-fns";
+import { format, min, max, differenceInDays, startOfMonth, endOfMonth, eachMonthOfInterval } from "date-fns";
 import type { Strategy, Tactic } from "@shared/schema";
-
-type TimelineItem = {
-  id: string;
-  title: string;
-  type: 'strategy' | 'tactic';
-  date: Date;
-  colorCode: string;
-  strategyTitle?: string;
-  description?: string;
-};
 
 export default function Timeline() {
   const { data: strategies, isLoading: strategiesLoading } = useQuery<Strategy[]>({
@@ -24,62 +14,58 @@ export default function Timeline() {
   });
 
   const timelineData = useMemo(() => {
-    if (!strategies || !tactics) return { items: [], minDate: new Date(), maxDate: new Date(), totalDays: 0 };
+    if (!strategies || !tactics) {
+      return { 
+        frameworks: [], 
+        minDate: new Date(), 
+        maxDate: new Date(), 
+        totalDays: 1,
+        months: []
+      };
+    }
 
-    // Create timeline items from strategies and tactics
-    const items: TimelineItem[] = [];
-
-    // Add strategies (using start and target dates as milestones)
-    strategies.forEach(strategy => {
-      items.push({
-        id: `${strategy.id}-start`,
-        title: `${strategy.title} - Start`,
-        type: 'strategy',
-        date: new Date(strategy.startDate),
-        colorCode: strategy.colorCode,
-        description: strategy.description,
-      });
-      items.push({
-        id: `${strategy.id}-end`,
-        title: `${strategy.title} - Target`,
-        type: 'strategy',
-        date: new Date(strategy.targetDate),
-        colorCode: strategy.colorCode,
-        description: strategy.description,
-      });
+    // Calculate overall date range
+    const allDates: Date[] = [];
+    strategies.forEach(s => {
+      allDates.push(new Date(s.startDate), new Date(s.targetDate));
+    });
+    tactics.forEach(t => {
+      allDates.push(new Date(t.dueDate));
     });
 
-    // Add tactics
-    tactics.forEach(tactic => {
-      const strategy = strategies.find(s => s.id === tactic.strategyId);
-      if (strategy) {
-        items.push({
-          id: tactic.id,
-          title: tactic.title,
-          type: 'tactic',
-          date: new Date(tactic.dueDate),
-          colorCode: strategy.colorCode,
-          strategyTitle: strategy.title,
-          description: tactic.description,
-        });
-      }
-    });
-
-    // Sort by date
-    items.sort((a, b) => a.date.getTime() - b.date.getTime());
-
-    // Calculate date range
-    const dates = items.map(item => item.date);
-    const minDate = dates.length > 0 ? min(dates) : new Date();
-    const maxDate = dates.length > 0 ? max(dates) : new Date();
+    const minDate = allDates.length > 0 ? min(allDates) : new Date();
+    const maxDate = allDates.length > 0 ? max(allDates) : new Date();
     const totalDays = differenceInDays(maxDate, minDate) || 1;
 
-    return { items, minDate, maxDate, totalDays };
+    // Generate month markers
+    const months = eachMonthOfInterval({ start: minDate, end: maxDate });
+
+    // Group strategies (tactics) by framework (strategy)
+    const frameworks = strategies.map(strategy => {
+      const strategyTactics = tactics.filter(t => t.strategyId === strategy.id);
+      
+      return {
+        id: strategy.id,
+        title: strategy.title,
+        colorCode: strategy.colorCode,
+        startDate: new Date(strategy.startDate),
+        targetDate: new Date(strategy.targetDate),
+        status: strategy.status,
+        milestones: strategyTactics.map(tactic => ({
+          id: tactic.id,
+          title: tactic.title,
+          date: new Date(tactic.dueDate),
+          status: tactic.status,
+        })),
+      };
+    });
+
+    return { frameworks, minDate, maxDate, totalDays, months };
   }, [strategies, tactics]);
 
   const getPositionPercentage = (date: Date) => {
     const daysSinceStart = differenceInDays(date, timelineData.minDate);
-    return (daysSinceStart / timelineData.totalDays) * 100;
+    return Math.min(Math.max((daysSinceStart / timelineData.totalDays) * 100, 0), 100);
   };
 
   if (strategiesLoading || tacticsLoading) {
@@ -106,7 +92,7 @@ export default function Timeline() {
             <div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Timeline</h2>
               <p className="text-gray-600 dark:text-gray-400 mt-1">
-                Visual timeline of frameworks, strategies, and tactics
+                Strategic roadmap showing frameworks and strategies
               </p>
             </div>
           </div>
@@ -114,7 +100,7 @@ export default function Timeline() {
 
         {/* Timeline Content */}
         <div className="p-6">
-          {timelineData.items.length === 0 ? (
+          {timelineData.frameworks.length === 0 ? (
             <div className="text-center py-12">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No timeline data</h3>
               <p className="text-gray-500 dark:text-gray-400">
@@ -122,17 +108,15 @@ export default function Timeline() {
               </p>
             </div>
           ) : (
-            <div className="space-y-8">
-              {/* Date Range Info */}
+            <div className="space-y-6">
+              {/* Date Range Summary */}
               <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
                 <div className="flex items-center justify-between text-sm">
                   <div>
-                    <span className="font-medium text-gray-700 dark:text-gray-300">Start: </span>
-                    <span className="text-gray-600 dark:text-gray-400">{format(timelineData.minDate, 'MMM dd, yyyy')}</span>
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-700 dark:text-gray-300">End: </span>
-                    <span className="text-gray-600 dark:text-gray-400">{format(timelineData.maxDate, 'MMM dd, yyyy')}</span>
+                    <span className="font-medium text-gray-700 dark:text-gray-300">Timeline Range: </span>
+                    <span className="text-gray-600 dark:text-gray-400">
+                      {format(timelineData.minDate, 'MMM dd, yyyy')} - {format(timelineData.maxDate, 'MMM dd, yyyy')}
+                    </span>
                   </div>
                   <div>
                     <span className="font-medium text-gray-700 dark:text-gray-300">Duration: </span>
@@ -141,121 +125,214 @@ export default function Timeline() {
                 </div>
               </div>
 
-              {/* Timeline Visualization */}
-              <div className="relative">
-                {/* Timeline Bar */}
-                <div className="relative h-2 bg-gray-200 dark:bg-gray-700 rounded-full">
-                  {/* Framework color segments */}
-                  {strategies?.map(strategy => {
-                    const startPos = getPositionPercentage(new Date(strategy.startDate));
-                    const endPos = getPositionPercentage(new Date(strategy.targetDate));
-                    const width = Math.max(endPos - startPos, 0.5);
-                    
-                    return (
-                      <div
-                        key={strategy.id}
-                        className="absolute h-2 rounded-full opacity-30"
-                        style={{
-                          left: `${startPos}%`,
-                          width: `${width}%`,
-                          backgroundColor: strategy.colorCode,
-                        }}
-                        data-testid={`timeline-segment-${strategy.id}`}
-                      />
-                    );
-                  })}
+              {/* Timeline Grid */}
+              <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden">
+                {/* Month Headers */}
+                <div className="flex border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+                  <div className="w-48 flex-shrink-0 px-4 py-3 border-r border-gray-200 dark:border-gray-800">
+                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Framework</span>
+                  </div>
+                  <div className="flex-1 relative">
+                    <div className="flex h-full">
+                      {timelineData.months.map((month, idx) => (
+                        <div
+                          key={idx}
+                          className="flex-1 min-w-0 px-2 py-3 text-center border-r border-gray-200 dark:border-gray-800 last:border-r-0"
+                        >
+                          <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                            {format(month, 'MMM yyyy')}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
-                {/* Milestones */}
-                <div className="relative pt-8 pb-4">
-                  {timelineData.items.map((item, index) => {
-                    const position = getPositionPercentage(item.date);
-                    const isEven = index % 2 === 0;
-                    
-                    return (
-                      <div
-                        key={item.id}
-                        className="absolute"
-                        style={{ left: `${position}%` }}
-                        data-testid={`milestone-${item.id}`}
-                      >
-                        {/* Vertical line */}
-                        <div
-                          className="absolute bottom-0 w-0.5 bg-gray-300 dark:bg-gray-600"
-                          style={{
-                            height: isEven ? '60px' : '100px',
-                            transform: 'translateX(-50%)',
-                          }}
-                        />
-                        
-                        {/* Milestone dot */}
-                        <div
-                          className="absolute bottom-0 w-3 h-3 rounded-full border-2 border-white dark:border-gray-900"
-                          style={{
-                            backgroundColor: item.colorCode,
-                            transform: 'translate(-50%, 50%)',
-                          }}
-                        />
-                        
-                        {/* Milestone card */}
-                        <div
-                          className={`absolute ${isEven ? 'top-16' : 'top-28'} left-0 transform -translate-x-1/2 w-48`}
-                        >
+                {/* Framework Rows (Swimlanes) */}
+                {timelineData.frameworks.map((framework, frameworkIndex) => {
+                  const startPos = getPositionPercentage(framework.startDate);
+                  const endPos = getPositionPercentage(framework.targetDate);
+                  const width = Math.max(endPos - startPos, 2);
+
+                  return (
+                    <div
+                      key={framework.id}
+                      className={`flex ${frameworkIndex % 2 === 0 ? 'bg-white dark:bg-black' : 'bg-gray-50 dark:bg-gray-900'} border-b border-gray-200 dark:border-gray-800 last:border-b-0`}
+                      data-testid={`timeline-row-${framework.id}`}
+                    >
+                      {/* Framework Label */}
+                      <div className="w-48 flex-shrink-0 px-4 py-6 border-r border-gray-200 dark:border-gray-800">
+                        <div className="flex items-start space-x-2">
                           <div
-                            className="bg-white dark:bg-gray-800 rounded-lg shadow-md border-2 p-3 hover:shadow-lg transition-shadow"
-                            style={{ borderColor: item.colorCode }}
-                          >
-                            <div className="flex items-start space-x-2">
-                              <div
-                                className="w-2 h-2 rounded-full mt-1 flex-shrink-0"
-                                style={{ backgroundColor: item.colorCode }}
-                              />
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center space-x-1 mb-1">
-                                  <span
-                                    className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                      item.type === 'strategy'
-                                        ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
-                                        : 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                                    }`}
-                                  >
-                                    {item.type === 'strategy' ? 'Framework' : 'Strategy'}
-                                  </span>
-                                </div>
-                                <h4 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2">
-                                  {item.title}
-                                </h4>
-                                {item.strategyTitle && (
-                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    {item.strategyTitle}
-                                  </p>
-                                )}
-                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                                  {format(item.date, 'MMM dd, yyyy')}
-                                </p>
-                              </div>
-                            </div>
+                            className="w-3 h-3 rounded-full mt-1 flex-shrink-0"
+                            style={{ backgroundColor: framework.colorCode }}
+                          />
+                          <div>
+                            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                              {framework.title}
+                            </h3>
+                            <span
+                              className={`inline-block mt-1 px-2 py-0.5 rounded text-xs font-medium ${
+                                framework.status === 'active'
+                                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                                  : framework.status === 'completed'
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                                  : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
+                              }`}
+                            >
+                              {framework.status}
+                            </span>
                           </div>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+
+                      {/* Timeline Bar */}
+                      <div className="flex-1 relative py-6 px-4 min-h-[120px]">
+                        {/* Framework Duration Bar */}
+                        <div
+                          className="absolute top-1/2 h-8 rounded-lg transform -translate-y-1/2 flex items-center justify-center shadow-sm"
+                          style={{
+                            left: `${startPos}%`,
+                            width: `${width}%`,
+                            backgroundColor: framework.colorCode,
+                            opacity: 0.2,
+                          }}
+                        />
+
+                        {/* Start and End Markers */}
+                        <div
+                          className="absolute top-1/2 transform -translate-y-1/2"
+                          style={{ left: `${startPos}%` }}
+                        >
+                          <div className="relative">
+                            <div
+                              className="w-3 h-3 rounded-full border-2 border-white dark:border-gray-900 shadow"
+                              style={{ backgroundColor: framework.colorCode }}
+                            />
+                            <div className="absolute top-5 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+                              <span className="text-xs text-gray-600 dark:text-gray-400">
+                                {format(framework.startDate, 'MMM dd')}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div
+                          className="absolute top-1/2 transform -translate-y-1/2"
+                          style={{ left: `${endPos}%` }}
+                        >
+                          <div className="relative">
+                            <div
+                              className="w-3 h-3 rounded-full border-2 border-white dark:border-gray-900 shadow"
+                              style={{ backgroundColor: framework.colorCode }}
+                            />
+                            <div className="absolute top-5 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+                              <span className="text-xs text-gray-600 dark:text-gray-400">
+                                {format(framework.targetDate, 'MMM dd')}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Strategy Milestones */}
+                        {framework.milestones.map((milestone) => {
+                          const milestonePos = getPositionPercentage(milestone.date);
+                          
+                          return (
+                            <div
+                              key={milestone.id}
+                              className="absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2 group"
+                              style={{ left: `${milestonePos}%` }}
+                            >
+                              {/* Milestone Dot */}
+                              <div
+                                className="w-4 h-4 rounded-full border-3 border-white dark:border-gray-900 shadow-md cursor-pointer hover:scale-125 transition-transform"
+                                style={{
+                                  backgroundColor: framework.colorCode,
+                                  borderWidth: '3px',
+                                }}
+                              />
+                              
+                              {/* Tooltip on Hover */}
+                              <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 hidden group-hover:block z-10 w-48">
+                                <div
+                                  className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border-2 p-3"
+                                  style={{ borderColor: framework.colorCode }}
+                                >
+                                  <div className="flex items-center space-x-1 mb-1">
+                                    <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                                      Strategy
+                                    </span>
+                                    <span
+                                      className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                        milestone.status === 'C'
+                                          ? 'bg-green-100 text-green-700'
+                                          : milestone.status === 'OT'
+                                          ? 'bg-yellow-100 text-yellow-700'
+                                          : milestone.status === 'OH'
+                                          ? 'bg-red-100 text-red-700'
+                                          : milestone.status === 'B'
+                                          ? 'bg-orange-100 text-orange-700'
+                                          : 'bg-gray-100 text-gray-700'
+                                      }`}
+                                    >
+                                      {milestone.status}
+                                    </span>
+                                  </div>
+                                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                                    {milestone.title}
+                                  </h4>
+                                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                                    Due: {format(milestone.date, 'MMM dd, yyyy')}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Legend */}
-              <div className="mt-48 bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Frameworks</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {strategies?.map(strategy => (
-                    <div key={strategy.id} className="flex items-center space-x-2">
-                      <div
-                        className="w-4 h-4 rounded-full"
-                        style={{ backgroundColor: strategy.colorCode }}
-                      />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">{strategy.title}</span>
+              <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Legend</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">Status Codes:</p>
+                    <div className="space-y-1 text-xs">
+                      <div className="flex items-center space-x-2">
+                        <span className="px-2 py-0.5 rounded bg-green-100 text-green-700 font-medium">C</span>
+                        <span className="text-gray-600 dark:text-gray-400">Completed</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="px-2 py-0.5 rounded bg-yellow-100 text-yellow-700 font-medium">OT</span>
+                        <span className="text-gray-600 dark:text-gray-400">On Track</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="px-2 py-0.5 rounded bg-red-100 text-red-700 font-medium">OH</span>
+                        <span className="text-gray-600 dark:text-gray-400">On Hold</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="px-2 py-0.5 rounded bg-orange-100 text-orange-700 font-medium">B</span>
+                        <span className="text-gray-600 dark:text-gray-400">Behind</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-700 font-medium">NYS</span>
+                        <span className="text-gray-600 dark:text-gray-400">Not Yet Started</span>
+                      </div>
                     </div>
-                  ))}
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">Timeline Elements:</p>
+                    <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                      <div>• Small dots = Framework start/end dates</div>
+                      <div>• Large dots = Strategy milestones (hover for details)</div>
+                      <div>• Colored bars = Framework duration</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
