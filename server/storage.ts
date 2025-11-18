@@ -449,6 +449,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
+    // Check if a user with this email already exists (e.g., with a pending- ID)
+    if (userData.email) {
+      const existingUsers = await db.select().from(users).where(eq(users.email, userData.email));
+      
+      // If user exists with a different ID (e.g., pending- ID), delete it first
+      if (existingUsers.length > 0 && existingUsers[0].id !== userData.id) {
+        await db.delete(users).where(eq(users.email, userData.email));
+      }
+    }
+    
+    // Now insert or update the user with their real Replit ID
     const [user] = await db
       .insert(users)
       .values(userData)
