@@ -6,6 +6,15 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 import { logger } from "./logger";
 
+// Validation helpers
+function isValidHexColor(color: string): boolean {
+  return /^#([0-9A-F]{3}){1,2}$/i.test(color);
+}
+
+function validateDateRange(startDate: Date, endDate: Date): boolean {
+  return new Date(startDate) <= new Date(endDate);
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up Replit Auth
   await setupAuth(app);
@@ -132,6 +141,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/strategies", async (req, res) => {
     try {
       const validatedData = insertStrategySchema.parse(req.body);
+      
+      // Validate color code format
+      if (validatedData.colorCode && !isValidHexColor(validatedData.colorCode)) {
+        return res.status(400).json({ message: "Color code must be a valid hex color (e.g., #FF5733)" });
+      }
+      
+      // Validate date range
+      if (validatedData.startDate && validatedData.targetDate && 
+          !validateDateRange(validatedData.startDate, validatedData.targetDate)) {
+        return res.status(400).json({ message: "Start date must be before or equal to target date" });
+      }
+      
       const strategy = await storage.createStrategy(validatedData);
       res.status(201).json(strategy);
     } catch (error) {
@@ -145,6 +166,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/strategies/:id", async (req, res) => {
     try {
       const validatedData = insertStrategySchema.parse(req.body);
+      
+      // Validate color code format
+      if (validatedData.colorCode && !isValidHexColor(validatedData.colorCode)) {
+        return res.status(400).json({ message: "Color code must be a valid hex color (e.g., #FF5733)" });
+      }
+      
+      // Validate date range
+      if (validatedData.startDate && validatedData.targetDate && 
+          !validateDateRange(validatedData.startDate, validatedData.targetDate)) {
+        return res.status(400).json({ message: "Start date must be before or equal to target date" });
+      }
+      
       const strategy = await storage.updateStrategy(req.params.id, validatedData);
       if (!strategy) {
         return res.status(404).json({ message: "Strategy not found" });
@@ -299,6 +332,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/tactics", async (req, res) => {
     try {
       const validatedData = insertTacticSchema.parse(req.body);
+      
+      // Validate date range
+      if (validatedData.startDate && validatedData.dueDate && 
+          !validateDateRange(validatedData.startDate, validatedData.dueDate)) {
+        return res.status(400).json({ message: "Start date must be before or equal to due date" });
+      }
+      
       const tactic = await storage.createTactic(validatedData);
       res.status(201).json(tactic);
     } catch (error) {
