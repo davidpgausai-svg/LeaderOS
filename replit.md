@@ -55,9 +55,21 @@ Role-based access control system with Replit Auth integration:
 The platform centers around four core entities:
 
 1. **Users**: Role-based user accounts (executives and leaders)
-2. **Strategies**: High-level organizational objectives with metrics and timelines
-3. **Tactics**: Specific actionable items assigned to users under strategies
+2. **Strategies**: High-level organizational objectives with metrics and timelines (called "Frameworks" in UI)
+3. **Tactics**: Specific actionable items assigned to users under strategies (called "Strategies" in UI)
 4. **Activities**: Audit trail and activity feed for tracking changes and progress
+
+### Archiving System
+Comprehensive archiving workflow for completed frameworks:
+
+- **Two-Step Completion**: Frameworks must be marked "Completed" before they can be archived
+- **Status Lifecycle**: Active → Completed → Archived
+- **Cascading Archival**: When a framework is archived, all related strategies and outcomes are automatically archived
+- **Completion Tracking**: Frameworks track completion date for historical reporting
+- **Default Filtering**: Archived items are hidden from main views by default
+- **Timeline Visibility**: Archived frameworks appear on Timeline with muted styling and completion dates
+- **Completion Reports**: Framework Completion report shows on-time vs late completion metrics
+- **Performance Indicators**: Reports calculate days offset from target date (positive = late, negative = early/on-time)
 
 ### Development and Build System
 Modern development toolchain:
