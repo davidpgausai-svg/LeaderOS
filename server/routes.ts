@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { insertStrategySchema, insertTacticSchema, insertOutcomeSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
+import { logger } from "./logger";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up Replit Auth
@@ -24,8 +25,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json(user);
     } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
+      logger.error("Error fetching authenticated user", error);
+      res.status(500).json({ message: "Unable to load user information. Please try refreshing the page." });
     }
   });
   // User routes
@@ -89,8 +90,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.status(201).json(user);
     } catch (error) {
-      console.error("User creation error:", error);
-      res.status(500).json({ message: "Failed to create user" });
+      logger.error("User creation failed", error);
+      res.status(500).json({ message: "Unable to create user. Please verify all information is correct and try again." });
     }
   });
 
@@ -153,8 +154,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
-      console.error("Strategy update error:", error);
-      res.status(500).json({ message: "Failed to update strategy" });
+      logger.error("Strategy update failed", error);
+      res.status(500).json({ message: "Unable to update framework. Please check your inputs and try again." });
     }
   });
 
@@ -175,8 +176,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({ success: true });
     } catch (error) {
-      console.error("Strategy reorder error:", error);
-      res.status(500).json({ message: "Failed to reorder strategies" });
+      logger.error("Strategy reorder failed", error);
+      res.status(500).json({ message: "Unable to reorder frameworks. Please try again." });
     }
   });
 
@@ -220,8 +221,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(updatedStrategy);
     } catch (error) {
-      console.error("Strategy completion error:", error);
-      res.status(500).json({ message: "Failed to complete strategy" });
+      logger.error("Strategy completion failed", error);
+      res.status(500).json({ message: "Unable to mark framework as completed. Please try again." });
     }
   });
 
@@ -258,8 +259,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ message: "Strategy and related items archived successfully" });
     } catch (error) {
-      console.error("Strategy archive error:", error);
-      res.status(500).json({ message: "Failed to archive strategy" });
+      logger.error("Strategy archive failed", error);
+      res.status(500).json({ message: "Unable to archive framework. Please ensure it's marked as completed first." });
     }
   });
 
@@ -378,8 +379,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
-      console.error("Outcome creation error:", error);
-      res.status(500).json({ message: "Failed to create outcome" });
+      logger.error("Outcome creation failed", error);
+      res.status(500).json({ message: "Unable to create outcome. Please verify all required fields are filled." });
     }
   });
 
@@ -402,11 +403,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(outcome);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        console.error("Outcome validation error:", error.errors);
+        logger.error("Outcome validation error", error.errors);
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
-      console.error("Outcome update error:", error);
-      res.status(500).json({ message: "Failed to update outcome" });
+      logger.error("Outcome update failed", error);
+      res.status(500).json({ message: "Unable to update outcome. Please check your inputs and try again." });
     }
   });
 

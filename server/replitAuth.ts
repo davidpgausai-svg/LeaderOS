@@ -7,6 +7,7 @@ import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
+import { logger } from "./logger";
 
 if (!process.env.REPLIT_DOMAINS) {
   throw new Error("Environment variable REPLIT_DOMAINS not provided");
@@ -104,7 +105,7 @@ export async function setupAuth(app: Express) {
       await upsertUser(tokens.claims());
       verified(null, user);
     } catch (error: any) {
-      console.error("Authentication error:", error.message);
+      logger.error("Authentication error", error.message);
       verified(error, false);
     }
   };
