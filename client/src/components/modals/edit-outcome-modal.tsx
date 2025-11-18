@@ -104,8 +104,8 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
   }, [outcome, form]);
 
   const updateOutcomeMutation = useMutation({
-    mutationFn: async (data: InsertOutcome & { id: string }) => {
-      const response = await apiRequest("PATCH", `/api/outcomes/${data.id}`, data);
+    mutationFn: async ({ id, data }: { id: string; data: InsertOutcome }) => {
+      const response = await apiRequest("PATCH", `/api/outcomes/${id}`, data);
       return response.json();
     },
     onSuccess: () => {
@@ -138,17 +138,16 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
       return;
     }
 
-    // Filter out empty optional fields and convert Date to ISO string
-    const cleanData = {
+    // Filter out empty optional fields
+    const cleanData: InsertOutcome = {
       ...data,
-      id: outcome.id,
       tacticId: data.tacticId === "none" ? undefined : data.tacticId || undefined,
       targetValue: data.targetValue || undefined,
       currentValue: data.currentValue || undefined,
       measurementUnit: data.measurementUnit || undefined,
-      dueDate: data.dueDate ? (data.dueDate instanceof Date ? data.dueDate.toISOString() : data.dueDate) : undefined,
+      dueDate: data.dueDate || undefined,
     };
-    updateOutcomeMutation.mutate(cleanData);
+    updateOutcomeMutation.mutate({ id: outcome.id, data: cleanData });
   };
 
   const selectedStrategy = form.watch("strategyId");

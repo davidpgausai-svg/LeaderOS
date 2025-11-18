@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertStrategySchema, insertTacticSchema } from "@shared/schema";
+import { insertStrategySchema, insertTacticSchema, insertOutcomeSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 
@@ -259,7 +259,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/outcomes", async (req, res) => {
     try {
-      const outcome = await storage.createOutcome(req.body);
+      const validatedData = insertOutcomeSchema.parse(req.body);
+      const outcome = await storage.createOutcome(validatedData);
       
       await storage.createActivity({
         type: "outcome_created",
@@ -271,13 +272,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(201).json(outcome);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Outcome creation error:", error);
       res.status(500).json({ message: "Failed to create outcome" });
     }
   });
 
   app.patch("/api/outcomes/:id", async (req, res) => {
     try {
-      const outcome = await storage.updateOutcome(req.params.id, req.body);
+      const validatedData = insertOutcomeSchema.parse(req.body);
+      const outcome = await storage.updateOutcome(req.params.id, validatedData);
       if (!outcome) {
         return res.status(404).json({ message: "Outcome not found" });
       }
@@ -292,6 +298,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(outcome);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error("Outcome validation error:", error.errors);
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Outcome update error:", error);
       res.status(500).json({ message: "Failed to update outcome" });
     }
   });
