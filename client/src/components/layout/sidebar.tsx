@@ -25,8 +25,8 @@ const navigation = [
   { name: "Dashboard", href: "/", icon: ChartLine },
   { name: "Framework", href: "/framework", icon: Target },
   { name: "Strategies", href: "/strategies", icon: CheckSquare },
-  { name: "Timeline", href: "/timeline", icon: Calendar },
   { name: "Outcomes", href: "/outcomes", icon: TrendingUp },
+  { name: "Timeline", href: "/timeline", icon: Calendar },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
