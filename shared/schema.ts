@@ -34,7 +34,8 @@ export const strategies = pgTable("strategies", {
   startDate: timestamp("start_date").notNull(),
   targetDate: timestamp("target_date").notNull(),
   metrics: text("metrics").notNull(),
-  status: text("status").notNull().default('active'), // 'active', 'completed', 'on-hold'
+  status: text("status").notNull().default('Active'), // 'Active', 'Completed', 'Archived'
+  completionDate: timestamp("completion_date"),
   colorCode: text("color_code").notNull().default('#3B82F6'), // Hex color for strategy grouping
   displayOrder: integer("display_order").notNull().default(0), // Order for framework ranking
   createdBy: varchar("created_by").notNull(),
@@ -54,6 +55,7 @@ export const tactics = pgTable("tactics", {
   dueDate: timestamp("due_date").notNull(), // Component 8: Timeline - End Date
   status: text("status").notNull().default('NYS'), // Component 9: Status (C, OT, OH, B, NYS)
   progress: integer("progress").notNull().default(0), // 0-100
+  isArchived: text("is_archived").notNull().default('false'), // 'true' or 'false' for cascade archival
   createdBy: varchar("created_by").notNull(),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
@@ -79,6 +81,7 @@ export const outcomes = pgTable("outcomes", {
   measurementUnit: text("measurement_unit"),
   status: text("status").notNull().default('in_progress'), // 'in_progress', 'achieved', 'at_risk', 'not_started'
   dueDate: timestamp("due_date"),
+  isArchived: text("is_archived").notNull().default('false'), // 'true' or 'false' for cascade archival
   createdBy: varchar("created_by").notNull(),
   createdAt: timestamp("created_at").default(sql`now()`),
 });

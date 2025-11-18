@@ -173,7 +173,10 @@ export default function Outcomes() {
     const matchesStatus = statusFilter === "all" || outcome.status === statusFilter;
     const matchesStrategy = strategyFilter === "all" || outcome.strategyId === strategyFilter;
     
-    return matchesSearch && matchesStatus && matchesStrategy;
+    // Filter out archived outcomes and outcomes from archived strategies
+    const isNotArchived = outcome.isArchived !== 'true' && outcome.strategy?.status !== 'Archived';
+    
+    return matchesSearch && matchesStatus && matchesStrategy && isNotArchived;
   });
 
   // Group outcomes by strategy

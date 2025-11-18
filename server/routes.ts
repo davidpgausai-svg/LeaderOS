@@ -204,6 +204,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/strategies/:id/complete", async (req, res) => {
+    try {
+      const strategy = await storage.getStrategy(req.params.id);
+      if (!strategy) {
+        return res.status(404).json({ message: "Strategy not found" });
+      }
+
+      // Only update status and completionDate, keep other fields unchanged
+      const updatedStrategy = await storage.updateStrategy(req.params.id, {
+        ...strategy,
+        status: 'Completed',
+        completionDate: new Date(),
+      });
+
+      res.json(updatedStrategy);
+    } catch (error) {
+      console.error("Strategy completion error:", error);
+      res.status(500).json({ message: "Failed to complete strategy" });
+    }
+  });
+
+  app.patch("/api/strategies/:id/archive", async (req, res) => {
+    try {
+      const strategy = await storage.getStrategy(req.params.id);
+      if (!strategy) {
+        return res.status(404).json({ message: "Strategy not found" });
+      }
+
+      if (strategy.status !== 'Completed') {
+        return res.status(400).json({ message: "Only completed strategies can be archived" });
+      }
+
+      // Update strategy status to Archived
+      await storage.updateStrategy(req.params.id, {
+        ...strategy,
+        status: 'Archived',
+      });
+
+      // Cascade archive to all tactics
+      const tactics = await storage.getAllTactics();
+      const strategyTactics = tactics.filter((t: any) => t.strategyId === req.params.id);
+      for (const tactic of strategyTactics) {
+        await storage.updateTactic(tactic.id, { ...tactic, isArchived: 'true' });
+      }
+
+      // Cascade archive to all outcomes
+      const outcomes = await storage.getAllOutcomes();
+      const strategyOutcomes = outcomes.filter((o: any) => o.strategyId === req.params.id);
+      for (const outcome of strategyOutcomes) {
+        await storage.updateOutcome(outcome.id, { ...outcome, isArchived: 'true' });
+      }
+
+      res.json({ message: "Strategy and related items archived successfully" });
+    } catch (error) {
+      console.error("Strategy archive error:", error);
+      res.status(500).json({ message: "Failed to archive strategy" });
+    }
+  });
+
   // Tactic routes
   app.get("/api/tactics", async (req, res) => {
     try {

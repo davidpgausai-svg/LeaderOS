@@ -22,7 +22,18 @@ import {
   CheckCircle,
   Clock,
   AlertTriangle,
+  XCircle,
+  Archive,
 } from "lucide-react";
+import { format, differenceInDays } from "date-fns";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function Reports() {
   const { currentRole } = useRole();
@@ -161,6 +172,7 @@ export default function Reports() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="overview">Overview</SelectItem>
+                  <SelectItem value="completion">Framework Completion</SelectItem>
                   <SelectItem value="changelog">Change Log</SelectItem>
                 </SelectContent>
               </Select>
@@ -169,7 +181,173 @@ export default function Reports() {
         </header>
 
         <div className="p-6 space-y-6">
-          {reportType === 'changelog' ? (
+          {reportType === 'completion' ? (
+            // Framework Completion Report
+            <>
+              {/* Metrics Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                      Total Completed
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-gray-900 dark:text-white">
+                      {strategies?.filter((s: any) => s.status === 'Completed' || s.status === 'Archived').length || 0}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
+                      <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                      On Time
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-green-600">
+                      {strategies?.filter((s: any) => {
+                        if (!s.completionDate || (s.status !== 'Completed' && s.status !== 'Archived')) return false;
+                        return new Date(s.completionDate) <= new Date(s.targetDate);
+                      }).length || 0}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
+                      <XCircle className="w-4 h-4 mr-2 text-red-600" />
+                      Late
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-red-600">
+                      {strategies?.filter((s: any) => {
+                        if (!s.completionDate || (s.status !== 'Completed' && s.status !== 'Archived')) return false;
+                        return new Date(s.completionDate) > new Date(s.targetDate);
+                      }).length || 0}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
+                      <Archive className="w-4 h-4 mr-2 text-gray-600" />
+                      Archived
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-gray-600">
+                      {strategies?.filter((s: any) => s.status === 'Archived').length || 0}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Detailed Table */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Framework Completion Details</CardTitle>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Historical view of all completed and archived frameworks
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  {strategies?.filter((s: any) => s.status === 'Completed' || s.status === 'Archived').length === 0 ? (
+                    <div className="text-center py-12">
+                      <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                        No completed frameworks
+                      </h3>
+                      <p className="text-gray-500 dark:text-gray-400">
+                        Complete a framework to see it appear in the reports
+                      </p>
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Framework</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Target Date</TableHead>
+                          <TableHead>Completion Date</TableHead>
+                          <TableHead>Performance</TableHead>
+                          <TableHead>Days Offset</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {strategies?.filter((s: any) => s.status === 'Completed' || s.status === 'Archived').map((framework: any) => {
+                          const completion = framework.completionDate ? new Date(framework.completionDate) : null;
+                          const target = new Date(framework.targetDate);
+                          const isOnTime = completion && completion <= target;
+                          const daysOffset = completion ? differenceInDays(completion, target) : 0;
+
+                          return (
+                            <TableRow key={framework.id} data-testid={`report-row-${framework.id}`}>
+                              <TableCell>
+                                <div className="flex items-center space-x-2">
+                                  <div
+                                    className="w-3 h-3 rounded-full"
+                                    style={{ backgroundColor: framework.colorCode }}
+                                  />
+                                  <span className="font-medium">{framework.title}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant={framework.status === "Archived" ? "secondary" : "default"}
+                                  className={
+                                    framework.status === "Archived"
+                                      ? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                                      : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                                  }
+                                >
+                                  {framework.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{format(target, "MMM dd, yyyy")}</TableCell>
+                              <TableCell>
+                                {completion ? format(completion, "MMM dd, yyyy") : "—"}
+                              </TableCell>
+                              <TableCell>
+                                {isOnTime ? (
+                                  <div className="flex items-center text-green-600">
+                                    <CheckCircle className="w-4 h-4 mr-1" />
+                                    On Time
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center text-red-600">
+                                    <XCircle className="w-4 h-4 mr-1" />
+                                    Late
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <span
+                                  className={
+                                    daysOffset <= 0
+                                      ? "text-green-600 font-medium"
+                                      : "text-red-600 font-medium"
+                                  }
+                                >
+                                  {daysOffset > 0 ? "+" : ""}
+                                  {daysOffset} days
+                                </span>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </>
+          ) : reportType === 'changelog' ? (
             // Change Log Report
             <Card data-testid="card-change-log">
               <CardHeader>

@@ -209,6 +209,9 @@ export default function Tactics() {
     const matchesStatus = statusFilter === "all" || tactic.status === statusFilter;
     const matchesStrategy = strategyFilter === "all" || tactic.strategyId === strategyFilter;
     
+    // Filter out archived tactics and tactics from archived strategies
+    const isNotArchived = tactic.isArchived !== 'true' && tactic.strategy?.status !== 'Archived';
+    
     // Role-based filtering
     let matchesRole = true;
     if (currentRole === 'leader') {
@@ -220,7 +223,7 @@ export default function Tactics() {
       }
     }
     
-    return matchesSearch && matchesStatus && matchesStrategy && matchesRole;
+    return matchesSearch && matchesStatus && matchesStrategy && isNotArchived && matchesRole;
   });
 
   // Group tactics by strategy

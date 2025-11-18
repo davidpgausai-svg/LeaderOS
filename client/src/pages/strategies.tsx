@@ -32,7 +32,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Trash2, MoreVertical, Edit } from "lucide-react";
+import { Plus, Search, Trash2, MoreVertical, Edit, CheckCircle, Archive } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -66,7 +66,11 @@ export default function Strategies() {
   const filteredStrategies = strategiesWithTactics.filter((strategy: any) => {
     const matchesSearch = strategy.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          strategy.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || strategy.status === statusFilter;
+    
+    // Default filter hides archived items unless explicitly selected
+    const matchesStatus = statusFilter === "all" 
+      ? strategy.status !== 'Archived' 
+      : strategy.status === statusFilter;
     
     return matchesSearch && matchesStatus;
   });
@@ -78,28 +82,45 @@ export default function Strategies() {
 
 
 
-  const updateStrategyStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const strategy = strategies?.find((s: any) => s.id === id);
-      if (!strategy) throw new Error("Strategy not found");
-      
-      const response = await apiRequest("PATCH", `/api/strategies/${id}`, {
-        ...strategy,
-        status,
-      });
+  const completeStrategyMutation = useMutation({
+    mutationFn: async (strategyId: string) => {
+      const response = await apiRequest("PATCH", `/api/strategies/${strategyId}/complete`);
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
       toast({
         title: "Success",
-        description: "Strategy status updated successfully",
+        description: "Framework marked as completed",
       });
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to update strategy status",
+        description: "Failed to complete framework",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const archiveStrategyMutation = useMutation({
+    mutationFn: async (strategyId: string) => {
+      const response = await apiRequest("PATCH", `/api/strategies/${strategyId}/archive`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tactics"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/outcomes"] });
+      toast({
+        title: "Success",
+        description: "Framework and related items archived successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to archive framework",
         variant: "destructive",
       });
     },
@@ -190,10 +211,10 @@ export default function Strategies() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Strategies</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="on-hold">On Hold</SelectItem>
+                <SelectItem value="all">All Frameworks</SelectItem>
+                <SelectItem value="Active">Active</SelectItem>
+                <SelectItem value="Completed">Completed</SelectItem>
+                <SelectItem value="Archived">Archived</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -239,55 +260,18 @@ export default function Strategies() {
                       </p>
                     </div>
                     <div className="flex items-center space-x-2">
-                      {/* Status Badge with Dropdown */}
-                      {canEditAllStrategies() ? (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button
-                              className={`px-3 py-1 rounded-full text-xs font-medium cursor-pointer transition-opacity hover:opacity-80 ${
-                                strategy.status === 'active' 
-                                  ? 'bg-blue-100 text-blue-700' 
-                                  : strategy.status === 'completed'
-                                  ? 'bg-green-100 text-green-700'
-                                  : 'bg-yellow-100 text-yellow-700'
-                              }`}
-                              data-testid={`button-status-${strategy.id}`}
-                            >
-                              {strategy.status === 'active' ? 'Active' : strategy.status === 'completed' ? 'Completed' : 'On Hold'}
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => updateStrategyStatusMutation.mutate({ id: strategy.id, status: 'active' })}
-                              data-testid={`button-set-active-${strategy.id}`}
-                            >
-                              Mark as Active
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => updateStrategyStatusMutation.mutate({ id: strategy.id, status: 'completed' })}
-                              data-testid={`button-set-completed-${strategy.id}`}
-                            >
-                              Mark as Completed
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => updateStrategyStatusMutation.mutate({ id: strategy.id, status: 'on-hold' })}
-                              data-testid={`button-set-on-hold-${strategy.id}`}
-                            >
-                              Mark as On Hold
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      ) : (
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          strategy.status === 'active' 
-                            ? 'bg-blue-100 text-blue-700' 
-                            : strategy.status === 'completed'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-yellow-100 text-yellow-700'
-                        }`}>
-                          {strategy.status === 'active' ? 'Active' : strategy.status === 'completed' ? 'Completed' : 'On Hold'}
-                        </span>
-                      )}
+                      {/* Status Badge */}
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        strategy.status === 'Active' 
+                          ? 'bg-blue-100 text-blue-700' 
+                          : strategy.status === 'Completed'
+                          ? 'bg-green-100 text-green-700'
+                          : strategy.status === 'Archived'
+                          ? 'bg-gray-100 text-gray-700'
+                          : 'bg-yellow-100 text-yellow-700'
+                      }`} data-testid={`status-badge-${strategy.id}`}>
+                        {strategy.status}
+                      </span>
                       {canEditAllStrategies() && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -358,7 +342,7 @@ export default function Strategies() {
                     </div>
                   </div>
 
-                  <div className="mt-6 pt-4 border-t border-gray-200">
+                  <div className="mt-6 pt-4 border-t border-gray-200 space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-500">
                         {strategy.tactics.length} tactics
@@ -373,6 +357,53 @@ export default function Strategies() {
                         Add Strategy
                       </Button>
                     </div>
+                    
+                    {/* Complete and Archive buttons */}
+                    {canEditAllStrategies() && strategy.status === 'Active' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => completeStrategyMutation.mutate(strategy.id)}
+                        className="w-full"
+                        data-testid={`button-complete-${strategy.id}`}
+                      >
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Mark as Completed
+                      </Button>
+                    )}
+                    
+                    {canEditAllStrategies() && strategy.status === 'Completed' && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full"
+                            data-testid={`button-archive-${strategy.id}`}
+                          >
+                            <Archive className="mr-2 h-4 w-4" />
+                            Archive
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Archive Framework</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to archive "{strategy.title}"? This will also archive all associated strategies and outcomes. Archived items can still be viewed in reports.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => archiveStrategyMutation.mutate(strategy.id)}
+                              data-testid={`button-confirm-archive-${strategy.id}`}
+                            >
+                              Archive
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
                   </div>
                 </div>
               ))}

@@ -89,6 +89,7 @@ export default function Timeline() {
         colorCode: strategy.colorCode,
         startDate: new Date(strategy.startDate),
         targetDate: new Date(strategy.targetDate),
+        completionDate: strategy.completionDate ? new Date(strategy.completionDate) : null,
         status: strategy.status,
         milestones: strategyTactics.map(tactic => ({
           id: tactic.id,
@@ -226,33 +227,40 @@ export default function Timeline() {
                       data-testid={`timeline-row-${framework.id}`}
                     >
                       {/* Framework Label */}
-                      <div className="w-48 flex-shrink-0 px-4 py-6 border-r border-gray-200 dark:border-gray-800">
+                      <div className={`w-48 flex-shrink-0 px-4 py-6 border-r border-gray-200 dark:border-gray-800 ${framework.status === 'Archived' ? 'opacity-50' : ''}`}>
                         <div className="flex items-start space-x-2">
                           <div
                             className="w-3 h-3 rounded-full mt-1 flex-shrink-0"
                             style={{ backgroundColor: framework.colorCode }}
                           />
                           <div>
-                            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                            <h3 className={`text-sm font-semibold ${framework.status === 'Archived' ? 'text-gray-500 dark:text-gray-600' : 'text-gray-900 dark:text-white'}`}>
                               {framework.title}
                             </h3>
                             <span
                               className={`inline-block mt-1 px-2 py-0.5 rounded text-xs font-medium ${
-                                framework.status === 'active'
+                                framework.status === 'Active'
                                   ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                                  : framework.status === 'completed'
+                                  : framework.status === 'Completed'
                                   ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                                  : framework.status === 'Archived'
+                                  ? 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
                                   : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
                               }`}
                             >
                               {framework.status}
                             </span>
+                            {framework.completionDate && (
+                              <div className="text-xs text-gray-500 dark:text-gray-600 mt-1">
+                                Completed: {format(framework.completionDate, 'MMM dd, yyyy')}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
 
                       {/* Timeline Bar */}
-                      <div className="flex-1 relative py-6 px-4 min-h-[120px]">
+                      <div className={`flex-1 relative py-6 px-4 min-h-[120px] ${framework.status === 'Archived' ? 'opacity-50' : ''}`}>
                         {/* Framework Duration Bar */}
                         <div
                           className="absolute top-1/2 h-8 rounded-lg transform -translate-y-1/2 flex items-center justify-center shadow-sm"
@@ -260,7 +268,7 @@ export default function Timeline() {
                             left: `${startPos}%`,
                             width: `${width}%`,
                             backgroundColor: framework.colorCode,
-                            opacity: 0.2,
+                            opacity: framework.status === 'Archived' ? 0.1 : 0.2,
                           }}
                         />
 
