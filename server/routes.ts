@@ -19,8 +19,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up Replit Auth
   await setupAuth(app);
 
-  // Initialize database with seed data on first run
-  if (storage && 'seedData' in storage) {
+  // Initialize database with seed data only in development
+  if (process.env.NODE_ENV !== 'production' && storage && 'seedData' in storage) {
     await (storage as any).seedData();
   }
 
