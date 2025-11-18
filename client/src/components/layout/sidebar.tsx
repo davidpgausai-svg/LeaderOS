@@ -59,8 +59,7 @@ export function Sidebar() {
       <div className={`${isCollapsed ? 'p-4' : 'p-6'} border-b border-gray-200 dark:border-gray-800 flex items-center justify-between`}>
         {!isCollapsed && (
           <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">NorthStar Planner</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Strategic Planning Platform</p>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">David's Planner</h1>
           </div>
         )}
         <Button
