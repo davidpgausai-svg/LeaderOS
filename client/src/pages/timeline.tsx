@@ -1,10 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { Sidebar } from "@/components/layout/sidebar";
-import { useMemo } from "react";
-import { format, min, max, differenceInDays, startOfMonth, endOfMonth, eachMonthOfInterval } from "date-fns";
+import { useState, useMemo } from "react";
+import { format, min, max, differenceInDays, startOfMonth, endOfMonth, eachMonthOfInterval, addYears, startOfDay, endOfDay } from "date-fns";
 import type { Strategy, Tactic } from "@shared/schema";
+import { Button } from "@/components/ui/button";
 
 export default function Timeline() {
+  const [yearRange, setYearRange] = useState<number | null>(null); // null means show all
+
   const { data: strategies, isLoading: strategiesLoading } = useQuery<Strategy[]>({
     queryKey: ["/api/strategies"],
   });
@@ -24,25 +27,61 @@ export default function Timeline() {
       };
     }
 
+    // Calculate date range filter based on selected year range
+    // Normalize to start/end of day to include all data from today
+    const today = new Date();
+    const rangeStartDate = startOfDay(today);
+    const rangeEndDate = yearRange ? endOfDay(addYears(today, yearRange)) : null;
+
+    // Filter strategies and tactics based on year range if set
+    // For strategies: include if their timeline overlaps with the selected range
+    // For tactics: include if their due date falls within the selected range
+    const filteredStrategies = yearRange 
+      ? strategies.filter(s => {
+          const startDate = new Date(s.startDate);
+          const targetDate = new Date(s.targetDate);
+          // Include if strategy overlaps with the range window
+          return targetDate >= rangeStartDate && startDate <= rangeEndDate!;
+        })
+      : strategies;
+    
+    const filteredTactics = yearRange
+      ? tactics.filter(t => {
+          const dueDate = new Date(t.dueDate);
+          // Include if tactic due date is within the range window
+          return dueDate >= rangeStartDate && dueDate <= rangeEndDate!;
+        })
+      : tactics;
+
     // Calculate overall date range
     const allDates: Date[] = [];
-    strategies.forEach(s => {
+    filteredStrategies.forEach(s => {
       allDates.push(new Date(s.startDate), new Date(s.targetDate));
     });
-    tactics.forEach(t => {
+    filteredTactics.forEach(t => {
       allDates.push(new Date(t.dueDate));
     });
 
-    const minDate = allDates.length > 0 ? min(allDates) : new Date();
-    const maxDate = allDates.length > 0 ? max(allDates) : new Date();
+    // If year range is set, use the range dates; otherwise use calculated min/max
+    let minDate: Date;
+    let maxDate: Date;
+    
+    if (yearRange && rangeEndDate) {
+      minDate = rangeStartDate;
+      maxDate = rangeEndDate;
+    } else {
+      minDate = allDates.length > 0 ? min(allDates) : new Date();
+      maxDate = allDates.length > 0 ? max(allDates) : new Date();
+    }
+    
     const totalDays = differenceInDays(maxDate, minDate) || 1;
 
     // Generate month markers
     const months = eachMonthOfInterval({ start: minDate, end: maxDate });
 
     // Group strategies (tactics) by framework (strategy)
-    const frameworks = strategies.map(strategy => {
-      const strategyTactics = tactics.filter(t => t.strategyId === strategy.id);
+    const frameworks = filteredStrategies.map(strategy => {
+      const strategyTactics = filteredTactics.filter(t => t.strategyId === strategy.id);
       
       return {
         id: strategy.id,
@@ -61,7 +100,7 @@ export default function Timeline() {
     });
 
     return { frameworks, minDate, maxDate, totalDays, months };
-  }, [strategies, tactics]);
+  }, [strategies, tactics, yearRange]);
 
   const getPositionPercentage = (date: Date) => {
     const daysSinceStart = differenceInDays(date, timelineData.minDate);
@@ -94,6 +133,32 @@ export default function Timeline() {
               <p className="text-gray-600 dark:text-gray-400 mt-1">
                 Strategic roadmap showing frameworks and strategies
               </p>
+            </div>
+            
+            {/* Year Range Selector */}
+            <div className="flex items-center space-x-2">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mr-2">
+                Time Horizon:
+              </span>
+              <Button
+                variant={yearRange === null ? "default" : "outline"}
+                size="sm"
+                onClick={() => setYearRange(null)}
+                data-testid="button-range-all"
+              >
+                All
+              </Button>
+              {[1, 2, 3, 4, 5].map((years) => (
+                <Button
+                  key={years}
+                  variant={yearRange === years ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setYearRange(years)}
+                  data-testid={`button-range-${years}`}
+                >
+                  {years}Y
+                </Button>
+              ))}
             </div>
           </div>
         </header>
