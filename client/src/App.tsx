@@ -11,6 +11,7 @@ import Tactics from "@/pages/tactics";
 import Outcomes from "@/pages/outcomes";
 import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
+import Timeline from "@/pages/timeline";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 
@@ -30,6 +31,7 @@ function Router() {
           <Route path="/" component={Dashboard} />
           <Route path="/framework" component={Strategies} />
           <Route path="/strategies" component={Tactics} />
+          <Route path="/timeline" component={Timeline} />
           <Route path="/outcomes" component={Outcomes} />
           <Route path="/reports" component={Reports} />
           <Route path="/settings" component={Settings} />

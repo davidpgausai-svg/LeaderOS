@@ -78,6 +78,33 @@ export default function Strategies() {
 
 
 
+  const updateStrategyStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const strategy = strategies?.find((s: any) => s.id === id);
+      if (!strategy) throw new Error("Strategy not found");
+      
+      const response = await apiRequest("PATCH", `/api/strategies/${id}`, {
+        ...strategy,
+        status,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
+      toast({
+        title: "Success",
+        description: "Strategy status updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update strategy status",
+        variant: "destructive",
+      });
+    },
+  });
+
   const deleteStrategyMutation = useMutation({
     mutationFn: async (strategyId: string) => {
       const response = await apiRequest("DELETE", `/api/strategies/${strategyId}`);
@@ -211,54 +238,105 @@ export default function Strategies() {
                         {strategy.description}
                       </p>
                     </div>
-                    {canEditAllStrategies() && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" data-testid={`button-strategy-menu-${strategy.id}`}>
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => handleEditStrategy(strategy)}
-                            data-testid={`button-edit-strategy-${strategy.id}`}
-                          >
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit Strategy
-                          </DropdownMenuItem>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <DropdownMenuItem
-                                className="text-red-600 focus:text-red-600"
-                                onSelect={(e) => e.preventDefault()}
-                                data-testid={`button-delete-strategy-${strategy.id}`}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete Strategy
-                              </DropdownMenuItem>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Strategy</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to delete "{strategy.title}"? This action cannot be undone and will also delete all associated tactics.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDeleteStrategy(strategy.id)}
-                                  className="bg-red-600 hover:bg-red-700"
-                                  data-testid={`button-confirm-delete-strategy-${strategy.id}`}
+                    <div className="flex items-center space-x-2">
+                      {/* Status Badge with Dropdown */}
+                      {canEditAllStrategies() ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              className={`px-3 py-1 rounded-full text-xs font-medium cursor-pointer transition-opacity hover:opacity-80 ${
+                                strategy.status === 'active' 
+                                  ? 'bg-blue-100 text-blue-700' 
+                                  : strategy.status === 'completed'
+                                  ? 'bg-green-100 text-green-700'
+                                  : 'bg-yellow-100 text-yellow-700'
+                              }`}
+                              data-testid={`button-status-${strategy.id}`}
+                            >
+                              {strategy.status === 'active' ? 'Active' : strategy.status === 'completed' ? 'Completed' : 'On Hold'}
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => updateStrategyStatusMutation.mutate({ id: strategy.id, status: 'active' })}
+                              data-testid={`button-set-active-${strategy.id}`}
+                            >
+                              Mark as Active
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => updateStrategyStatusMutation.mutate({ id: strategy.id, status: 'completed' })}
+                              data-testid={`button-set-completed-${strategy.id}`}
+                            >
+                              Mark as Completed
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => updateStrategyStatusMutation.mutate({ id: strategy.id, status: 'on-hold' })}
+                              data-testid={`button-set-on-hold-${strategy.id}`}
+                            >
+                              Mark as On Hold
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : (
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          strategy.status === 'active' 
+                            ? 'bg-blue-100 text-blue-700' 
+                            : strategy.status === 'completed'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {strategy.status === 'active' ? 'Active' : strategy.status === 'completed' ? 'Completed' : 'On Hold'}
+                        </span>
+                      )}
+                      {canEditAllStrategies() && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" data-testid={`button-strategy-menu-${strategy.id}`}>
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => handleEditStrategy(strategy)}
+                              data-testid={`button-edit-strategy-${strategy.id}`}
+                            >
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit Strategy
+                            </DropdownMenuItem>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <DropdownMenuItem
+                                  className="text-red-600 focus:text-red-600"
+                                  onSelect={(e) => e.preventDefault()}
+                                  data-testid={`button-delete-strategy-${strategy.id}`}
                                 >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete Strategy
+                                </DropdownMenuItem>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Strategy</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete "{strategy.title}"? This action cannot be undone and will also delete all associated tactics.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDeleteStrategy(strategy.id)}
+                                    className="bg-red-600 hover:bg-red-700"
+                                    data-testid={`button-confirm-delete-strategy-${strategy.id}`}
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </div>
                   </div>
 
                   <div className="space-y-3">

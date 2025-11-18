@@ -1,21 +1,12 @@
 import { create } from 'zustand';
+import type { User } from '@shared/schema';
 
 type Role = 'administrator' | 'executive' | 'leader';
 
 interface RoleStore {
   currentRole: Role;
-  currentUser: {
-    id: string;
-    name: string;
-    initials: string;
-    role: Role;
-  } | null;
-  setCurrentUser: (user: {
-    id: string;
-    name: string;
-    initials: string;
-    role: Role;
-  }) => void;
+  currentUser: User | null;
+  setCurrentUser: (user: User) => void;
   // Permission helpers
   canEditStrategies: () => boolean;
   canEditTactics: () => boolean;
@@ -32,7 +23,7 @@ export const useRole = create<RoleStore>((set, get) => ({
   currentUser: null,
   setCurrentUser: (user) => set({ 
     currentUser: user, 
-    currentRole: user.role 
+    currentRole: (user.role || 'leader') as Role
   }),
 
   // Permission methods
