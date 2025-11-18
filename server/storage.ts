@@ -676,87 +676,94 @@ export class DatabaseStorage implements IStorage {
   }
 
   async seedData() {
+    // Only seed in development mode
+    if (process.env.NODE_ENV === 'production') {
+      console.log('Skipping seed data in production');
+      return;
+    }
+
     // Check if strategies already exist (don't re-seed if data exists)
     const existingStrategies = await this.getAllStrategies();
-    if (existingStrategies.length > 1) {
+    if (existingStrategies.length > 0) {
       return; // Data already seeded
     }
 
-    // Get or create users with proper schema
-    let adminUser = await this.getUser("admin-1");
+    console.log('Seeding development data...');
+
+    // Get or create sample users for development
+    const adminResult = await db.select().from(users).where(eq(users.email, 'admin@example.com'));
+    let adminUser = adminResult[0];
     if (!adminUser) {
-      adminUser = await this.createUser({
-        id: "admin-1",
+      const [created] = await db.insert(users).values({
         email: "admin@example.com",
         firstName: "Admin",
         lastName: "User",
         profileImageUrl: null,
-        role: "administrator",
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
+        role: "administrator"
+      }).returning();
+      adminUser = created;
     }
     
-    let executiveUser = await this.getUser("exec-1");
+    const execResult = await db.select().from(users).where(eq(users.email, 'exec@example.com'));
+    let executiveUser = execResult[0];
     if (!executiveUser) {
-      executiveUser = await this.createUser({
-        id: "exec-1",
+      const [created] = await db.insert(users).values({
         email: "exec@example.com",
         firstName: "Executive",
         lastName: "User",
         profileImageUrl: null,
-        role: "executive",
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
+        role: "executive"
+      }).returning();
+      executiveUser = created;
     }
     
-    let leaderUser = await this.getUser("leader-1");
+    const leaderResult = await db.select().from(users).where(eq(users.email, 'leader@example.com'));
+    let leaderUser = leaderResult[0];
     if (!leaderUser) {
-      leaderUser = await this.createUser({
-        id: "leader-1",
+      const [created] = await db.insert(users).values({
         email: "leader@example.com",
         firstName: "Leader",
         lastName: "User",
         profileImageUrl: null,
-        role: "leader",
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
+        role: "leader"
+      }).returning();
+      leaderUser = created;
     }
 
-    // Create sample strategies to restore the missing frameworks
-    await this.createStrategy({
+    // Create sample strategies for development
+    const strategy1 = await this.createStrategy({
       title: "Digital Transformation Framework",
       description: "Comprehensive digital transformation initiative to modernize operations and improve customer experience",
       goal: "Transform business operations through digital innovation",
       startDate: new Date("2024-01-01"),
       targetDate: new Date("2024-12-31"),
       metrics: "Reduce operational costs by 20%, improve customer satisfaction to 90%, achieve 95% digital process adoption",
-      status: "active",
+      status: "Active",
+      completionDate: null,
       colorCode: "#10B981",
       displayOrder: 0,
       createdBy: executiveUser.id
     });
 
-    await this.createStrategy({
+    const strategy2 = await this.createStrategy({
       title: "Customer Experience Excellence",
       description: "Focus on delivering exceptional customer experiences across all touchpoints",
       goal: "Become the industry leader in customer satisfaction",
       startDate: new Date("2024-02-01"),
       targetDate: new Date("2024-11-30"),
       metrics: "Achieve NPS score of 80+, reduce complaint resolution time by 50%, increase customer retention to 95%",
-      status: "active",
+      status: "Completed",
+      completionDate: new Date("2024-11-15"),
       colorCode: "#F59E0B",
       displayOrder: 1,
       createdBy: executiveUser.id
     });
 
-    // Create sample tactics
+    // Create sample tactics for development
     await this.createTactic({
       title: "Market Research Analysis",
       description: "Conduct comprehensive market research for target regions",
-      strategyId: strategy.id,
+      strategyId: strategy1.id,
       kpi: "Number of markets analyzed",
       kpiTracking: "3 out of 5 markets completed",
       accountableLeaders: JSON.stringify([leaderUser.id]),
@@ -765,23 +772,11 @@ export class DatabaseStorage implements IStorage {
       dueDate: new Date("2024-03-14"),
       status: "C",
       progress: 100,
+      isArchived: 'false',
       createdBy: executiveUser.id
     });
 
-    await this.createTactic({
-      title: "Regional Partnership Development",
-      description: "Establish partnerships with local businesses in target markets",
-      strategyId: strategy.id,
-      kpi: "Number of strategic partnerships established",
-      kpiTracking: "2 partnerships signed, 3 in negotiation",
-      accountableLeaders: JSON.stringify([leaderUser.id, executiveUser.id]),
-      resourcesRequired: "Legal team, business development resources, travel budget",
-      startDate: new Date("2024-03-15"),
-      dueDate: new Date("2024-06-29"),
-      status: "OT",
-      progress: 65,
-      createdBy: executiveUser.id
-    });
+    console.log('Development data seeded successfully');
   }
 }
 
