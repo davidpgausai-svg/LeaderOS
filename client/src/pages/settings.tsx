@@ -55,6 +55,10 @@ export default function Settings() {
   const [adminActiveTab, setAdminActiveTab] = useState("user-management");
   const [frameworkOrder, setFrameworkOrder] = useState<any[]>([]);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
+  const [newUserFirstName, setNewUserFirstName] = useState("");
+  const [newUserLastName, setNewUserLastName] = useState("");
+  const [newUserEmail, setNewUserEmail] = useState("");
   const [notifications, setNotifications] = useState({
     email: true,
     push: false,
@@ -110,6 +114,31 @@ export default function Settings() {
       toast({
         title: "Error",
         description: "Failed to update framework order",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const addUserMutation = useMutation({
+    mutationFn: async (userData: { firstName: string; lastName: string; email: string }) => {
+      const response = await apiRequest("POST", "/api/users", userData);
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "User added successfully. They can now sign in with Replit Auth.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setIsAddUserDialogOpen(false);
+      setNewUserFirstName("");
+      setNewUserLastName("");
+      setNewUserEmail("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add user",
         variant: "destructive",
       });
     },
@@ -182,6 +211,34 @@ export default function Settings() {
       displayOrder: index
     }));
     reorderFrameworksMutation.mutate(strategyOrders);
+  };
+
+  const handleAddUser = () => {
+    if (!newUserFirstName.trim() || !newUserLastName.trim() || !newUserEmail.trim()) {
+      toast({
+        title: "Error",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newUserEmail)) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    addUserMutation.mutate({
+      firstName: newUserFirstName,
+      lastName: newUserLastName,
+      email: newUserEmail,
+    });
   };
 
   const toggleTheme = () => {
@@ -545,14 +602,21 @@ export default function Settings() {
               <TabsContent value="user-management" className="space-y-6">
                 <Card data-testid="card-admin-user-management">
                   <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Users className="mr-2 h-5 w-5" />
-                      User Role Management
-                    </CardTitle>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                      As an administrator, you can assign roles to control access permissions. 
-                      Administrators have full modification power, Executives can edit all strategies and tactics, while Leaders can only edit tactics assigned to them.
-                    </p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center">
+                          <Users className="mr-2 h-5 w-5" />
+                          User Role Management
+                        </CardTitle>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                          Add users by name and email to grant them access. Only approved users can sign in with Replit Auth.
+                        </p>
+                      </div>
+                      <Button onClick={() => setIsAddUserDialogOpen(true)} data-testid="button-add-user">
+                        <User className="w-4 h-4 mr-2" />
+                        Add User
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
@@ -612,23 +676,6 @@ export default function Settings() {
                           </div>
                         </div>
                       ))}
-                      
-                      <div className="p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-center">
-                        <div className="flex items-center justify-center mb-2">
-                          <User className="w-5 h-5 text-gray-400 mr-2" />
-                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                            New User Access
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Users can join by signing in with their Replit account. New users are automatically assigned the 
-                          <span className="font-medium text-blue-600 dark:text-blue-400"> Leader </span> 
-                          role and will appear here once they sign in.
-                        </p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                          Share your app URL with team members to get started
-                        </p>
-                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -862,6 +909,61 @@ export default function Settings() {
           )}
         </div>
       </main>
+
+      {/* Add User Dialog */}
+      <AlertDialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Add New User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Add a user by name and email. They will be able to sign in with Replit Auth using this email address.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4 my-4">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">First Name</Label>
+              <Input
+                id="firstName"
+                value={newUserFirstName}
+                onChange={(e) => setNewUserFirstName(e.target.value)}
+                placeholder="Enter first name"
+                data-testid="input-new-user-first-name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Last Name</Label>
+              <Input
+                id="lastName"
+                value={newUserLastName}
+                onChange={(e) => setNewUserLastName(e.target.value)}
+                placeholder="Enter last name"
+                data-testid="input-new-user-last-name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address</Label>
+              <Input
+                id="email"
+                type="email"
+                value={newUserEmail}
+                onChange={(e) => setNewUserEmail(e.target.value)}
+                placeholder="user@example.com"
+                data-testid="input-new-user-email"
+              />
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleAddUser}
+              disabled={addUserMutation.isPending}
+              data-testid="button-confirm-add-user"
+            >
+              {addUserMutation.isPending ? "Adding..." : "Add User"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

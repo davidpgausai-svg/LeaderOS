@@ -57,16 +57,32 @@ function updateUserSession(
 async function upsertUser(
   claims: any,
 ) {
-  // Determine role: dpgaus@outlook.com is administrator, everyone else is leader by default
-  const role = claims["email"] === "dpgaus@outlook.com" ? "administrator" : "leader";
+  const userEmail = claims["email"];
   
+  // Always allow the default administrator
+  const isDefaultAdmin = userEmail === "dpgaus@outlook.com";
+  
+  // Check if user is in the allowed users list
+  const allUsers = await storage.getAllUsers();
+  const allowedUser = allUsers.find((u: any) => u.email === userEmail);
+  
+  if (!allowedUser && !isDefaultAdmin) {
+    const error = new Error("ACCESS_DENIED");
+    (error as any).userMessage = "Access denied. Please contact an administrator to be granted access to this application.";
+    throw error;
+  }
+  
+  // Determine role: default admin always gets administrator, otherwise use assigned role
+  const userRole = isDefaultAdmin ? "administrator" : (allowedUser?.role || "leader");
+  
+  // Update or create user with their Replit ID
   await storage.upsertUser({
     id: claims["sub"],
-    email: claims["email"],
-    firstName: claims["first_name"],
-    lastName: claims["last_name"],
+    email: userEmail,
+    firstName: claims["first_name"] || allowedUser?.firstName,
+    lastName: claims["last_name"] || allowedUser?.lastName,
     profileImageUrl: claims["profile_image_url"],
-    role: role,
+    role: userRole,
   });
 }
 
@@ -82,10 +98,15 @@ export async function setupAuth(app: Express) {
     tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
     verified: passport.AuthenticateCallback
   ) => {
-    const user = {};
-    updateUserSession(user, tokens);
-    await upsertUser(tokens.claims());
-    verified(null, user);
+    try {
+      const user = {};
+      updateUserSession(user, tokens);
+      await upsertUser(tokens.claims());
+      verified(null, user);
+    } catch (error: any) {
+      console.error("Authentication error:", error.message);
+      verified(error, false);
+    }
   };
 
   for (const domain of process.env
@@ -115,8 +136,47 @@ export async function setupAuth(app: Express) {
   app.get("/api/callback", (req, res, next) => {
     passport.authenticate(`replitauth:${req.hostname}`, {
       successReturnToOrRedirect: "/",
-      failureRedirect: "/api/login",
+      failureRedirect: "/access-denied",
     })(req, res, next);
+  });
+
+  app.get("/access-denied", (req, res) => {
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Access Denied</title>
+          <style>
+            body { 
+              font-family: system-ui, -apple-system, sans-serif; 
+              display: flex; 
+              align-items: center; 
+              justify-content: center; 
+              min-height: 100vh; 
+              margin: 0; 
+              background: #f3f4f6; 
+            }
+            .container { 
+              text-align: center; 
+              padding: 2rem; 
+              background: white; 
+              border-radius: 0.5rem; 
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); 
+              max-width: 500px;
+            }
+            h1 { color: #dc2626; margin-bottom: 1rem; }
+            p { color: #4b5563; line-height: 1.6; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>Access Denied</h1>
+            <p>You do not have permission to access this application.</p>
+            <p>Please contact an administrator to be granted access.</p>
+          </div>
+        </body>
+      </html>
+    `);
   });
 
   app.get("/api/logout", (req, res) => {

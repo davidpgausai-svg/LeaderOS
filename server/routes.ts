@@ -50,6 +50,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/users", isAuthenticated, async (req: any, res) => {
+    try {
+      // Check if the requesting user is an administrator
+      const requestingUserId = req.user.claims.sub;
+      const requestingUser = await storage.getUser(requestingUserId);
+      
+      if (!requestingUser || requestingUser.role !== 'administrator') {
+        return res.status(403).json({ message: "Forbidden: Only administrators can add users" });
+      }
+
+      const { firstName, lastName, email } = req.body;
+      
+      if (!firstName || !lastName || !email) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ message: "Invalid email address" });
+      }
+
+      // Check if user with this email already exists
+      const existingUsers = await storage.getAllUsers();
+      if (existingUsers.some((u: any) => u.email === email)) {
+        return res.status(409).json({ message: "User with this email already exists" });
+      }
+
+      // Create user with a placeholder ID that will be updated when they sign in
+      const user = await storage.upsertUser({
+        id: `pending-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        email,
+        firstName,
+        lastName,
+        role: "leader", // Default role for new users
+      });
+
+      res.status(201).json(user);
+    } catch (error) {
+      console.error("User creation error:", error);
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
   app.patch("/api/users/:id", async (req, res) => {
     try {
       const user = await storage.updateUser(req.params.id, req.body);
