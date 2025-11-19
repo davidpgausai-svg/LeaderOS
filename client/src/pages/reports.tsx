@@ -172,7 +172,7 @@ export default function Reports() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="overview">Overview</SelectItem>
-                  <SelectItem value="completion">Framework Completion</SelectItem>
+                  <SelectItem value="completion">Strategy Completion</SelectItem>
                   <SelectItem value="changelog">Change Log</SelectItem>
                 </SelectContent>
               </Select>
@@ -182,7 +182,7 @@ export default function Reports() {
 
         <div className="p-6 space-y-6">
           {reportType === 'completion' ? (
-            // Framework Completion Report
+            // Strategy Completion Report
             <>
               {/* Metrics Cards */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -251,9 +251,9 @@ export default function Reports() {
               {/* Detailed Table */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Framework Completion Details</CardTitle>
+                  <CardTitle>Strategy Completion Details</CardTitle>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    Historical view of all completed and archived frameworks
+                    Historical view of all completed and archived strategies
                   </p>
                 </CardHeader>
                 <CardContent>
@@ -261,17 +261,17 @@ export default function Reports() {
                     <div className="text-center py-12">
                       <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                       <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                        No completed frameworks
+                        No completed strategies
                       </h3>
                       <p className="text-gray-500 dark:text-gray-400">
-                        Complete a framework to see it appear in the reports
+                        Complete a strategy to see it appear in the reports
                       </p>
                     </div>
                   ) : (
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Framework</TableHead>
+                          <TableHead>Strategy</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Target Date</TableHead>
                           <TableHead>Completion Date</TableHead>

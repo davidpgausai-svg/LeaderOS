@@ -681,17 +681,17 @@ export default function Settings() {
                 </Card>
               </TabsContent>
 
-              {/* Framework Management */}
+              {/* Strategy Management */}
               <TabsContent value="framework-management" className="space-y-6">
                 <Card data-testid="card-admin-framework-management">
                   <CardHeader>
                     <CardTitle className="flex items-center">
                       <Target className="mr-2 h-5 w-5" />
-                      Strategic Framework Priority Order
+                      Strategy Priority Order
                     </CardTitle>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                      Set the display order for your strategic frameworks. The order you set here will be reflected 
-                      across all pages including Dashboard, Framework, Strategies, and Outcomes. This helps establish 
+                      Set the display order for your strategies. The order you set here will be reflected 
+                      across all pages including Dashboard, Strategies, Projects, and Actions. This helps establish 
                       organizational priority and focus for your strategic initiatives.
                     </p>
                   </CardHeader>

@@ -2,7 +2,12 @@
 
 ## Overview
 
-StrategicFlow is a comprehensive strategic planning platform designed for organizational management and execution. The application provides a hierarchical system for managing strategies and tactics, allowing executives to create high-level strategies and leaders to implement specific tactics. The platform features role-based views, progress tracking, activity monitoring, and comprehensive reporting capabilities for strategic initiatives.
+StrategicFlow is a comprehensive strategic planning platform designed for organizational management and execution. The application provides a hierarchical system for managing strategies, projects, and actions. Executives create high-level strategies, and leaders implement specific projects with measurable actions. The platform features role-based views, progress tracking, activity monitoring, and comprehensive reporting capabilities for strategic initiatives.
+
+**Important Terminology Note**: The UI uses user-friendly terminology that differs from database schema names:
+- UI "Strategies" = Database "strategies"
+- UI "Projects" = Database "tactics"
+- UI "Actions" = Database "outcomes"
 
 ## User Preferences
 
@@ -52,25 +57,27 @@ Role-based access control system with Replit Auth integration:
 - **Default Admin**: David Gaus (dpgaus@outlook.com) is set as the default administrator
 
 ### Key Data Models
-The platform centers around four core entities:
+The platform centers around four core entities (note: database schema names differ from UI labels):
 
-1. **Users**: Role-based user accounts (executives and leaders)
-2. **Strategies**: High-level organizational objectives with metrics and timelines (called "Frameworks" in UI)
-   - Each framework has a customizable color code for visual identification
-   - Color pickers available in both create and edit forms with predefined palette options
-3. **Tactics**: Specific actionable items assigned to users under strategies (called "Strategies" in UI)
-4. **Activities**: Audit trail and activity feed for tracking changes and progress
+1. **Users**: Role-based user accounts (administrators, executives, and leaders)
+2. **Strategies** (DB: strategies, UI: "Strategies"): High-level organizational objectives with metrics and timelines
+   - Each strategy has a customizable color code for visual identification
+   - Color pickers available in both create and edit forms with 8 predefined colors plus custom color option
+   - Colors: Emerald (#10B981), Blue (#3B82F6), Purple (#8B5CF6), Amber (#F59E0B), Red (#EF4444), Pink (#EC4899), Cyan (#06B6D4), Teal (#14B8A6)
+3. **Tactics** (DB: tactics, UI: "Projects"): Specific actionable items assigned to users under strategies
+4. **Outcomes** (DB: outcomes, UI: "Actions"): Measurable results and deliverables associated with projects
+5. **Activities**: Audit trail and activity feed for tracking changes and progress
 
 ### Archiving System
-Comprehensive archiving workflow for completed frameworks:
+Comprehensive archiving workflow for completed strategies:
 
-- **Two-Step Completion**: Frameworks must be marked "Completed" before they can be archived
+- **Two-Step Completion**: Strategies must be marked "Completed" before they can be archived
 - **Status Lifecycle**: Active → Completed → Archived
-- **Cascading Archival**: When a framework is archived, all related strategies and outcomes are automatically archived
-- **Completion Tracking**: Frameworks track completion date for historical reporting
+- **Cascading Archival**: When a strategy is archived, all related projects and actions are automatically archived
+- **Completion Tracking**: Strategies track completion date for historical reporting
 - **Default Filtering**: Archived items are hidden from main views by default
-- **Timeline Visibility**: Archived frameworks appear on Timeline with muted styling and completion dates
-- **Completion Reports**: Framework Completion report shows on-time vs late completion metrics
+- **Timeline Visibility**: Archived strategies appear on Timeline with muted styling and completion dates
+- **Completion Reports**: Strategy Completion report shows on-time vs late completion metrics
 - **Performance Indicators**: Reports calculate days offset from target date (positive = late, negative = early/on-time)
 
 ### Development and Build System
