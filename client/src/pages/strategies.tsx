@@ -91,13 +91,13 @@ export default function Strategies() {
       queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
       toast({
         title: "Success",
-        description: "Framework marked as completed",
+        description: "Strategy marked as completed",
       });
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to complete framework",
+        description: "Failed to complete strategy",
         variant: "destructive",
       });
     },
@@ -114,13 +114,13 @@ export default function Strategies() {
       queryClient.invalidateQueries({ queryKey: ["/api/outcomes"] });
       toast({
         title: "Success",
-        description: "Framework and related items archived successfully",
+        description: "Strategy and related items archived successfully",
       });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to archive framework",
+        description: error.message || "Failed to archive strategy",
         variant: "destructive",
       });
     },
@@ -179,7 +179,7 @@ export default function Strategies() {
         <header className="bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800 px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Framework</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Strategy</h2>
               <p className="text-gray-600 dark:text-gray-400 mt-1">
                 Manage and track strategic initiatives
               </p>
@@ -187,7 +187,7 @@ export default function Strategies() {
             {canCreateStrategies() && (
               <Button onClick={() => setIsCreateStrategyOpen(true)} data-testid="button-create-strategy">
                 <Plus className="mr-2 h-4 w-4" />
-                New Framework
+                New Strategy
               </Button>
             )}
           </div>
@@ -211,7 +211,7 @@ export default function Strategies() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Frameworks</SelectItem>
+                <SelectItem value="all">All Strategies</SelectItem>
                 <SelectItem value="Active">Active</SelectItem>
                 <SelectItem value="Completed">Completed</SelectItem>
                 <SelectItem value="Archived">Archived</SelectItem>
@@ -302,7 +302,7 @@ export default function Strategies() {
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Delete Strategy</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Are you sure you want to delete "{strategy.title}"? This action cannot be undone and will also delete all associated tactics.
+                                    Are you sure you want to delete "{strategy.title}"? This action cannot be undone and will also delete all associated projects.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
@@ -354,7 +354,7 @@ export default function Strategies() {
                         className="text-white hover:opacity-90"
                       >
                         <Plus className="mr-1 h-3 w-3" />
-                        Add Strategy
+                        Add Project
                       </Button>
                     </div>
                     
@@ -387,9 +387,9 @@ export default function Strategies() {
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Archive Framework</AlertDialogTitle>
+                            <AlertDialogTitle>Archive Strategy</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Are you sure you want to archive "{strategy.title}"? This will also archive all associated strategies and outcomes. Archived items can still be viewed in reports.
+                              Are you sure you want to archive "{strategy.title}"? This will also archive all associated projects and actions. Archived items can still be viewed in reports.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>

@@ -97,7 +97,7 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
       queryClient.invalidateQueries({ queryKey: ["/api/outcomes"] });
       toast({
         title: "Success",
-        description: "Outcome created successfully",
+        description: "Action created successfully",
       });
       form.reset();
       onOpenChange(false);
@@ -105,7 +105,7 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
     onError: (error) => {
       toast({
         title: "Error",
-        description: "Failed to create outcome",
+        description: "Failed to create action",
         variant: "destructive",
       });
     },
@@ -116,7 +116,7 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
     if (!data.strategyId || data.strategyId === "placeholder") {
       toast({
         title: "Error",
-        description: "Please select a framework strategy",
+        description: "Please select a strategy",
         variant: "destructive",
       });
       return;
@@ -143,7 +143,7 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create New Outcome</DialogTitle>
+          <DialogTitle>Create New Action</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -157,9 +157,9 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
                   name="title"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Outcome Title</FormLabel>
+                      <FormLabel>Action Title</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter outcome title..." {...field} data-testid="input-outcome-title" />
+                        <Input placeholder="Enter action title..." {...field} data-testid="input-outcome-title" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -174,7 +174,7 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
                       <FormLabel>Description</FormLabel>
                       <FormControl>
                         <Textarea 
-                          placeholder="Describe the expected outcome..." 
+                          placeholder="Describe the expected action..." 
                           className="min-h-[100px]"
                           {...field} 
                           data-testid="textarea-outcome-description"
@@ -195,15 +195,15 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
                   name="strategyId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Framework Strategy</FormLabel>
+                      <FormLabel>Strategy</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value || "placeholder"}>
                         <FormControl>
                           <SelectTrigger data-testid="select-outcome-strategy">
-                            <SelectValue placeholder="Select a framework strategy" />
+                            <SelectValue placeholder="Select a strategy" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="placeholder">Select a framework strategy</SelectItem>
+                          <SelectItem value="placeholder">Select a strategy</SelectItem>
                           {(strategies as Strategy[])?.map((strategy) => (
                             <SelectItem key={strategy.id} value={strategy.id}>
                               <div className="flex items-center space-x-2">

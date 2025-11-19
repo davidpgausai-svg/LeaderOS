@@ -140,7 +140,7 @@ export function CreateTacticModal({ isOpen, onClose, strategyId }: CreateTacticM
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <Target className="w-5 h-5 text-blue-500" />
-            <span>Create New Strategy</span>
+            <span>Create New Project</span>
           </DialogTitle>
         </DialogHeader>
 
@@ -155,10 +155,10 @@ export function CreateTacticModal({ isOpen, onClose, strategyId }: CreateTacticM
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Strategy Title *</FormLabel>
+                    <FormLabel>Project Title *</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Enter strategy title"
+                        placeholder="Enter project title"
                         {...field}
                         data-testid="input-tactic-title"
                       />
@@ -176,7 +176,7 @@ export function CreateTacticModal({ isOpen, onClose, strategyId }: CreateTacticM
                     <FormLabel>Description *</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Describe this strategy and its objectives"
+                        placeholder="Describe this project and its objectives"
                         {...field}
                         data-testid="textarea-tactic-description"
                       />
@@ -191,11 +191,11 @@ export function CreateTacticModal({ isOpen, onClose, strategyId }: CreateTacticM
                 name="strategyId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Framework *</FormLabel>
+                    <FormLabel>Strategy *</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger data-testid="select-strategy">
-                          <SelectValue placeholder="Select a strategic framework" />
+                          <SelectValue placeholder="Select a strategy" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>

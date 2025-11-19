@@ -333,7 +333,7 @@ export function EditStrategyModal({ open, onOpenChange, strategy }: EditStrategy
                   name="colorCode"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Framework Color</FormLabel>
+                      <FormLabel>Strategy Color</FormLabel>
                       <FormControl>
                         <div className="space-y-3">
                           <div className="flex flex-wrap gap-2">
