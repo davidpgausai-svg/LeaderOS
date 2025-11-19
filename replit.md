@@ -57,16 +57,21 @@ Role-based access control system with Replit Auth integration:
 - **Default Admin**: David Gaus (dpgaus@outlook.com) is set as the default administrator
 
 ### Key Data Models
-The platform centers around four core entities (note: database schema names differ from UI labels):
+The platform centers around six core entities (note: database schema names differ from UI labels):
 
 1. **Users**: Role-based user accounts (administrators, executives, and leaders)
 2. **Strategies** (DB: strategies, UI: "Strategies"): High-level organizational objectives with metrics and timelines
    - Each strategy has a customizable color code for visual identification
    - Color pickers available in both create and edit forms with 8 predefined colors plus custom color option
    - Colors: Emerald (#10B981), Blue (#3B82F6), Purple (#8B5CF6), Amber (#F59E0B), Red (#EF4444), Pink (#EC4899), Cyan (#06B6D4), Teal (#14B8A6)
+   - **Change Continuum Framework**: 9 mandatory fields for change management (see dedicated section below)
 3. **Tactics** (DB: tactics, UI: "Projects"): Specific actionable items assigned to users under strategies
+   - Each project includes 7 milestones for tracking implementation progress
+   - Document folder URL field for centralized project documentation
 4. **Outcomes** (DB: outcomes, UI: "Actions"): Measurable results and deliverables associated with projects
-5. **Activities**: Audit trail and activity feed for tracking changes and progress
+5. **Milestones**: 7 predefined milestones per project tracking change management phases
+6. **Communication Templates**: URL links to presentation and documentation templates for each milestone
+7. **Activities**: Audit trail and activity feed for tracking changes and progress
 
 ### Progress Calculation System
 Automatic backend-driven progress calculation with cascading rollups:
@@ -90,6 +95,66 @@ Comprehensive archiving workflow for completed strategies:
 - **Timeline Visibility**: Archived strategies appear on Timeline with muted styling and completion dates
 - **Completion Reports**: Strategy Completion report shows on-time vs late completion metrics
 - **Performance Indicators**: Reports calculate days offset from target date (positive = late, negative = early/on-time)
+
+### Change Continuum Framework
+Every strategy includes 9 mandatory fields that define the change management approach:
+
+1. **Case for Change**: Justification for why the change is necessary
+2. **Vision Statement**: Description of the desired future state
+3. **Success Metrics**: Measurable indicators of success
+4. **Stakeholder Map**: Identification of key stakeholders and their roles
+5. **Readiness Rating (RAG)**: Red/Amber/Green assessment of organizational readiness
+6. **Risk Exposure Rating**: Assessment of potential risks and mitigation strategies
+7. **Change Champion Assignment**: Designation of change leaders and sponsors
+8. **Reinforcement Plan**: Strategy for sustaining the change over time
+9. **Benefits Realization Plan**: Approach for tracking and realizing expected benefits
+
+**Implementation Details:**
+- All 9 fields are mandatory (enforced at database, API, and form levels)
+- Database fields use NOT NULL constraints with meaningful defaults ("To be defined")
+- API validation requires non-empty strings using `.trim().min(1)` Zod validation
+- Fields are displayed in collapsible sections on Strategy cards and detail views
+- Full dark mode support across all Change Continuum displays
+
+### Project Milestones System
+Each project automatically includes 7 predefined milestones for tracking change implementation:
+
+1. **Stakeholder & Readiness Assessment**: Initial stakeholder analysis and readiness evaluation
+2. **Executive Governance Review**: Executive leadership review and approval
+3. **Directors Meeting Authorization**: Board or director-level authorization
+4. **Strategic Communication Deployment**: Rollout of strategic communications
+5. **Staff Meetings & Huddles Activation**: Team engagement and activation sessions
+6. **Education & Enablement Completion**: Training and enablement activities
+7. **Operational Feedback + Governance Close-Out**: Final review and lessons learned
+
+**Milestone Features:**
+- Auto-created when a new project is created
+- Each milestone tracks status (not_started, in_progress, completed)
+- Displayed as checklist on project cards with visual completion indicators
+- Can include start dates, completion dates, and notes
+- Integrated with Communication Templates for document management
+
+### Communication Templates
+Centralized document management for project milestones:
+
+- **Purpose**: Store and manage URLs to presentation and documentation templates
+- **Structure**: One URL per milestone (7 URLs total per project)
+- **Features**: 
+  - Simple URL input fields for each milestone
+  - Clickable hyperlinks to access templates
+  - Auto-creation of template placeholders for all projects
+  - Project-specific organization by milestone number
+- **Access**: Available to all users through dedicated Communication Templates page
+
+### View-Only Access
+Strategy and Project cards include View functionality for read-only access:
+
+- **View Buttons**: Available in dropdown menus on all Strategy and Project cards
+- **Accessibility**: View access available to all users regardless of edit permissions
+- **View Modals**: Display all details in read-only format including:
+  - Strategies: All 9 Change Continuum fields, timeline, metrics, status
+  - Projects: All project details, 7 milestones with completion status, KPIs, resources
+- **Purpose**: Allow users to review details without requiring edit permissions
 
 ### Development and Build System
 Modern development toolchain:

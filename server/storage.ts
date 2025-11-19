@@ -217,7 +217,12 @@ export class MemStorage implements IStorage {
 
   async upsertUser(userData: UpsertUser): Promise<User> {
     const user: User = {
-      ...userData,
+      id: userData.id ?? randomUUID(),
+      email: userData.email ?? null,
+      firstName: userData.firstName ?? null,
+      lastName: userData.lastName ?? null,
+      profileImageUrl: userData.profileImageUrl ?? null,
+      role: userData.role ?? 'leader',
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -228,8 +233,12 @@ export class MemStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
     const user: User = { 
-      ...insertUser, 
       id,
+      email: insertUser.email ?? null,
+      firstName: insertUser.firstName ?? null,
+      lastName: insertUser.lastName ?? null,
+      profileImageUrl: insertUser.profileImageUrl ?? null,
+      role: insertUser.role ?? 'leader',
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -272,6 +281,8 @@ export class MemStorage implements IStorage {
       status: insertStrategy.status || 'active',
       colorCode: insertStrategy.colorCode || '#3B82F6',
       displayOrder: insertStrategy.displayOrder ?? 0,
+      progress: 0,
+      completionDate: insertStrategy.completionDate ?? null,
       createdAt: new Date()
     };
     this.strategies.set(id, strategy);
@@ -361,9 +372,11 @@ export class MemStorage implements IStorage {
       ...insertTactic, 
       id,
       status: insertTactic.status || 'NYS',
-      progress: insertTactic.progress || 0,
+      progress: 0,
+      isArchived: insertTactic.isArchived || 'false',
       kpiTracking: insertTactic.kpiTracking || null,
       resourcesRequired: insertTactic.resourcesRequired || null,
+      documentFolderUrl: insertTactic.documentFolderUrl || null,
       createdAt: new Date()
     };
     this.tactics.set(id, tactic);
@@ -458,6 +471,7 @@ export class MemStorage implements IStorage {
       ...insertOutcome, 
       id,
       status: insertOutcome.status || 'in_progress',
+      isArchived: insertOutcome.isArchived || 'false',
       dueDate: insertOutcome.dueDate || null,
       tacticId: insertOutcome.tacticId || null,
       targetValue: insertOutcome.targetValue || null,
@@ -1041,6 +1055,15 @@ export class DatabaseStorage implements IStorage {
       completionDate: null,
       colorCode: "#10B981",
       displayOrder: 0,
+      caseForChange: "Legacy systems and processes are hindering growth and customer satisfaction in a rapidly evolving digital landscape",
+      visionStatement: "Become a digitally-enabled organization delivering seamless customer experiences and operational excellence",
+      successMetrics: "20% cost reduction, 90% customer satisfaction, 95% digital adoption rate",
+      stakeholderMap: "Executive team (sponsors), IT department (implementers), All departments (impacted users)",
+      readinessRating: "Green - Strong executive support and allocated budget",
+      riskExposureRating: "Amber - Medium risk due to scale and complexity of transformation",
+      changeChampionAssignment: "Executive User - Executive sponsor and primary champion",
+      reinforcementPlan: "Monthly progress reviews, quarterly celebrations of milestones, continuous communication of benefits",
+      benefitsRealizationPlan: "Track cost savings monthly, measure customer satisfaction quarterly, monitor adoption rates weekly",
       createdBy: executiveUser.id
     });
 
@@ -1055,6 +1078,15 @@ export class DatabaseStorage implements IStorage {
       completionDate: new Date("2024-11-15"),
       colorCode: "#F59E0B",
       displayOrder: 1,
+      caseForChange: "Customer expectations are rising and competitors are outperforming us in customer satisfaction metrics",
+      visionStatement: "Be recognized as the industry leader in customer experience and satisfaction",
+      successMetrics: "NPS score of 80+, 50% faster complaint resolution, 95% customer retention rate",
+      stakeholderMap: "Customer service team (champions), Sales team (key stakeholders), All customer-facing staff (implementers)",
+      readinessRating: "Green - High readiness with experienced customer service leadership",
+      riskExposureRating: "Green - Low risk due to clear metrics and proven methodologies",
+      changeChampionAssignment: "Leader User - Customer experience champion and implementation lead",
+      reinforcementPlan: "Weekly team huddles, monthly recognition of customer service wins, ongoing customer feedback sharing",
+      benefitsRealizationPlan: "Track NPS monthly, monitor complaint resolution times daily, review retention rates quarterly",
       createdBy: executiveUser.id
     });
 
@@ -1070,7 +1102,6 @@ export class DatabaseStorage implements IStorage {
       startDate: new Date("2024-01-01"),
       dueDate: new Date("2024-03-14"),
       status: "C",
-      progress: 100,
       isArchived: 'false',
       createdBy: executiveUser.id
     });

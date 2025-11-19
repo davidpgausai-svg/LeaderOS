@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { StrategyCard } from "@/components/cards/strategy-card";
 import { CreateStrategyModal } from "@/components/modals/create-strategy-modal";
 import { EditStrategyModal } from "@/components/modals/edit-strategy-modal";
+import { ViewStrategyModal } from "@/components/modals/view-strategy-modal";
 import { CreateTacticModal } from "@/components/modals/create-tactic-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,7 +33,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Trash2, MoreVertical, Edit, CheckCircle, Archive, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronUp } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -47,6 +48,7 @@ export default function Strategies() {
   const queryClient = useQueryClient();
   const [isCreateStrategyOpen, setIsCreateStrategyOpen] = useState(false);
   const [isEditStrategyOpen, setIsEditStrategyOpen] = useState(false);
+  const [isViewStrategyOpen, setIsViewStrategyOpen] = useState(false);
   const [isCreateTacticOpen, setIsCreateTacticOpen] = useState(false);
   const [selectedStrategyId, setSelectedStrategyId] = useState<string>();
   const [selectedStrategy, setSelectedStrategy] = useState<any>(null);
@@ -157,6 +159,11 @@ export default function Strategies() {
   const handleEditStrategy = (strategy: any) => {
     setSelectedStrategy(strategy);
     setIsEditStrategyOpen(true);
+  };
+
+  const handleViewStrategy = (strategy: any) => {
+    setSelectedStrategy(strategy);
+    setIsViewStrategyOpen(true);
   };
 
   const handleDeleteStrategy = (strategyId: string) => {
@@ -278,54 +285,63 @@ export default function Strategies() {
                       }`} data-testid={`status-badge-${strategy.id}`}>
                         {strategy.status}
                       </span>
-                      {canEditAllStrategies() && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" data-testid={`button-strategy-menu-${strategy.id}`}>
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => handleEditStrategy(strategy)}
-                              data-testid={`button-edit-strategy-${strategy.id}`}
-                            >
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit Strategy
-                            </DropdownMenuItem>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <DropdownMenuItem
-                                  className="text-red-600 focus:text-red-600"
-                                  onSelect={(e) => e.preventDefault()}
-                                  data-testid={`button-delete-strategy-${strategy.id}`}
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete Strategy
-                                </DropdownMenuItem>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Strategy</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to delete "{strategy.title}"? This action cannot be undone and will also delete all associated projects.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleDeleteStrategy(strategy.id)}
-                                    className="bg-red-600 hover:bg-red-700"
-                                    data-testid={`button-confirm-delete-strategy-${strategy.id}`}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" data-testid={`button-strategy-menu-${strategy.id}`}>
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => handleViewStrategy(strategy)}
+                            data-testid={`button-view-strategy-${strategy.id}`}
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Details
+                          </DropdownMenuItem>
+                          {canEditAllStrategies() && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => handleEditStrategy(strategy)}
+                                data-testid={`button-edit-strategy-${strategy.id}`}
+                              >
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit Strategy
+                              </DropdownMenuItem>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <DropdownMenuItem
+                                    className="text-red-600 focus:text-red-600"
+                                    onSelect={(e) => e.preventDefault()}
+                                    data-testid={`button-delete-strategy-${strategy.id}`}
                                   >
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete Strategy
+                                  </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Strategy</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete "{strategy.title}"? This action cannot be undone and will also delete all associated projects.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDeleteStrategy(strategy.id)}
+                                      className="bg-red-600 hover:bg-red-700"
+                                      data-testid={`button-confirm-delete-strategy-${strategy.id}`}
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
 
@@ -486,6 +502,11 @@ export default function Strategies() {
       <EditStrategyModal
         open={isEditStrategyOpen}
         onOpenChange={setIsEditStrategyOpen}
+        strategy={selectedStrategy}
+      />
+      <ViewStrategyModal
+        open={isViewStrategyOpen}
+        onOpenChange={setIsViewStrategyOpen}
         strategy={selectedStrategy}
       />
       <CreateTacticModal

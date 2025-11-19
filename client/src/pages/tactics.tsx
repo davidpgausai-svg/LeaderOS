@@ -4,6 +4,7 @@ import { useRole } from "@/hooks/use-role";
 import { Sidebar } from "@/components/layout/sidebar";
 import { CreateTacticModal } from "@/components/modals/create-tactic-modal";
 import { EditTacticModal } from "@/components/modals/edit-tactic-modal";
+import { ViewTacticModal } from "@/components/modals/view-tactic-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -53,6 +54,7 @@ import {
   ChevronDown,
   ChevronRight,
   Edit,
+  Eye,
   ExternalLink,
   CheckCircle2,
   Circle
@@ -113,7 +115,9 @@ export default function Tactics() {
   const queryClient = useQueryClient();
   const [isCreateTacticOpen, setIsCreateTacticOpen] = useState(false);
   const [isEditTacticOpen, setIsEditTacticOpen] = useState(false);
+  const [isViewTacticOpen, setIsViewTacticOpen] = useState(false);
   const [editingTactic, setEditingTactic] = useState<Tactic | null>(null);
+  const [viewingTactic, setViewingTactic] = useState<Tactic | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [strategyFilter, setStrategyFilter] = useState("all");
@@ -309,9 +313,19 @@ export default function Tactics() {
     setIsEditTacticOpen(true);
   };
 
+  const handleViewTactic = (tactic: Tactic) => {
+    setViewingTactic(tactic);
+    setIsViewTacticOpen(true);
+  };
+
   const closeEditModal = () => {
     setIsEditTacticOpen(false);
     setEditingTactic(null);
+  };
+
+  const closeViewModal = () => {
+    setIsViewTacticOpen(false);
+    setViewingTactic(null);
   };
 
   if (tacticsLoading) {
@@ -490,6 +504,13 @@ export default function Tactics() {
                                         </Button>
                                       </DropdownMenuTrigger>
                                       <DropdownMenuContent align="end">
+                                        <DropdownMenuItem 
+                                          onClick={() => handleViewTactic(tactic)}
+                                          data-testid={`button-view-${tactic.id}`}
+                                        >
+                                          <Eye className="w-4 h-4 mr-2" />
+                                          View Details
+                                        </DropdownMenuItem>
                                         {canEditTactic(tactic) && (
                                           <>
                                             <DropdownMenuItem 
@@ -708,6 +729,11 @@ export default function Tactics() {
         isOpen={isEditTacticOpen} 
         onClose={closeEditModal}
         tactic={editingTactic}
+      />
+      <ViewTacticModal 
+        isOpen={isViewTacticOpen} 
+        onClose={closeViewModal}
+        tactic={viewingTactic}
       />
     </div>
   );
