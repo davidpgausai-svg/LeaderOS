@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 import {
   Select,
   SelectContent,
@@ -693,19 +694,26 @@ export default function Tactics() {
                                         return (
                                           <div 
                                             key={milestoneNum} 
-                                            className="flex items-center space-x-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded transition-colors"
+                                            className="flex items-center justify-between text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded transition-colors"
                                             onClick={() => handleMilestoneClick(tactic.id, milestoneNum)}
                                             title="Click to toggle completion status"
                                             data-testid={`milestone-${tactic.id}-${milestoneNum}`}
                                           >
-                                            {isCompleted ? (
-                                              <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
-                                            ) : (
-                                              <Circle className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                            <div className="flex items-center space-x-2">
+                                              {isCompleted ? (
+                                                <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                              ) : (
+                                                <Circle className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                              )}
+                                              <span className={isCompleted ? "text-gray-900 dark:text-white" : "text-gray-600 dark:text-gray-400"}>
+                                                {getMilestoneTitle(milestoneNum)}
+                                              </span>
+                                            </div>
+                                            {isCompleted && milestone?.completionDate && (
+                                              <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                                                {format(new Date(milestone.completionDate), 'MMM d, yyyy h:mm a')}
+                                              </span>
                                             )}
-                                            <span className={isCompleted ? "text-gray-900 dark:text-white" : "text-gray-600 dark:text-gray-400"}>
-                                              {getMilestoneTitle(milestoneNum)}
-                                            </span>
                                           </div>
                                         );
                                       })}
