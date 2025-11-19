@@ -44,9 +44,21 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
       targetDate: new Date(),
       metrics: "",
       status: "active",
+      colorCode: "#3B82F6",
       createdBy: currentUser?.id || "1",
     },
   });
+
+  const predefinedColors = [
+    { name: "Blue", value: "#3B82F6" },
+    { name: "Green", value: "#10B981" },
+    { name: "Purple", value: "#8B5CF6" },
+    { name: "Orange", value: "#F59E0B" },
+    { name: "Red", value: "#EF4444" },
+    { name: "Pink", value: "#EC4899" },
+    { name: "Teal", value: "#14B8A6" },
+    { name: "Indigo", value: "#6366F1" },
+  ];
 
   const createStrategyMutation = useMutation({
     mutationFn: async (data: InsertStrategy) => {
@@ -182,6 +194,50 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
                   <FormLabel>Success Metrics</FormLabel>
                   <FormControl>
                     <Input placeholder="How will success be measured?" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="colorCode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Framework Color</FormLabel>
+                  <FormControl>
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap gap-2">
+                        {predefinedColors.map((color) => (
+                          <button
+                            key={color.value}
+                            type="button"
+                            onClick={() => field.onChange(color.value)}
+                            className={`w-10 h-10 rounded-lg border-2 transition-all ${
+                              field.value === color.value
+                                ? 'border-gray-900 dark:border-white scale-110'
+                                : 'border-gray-300 dark:border-gray-600 hover:scale-105'
+                            }`}
+                            style={{ backgroundColor: color.value }}
+                            title={color.name}
+                            data-testid={`color-${color.value}`}
+                          />
+                        ))}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          type="color"
+                          value={field.value}
+                          onChange={(e) => field.onChange(e.target.value)}
+                          className="w-20 h-10 cursor-pointer"
+                          data-testid="input-custom-color"
+                        />
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          or choose a custom color
+                        </span>
+                      </div>
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
