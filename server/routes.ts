@@ -517,6 +517,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Milestone routes
+  app.get("/api/milestones", async (req, res) => {
+    try {
+      const milestones = await storage.getAllMilestones();
+      res.json(milestones);
+    } catch (error) {
+      logger.error("Failed to fetch all milestones", error);
+      res.status(500).json({ message: "Failed to fetch milestones" });
+    }
+  });
+
   app.get("/api/milestones/:tacticId", async (req, res) => {
     try {
       const milestones = await storage.getMilestonesByTactic(req.params.tacticId);
@@ -543,7 +553,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Communication Template routes
   app.get("/api/communication-templates/:tacticId", async (req, res) => {
     try {
-      const templates = await storage.getCommunicationTemplatesByTactic(req.params.tacticId);
+      let templates = await storage.getCommunicationTemplatesByTactic(req.params.tacticId);
+      
+      // Auto-create templates if they don't exist for this tactic
+      if (templates.length === 0) {
+        templates = await storage.createCommunicationTemplates(req.params.tacticId);
+      }
+      
       res.json(templates);
     } catch (error) {
       logger.error("Failed to fetch communication templates", error);

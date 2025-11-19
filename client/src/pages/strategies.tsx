@@ -371,24 +371,40 @@ export default function Strategies() {
                     </CollapsibleTrigger>
                     <CollapsibleContent className="mt-2 space-y-2 text-sm">
                       <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                        <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Change Driver</div>
-                        <div className="text-gray-600 dark:text-gray-400">{strategy.changeDriver || "To be defined"}</div>
+                        <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Case for Change</div>
+                        <div className="text-gray-600 dark:text-gray-400">{strategy.caseForChange || "To be defined"}</div>
                       </div>
                       <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                        <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Key Stakeholders</div>
-                        <div className="text-gray-600 dark:text-gray-400">{strategy.changeStakeholders || "To be defined"}</div>
+                        <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Vision Statement</div>
+                        <div className="text-gray-600 dark:text-gray-400">{strategy.visionStatement || "To be defined"}</div>
                       </div>
                       <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                        <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Expected Impact</div>
-                        <div className="text-gray-600 dark:text-gray-400">{strategy.changeImpact || "To be defined"}</div>
+                        <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Success Metrics</div>
+                        <div className="text-gray-600 dark:text-gray-400">{strategy.successMetrics || "To be defined"}</div>
                       </div>
                       <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                        <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Potential Risks</div>
-                        <div className="text-gray-600 dark:text-gray-400">{strategy.changeRisks || "To be defined"}</div>
+                        <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Stakeholder Map</div>
+                        <div className="text-gray-600 dark:text-gray-400">{strategy.stakeholderMap || "To be defined"}</div>
                       </div>
                       <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                        <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Success Indicators</div>
-                        <div className="text-gray-600 dark:text-gray-400">{strategy.changeSuccess || "To be defined"}</div>
+                        <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Readiness Rating (RAG)</div>
+                        <div className="text-gray-600 dark:text-gray-400">{strategy.readinessRating || "To be defined"}</div>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                        <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Risk Exposure Rating</div>
+                        <div className="text-gray-600 dark:text-gray-400">{strategy.riskExposureRating || "To be defined"}</div>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                        <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Change Champion Assignment</div>
+                        <div className="text-gray-600 dark:text-gray-400">{strategy.changeChampionAssignment || "To be defined"}</div>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                        <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Reinforcement Plan</div>
+                        <div className="text-gray-600 dark:text-gray-400">{strategy.reinforcementPlan || "To be defined"}</div>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                        <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Benefits Realization Plan</div>
+                        <div className="text-gray-600 dark:text-gray-400">{strategy.benefitsRealizationPlan || "To be defined"}</div>
                       </div>
                     </CollapsibleContent>
                   </Collapsible>

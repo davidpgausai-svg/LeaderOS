@@ -29,11 +29,15 @@ interface FrameworkCardProps {
   icon: React.ReactNode;
   status: string;
   actualProgress?: number;
-  changeDriver?: string;
-  changeStakeholders?: string;
-  changeImpact?: string;
-  changeRisks?: string;
-  changeSuccess?: string;
+  caseForChange?: string;
+  visionStatement?: string;
+  successMetrics?: string;
+  stakeholderMap?: string;
+  readinessRating?: string;
+  riskExposureRating?: string;
+  changeChampionAssignment?: string;
+  reinforcementPlan?: string;
+  benefitsRealizationPlan?: string;
 }
 
 export function FrameworkCard({ 
@@ -46,11 +50,15 @@ export function FrameworkCard({
   icon, 
   status,
   actualProgress = 0,
-  changeDriver,
-  changeStakeholders,
-  changeImpact,
-  changeRisks,
-  changeSuccess
+  caseForChange,
+  visionStatement,
+  successMetrics,
+  stakeholderMap,
+  readinessRating,
+  riskExposureRating,
+  changeChampionAssignment,
+  reinforcementPlan,
+  benefitsRealizationPlan
 }: FrameworkCardProps) {
   const [expandedContinuum, setExpandedContinuum] = useState(false);
   
@@ -129,24 +137,40 @@ export function FrameworkCard({
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-2 space-y-2">
             <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
-              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Change Driver</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">{changeDriver || "To be defined"}</div>
+              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Case for Change</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">{caseForChange || "To be defined"}</div>
             </div>
             <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
-              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Key Stakeholders</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">{changeStakeholders || "To be defined"}</div>
+              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Vision Statement</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">{visionStatement || "To be defined"}</div>
             </div>
             <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
-              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Expected Impact</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">{changeImpact || "To be defined"}</div>
+              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Success Metrics</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">{successMetrics || "To be defined"}</div>
             </div>
             <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
-              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Potential Risks</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">{changeRisks || "To be defined"}</div>
+              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Stakeholder Map</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">{stakeholderMap || "To be defined"}</div>
             </div>
             <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
-              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Success Indicators</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">{changeSuccess || "To be defined"}</div>
+              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Readiness Rating (RAG)</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">{readinessRating || "To be defined"}</div>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
+              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Risk Exposure Rating</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">{riskExposureRating || "To be defined"}</div>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
+              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Change Champion Assignment</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">{changeChampionAssignment || "To be defined"}</div>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
+              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Reinforcement Plan</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">{reinforcementPlan || "To be defined"}</div>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
+              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Benefits Realization Plan</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">{benefitsRealizationPlan || "To be defined"}</div>
             </div>
           </CollapsibleContent>
         </Collapsible>

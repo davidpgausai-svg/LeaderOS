@@ -53,7 +53,9 @@ import {
   ChevronDown,
   ChevronRight,
   Edit,
-  ExternalLink
+  ExternalLink,
+  CheckCircle2,
+  Circle
 } from "lucide-react";
 
 type Strategy = {
@@ -94,6 +96,17 @@ type Tactic = {
   strategy?: Strategy;
 };
 
+type Milestone = {
+  id: string;
+  tacticId: string;
+  milestoneNumber: number;
+  status: string;
+  startDate?: string;
+  completionDate?: string;
+  notes?: string;
+  createdAt: string;
+};
+
 export default function Tactics() {
   const { currentRole, currentUser, canCreateTactics, canEditTactics } = useRole();
   const { toast } = useToast();
@@ -116,6 +129,10 @@ export default function Tactics() {
 
   const { data: users } = useQuery({
     queryKey: ["/api/users"],
+  });
+
+  const { data: milestones } = useQuery({
+    queryKey: ["/api/milestones"],
   });
 
   // Initialize all strategies as collapsed by default when strategies data loads
@@ -172,6 +189,23 @@ export default function Tactics() {
   })) || [];
 
   // Helper functions
+  const getMilestoneTitle = (milestoneNumber: number): string => {
+    const titles = {
+      1: "Stakeholder & Readiness Assessment",
+      2: "Executive Governance Review",
+      3: "Directors Meeting Authorization",
+      4: "Strategic Communication Deployment",
+      5: "Staff Meetings & Huddles Activation",
+      6: "Education & Enablement Completion",
+      7: "Operational Feedback + Governance Close-Out"
+    };
+    return titles[milestoneNumber as keyof typeof titles] || `Milestone ${milestoneNumber}`;
+  };
+
+  const getTacticMilestones = (tacticId: string): Milestone[] => {
+    return (milestones as Milestone[])?.filter(m => m.tacticId === tacticId) || [];
+  };
+
   const getAccountableLeaders = (tactic: Tactic): User[] => {
     try {
       const leaderIds = JSON.parse(tactic.accountableLeaders);
@@ -583,13 +617,37 @@ export default function Tactics() {
                                     )}
                                   </div>
 
-                                  {/* Progress Component */}
+                                  {/* Milestones Component */}
                                   <div className="space-y-3 mb-4">
-                                    <div className="flex items-center justify-between text-sm">
-                                      <span className="text-gray-600 dark:text-gray-400">Progress</span>
-                                      <span className="font-medium">{tactic.progress}%</span>
+                                    <div className="flex items-center space-x-2 mb-3">
+                                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        Milestones
+                                      </span>
                                     </div>
-                                    <Progress value={tactic.progress} className="h-2" />
+                                    <div className="space-y-2">
+                                      {[1, 2, 3, 4, 5, 6, 7].map((milestoneNum) => {
+                                        const tacticMilestones = getTacticMilestones(tactic.id);
+                                        const milestone = tacticMilestones.find(m => m.milestoneNumber === milestoneNum);
+                                        const isCompleted = milestone?.status === 'completed';
+                                        
+                                        return (
+                                          <div 
+                                            key={milestoneNum} 
+                                            className="flex items-center space-x-2 text-sm"
+                                            data-testid={`milestone-${tactic.id}-${milestoneNum}`}
+                                          >
+                                            {isCompleted ? (
+                                              <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                            ) : (
+                                              <Circle className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                            )}
+                                            <span className={isCompleted ? "text-gray-900 dark:text-white" : "text-gray-600 dark:text-gray-400"}>
+                                              {getMilestoneTitle(milestoneNum)}
+                                            </span>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
                                   </div>
 
                                   {/* Action Controls */}

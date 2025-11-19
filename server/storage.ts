@@ -48,6 +48,7 @@ export interface IStorage {
   recalculateStrategyProgress(strategyId: string): Promise<void>;
 
   // Milestone methods
+  getAllMilestones(): Promise<Milestone[]>;
   getMilestonesByTactic(tacticId: string): Promise<Milestone[]>;
   createMilestones(tacticId: string): Promise<Milestone[]>; // Auto-generate 7 milestones
   updateMilestone(id: string, updates: Partial<Milestone>): Promise<Milestone | undefined>;
@@ -124,6 +125,15 @@ export class MemStorage implements IStorage {
       colorCode: "#22C55E",
       displayOrder: 0,
       progress: 0,
+      caseForChange: "Growing market demands and competitive pressures require strategic expansion into new geographic territories",
+      visionStatement: "Become the market leader in three new regional markets within 12 months",
+      successMetrics: "25% revenue increase, 3 new markets entered, 15% market share in each new region",
+      stakeholderMap: "Executive team (sponsors), Sales leaders (champions), Regional managers (key stakeholders), Legal & Compliance (advisors)",
+      readinessRating: "Amber - Moderate readiness, some resource constraints",
+      riskExposureRating: "Amber - Medium risk due to market uncertainties and regulatory requirements",
+      changeChampionAssignment: "Mike Wilson (Executive) - Primary sponsor, Sarah Johnson (Leader) - Implementation champion",
+      reinforcementPlan: "Quarterly business reviews, monthly progress updates to stakeholders, recognition program for early wins",
+      benefitsRealizationPlan: "Track market share monthly, revenue impact quarterly, customer acquisition metrics weekly",
       createdBy: adminUser.id,
       createdAt: new Date()
     };
@@ -141,6 +151,15 @@ export class MemStorage implements IStorage {
       colorCode: "#3B82F6",
       displayOrder: 1,
       progress: 0,
+      caseForChange: "Legacy systems are causing operational inefficiencies and limiting our ability to compete in a digital-first market",
+      visionStatement: "Transform into a digitally-enabled organization with modern systems supporting agile operations",
+      successMetrics: "50% efficiency improvement, 95% system uptime, 30% reduction in manual processes",
+      stakeholderMap: "CTO (sponsor), IT Directors (champions), Department heads (key stakeholders), End users (impacted)",
+      readinessRating: "Green - Strong readiness with executive support and allocated budget",
+      riskExposureRating: "Amber - Medium risk due to technical complexity and change adoption challenges",
+      changeChampionAssignment: "David Gaus (Administrator) - Executive sponsor, Mike Wilson (Executive) - Technical champion",
+      reinforcementPlan: "Weekly team huddles, bi-weekly stakeholder updates, training programs, success stories communication",
+      benefitsRealizationPlan: "Monitor system performance metrics daily, efficiency gains monthly, user adoption rates weekly",
       createdBy: executiveUser.id,
       createdAt: new Date()
     };
@@ -163,6 +182,7 @@ export class MemStorage implements IStorage {
       status: "C",
       progress: 100,
       isArchived: "false",
+      documentFolderUrl: null,
       createdBy: executiveUser.id,
       createdAt: new Date()
     };
@@ -181,6 +201,7 @@ export class MemStorage implements IStorage {
       status: "OT",
       progress: 65,
       isArchived: "false",
+      documentFolderUrl: null,
       createdBy: executiveUser.id,
       createdAt: new Date()
     };
@@ -505,6 +526,10 @@ export class MemStorage implements IStorage {
   }
 
   // Milestone methods
+  async getAllMilestones(): Promise<Milestone[]> {
+    return Array.from(this.milestonesMap.values());
+  }
+
   async getMilestonesByTactic(tacticId: string): Promise<Milestone[]> {
     return Array.from(this.milestonesMap.values()).filter(milestone => milestone.tacticId === tacticId);
   }
@@ -554,8 +579,7 @@ export class MemStorage implements IStorage {
         id,
         tacticId,
         milestoneNumber: i,
-        pptTemplateUrl: null,
-        wordTemplateUrl: null,
+        templateUrl: null,
         createdAt: new Date()
       };
       this.communicationTemplatesMap.set(id, template);
@@ -878,6 +902,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Milestone methods
+  async getAllMilestones(): Promise<Milestone[]> {
+    return await db.select().from(milestones);
+  }
+
   async getMilestonesByTactic(tacticId: string): Promise<Milestone[]> {
     return await db.select().from(milestones).where(eq(milestones.tacticId, tacticId));
   }
@@ -925,8 +953,7 @@ export class DatabaseStorage implements IStorage {
       templatesToCreate.push({
         tacticId,
         milestoneNumber: i,
-        pptTemplateUrl: null,
-        wordTemplateUrl: null
+        templateUrl: null
       });
     }
     

@@ -63,11 +63,15 @@ export function EditStrategyModal({ open, onOpenChange, strategy }: EditStrategy
       status: "active",
       colorCode: "#3B82F6",
       createdBy: currentUser?.id || "",
-      continuumField1: "",
-      continuumField2: "",
-      continuumField3: "",
-      continuumField4: "",
-      continuumField5: "",
+      caseForChange: "",
+      visionStatement: "",
+      successMetrics: "",
+      stakeholderMap: "",
+      readinessRating: "",
+      riskExposureRating: "",
+      changeChampionAssignment: "",
+      reinforcementPlan: "",
+      benefitsRealizationPlan: "",
     },
   });
 
@@ -95,11 +99,15 @@ export function EditStrategyModal({ open, onOpenChange, strategy }: EditStrategy
         status: strategy.status,
         colorCode: strategy.colorCode,
         createdBy: strategy.createdBy,
-        continuumField1: strategy.continuumField1 || "",
-        continuumField2: strategy.continuumField2 || "",
-        continuumField3: strategy.continuumField3 || "",
-        continuumField4: strategy.continuumField4 || "",
-        continuumField5: strategy.continuumField5 || "",
+        caseForChange: strategy.caseForChange || "",
+        visionStatement: strategy.visionStatement || "",
+        successMetrics: strategy.successMetrics || "",
+        stakeholderMap: strategy.stakeholderMap || "",
+        readinessRating: strategy.readinessRating || "",
+        riskExposureRating: strategy.riskExposureRating || "",
+        changeChampionAssignment: strategy.changeChampionAssignment || "",
+        reinforcementPlan: strategy.reinforcementPlan || "",
+        benefitsRealizationPlan: strategy.benefitsRealizationPlan || "",
       });
     }
   }, [strategy, open, form]);
@@ -387,19 +395,19 @@ export function EditStrategyModal({ open, onOpenChange, strategy }: EditStrategy
               <div className="space-y-4 border-t pt-6">
                 <h3 className="text-lg font-medium">Change Continuum (Required)</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  These fields will be customizable. For now, please provide information for all five fields.
+                  Complete all fields to define the change management framework for this strategy.
                 </p>
 
                 <FormField
                   control={form.control}
-                  name="continuumField1"
+                  name="caseForChange"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Continuum Field 1 *</FormLabel>
+                      <FormLabel>Case for Change *</FormLabel>
                       <FormControl>
                         <Textarea
                           rows={2}
-                          placeholder="Enter information for field 1"
+                          placeholder="Why is this change necessary?"
                           {...field}
                         />
                       </FormControl>
@@ -410,14 +418,14 @@ export function EditStrategyModal({ open, onOpenChange, strategy }: EditStrategy
 
                 <FormField
                   control={form.control}
-                  name="continuumField2"
+                  name="visionStatement"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Continuum Field 2 *</FormLabel>
+                      <FormLabel>Vision Statement *</FormLabel>
                       <FormControl>
                         <Textarea
                           rows={2}
-                          placeholder="Enter information for field 2"
+                          placeholder="What will success look like?"
                           {...field}
                         />
                       </FormControl>
@@ -428,14 +436,14 @@ export function EditStrategyModal({ open, onOpenChange, strategy }: EditStrategy
 
                 <FormField
                   control={form.control}
-                  name="continuumField3"
+                  name="successMetrics"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Continuum Field 3 *</FormLabel>
+                      <FormLabel>Success Metrics *</FormLabel>
                       <FormControl>
                         <Textarea
                           rows={2}
-                          placeholder="Enter information for field 3"
+                          placeholder="How will we measure success?"
                           {...field}
                         />
                       </FormControl>
@@ -446,14 +454,14 @@ export function EditStrategyModal({ open, onOpenChange, strategy }: EditStrategy
 
                 <FormField
                   control={form.control}
-                  name="continuumField4"
+                  name="stakeholderMap"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Continuum Field 4 *</FormLabel>
+                      <FormLabel>Stakeholder Map *</FormLabel>
                       <FormControl>
                         <Textarea
                           rows={2}
-                          placeholder="Enter information for field 4"
+                          placeholder="Who are the key stakeholders?"
                           {...field}
                         />
                       </FormControl>
@@ -464,14 +472,86 @@ export function EditStrategyModal({ open, onOpenChange, strategy }: EditStrategy
 
                 <FormField
                   control={form.control}
-                  name="continuumField5"
+                  name="readinessRating"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Continuum Field 5 *</FormLabel>
+                      <FormLabel>Readiness Rating (RAG) *</FormLabel>
                       <FormControl>
                         <Textarea
                           rows={2}
-                          placeholder="Enter information for field 5"
+                          placeholder="Red/Amber/Green assessment of organizational readiness"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="riskExposureRating"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Risk Exposure Rating *</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={2}
+                          placeholder="Assessment of risks and potential issues"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="changeChampionAssignment"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Change Champion Assignment *</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={2}
+                          placeholder="Who will champion this change?"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="reinforcementPlan"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Reinforcement Plan *</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={2}
+                          placeholder="How will we reinforce and sustain the change?"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="benefitsRealizationPlan"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Benefits Realization Plan *</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={2}
+                          placeholder="How will we realize and track benefits?"
                           {...field}
                         />
                       </FormControl>
