@@ -39,6 +39,12 @@ export const strategies = pgTable("strategies", {
   colorCode: text("color_code").notNull().default('#3B82F6'), // Hex color for strategy grouping
   displayOrder: integer("display_order").notNull().default(0), // Order for framework ranking
   progress: integer("progress").notNull().default(0), // 0-100, auto-calculated from tactics
+  // Change Continuum fields (generic text fields for user customization)
+  continuumField1: text("continuum_field_1"),
+  continuumField2: text("continuum_field_2"),
+  continuumField3: text("continuum_field_3"),
+  continuumField4: text("continuum_field_4"),
+  continuumField5: text("continuum_field_5"),
   createdBy: varchar("created_by").notNull(),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
@@ -57,6 +63,7 @@ export const tactics = pgTable("tactics", {
   status: text("status").notNull().default('NYS'), // Component 9: Status (C, OT, OH, B, NYS)
   progress: integer("progress").notNull().default(0), // 0-100
   isArchived: text("is_archived").notNull().default('false'), // 'true' or 'false' for cascade archival
+  documentFolderUrl: text("document_folder_url"), // OneDrive/Google Drive URL for project documents
   createdBy: varchar("created_by").notNull(),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
@@ -84,6 +91,28 @@ export const outcomes = pgTable("outcomes", {
   dueDate: timestamp("due_date"),
   isArchived: text("is_archived").notNull().default('false'), // 'true' or 'false' for cascade archival
   createdBy: varchar("created_by").notNull(),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+// Change Continuum Milestones - 7 milestones per project
+export const milestones = pgTable("milestones", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tacticId: varchar("tactic_id").notNull(), // Project this milestone belongs to
+  milestoneNumber: integer("milestone_number").notNull(), // 1-7
+  status: text("status").notNull().default('not_started'), // 'not_started', 'in_progress', 'completed'
+  startDate: timestamp("start_date"),
+  completionDate: timestamp("completion_date"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+// Communication Templates - PPT/Word template URLs for each milestone
+export const communicationTemplates = pgTable("communication_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tacticId: varchar("tactic_id").notNull(), // Project this template belongs to
+  milestoneNumber: integer("milestone_number").notNull(), // 1-7, matches milestone
+  pptTemplateUrl: text("ppt_template_url"),
+  wordTemplateUrl: text("word_template_url"),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
@@ -134,6 +163,19 @@ export const insertOutcomeSchema = createInsertSchema(outcomes).omit({
   dueDate: z.coerce.date().optional(),
 });
 
+export const insertMilestoneSchema = createInsertSchema(milestones).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  startDate: z.coerce.date().optional(),
+  completionDate: z.coerce.date().optional(),
+});
+
+export const insertCommunicationTemplateSchema = createInsertSchema(communicationTemplates).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -145,3 +187,7 @@ export type InsertActivity = z.infer<typeof insertActivitySchema>;
 export type Activity = typeof activities.$inferSelect;
 export type InsertOutcome = z.infer<typeof insertOutcomeSchema>;
 export type Outcome = typeof outcomes.$inferSelect;
+export type InsertMilestone = z.infer<typeof insertMilestoneSchema>;
+export type Milestone = typeof milestones.$inferSelect;
+export type InsertCommunicationTemplate = z.infer<typeof insertCommunicationTemplateSchema>;
+export type CommunicationTemplate = typeof communicationTemplates.$inferSelect;

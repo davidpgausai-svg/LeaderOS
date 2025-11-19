@@ -71,7 +71,7 @@ export default function Dashboard() {
         <header className="bg-white dark:bg-gray-800 shadow-sm border-b px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Strategy. Project. Actions.</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Strategy → Project → Actions</h1>
             </div>
             <div className="flex space-x-3">
               {currentRole === 'administrator' && (
