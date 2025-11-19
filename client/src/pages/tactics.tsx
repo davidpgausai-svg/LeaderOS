@@ -328,6 +328,47 @@ export default function Tactics() {
     setViewingTactic(null);
   };
 
+  // Mutation for updating milestone status
+  const updateMilestoneMutation = useMutation({
+    mutationFn: async ({ milestoneId, status }: { milestoneId: string; status: string }) => {
+      return await apiRequest(`/api/milestones/${milestoneId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ 
+          status, 
+          completionDate: status === 'completed' ? new Date().toISOString() : null 
+        }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/milestones'] });
+      toast({
+        title: "Milestone updated",
+        description: "Milestone status has been updated successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update milestone status.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleMilestoneClick = (tacticId: string, milestoneNum: number) => {
+    const tacticMilestones = getTacticMilestones(tacticId);
+    const milestone = tacticMilestones.find(m => m.milestoneNumber === milestoneNum);
+    
+    if (!milestone) return;
+
+    // Toggle between not_started and completed for simplicity
+    const newStatus = milestone.status === 'completed' ? 'not_started' : 'completed';
+    updateMilestoneMutation.mutate({ 
+      milestoneId: milestone.id, 
+      status: newStatus 
+    });
+  };
+
   if (tacticsLoading) {
     return (
       <div className="flex h-screen">
@@ -654,7 +695,9 @@ export default function Tactics() {
                                         return (
                                           <div 
                                             key={milestoneNum} 
-                                            className="flex items-center space-x-2 text-sm"
+                                            className="flex items-center space-x-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded transition-colors"
+                                            onClick={() => handleMilestoneClick(tactic.id, milestoneNum)}
+                                            title="Click to toggle completion status"
                                             data-testid={`milestone-${tactic.id}-${milestoneNum}`}
                                           >
                                             {isCompleted ? (
