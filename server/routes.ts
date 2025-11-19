@@ -413,6 +413,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         strategyId: outcome.strategyId,
         tacticId: outcome.tacticId,
       });
+
+      // Recalculate progress: outcome -> tactic -> strategy
+      if (outcome.tacticId) {
+        await storage.recalculateTacticProgress(outcome.tacticId);
+        await storage.recalculateStrategyProgress(outcome.strategyId);
+      }
       
       res.status(201).json(outcome);
     } catch (error) {
@@ -439,6 +445,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         strategyId: outcome.strategyId,
         tacticId: outcome.tacticId,
       });
+
+      // Recalculate progress: outcome -> tactic -> strategy
+      if (outcome.tacticId) {
+        await storage.recalculateTacticProgress(outcome.tacticId);
+        await storage.recalculateStrategyProgress(outcome.strategyId);
+      }
       
       res.json(outcome);
     } catch (error) {
@@ -453,10 +465,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/outcomes/:id", async (req, res) => {
     try {
+      // Get outcome details before deleting to know which tactic/strategy to recalculate
+      const outcome = await storage.getOutcome(req.params.id);
+      if (!outcome) {
+        return res.status(404).json({ message: "Outcome not found" });
+      }
+
       const deleted = await storage.deleteOutcome(req.params.id);
       if (!deleted) {
         return res.status(404).json({ message: "Outcome not found" });
       }
+
+      // Recalculate progress: outcome -> tactic -> strategy
+      if (outcome.tacticId) {
+        await storage.recalculateTacticProgress(outcome.tacticId);
+        await storage.recalculateStrategyProgress(outcome.strategyId);
+      }
+
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete outcome" });
