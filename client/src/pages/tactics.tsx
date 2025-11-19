@@ -331,13 +331,11 @@ export default function Tactics() {
   // Mutation for updating milestone status
   const updateMilestoneMutation = useMutation({
     mutationFn: async ({ milestoneId, status }: { milestoneId: string; status: string }) => {
-      return await apiRequest(`/api/milestones/${milestoneId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ 
-          status, 
-          completionDate: status === 'completed' ? new Date().toISOString() : null 
-        }),
+      const response = await apiRequest("PATCH", `/api/milestones/${milestoneId}`, { 
+        status, 
+        completionDate: status === 'completed' ? new Date().toISOString() : null 
       });
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/milestones'] });
