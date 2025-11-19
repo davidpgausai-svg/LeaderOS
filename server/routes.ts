@@ -340,6 +340,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const tactic = await storage.createTactic(validatedData);
+
+      // Recalculate parent strategy progress when a tactic is created
+      await storage.recalculateStrategyProgress(tactic.strategyId);
+
       res.status(201).json(tactic);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -355,6 +359,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!tactic) {
         return res.status(404).json({ message: "Tactic not found" });
       }
+
+      // Recalculate parent strategy progress when a tactic is updated
+      await storage.recalculateStrategyProgress(tactic.strategyId);
+
       res.json(tactic);
     } catch (error) {
       res.status(500).json({ message: "Failed to update tactic" });
@@ -363,10 +371,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/tactics/:id", async (req, res) => {
     try {
+      // Get tactic details before deleting to know which strategy to recalculate
+      const tactic = await storage.getTactic(req.params.id);
+      if (!tactic) {
+        return res.status(404).json({ message: "Tactic not found" });
+      }
+
       const deleted = await storage.deleteTactic(req.params.id);
       if (!deleted) {
         return res.status(404).json({ message: "Tactic not found" });
       }
+
+      // Recalculate parent strategy progress when a tactic is deleted
+      await storage.recalculateStrategyProgress(tactic.strategyId);
+
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete tactic" });
