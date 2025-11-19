@@ -1,149 +1,176 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useRole } from "@/hooks/use-role";
+import { useReactToPrint } from "react-to-print";
 import { Sidebar } from "@/components/layout/sidebar";
-import { ActivityFeed } from "@/components/lists/activity-feed";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
-  BarChart3,
-  TrendingUp,
   Target,
   Users,
   CheckCircle,
   Clock,
   AlertTriangle,
   XCircle,
-  Archive,
+  ChevronDown,
+  ChevronRight,
+  FileDown,
+  Calendar,
+  TrendingUp,
+  BarChart3,
 } from "lucide-react";
-import { format, differenceInDays } from "date-fns";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { format, differenceInDays, isPast, isBefore } from "date-fns";
+
+type Strategy = {
+  id: string;
+  title: string;
+  colorCode: string;
+  status: string;
+  progress: number;
+  startDate: string;
+  targetDate: string;
+  dueDate: string;
+};
+
+type Tactic = {
+  id: string;
+  title: string;
+  strategyId: string;
+  progress: number;
+  status: string;
+  startDate: string;
+  dueDate: string;
+  assignedTo: string;
+};
+
+type Outcome = {
+  id: string;
+  title: string;
+  tacticId: string;
+  strategyId: string;
+  status: string;
+  targetDate: string;
+};
+
+type User = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+};
 
 export default function Reports() {
-  const { currentRole } = useRole();
-  const [reportType, setReportType] = useState("overview");
+  const [activeTab, setActiveTab] = useState("health");
+  const reportRef = useRef<HTMLDivElement>(null);
 
-  const { data: strategies, isLoading: strategiesLoading } = useQuery({
+  const { data: strategies = [], isLoading: strategiesLoading } = useQuery<Strategy[]>({
     queryKey: ["/api/strategies"],
   });
 
-  const { data: tactics, isLoading: tacticsLoading } = useQuery({
+  const { data: tactics = [], isLoading: tacticsLoading } = useQuery<Tactic[]>({
     queryKey: ["/api/tactics"],
   });
 
-  const { data: users } = useQuery({
+  const { data: outcomes = [], isLoading: outcomesLoading } = useQuery<Outcome[]>({
+    queryKey: ["/api/outcomes"],
+  });
+
+  const { data: users = [] } = useQuery<User[]>({
     queryKey: ["/api/users"],
   });
 
-  const { data: activities } = useQuery({
-    queryKey: ["/api/activities"],
+  const handlePrint = useReactToPrint({
+    contentRef: reportRef,
+    documentTitle: `Strategic Report - ${format(new Date(), 'yyyy-MM-dd')}`,
   });
 
-  // Enhance activities with users for change log
-  const activitiesWithUsers = (activities as any[])?.map((activity: any) => ({
-    ...activity,
-    user: (users as any[])?.find((user: any) => user.id === activity.userId)
-  })) || [];
-
-  // Enhance data for reporting
-  const strategiesWithTactics = (strategies as any[])?.map((strategy: any) => ({
-    ...strategy,
-    tactics: (tactics as any[])?.filter((tactic: any) => tactic.strategyId === strategy.id) || []
-  })) || [];
-
-  const tacticsWithDetails = (tactics as any[])?.map((tactic: any) => ({
-    ...tactic,
-    strategy: (strategies as any[])?.find((s: any) => s.id === tactic.strategyId),
-    assignee: (users as any[])?.find((u: any) => u.id === tactic.assignedTo),
-  })) || [];
-
-  // Calculate key metrics
-  const totalStrategies = (strategies as any[])?.length || 0;
-  const activeStrategies = (strategies as any[])?.filter((s: any) => s.status === 'active').length || 0;
-  const completedStrategies = (strategies as any[])?.filter((s: any) => s.status === 'completed').length || 0;
-  
-  const totalTactics = (tactics as any[])?.length || 0;
-  const completedTactics = (tactics as any[])?.filter((t: any) => (t.progress || 0) >= 100).length || 0;
-  const inProgressTactics = (tactics as any[])?.filter((t: any) => (t.progress || 0) > 0 && (t.progress || 0) < 100).length || 0;
-  const overdueTactics = (tactics as any[])?.filter((t: any) => {
-    if ((t.progress || 0) >= 100) return false;
-    return new Date(t.dueDate) < new Date();
-  }).length || 0;
-
-  // Calculate overall completion rate to match dashboard (strategies + tactics combined)
-  const totalItems = totalStrategies + totalTactics;
-  const completedItems = completedStrategies + completedTactics;
-  const completionRate = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
-
-  // Team performance metrics
-  const teamPerformance = (users as any[])?.map((user: any) => {
-    const assignedTactics = tacticsWithDetails.filter(t => t.assignedTo === user.id);
-    const completedCount = assignedTactics.filter(t => (t.progress || 0) >= 100).length;
-    const totalCount = assignedTactics.length;
-    const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+  // Helper function to determine risk level
+  const getRiskLevel = (item: any, type: 'strategy' | 'tactic' | 'outcome'): 'on-track' | 'at-risk' | 'critical' | 'blocked' => {
+    const today = new Date();
     
-    return {
-      ...user,
-      assignedTactics: totalCount,
-      completedTactics: completedCount,
-      completionRate
-    };
-  }) || [];
-
-  // Strategy progress breakdown
-  const strategyProgress = strategiesWithTactics.map((strategy: any) => {
-    const completed = strategy.tactics.filter((t: any) => (t.progress || 0) >= 100).length;
-    const total = strategy.tactics.length;
-    const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
-    
-    return {
-      ...strategy,
-      completedTactics: completed,
-      totalTactics: total,
-      progress
-    };
-  });
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'in-progress':
-        return <Clock className="w-4 h-4 text-blue-500" />;
-      case 'overdue':
-        return <AlertTriangle className="w-4 h-4 text-red-500" />;
-      default:
-        return <Clock className="w-4 h-4 text-gray-400" />;
+    if (type === 'outcome') {
+      if (item.status === 'achieved') return 'on-track';
+      if (item.status === 'blocked') return 'blocked';
+      const targetDate = new Date(item.targetDate);
+      if (isPast(targetDate)) return 'critical';
+      const daysUntilDue = differenceInDays(targetDate, today);
+      if (daysUntilDue <= 7) return 'at-risk';
+      return 'on-track';
     }
+
+    if (type === 'tactic' || type === 'strategy') {
+      const progress = item.progress || 0;
+      const dueDate = new Date(type === 'tactic' ? item.dueDate : item.targetDate);
+      
+      if (progress >= 100) return 'on-track';
+      if (isPast(dueDate)) return 'critical';
+      
+      const totalDays = differenceInDays(dueDate, new Date(item.startDate));
+      const elapsed = differenceInDays(today, new Date(item.startDate));
+      const expectedProgress = totalDays > 0 ? (elapsed / totalDays) * 100 : 0;
+      
+      if (progress < expectedProgress - 20) return 'critical';
+      if (progress < expectedProgress - 10) return 'at-risk';
+      return 'on-track';
+    }
+
+    return 'on-track';
   };
 
-  if (strategiesLoading || tacticsLoading) {
+  const getRiskBadge = (riskLevel: string) => {
+    const styles = {
+      'on-track': 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+      'at-risk': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
+      'critical': 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
+      'blocked': 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+    };
+
+    const labels = {
+      'on-track': 'On Track',
+      'at-risk': 'At Risk',
+      'critical': 'Critical',
+      'blocked': 'Blocked',
+    };
+
     return (
-      <div className="min-h-screen flex">
+      <Badge className={styles[riskLevel as keyof typeof styles]}>
+        {labels[riskLevel as keyof typeof labels]}
+      </Badge>
+    );
+  };
+
+  // Calculate metrics
+  const totalStrategies = strategies.length;
+  const activeStrategies = strategies.filter(s => s.status === 'active').length;
+  const atRiskStrategies = strategies.filter(s => getRiskLevel(s, 'strategy') === 'at-risk' || getRiskLevel(s, 'strategy') === 'critical').length;
+
+  const totalTactics = tactics.length;
+  const overdueTactics = tactics.filter(t => {
+    const dueDate = new Date(t.dueDate);
+    return isPast(dueDate) && t.progress < 100;
+  }).length;
+
+  const totalOutcomes = outcomes.length;
+  const achievedOutcomes = outcomes.filter(o => o.status === 'achieved').length;
+
+  if (strategiesLoading || tacticsLoading || outcomesLoading) {
+    return (
+      <div className="min-h-screen flex bg-white dark:bg-gray-900">
         <Sidebar />
         <main className="flex-1 p-6">
           <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2 mb-6"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-6"></div>
+            <div className="grid grid-cols-4 gap-6">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-32 bg-gray-200 rounded"></div>
+                <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
               ))}
             </div>
           </div>
@@ -153,481 +180,622 @@ export default function Reports() {
   }
 
   return (
-    <div className="min-h-screen flex bg-white dark:bg-black">
+    <div className="min-h-screen flex bg-gray-50 dark:bg-gray-900">
       <Sidebar />
       <main className="flex-1 overflow-auto">
         {/* Header */}
-        <header className="bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800 px-6 py-4">
+        <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 print:border-0">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Reports & Analytics</h2>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-reports-header">
+                Reports & Analytics
+              </h1>
               <p className="text-gray-600 dark:text-gray-400 mt-1">
-                Strategic planning performance and insights
+                Strategic planning insights and performance tracking
               </p>
             </div>
-            <div className="flex items-center">
-              <Select value={reportType} onValueChange={setReportType}>
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="overview">Overview</SelectItem>
-                  <SelectItem value="completion">Strategy Completion</SelectItem>
-                  <SelectItem value="changelog">Change Log</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <Button 
+              onClick={handlePrint} 
+              variant="outline"
+              className="print:hidden"
+              data-testid="button-export-pdf"
+            >
+              <FileDown className="w-4 h-4 mr-2" />
+              Export to PDF
+            </Button>
           </div>
         </header>
 
-        <div className="p-6 space-y-6">
-          {reportType === 'completion' ? (
-            // Strategy Completion Report
-            <>
-              {/* Metrics Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      Total Completed
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-gray-900 dark:text-white">
-                      {strategies?.filter((s: any) => s.status === 'Completed' || s.status === 'Archived').length || 0}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
-                      <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
-                      On Time
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-green-600">
-                      {strategies?.filter((s: any) => {
-                        if (!s.completionDate || (s.status !== 'Completed' && s.status !== 'Archived')) return false;
-                        return new Date(s.completionDate) <= new Date(s.targetDate);
-                      }).length || 0}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
-                      <XCircle className="w-4 h-4 mr-2 text-red-600" />
-                      Late
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-red-600">
-                      {strategies?.filter((s: any) => {
-                        if (!s.completionDate || (s.status !== 'Completed' && s.status !== 'Archived')) return false;
-                        return new Date(s.completionDate) > new Date(s.targetDate);
-                      }).length || 0}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
-                      <Archive className="w-4 h-4 mr-2 text-gray-600" />
-                      Archived
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-gray-600">
-                      {strategies?.filter((s: any) => s.status === 'Archived').length || 0}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Detailed Table */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Strategy Completion Details</CardTitle>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    Historical view of all completed and archived strategies
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  {strategies?.filter((s: any) => s.status === 'Completed' || s.status === 'Archived').length === 0 ? (
-                    <div className="text-center py-12">
-                      <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                        No completed strategies
-                      </h3>
-                      <p className="text-gray-500 dark:text-gray-400">
-                        Complete a strategy to see it appear in the reports
-                      </p>
-                    </div>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Strategy</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Target Date</TableHead>
-                          <TableHead>Completion Date</TableHead>
-                          <TableHead>Performance</TableHead>
-                          <TableHead>Days Offset</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {strategies?.filter((s: any) => s.status === 'Completed' || s.status === 'Archived').map((framework: any) => {
-                          const completion = framework.completionDate ? new Date(framework.completionDate) : null;
-                          const target = new Date(framework.targetDate);
-                          const isOnTime = completion && completion <= target;
-                          const daysOffset = completion ? differenceInDays(completion, target) : 0;
-
-                          return (
-                            <TableRow key={framework.id} data-testid={`report-row-${framework.id}`}>
-                              <TableCell>
-                                <div className="flex items-center space-x-2">
-                                  <div
-                                    className="w-3 h-3 rounded-full"
-                                    style={{ backgroundColor: framework.colorCode }}
-                                  />
-                                  <span className="font-medium">{framework.title}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  variant={framework.status === "Archived" ? "secondary" : "default"}
-                                  className={
-                                    framework.status === "Archived"
-                                      ? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
-                                      : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                                  }
-                                >
-                                  {framework.status}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>{format(target, "MMM dd, yyyy")}</TableCell>
-                              <TableCell>
-                                {completion ? format(completion, "MMM dd, yyyy") : "—"}
-                              </TableCell>
-                              <TableCell>
-                                {isOnTime ? (
-                                  <div className="flex items-center text-green-600">
-                                    <CheckCircle className="w-4 h-4 mr-1" />
-                                    On Time
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center text-red-600">
-                                    <XCircle className="w-4 h-4 mr-1" />
-                                    Late
-                                  </div>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <span
-                                  className={
-                                    daysOffset <= 0
-                                      ? "text-green-600 font-medium"
-                                      : "text-red-600 font-medium"
-                                  }
-                                >
-                                  {daysOffset > 0 ? "+" : ""}
-                                  {daysOffset} days
-                                </span>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  )}
-                </CardContent>
-              </Card>
-            </>
-          ) : reportType === 'changelog' ? (
-            // Change Log Report
-            <Card data-testid="card-change-log">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Clock className="mr-2 h-5 w-5" />
-                  Change Log
+        <div ref={reportRef} className="p-6">
+          {/* Summary Metrics */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <Card data-testid="card-active-strategies">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
+                  <Target className="w-4 h-4 mr-2" />
+                  Active Strategies
                 </CardTitle>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Track all strategic framework activities and changes
-                </p>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {activitiesWithUsers.length === 0 ? (
-                    <div className="text-center py-8">
-                      <Clock className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-white">No activity yet</h3>
-                      <p className="text-gray-500">Activities will appear here as changes are made to strategies and tactics.</p>
-                    </div>
-                  ) : (
-                    <ActivityFeed activities={activitiesWithUsers} />
-                  )}
+                <div className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-active-strategies">
+                  {activeStrategies}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  of {totalStrategies} total
                 </div>
               </CardContent>
             </Card>
-          ) : (
-            <>
-              {/* Key Metrics Overview */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card data-testid="card-total-strategies">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Strategies</CardTitle>
-                <Target className="h-4 w-4 text-blue-600" />
+
+            <Card data-testid="card-at-risk">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
+                  <AlertTriangle className="w-4 h-4 mr-2 text-yellow-600" />
+                  At Risk
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold" data-testid="text-total-strategies">{totalStrategies}</div>
-                <div className="text-xs text-green-600 mt-1">
-                  +{activeStrategies} active
+                <div className="text-3xl font-bold text-yellow-600" data-testid="text-at-risk">
+                  {atRiskStrategies}
+                </div>
+                <div className="text-xs text-yellow-600 mt-1">
+                  strategies need attention
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card data-testid="card-overdue-projects">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
+                  <XCircle className="w-4 h-4 mr-2 text-red-600" />
+                  Overdue Projects
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-red-600" data-testid="text-overdue-projects">
+                  {overdueTactics}
+                </div>
+                <div className="text-xs text-red-600 mt-1">
+                  past due date
                 </div>
               </CardContent>
             </Card>
 
             <Card data-testid="card-completion-rate">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Completion Rate</CardTitle>
-                <TrendingUp className="h-4 w-4 text-green-600" />
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
+                  <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                  Actions Complete
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold" data-testid="text-completion-rate">{completionRate}%</div>
+                <div className="text-3xl font-bold text-green-600" data-testid="text-completion-rate">
+                  {totalOutcomes > 0 ? Math.round((achievedOutcomes / totalOutcomes) * 100) : 0}%
+                </div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {completedTactics}/{totalTactics} tactics
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card data-testid="card-active-tactics">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Tactics</CardTitle>
-                <Clock className="h-4 w-4 text-blue-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold" data-testid="text-active-tactics">{inProgressTactics}</div>
-                <div className="text-xs text-blue-600 mt-1">
-                  In progress
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card data-testid="card-overdue-tactics">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Overdue Items</CardTitle>
-                <AlertTriangle className="h-4 w-4 text-red-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-600" data-testid="text-overdue-tactics">{overdueTactics}</div>
-                <div className="text-xs text-red-600 mt-1">
-                  Need attention
+                  {achievedOutcomes} of {totalOutcomes}
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Strategy Progress Overview */}
-          <Card data-testid="card-strategy-progress">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <BarChart3 className="mr-2 h-5 w-5" />
-                Strategy Progress Overview
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {strategyProgress.slice(0, 5).map((strategy: any) => (
-                  <div key={strategy.id} className="space-y-2" data-testid={`strategy-progress-${strategy.id}`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <h4 className="font-medium text-sm" data-testid="text-strategy-title">{strategy.title}</h4>
-                        <p className="text-xs text-gray-500">
-                          {strategy.completedTactics}/{strategy.totalTactics} tactics completed
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-medium" data-testid="text-progress-percentage">
-                          {strategy.progress}%
-                        </span>
-                      </div>
-                    </div>
-                    <Progress value={strategy.progress} className="h-2" />
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          {/* Tabbed Reports */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="print:hidden">
+            <TabsList className="mb-6">
+              <TabsTrigger value="health" data-testid="tab-health">
+                <Target className="w-4 h-4 mr-2" />
+                Strategy Health
+              </TabsTrigger>
+              <TabsTrigger value="timeline" data-testid="tab-timeline">
+                <Calendar className="w-4 h-4 mr-2" />
+                Timeline Risk
+              </TabsTrigger>
+              <TabsTrigger value="ownership" data-testid="tab-ownership">
+                <Users className="w-4 h-4 mr-2" />
+                Ownership
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Team Performance */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card data-testid="card-team-performance">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Users className="mr-2 h-5 w-5" />
-                  Team Performance
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {teamPerformance.map((member: any) => (
-                    <div key={member.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg" 
-                         data-testid={`team-member-${member.id}`}>
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
-                          {member.initials}
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm" data-testid="text-member-name">{member.name}</p>
-                          <p className="text-xs text-gray-500 capitalize">{member.role}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium" data-testid="text-member-completion-rate">
-                          {member.completionRate}%
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {member.completedTactics}/{member.assignedTactics} complete
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            {/* Strategy Health Overview */}
+            <TabsContent value="health" className="space-y-4">
+              <StrategyHealthReport
+                strategies={strategies}
+                tactics={tactics}
+                outcomes={outcomes}
+                getRiskLevel={getRiskLevel}
+                getRiskBadge={getRiskBadge}
+              />
+            </TabsContent>
 
-            {/* Recent Activity Summary */}
-            <Card data-testid="card-recent-activity">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <BarChart3 className="mr-2 h-5 w-5" />
-                  Status Distribution
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                      <span className="font-medium text-green-800 dark:text-green-200">Completed</span>
-                    </div>
-                    <span className="text-green-600 font-bold" data-testid="text-completed-count">
-                      {completedTactics}
-                    </span>
-                  </div>
+            {/* Timeline Risk Report */}
+            <TabsContent value="timeline" className="space-y-4">
+              <TimelineRiskReport
+                strategies={strategies}
+                tactics={tactics}
+                outcomes={outcomes}
+                getRiskLevel={getRiskLevel}
+                getRiskBadge={getRiskBadge}
+              />
+            </TabsContent>
 
-                  <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      <Clock className="w-4 h-4 text-blue-600" />
-                      <span className="font-medium text-blue-800 dark:text-blue-200">In Progress</span>
-                    </div>
-                    <span className="text-blue-600 font-bold" data-testid="text-in-progress-count">
-                      {inProgressTactics}
-                    </span>
-                  </div>
+            {/* Ownership Report */}
+            <TabsContent value="ownership" className="space-y-4">
+              <OwnershipReport
+                tactics={tactics}
+                outcomes={outcomes}
+                users={users}
+                strategies={strategies}
+              />
+            </TabsContent>
+          </Tabs>
 
-                  <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      <Clock className="w-4 h-4 text-yellow-600" />
-                      <span className="font-medium text-yellow-800 dark:text-yellow-200">Not Started</span>
-                    </div>
-                    <span className="text-yellow-600 font-bold" data-testid="text-not-started-count">
-                      {totalTactics - completedTactics - inProgressTactics}
-                    </span>
-                  </div>
-
-                  {overdueTactics > 0 && (
-                    <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                      <div className="flex items-center space-x-2">
-                        <AlertTriangle className="w-4 h-4 text-red-600" />
-                        <span className="font-medium text-red-800 dark:text-red-200">Overdue</span>
-                      </div>
-                      <span className="text-red-600 font-bold" data-testid="text-overdue-count">
-                        {overdueTactics}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+          {/* Print view - show all reports */}
+          <div className="hidden print:block space-y-8">
+            <div>
+              <h2 className="text-xl font-bold mb-4">Strategy Health Overview</h2>
+              <StrategyHealthReport
+                strategies={strategies}
+                tactics={tactics}
+                outcomes={outcomes}
+                getRiskLevel={getRiskLevel}
+                getRiskBadge={getRiskBadge}
+              />
+            </div>
+            <div className="page-break">
+              <h2 className="text-xl font-bold mb-4">Timeline Risk</h2>
+              <TimelineRiskReport
+                strategies={strategies}
+                tactics={tactics}
+                outcomes={outcomes}
+                getRiskLevel={getRiskLevel}
+                getRiskBadge={getRiskBadge}
+              />
+            </div>
+            <div className="page-break">
+              <h2 className="text-xl font-bold mb-4">Resource & Ownership</h2>
+              <OwnershipReport
+                tactics={tactics}
+                outcomes={outcomes}
+                users={users}
+                strategies={strategies}
+              />
+            </div>
           </div>
-
-          {/* Detailed Strategy Breakdown */}
-          {currentRole === 'executive' && (
-            <Card data-testid="card-detailed-breakdown">
-              <CardHeader>
-                <CardTitle>Detailed Strategy Breakdown</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {strategiesWithTactics.map((strategy: any) => (
-                    <div key={strategy.id} className="border-l-4 border-primary pl-4" data-testid={`detailed-strategy-${strategy.id}`}>
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold" data-testid="text-detailed-strategy-title">{strategy.title}</h4>
-                        <Badge className={
-                          strategy.status === 'completed' ? 'bg-green-100 text-green-800' :
-                          strategy.status === 'active' ? 'bg-blue-100 text-blue-800' :
-                          'bg-gray-100 text-gray-800'
-                        }>
-                          {strategy.status}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{strategy.description}</p>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <span className="font-medium">Start Date:</span>
-                          <p className="text-gray-600 dark:text-gray-400">
-                            {new Date(strategy.startDate).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="font-medium">Target Date:</span>
-                          <p className="text-gray-600 dark:text-gray-400">
-                            {new Date(strategy.targetDate).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="font-medium">Total Tactics:</span>
-                          <p className="text-gray-600 dark:text-gray-400">{strategy.tactics.length}</p>
-                        </div>
-                        <div>
-                          <span className="font-medium">Metrics:</span>
-                          <p className="text-gray-600 dark:text-gray-400">{strategy.metrics}</p>
-                        </div>
-                      </div>
-                      
-                      {strategy.tactics.length > 0 && (
-                        <div className="mt-4">
-                          <h5 className="font-medium mb-2">Associated Tactics:</h5>
-                          <div className="space-y-2">
-                            {strategy.tactics.slice(0, 3).map((tactic: any) => (
-                              <div key={tactic.id} className="flex items-center text-sm" data-testid={`tactic-${tactic.id}`}>
-                                {getStatusIcon(tactic.status)}
-                                <span className="ml-2 flex-1">{tactic.title}</span>
-                                <span className="text-gray-500">{tactic.progress}%</span>
-                              </div>
-                            ))}
-                            {strategy.tactics.length > 3 && (
-                              <p className="text-xs text-gray-500 ml-6">
-                                +{strategy.tactics.length - 3} more tactics
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-            </>
-          )}
         </div>
       </main>
+    </div>
+  );
+}
+
+// Strategy Health Report Component
+function StrategyHealthReport({ strategies, tactics, outcomes, getRiskLevel, getRiskBadge }: any) {
+  const [openStrategies, setOpenStrategies] = useState<Set<string>>(new Set());
+  const [openTactics, setOpenTactics] = useState<Set<string>>(new Set());
+
+  const toggleStrategy = (id: string) => {
+    const newSet = new Set(openStrategies);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setOpenStrategies(newSet);
+  };
+
+  const toggleTactic = (id: string) => {
+    const newSet = new Set(openTactics);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setOpenTactics(newSet);
+  };
+
+  return (
+    <Card data-testid="card-strategy-health">
+      <CardHeader>
+        <CardTitle className="flex items-center">
+          <BarChart3 className="w-5 h-5 mr-2" />
+          Hierarchical Strategy View
+        </CardTitle>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          Complete hierarchy: Strategies → Projects → Actions
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {strategies.map((strategy: any) => {
+          const strategyTactics = tactics.filter((t: any) => t.strategyId === strategy.id);
+          const strategyRisk = getRiskLevel(strategy, 'strategy');
+          const isOpen = openStrategies.has(strategy.id);
+
+          return (
+            <div key={strategy.id} className="border border-gray-200 dark:border-gray-700 rounded-lg" data-testid={`strategy-${strategy.id}`}>
+              <Collapsible open={isOpen} onOpenChange={() => toggleStrategy(strategy.id)}>
+                <CollapsibleTrigger className="w-full">
+                  <div className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    <div className="flex items-center space-x-3 flex-1">
+                      {isOpen ? (
+                        <ChevronDown className="w-4 h-4 text-gray-500" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-gray-500" />
+                      )}
+                      <div
+                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: strategy.colorCode }}
+                      />
+                      <div className="text-left flex-1">
+                        <h3 className="font-semibold text-gray-900 dark:text-white">{strategy.title}</h3>
+                        <p className="text-sm text-gray-500">{strategyTactics.length} projects</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <div className="text-right mr-4">
+                        <Progress value={strategy.progress || 0} className="w-32 h-2" />
+                        <span className="text-sm text-gray-600 dark:text-gray-400 mt-1 block">
+                          {strategy.progress || 0}%
+                        </span>
+                      </div>
+                      {getRiskBadge(strategyRisk)}
+                    </div>
+                  </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="pl-8 pr-4 pb-4 space-y-2">
+                    {strategyTactics.length === 0 ? (
+                      <p className="text-sm text-gray-500 italic py-2">No projects defined</p>
+                    ) : (
+                      strategyTactics.map((tactic: any) => {
+                        const tacticOutcomes = outcomes.filter((o: any) => o.tacticId === tactic.id);
+                        const tacticRisk = getRiskLevel(tactic, 'tactic');
+                        const isTacticOpen = openTactics.has(tactic.id);
+
+                        return (
+                          <div key={tactic.id} className="border-l-2 border-gray-300 dark:border-gray-600 ml-2" data-testid={`tactic-${tactic.id}`}>
+                            <Collapsible open={isTacticOpen} onOpenChange={() => toggleTactic(tactic.id)}>
+                              <CollapsibleTrigger className="w-full">
+                                <div className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                  <div className="flex items-center space-x-2 flex-1">
+                                    {isTacticOpen ? (
+                                      <ChevronDown className="w-3 h-3 text-gray-500" />
+                                    ) : (
+                                      <ChevronRight className="w-3 h-3 text-gray-500" />
+                                    )}
+                                    <div className="text-left flex-1">
+                                      <h4 className="font-medium text-sm text-gray-900 dark:text-white">{tactic.title}</h4>
+                                      <p className="text-xs text-gray-500">{tacticOutcomes.length} actions</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center space-x-3">
+                                    <Progress value={tactic.progress || 0} className="w-24 h-2" />
+                                    <span className="text-xs text-gray-600 dark:text-gray-400 w-10">
+                                      {tactic.progress || 0}%
+                                    </span>
+                                    {getRiskBadge(tacticRisk)}
+                                  </div>
+                                </div>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent>
+                                <div className="pl-6 pr-3 pb-2 space-y-1">
+                                  {tacticOutcomes.length === 0 ? (
+                                    <p className="text-xs text-gray-500 italic py-1">No actions defined</p>
+                                  ) : (
+                                    tacticOutcomes.map((outcome: any) => {
+                                      const outcomeRisk = getRiskLevel(outcome, 'outcome');
+                                      const isOverdue = isPast(new Date(outcome.targetDate)) && outcome.status !== 'achieved';
+
+                                      return (
+                                        <div
+                                          key={outcome.id}
+                                          className="flex items-center justify-between p-2 text-sm"
+                                          data-testid={`outcome-${outcome.id}`}
+                                        >
+                                          <div className="flex items-center space-x-2 flex-1">
+                                            {outcome.status === 'achieved' ? (
+                                              <CheckCircle className="w-3 h-3 text-green-600" />
+                                            ) : (
+                                              <Clock className="w-3 h-3 text-gray-400" />
+                                            )}
+                                            <span className={outcome.status === 'achieved' ? 'text-gray-500 line-through' : ''}>
+                                              {outcome.title}
+                                            </span>
+                                          </div>
+                                          <div className="flex items-center space-x-2">
+                                            <span className="text-xs text-gray-500">
+                                              {format(new Date(outcome.targetDate), 'MMM dd')}
+                                            </span>
+                                            {isOverdue && (
+                                              <Badge className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 text-xs">
+                                                Overdue
+                                              </Badge>
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
+                                    })
+                                  )}
+                                </div>
+                              </CollapsibleContent>
+                            </Collapsible>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
+          );
+        })}
+        {strategies.length === 0 && (
+          <div className="text-center py-12">
+            <Target className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-500">No strategies to display</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Timeline Risk Report Component
+function TimelineRiskReport({ strategies, tactics, outcomes, getRiskLevel, getRiskBadge }: any) {
+  const overdueTactics = tactics.filter((t: any) => {
+    const dueDate = new Date(t.dueDate);
+    return isPast(dueDate) && t.progress < 100;
+  });
+
+  const upcomingTactics = tactics.filter((t: any) => {
+    const dueDate = new Date(t.dueDate);
+    const daysUntilDue = differenceInDays(dueDate, new Date());
+    return daysUntilDue >= 0 && daysUntilDue <= 30 && t.progress < 100;
+  }).sort((a: any, b: any) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+
+  return (
+    <div className="space-y-6">
+      {/* Overdue Projects */}
+      <Card data-testid="card-overdue-timeline">
+        <CardHeader>
+          <CardTitle className="flex items-center text-red-600">
+            <XCircle className="w-5 h-5 mr-2" />
+            Overdue Projects ({overdueTactics.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {overdueTactics.length === 0 ? (
+            <div className="text-center py-8">
+              <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
+              <p className="text-gray-500">No overdue projects</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {overdueTactics.map((tactic: any) => {
+                const strategy = strategies.find((s: any) => s.id === tactic.strategyId);
+                const daysOverdue = differenceInDays(new Date(), new Date(tactic.dueDate));
+
+                return (
+                  <div
+                    key={tactic.id}
+                    className="p-4 border border-red-200 dark:border-red-800 rounded-lg bg-red-50 dark:bg-red-900/20"
+                    data-testid={`overdue-${tactic.id}`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        {strategy && (
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: strategy.colorCode }}
+                          />
+                        )}
+                        <h4 className="font-semibold text-gray-900 dark:text-white">{tactic.title}</h4>
+                      </div>
+                      <Badge className="bg-red-600 text-white">
+                        {daysOverdue} days overdue
+                      </Badge>
+                    </div>
+                    {strategy && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                        Strategy: {strategy.title}
+                      </p>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Due: {format(new Date(tactic.dueDate), 'MMM dd, yyyy')}
+                      </span>
+                      <div className="flex items-center space-x-2">
+                        <Progress value={tactic.progress || 0} className="w-32 h-2" />
+                        <span className="text-sm font-medium">{tactic.progress || 0}%</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Upcoming Deadlines */}
+      <Card data-testid="card-upcoming-timeline">
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Clock className="w-5 h-5 mr-2" />
+            Upcoming Deadlines (Next 30 Days)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {upcomingTactics.length === 0 ? (
+            <div className="text-center py-8">
+              <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500">No upcoming deadlines in the next 30 days</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {upcomingTactics.map((tactic: any) => {
+                const strategy = strategies.find((s: any) => s.id === tactic.strategyId);
+                const daysUntilDue = differenceInDays(new Date(tactic.dueDate), new Date());
+                const tacticRisk = getRiskLevel(tactic, 'tactic');
+
+                return (
+                  <div
+                    key={tactic.id}
+                    className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
+                    data-testid={`upcoming-${tactic.id}`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        {strategy && (
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: strategy.colorCode }}
+                          />
+                        )}
+                        <h4 className="font-semibold text-gray-900 dark:text-white">{tactic.title}</h4>
+                      </div>
+                      {getRiskBadge(tacticRisk)}
+                    </div>
+                    {strategy && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                        Strategy: {strategy.title}
+                      </p>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Due in {daysUntilDue} days ({format(new Date(tactic.dueDate), 'MMM dd, yyyy')})
+                      </span>
+                      <div className="flex items-center space-x-2">
+                        <Progress value={tactic.progress || 0} className="w-32 h-2" />
+                        <span className="text-sm font-medium">{tactic.progress || 0}%</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Ownership Report Component
+function OwnershipReport({ tactics, outcomes, users, strategies }: any) {
+  const userPerformance = users.map((user: any) => {
+    const userTactics = tactics.filter((t: any) => t.assignedTo === user.id);
+    const completedTactics = userTactics.filter((t: any) => t.progress >= 100).length;
+    const inProgressTactics = userTactics.filter((t: any) => t.progress > 0 && t.progress < 100).length;
+    const overdueTactics = userTactics.filter((t: any) => {
+      const dueDate = new Date(t.dueDate);
+      return isPast(dueDate) && t.progress < 100;
+    }).length;
+
+    const avgProgress = userTactics.length > 0
+      ? Math.round(userTactics.reduce((sum: number, t: any) => sum + (t.progress || 0), 0) / userTactics.length)
+      : 0;
+
+    return {
+      user,
+      totalProjects: userTactics.length,
+      completedProjects: completedTactics,
+      inProgressProjects: inProgressTactics,
+      overdueProjects: overdueTactics,
+      avgProgress,
+      tactics: userTactics,
+    };
+  }).filter((up: any) => up.totalProjects > 0);
+
+  return (
+    <div className="space-y-6">
+      {userPerformance.map((perf: any) => (
+        <Card key={perf.user.id} data-testid={`user-performance-${perf.user.id}`}>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold">
+                  {perf.user.firstName[0]}{perf.user.lastName[0]}
+                </div>
+                <div>
+                  <CardTitle>{perf.user.firstName} {perf.user.lastName}</CardTitle>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 capitalize">{perf.user.role}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold">{perf.avgProgress}%</div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Avg Progress</p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-4 gap-4 mb-6">
+              <div className="text-center p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{perf.totalProjects}</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Total Projects</div>
+              </div>
+              <div className="text-center p-3 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                <div className="text-2xl font-bold text-green-600">{perf.completedProjects}</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Completed</div>
+              </div>
+              <div className="text-center p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600">{perf.inProgressProjects}</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">In Progress</div>
+              </div>
+              <div className="text-center p-3 bg-red-100 dark:bg-red-900/20 rounded-lg">
+                <div className="text-2xl font-bold text-red-600">{perf.overdueProjects}</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Overdue</div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300 mb-2">Assigned Projects</h4>
+              {perf.tactics.map((tactic: any) => {
+                const strategy = strategies.find((s: any) => s.id === tactic.strategyId);
+                const isOverdue = isPast(new Date(tactic.dueDate)) && tactic.progress < 100;
+
+                return (
+                  <div
+                    key={tactic.id}
+                    className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded"
+                    data-testid={`user-tactic-${tactic.id}`}
+                  >
+                    <div className="flex items-center space-x-2 flex-1">
+                      {strategy && (
+                        <div
+                          className="w-3 h-3 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: strategy.colorCode }}
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{tactic.title}</p>
+                        <p className="text-xs text-gray-500">
+                          Due: {format(new Date(tactic.dueDate), 'MMM dd, yyyy')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <Progress value={tactic.progress || 0} className="w-24 h-2" />
+                      <span className="text-sm font-medium w-12">{tactic.progress || 0}%</span>
+                      {isOverdue && (
+                        <Badge className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300">
+                          Overdue
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+
+      {userPerformance.length === 0 && (
+        <Card>
+          <CardContent className="text-center py-12">
+            <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-500">No project assignments found</p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
