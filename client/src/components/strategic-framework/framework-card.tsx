@@ -176,20 +176,20 @@ export function FrameworkCard({
 
         {/* Action Buttons */}
         <div className="flex space-x-2 pt-2">
-          <Link href="/strategies">
+          <Link href="/projects">
             <Button variant="outline" size="sm" className="flex-1">
-              View Strategies
+              View Projects
               <ChevronRight className="w-3 h-3 ml-1" />
             </Button>
           </Link>
-          <Link href="/outcomes">
+          <Link href="/actions">
             <Button 
               variant="outline" 
               size="sm" 
               className="flex-1"
               style={{ color: colorCode, borderColor: colorCode }}
             >
-              Track Outcomes
+              Track Actions
               <TrendingUp className="w-3 h-3 ml-1" />
             </Button>
           </Link>
