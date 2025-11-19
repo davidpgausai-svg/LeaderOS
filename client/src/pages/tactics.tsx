@@ -88,6 +88,7 @@ type Tactic = {
   progress: number;
   createdBy: string;
   createdAt: string;
+  isArchived?: string;
   strategy?: Strategy;
 };
 
