@@ -1,4 +1,4 @@
-import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Tactic, type InsertTactic, type Activity, type InsertActivity, type Outcome, type InsertOutcome, users, strategies, tactics, activities, outcomes } from "@shared/schema";
+import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Tactic, type InsertTactic, type Activity, type InsertActivity, type Outcome, type InsertOutcome, type Milestone, type InsertMilestone, type CommunicationTemplate, type InsertCommunicationTemplate, users, strategies, tactics, activities, outcomes, milestones, communicationTemplates } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, asc } from "drizzle-orm";
@@ -46,6 +46,16 @@ export interface IStorage {
   // Progress recalculation methods
   recalculateTacticProgress(tacticId: string): Promise<void>;
   recalculateStrategyProgress(strategyId: string): Promise<void>;
+
+  // Milestone methods
+  getMilestonesByTactic(tacticId: string): Promise<Milestone[]>;
+  createMilestones(tacticId: string): Promise<Milestone[]>; // Auto-generate 7 milestones
+  updateMilestone(id: string, updates: Partial<Milestone>): Promise<Milestone | undefined>;
+
+  // Communication Template methods
+  getCommunicationTemplatesByTactic(tacticId: string): Promise<CommunicationTemplate[]>;
+  createCommunicationTemplates(tacticId: string): Promise<CommunicationTemplate[]>; // Auto-generate 7 templates
+  updateCommunicationTemplate(id: string, updates: Partial<CommunicationTemplate>): Promise<CommunicationTemplate | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -54,6 +64,8 @@ export class MemStorage implements IStorage {
   private tactics: Map<string, Tactic> = new Map();
   private activities: Map<string, Activity> = new Map();
   private outcomes: Map<string, Outcome> = new Map();
+  private milestonesMap: Map<string, Milestone> = new Map();
+  private communicationTemplatesMap: Map<string, CommunicationTemplate> = new Map();
 
   constructor() {
     this.seedData();
@@ -491,6 +503,76 @@ export class MemStorage implements IStorage {
 
     this.strategies.set(strategyId, strategy);
   }
+
+  // Milestone methods
+  async getMilestonesByTactic(tacticId: string): Promise<Milestone[]> {
+    return Array.from(this.milestonesMap.values()).filter(milestone => milestone.tacticId === tacticId);
+  }
+
+  async createMilestones(tacticId: string): Promise<Milestone[]> {
+    const milestones: Milestone[] = [];
+    
+    for (let i = 1; i <= 7; i++) {
+      const id = randomUUID();
+      const milestone: Milestone = {
+        id,
+        tacticId,
+        milestoneNumber: i,
+        status: 'not_started',
+        startDate: null,
+        completionDate: null,
+        notes: null,
+        createdAt: new Date()
+      };
+      this.milestonesMap.set(id, milestone);
+      milestones.push(milestone);
+    }
+    
+    return milestones;
+  }
+
+  async updateMilestone(id: string, updates: Partial<Milestone>): Promise<Milestone | undefined> {
+    const existing = this.milestonesMap.get(id);
+    if (!existing) return undefined;
+    
+    const updated = { ...existing, ...updates };
+    this.milestonesMap.set(id, updated);
+    return updated;
+  }
+
+  // Communication Template methods
+  async getCommunicationTemplatesByTactic(tacticId: string): Promise<CommunicationTemplate[]> {
+    return Array.from(this.communicationTemplatesMap.values()).filter(template => template.tacticId === tacticId);
+  }
+
+  async createCommunicationTemplates(tacticId: string): Promise<CommunicationTemplate[]> {
+    const templates: CommunicationTemplate[] = [];
+    
+    for (let i = 1; i <= 7; i++) {
+      const id = randomUUID();
+      const template: CommunicationTemplate = {
+        id,
+        tacticId,
+        milestoneNumber: i,
+        pptTemplateUrl: null,
+        wordTemplateUrl: null,
+        createdAt: new Date()
+      };
+      this.communicationTemplatesMap.set(id, template);
+      templates.push(template);
+    }
+    
+    return templates;
+  }
+
+  async updateCommunicationTemplate(id: string, updates: Partial<CommunicationTemplate>): Promise<CommunicationTemplate | undefined> {
+    const existing = this.communicationTemplatesMap.get(id);
+    if (!existing) return undefined;
+    
+    const updated = { ...existing, ...updates };
+    this.communicationTemplatesMap.set(id, updated);
+    return updated;
+  }
 }
 
 // DatabaseStorage implementation
@@ -793,6 +875,76 @@ export class DatabaseStorage implements IStorage {
       .update(strategies)
       .set({ progress })
       .where(eq(strategies.id, strategyId));
+  }
+
+  // Milestone methods
+  async getMilestonesByTactic(tacticId: string): Promise<Milestone[]> {
+    return await db.select().from(milestones).where(eq(milestones.tacticId, tacticId));
+  }
+
+  async createMilestones(tacticId: string): Promise<Milestone[]> {
+    const milestonesToCreate: InsertMilestone[] = [];
+    
+    for (let i = 1; i <= 7; i++) {
+      milestonesToCreate.push({
+        tacticId,
+        milestoneNumber: i,
+        status: 'not_started',
+        startDate: undefined,
+        completionDate: undefined,
+        notes: undefined
+      });
+    }
+    
+    const createdMilestones = await db
+      .insert(milestones)
+      .values(milestonesToCreate)
+      .returning();
+    
+    return createdMilestones;
+  }
+
+  async updateMilestone(id: string, updates: Partial<Milestone>): Promise<Milestone | undefined> {
+    const [updated] = await db
+      .update(milestones)
+      .set(updates)
+      .where(eq(milestones.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  // Communication Template methods
+  async getCommunicationTemplatesByTactic(tacticId: string): Promise<CommunicationTemplate[]> {
+    return await db.select().from(communicationTemplates).where(eq(communicationTemplates.tacticId, tacticId));
+  }
+
+  async createCommunicationTemplates(tacticId: string): Promise<CommunicationTemplate[]> {
+    const templatesToCreate: InsertCommunicationTemplate[] = [];
+    
+    for (let i = 1; i <= 7; i++) {
+      templatesToCreate.push({
+        tacticId,
+        milestoneNumber: i,
+        pptTemplateUrl: null,
+        wordTemplateUrl: null
+      });
+    }
+    
+    const createdTemplates = await db
+      .insert(communicationTemplates)
+      .values(templatesToCreate)
+      .returning();
+    
+    return createdTemplates;
+  }
+
+  async updateCommunicationTemplate(id: string, updates: Partial<CommunicationTemplate>): Promise<CommunicationTemplate | undefined> {
+    const [updated] = await db
+      .update(communicationTemplates)
+      .set(updates)
+      .where(eq(communicationTemplates.id, id))
+      .returning();
+    return updated || undefined;
   }
 
   async seedData() {

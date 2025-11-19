@@ -46,6 +46,11 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
       status: "active",
       colorCode: "#3B82F6",
       createdBy: currentUser?.id || "1",
+      continuumField1: "",
+      continuumField2: "",
+      continuumField3: "",
+      continuumField4: "",
+      continuumField5: "",
     },
   });
 
@@ -243,6 +248,105 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
                 </FormItem>
               )}
             />
+
+            <div className="border-t pt-6 space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Change Continuum (Required)
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                These fields will be customizable. For now, please provide information for all five fields.
+              </p>
+
+              <FormField
+                control={form.control}
+                name="continuumField1"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Continuum Field 1 *</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        rows={2}
+                        placeholder="Enter information for field 1"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="continuumField2"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Continuum Field 2 *</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        rows={2}
+                        placeholder="Enter information for field 2"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="continuumField3"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Continuum Field 3 *</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        rows={2}
+                        placeholder="Enter information for field 3"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="continuumField4"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Continuum Field 4 *</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        rows={2}
+                        placeholder="Enter information for field 4"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="continuumField5"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Continuum Field 5 *</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        rows={2}
+                        placeholder="Enter information for field 5"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="flex justify-end space-x-3 pt-4">
               <Button

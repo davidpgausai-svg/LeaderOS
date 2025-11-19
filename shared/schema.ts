@@ -133,6 +133,12 @@ export const insertStrategySchema = createInsertSchema(strategies).omit({
 }).extend({
   startDate: z.coerce.date(),
   targetDate: z.coerce.date(),
+  // Make Change Continuum fields mandatory (can be customized by user later)
+  continuumField1: z.string().min(1, "This field is required"),
+  continuumField2: z.string().min(1, "This field is required"),
+  continuumField3: z.string().min(1, "This field is required"),
+  continuumField4: z.string().min(1, "This field is required"),
+  continuumField5: z.string().min(1, "This field is required"),
 });
 
 export const insertTacticSchema = createInsertSchema(tactics).omit({

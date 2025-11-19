@@ -341,6 +341,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const tactic = await storage.createTactic(validatedData);
 
+      // Auto-generate 7 milestones and 7 communication templates for the new tactic
+      await storage.createMilestones(tactic.id);
+      await storage.createCommunicationTemplates(tactic.id);
+
       // Recalculate parent strategy progress when a tactic is created
       await storage.recalculateStrategyProgress(tactic.strategyId);
 
@@ -509,6 +513,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete outcome" });
+    }
+  });
+
+  // Milestone routes
+  app.get("/api/milestones/:tacticId", async (req, res) => {
+    try {
+      const milestones = await storage.getMilestonesByTactic(req.params.tacticId);
+      res.json(milestones);
+    } catch (error) {
+      logger.error("Failed to fetch milestones", error);
+      res.status(500).json({ message: "Failed to fetch milestones" });
+    }
+  });
+
+  app.patch("/api/milestones/:id", async (req, res) => {
+    try {
+      const milestone = await storage.updateMilestone(req.params.id, req.body);
+      if (!milestone) {
+        return res.status(404).json({ message: "Milestone not found" });
+      }
+      res.json(milestone);
+    } catch (error) {
+      logger.error("Failed to update milestone", error);
+      res.status(500).json({ message: "Failed to update milestone" });
+    }
+  });
+
+  // Communication Template routes
+  app.get("/api/communication-templates/:tacticId", async (req, res) => {
+    try {
+      const templates = await storage.getCommunicationTemplatesByTactic(req.params.tacticId);
+      res.json(templates);
+    } catch (error) {
+      logger.error("Failed to fetch communication templates", error);
+      res.status(500).json({ message: "Failed to fetch communication templates" });
+    }
+  });
+
+  app.patch("/api/communication-templates/:id", async (req, res) => {
+    try {
+      const template = await storage.updateCommunicationTemplate(req.params.id, req.body);
+      if (!template) {
+        return res.status(404).json({ message: "Communication template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      logger.error("Failed to update communication template", error);
+      res.status(500).json({ message: "Failed to update communication template" });
     }
   });
 
