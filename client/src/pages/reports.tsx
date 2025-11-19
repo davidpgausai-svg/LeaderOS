@@ -92,6 +92,17 @@ export default function Reports() {
     documentTitle: `Strategic Report - ${format(new Date(), 'yyyy-MM-dd')}`,
   });
 
+  // Safe date parsing helper
+  const safeDate = (dateString: string | null | undefined): Date | null => {
+    if (!dateString) return null;
+    try {
+      const date = new Date(dateString);
+      return isNaN(date.getTime()) ? null : date;
+    } catch {
+      return null;
+    }
+  };
+
   // Helper function to determine risk level
   const getRiskLevel = (item: any, type: 'strategy' | 'tactic' | 'outcome'): 'on-track' | 'at-risk' | 'critical' | 'blocked' => {
     const today = new Date();
@@ -99,7 +110,8 @@ export default function Reports() {
     if (type === 'outcome') {
       if (item.status === 'achieved') return 'on-track';
       if (item.status === 'blocked') return 'blocked';
-      const targetDate = new Date(item.targetDate);
+      const targetDate = safeDate(item.targetDate);
+      if (!targetDate) return 'on-track';
       if (isPast(targetDate)) return 'critical';
       const daysUntilDue = differenceInDays(targetDate, today);
       if (daysUntilDue <= 7) return 'at-risk';
@@ -108,13 +120,18 @@ export default function Reports() {
 
     if (type === 'tactic' || type === 'strategy') {
       const progress = item.progress || 0;
-      const dueDate = new Date(type === 'tactic' ? item.dueDate : item.targetDate);
+      const dueDateString = type === 'tactic' ? item.dueDate : item.targetDate;
+      const dueDate = safeDate(dueDateString);
       
+      if (!dueDate) return 'on-track';
       if (progress >= 100) return 'on-track';
       if (isPast(dueDate)) return 'critical';
       
-      const totalDays = differenceInDays(dueDate, new Date(item.startDate));
-      const elapsed = differenceInDays(today, new Date(item.startDate));
+      const startDate = safeDate(item.startDate);
+      if (!startDate) return 'on-track';
+      
+      const totalDays = differenceInDays(dueDate, startDate);
+      const elapsed = differenceInDays(today, startDate);
       const expectedProgress = totalDays > 0 ? (elapsed / totalDays) * 100 : 0;
       
       if (progress < expectedProgress - 20) return 'critical';
@@ -154,8 +171,8 @@ export default function Reports() {
 
   const totalTactics = tactics.length;
   const overdueTactics = tactics.filter(t => {
-    const dueDate = new Date(t.dueDate);
-    return isPast(dueDate) && t.progress < 100;
+    const dueDate = safeDate(t.dueDate);
+    return dueDate && isPast(dueDate) && t.progress < 100;
   }).length;
 
   const totalOutcomes = outcomes.length;
@@ -303,6 +320,7 @@ export default function Reports() {
                 outcomes={outcomes}
                 getRiskLevel={getRiskLevel}
                 getRiskBadge={getRiskBadge}
+                safeDate={safeDate}
               />
             </TabsContent>
 
@@ -314,6 +332,7 @@ export default function Reports() {
                 outcomes={outcomes}
                 getRiskLevel={getRiskLevel}
                 getRiskBadge={getRiskBadge}
+                safeDate={safeDate}
               />
             </TabsContent>
 
@@ -324,6 +343,7 @@ export default function Reports() {
                 outcomes={outcomes}
                 users={users}
                 strategies={strategies}
+                safeDate={safeDate}
               />
             </TabsContent>
           </Tabs>
@@ -338,6 +358,7 @@ export default function Reports() {
                 outcomes={outcomes}
                 getRiskLevel={getRiskLevel}
                 getRiskBadge={getRiskBadge}
+                safeDate={safeDate}
               />
             </div>
             <div className="page-break">
@@ -348,6 +369,7 @@ export default function Reports() {
                 outcomes={outcomes}
                 getRiskLevel={getRiskLevel}
                 getRiskBadge={getRiskBadge}
+                safeDate={safeDate}
               />
             </div>
             <div className="page-break">
@@ -357,6 +379,7 @@ export default function Reports() {
                 outcomes={outcomes}
                 users={users}
                 strategies={strategies}
+                safeDate={safeDate}
               />
             </div>
           </div>
@@ -367,7 +390,7 @@ export default function Reports() {
 }
 
 // Strategy Health Report Component
-function StrategyHealthReport({ strategies, tactics, outcomes, getRiskLevel, getRiskBadge }: any) {
+function StrategyHealthReport({ strategies, tactics, outcomes, getRiskLevel, getRiskBadge, safeDate }: any) {
   const [openStrategies, setOpenStrategies] = useState<Set<string>>(new Set());
   const [openTactics, setOpenTactics] = useState<Set<string>>(new Set());
 
@@ -481,7 +504,8 @@ function StrategyHealthReport({ strategies, tactics, outcomes, getRiskLevel, get
                                   ) : (
                                     tacticOutcomes.map((outcome: any) => {
                                       const outcomeRisk = getRiskLevel(outcome, 'outcome');
-                                      const isOverdue = isPast(new Date(outcome.targetDate)) && outcome.status !== 'achieved';
+                                      const targetDate = safeDate(outcome.targetDate);
+                                      const isOverdue = targetDate && isPast(targetDate) && outcome.status !== 'achieved';
 
                                       return (
                                         <div
@@ -500,9 +524,11 @@ function StrategyHealthReport({ strategies, tactics, outcomes, getRiskLevel, get
                                             </span>
                                           </div>
                                           <div className="flex items-center space-x-2">
-                                            <span className="text-xs text-gray-500">
-                                              {format(new Date(outcome.targetDate), 'MMM dd')}
-                                            </span>
+                                            {targetDate && (
+                                              <span className="text-xs text-gray-500">
+                                                {format(targetDate, 'MMM dd')}
+                                              </span>
+                                            )}
                                             {isOverdue && (
                                               <Badge className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 text-xs">
                                                 Overdue
@@ -538,17 +564,23 @@ function StrategyHealthReport({ strategies, tactics, outcomes, getRiskLevel, get
 }
 
 // Timeline Risk Report Component
-function TimelineRiskReport({ strategies, tactics, outcomes, getRiskLevel, getRiskBadge }: any) {
+function TimelineRiskReport({ strategies, tactics, outcomes, getRiskLevel, getRiskBadge, safeDate }: any) {
   const overdueTactics = tactics.filter((t: any) => {
-    const dueDate = new Date(t.dueDate);
-    return isPast(dueDate) && t.progress < 100;
+    const dueDate = safeDate(t.dueDate);
+    return dueDate && isPast(dueDate) && t.progress < 100;
   });
 
   const upcomingTactics = tactics.filter((t: any) => {
-    const dueDate = new Date(t.dueDate);
+    const dueDate = safeDate(t.dueDate);
+    if (!dueDate) return false;
     const daysUntilDue = differenceInDays(dueDate, new Date());
     return daysUntilDue >= 0 && daysUntilDue <= 30 && t.progress < 100;
-  }).sort((a: any, b: any) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+  }).sort((a: any, b: any) => {
+    const dateA = safeDate(a.dueDate);
+    const dateB = safeDate(b.dueDate);
+    if (!dateA || !dateB) return 0;
+    return dateA.getTime() - dateB.getTime();
+  });
 
   return (
     <div className="space-y-6">
@@ -570,7 +602,8 @@ function TimelineRiskReport({ strategies, tactics, outcomes, getRiskLevel, getRi
             <div className="space-y-3">
               {overdueTactics.map((tactic: any) => {
                 const strategy = strategies.find((s: any) => s.id === tactic.strategyId);
-                const daysOverdue = differenceInDays(new Date(), new Date(tactic.dueDate));
+                const dueDate = safeDate(tactic.dueDate);
+                const daysOverdue = dueDate ? differenceInDays(new Date(), dueDate) : 0;
 
                 return (
                   <div
@@ -598,9 +631,11 @@ function TimelineRiskReport({ strategies, tactics, outcomes, getRiskLevel, getRi
                       </p>
                     )}
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        Due: {format(new Date(tactic.dueDate), 'MMM dd, yyyy')}
-                      </span>
+                      {dueDate && (
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          Due: {format(dueDate, 'MMM dd, yyyy')}
+                        </span>
+                      )}
                       <div className="flex items-center space-x-2">
                         <Progress value={tactic.progress || 0} className="w-32 h-2" />
                         <span className="text-sm font-medium">{tactic.progress || 0}%</span>
@@ -632,7 +667,8 @@ function TimelineRiskReport({ strategies, tactics, outcomes, getRiskLevel, getRi
             <div className="space-y-3">
               {upcomingTactics.map((tactic: any) => {
                 const strategy = strategies.find((s: any) => s.id === tactic.strategyId);
-                const daysUntilDue = differenceInDays(new Date(tactic.dueDate), new Date());
+                const dueDate = safeDate(tactic.dueDate);
+                const daysUntilDue = dueDate ? differenceInDays(dueDate, new Date()) : 0;
                 const tacticRisk = getRiskLevel(tactic, 'tactic');
 
                 return (
@@ -659,9 +695,11 @@ function TimelineRiskReport({ strategies, tactics, outcomes, getRiskLevel, getRi
                       </p>
                     )}
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        Due in {daysUntilDue} days ({format(new Date(tactic.dueDate), 'MMM dd, yyyy')})
-                      </span>
+                      {dueDate && (
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          Due in {daysUntilDue} days ({format(dueDate, 'MMM dd, yyyy')})
+                        </span>
+                      )}
                       <div className="flex items-center space-x-2">
                         <Progress value={tactic.progress || 0} className="w-32 h-2" />
                         <span className="text-sm font-medium">{tactic.progress || 0}%</span>
@@ -679,14 +717,14 @@ function TimelineRiskReport({ strategies, tactics, outcomes, getRiskLevel, getRi
 }
 
 // Ownership Report Component
-function OwnershipReport({ tactics, outcomes, users, strategies }: any) {
+function OwnershipReport({ tactics, outcomes, users, strategies, safeDate }: any) {
   const userPerformance = users.map((user: any) => {
     const userTactics = tactics.filter((t: any) => t.assignedTo === user.id);
     const completedTactics = userTactics.filter((t: any) => t.progress >= 100).length;
     const inProgressTactics = userTactics.filter((t: any) => t.progress > 0 && t.progress < 100).length;
     const overdueTactics = userTactics.filter((t: any) => {
-      const dueDate = new Date(t.dueDate);
-      return isPast(dueDate) && t.progress < 100;
+      const dueDate = safeDate(t.dueDate);
+      return dueDate && isPast(dueDate) && t.progress < 100;
     }).length;
 
     const avgProgress = userTactics.length > 0
@@ -749,7 +787,8 @@ function OwnershipReport({ tactics, outcomes, users, strategies }: any) {
               <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300 mb-2">Assigned Projects</h4>
               {perf.tactics.map((tactic: any) => {
                 const strategy = strategies.find((s: any) => s.id === tactic.strategyId);
-                const isOverdue = isPast(new Date(tactic.dueDate)) && tactic.progress < 100;
+                const dueDate = safeDate(tactic.dueDate);
+                const isOverdue = dueDate && isPast(dueDate) && tactic.progress < 100;
 
                 return (
                   <div
@@ -766,9 +805,11 @@ function OwnershipReport({ tactics, outcomes, users, strategies }: any) {
                       )}
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{tactic.title}</p>
-                        <p className="text-xs text-gray-500">
-                          Due: {format(new Date(tactic.dueDate), 'MMM dd, yyyy')}
-                        </p>
+                        {dueDate && (
+                          <p className="text-xs text-gray-500">
+                            Due: {format(dueDate, 'MMM dd, yyyy')}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
