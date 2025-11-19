@@ -360,11 +360,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Tactic not found" });
       }
 
-      // Recalculate parent strategy progress when a tactic is updated
-      await storage.recalculateStrategyProgress(tactic.strategyId);
+      // Recalculate parent strategy progress when a tactic is updated (non-blocking)
+      try {
+        await storage.recalculateStrategyProgress(tactic.strategyId);
+      } catch (progressError) {
+        logger.error("Failed to recalculate strategy progress after tactic update", progressError);
+        // Don't fail the request if progress calculation fails
+      }
 
       res.json(tactic);
     } catch (error) {
+      logger.error("Tactic update failed", error);
       res.status(500).json({ message: "Failed to update tactic" });
     }
   });
