@@ -23,9 +23,9 @@ import {
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: ChartLine },
-  { name: "Strategy", href: "/framework", icon: Target },
-  { name: "Projects", href: "/strategies", icon: CheckSquare },
-  { name: "Actions", href: "/outcomes", icon: TrendingUp },
+  { name: "Strategy", href: "/strategies", icon: Target },
+  { name: "Projects", href: "/projects", icon: CheckSquare },
+  { name: "Actions", href: "/actions", icon: TrendingUp },
   { name: "Timeline", href: "/timeline", icon: Calendar },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Settings", href: "/settings", icon: Settings },

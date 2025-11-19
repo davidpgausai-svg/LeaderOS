@@ -29,10 +29,10 @@ function Router() {
       ) : (
         <>
           <Route path="/" component={Dashboard} />
-          <Route path="/framework" component={Strategies} />
-          <Route path="/strategies" component={Tactics} />
+          <Route path="/strategies" component={Strategies} />
+          <Route path="/projects" component={Tactics} />
           <Route path="/timeline" component={Timeline} />
-          <Route path="/outcomes" component={Actions} />
+          <Route path="/actions" component={Actions} />
           <Route path="/reports" component={Reports} />
           <Route path="/settings" component={Settings} />
         </>
