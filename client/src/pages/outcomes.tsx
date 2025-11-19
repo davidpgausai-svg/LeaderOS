@@ -85,7 +85,7 @@ type Outcome = {
   tactic?: Tactic;
 };
 
-export default function Outcomes() {
+export default function Actions() {
   const { currentRole, currentUser, canCreateTactics } = useRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -134,13 +134,13 @@ export default function Outcomes() {
       queryClient.invalidateQueries({ queryKey: ["/api/outcomes"] });
       toast({
         title: "Success",
-        description: "Outcome deleted successfully",
+        description: "Action deleted successfully",
       });
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to delete outcome",
+        description: "Failed to delete action",
         variant: "destructive",
       });
     },
@@ -204,7 +204,7 @@ export default function Outcomes() {
       <div className="flex h-screen">
         <Sidebar />
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-lg">Loading outcomes...</div>
+          <div className="text-lg">Loading actions...</div>
         </div>
       </div>
     );
@@ -219,13 +219,13 @@ export default function Outcomes() {
         <header className="bg-white dark:bg-gray-800 shadow-sm border-b px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Outcomes</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Actions</h1>
               <p className="text-gray-600 dark:text-gray-400">Track measurable results and achievements</p>
             </div>
             {canCreateTactics() && (
               <Button onClick={() => setIsCreateOutcomeOpen(true)} data-testid="button-create-outcome">
                 <Plus className="w-4 h-4 mr-2" />
-                New Outcome
+                New Action
               </Button>
             )}
           </div>
@@ -238,7 +238,7 @@ export default function Outcomes() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
-                  placeholder="Search outcomes..."
+                  placeholder="Search actions..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -328,7 +328,7 @@ export default function Outcomes() {
                               {strategy.title}
                             </CardTitle>
                             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                              {strategyOutcomes.length} outcome{strategyOutcomes.length !== 1 ? 's' : ''}
+                              {strategyOutcomes.length} action{strategyOutcomes.length !== 1 ? 's' : ''}
                             </p>
                           </div>
                         </div>
@@ -446,13 +446,13 @@ export default function Outcomes() {
                                       </div>
                                     )}
 
-                                    {/* Linked Tactic */}
+                                    {/* Linked Project */}
                                     {outcome.tactic && (
                                       <div className="space-y-2">
                                         <div className="flex items-center space-x-2">
                                           <Target className="w-4 h-4 text-blue-500" />
                                           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                            Linked Tactic
+                                            Linked Project
                                           </span>
                                         </div>
                                         <p className="text-sm text-gray-900 dark:text-white">

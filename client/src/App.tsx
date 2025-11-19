@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import Dashboard from "@/pages/dashboard";
 import Strategies from "@/pages/strategies";
 import Tactics from "@/pages/tactics";
-import Outcomes from "@/pages/outcomes";
+import Actions from "@/pages/outcomes";
 import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
 import Timeline from "@/pages/timeline";
@@ -32,7 +32,7 @@ function Router() {
           <Route path="/framework" component={Strategies} />
           <Route path="/strategies" component={Tactics} />
           <Route path="/timeline" component={Timeline} />
-          <Route path="/outcomes" component={Outcomes} />
+          <Route path="/outcomes" component={Actions} />
           <Route path="/reports" component={Reports} />
           <Route path="/settings" component={Settings} />
         </>

@@ -227,7 +227,7 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
                   name="tacticId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Related Strategy (Optional)</FormLabel>
+                      <FormLabel>Related Project (Optional)</FormLabel>
                       <Select 
                         onValueChange={field.onChange} 
                         defaultValue={field.value || "none"}
@@ -235,11 +235,11 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
                       >
                         <FormControl>
                           <SelectTrigger data-testid="select-outcome-tactic">
-                            <SelectValue placeholder="Select a related strategy (optional)" />
+                            <SelectValue placeholder="Select a related project (optional)" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="none">No specific strategy</SelectItem>
+                          <SelectItem value="none">No specific project</SelectItem>
                           {filteredTactics.map((tactic) => (
                             <SelectItem key={tactic.id} value={tactic.id}>
                               {tactic.title}

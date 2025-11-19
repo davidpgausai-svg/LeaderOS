@@ -112,14 +112,14 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
       queryClient.invalidateQueries({ queryKey: ["/api/outcomes"] });
       toast({
         title: "Success",
-        description: "Outcome updated successfully",
+        description: "Action updated successfully",
       });
       onOpenChange(false);
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to update outcome",
+        description: "Failed to update action",
         variant: "destructive",
       });
     },
@@ -132,7 +132,7 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
     if (!data.strategyId || data.strategyId === "placeholder") {
       toast({
         title: "Error",
-        description: "Please select a framework strategy",
+        description: "Please select a strategy",
         variant: "destructive",
       });
       return;
@@ -161,7 +161,7 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Outcome</DialogTitle>
+          <DialogTitle>Edit Action</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -175,9 +175,9 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
                   name="title"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Outcome Title</FormLabel>
+                      <FormLabel>Action Title</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter outcome title..." {...field} data-testid="input-edit-outcome-title" />
+                        <Input placeholder="Enter action title..." {...field} data-testid="input-edit-outcome-title" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -192,7 +192,7 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
                       <FormLabel>Description</FormLabel>
                       <FormControl>
                         <Textarea 
-                          placeholder="Describe the expected outcome..." 
+                          placeholder="Describe the expected action..." 
                           className="min-h-[100px]"
                           {...field} 
                           data-testid="textarea-edit-outcome-description"
@@ -213,15 +213,15 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
                   name="strategyId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Framework Strategy</FormLabel>
+                      <FormLabel>Strategy</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value || "placeholder"}>
                         <FormControl>
                           <SelectTrigger data-testid="select-edit-outcome-strategy">
-                            <SelectValue placeholder="Select a framework strategy" />
+                            <SelectValue placeholder="Select a strategy" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="placeholder">Select a framework strategy</SelectItem>
+                          <SelectItem value="placeholder">Select a strategy</SelectItem>
                           {(strategies as Strategy[])?.map((strategy) => (
                             <SelectItem key={strategy.id} value={strategy.id}>
                               <div className="flex items-center space-x-2">
@@ -245,7 +245,7 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
                   name="tacticId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Related Strategy (Optional)</FormLabel>
+                      <FormLabel>Related Project (Optional)</FormLabel>
                       <Select 
                         onValueChange={field.onChange} 
                         value={field.value || "none"}
@@ -253,11 +253,11 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
                       >
                         <FormControl>
                           <SelectTrigger data-testid="select-edit-outcome-tactic">
-                            <SelectValue placeholder="Select a related strategy (optional)" />
+                            <SelectValue placeholder="Select a related project (optional)" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="none">No specific strategy</SelectItem>
+                          <SelectItem value="none">No specific project</SelectItem>
                           {filteredTactics.map((tactic) => (
                             <SelectItem key={tactic.id} value={tactic.id}>
                               {tactic.title}

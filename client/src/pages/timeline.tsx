@@ -132,7 +132,7 @@ export default function Timeline() {
             <div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Timeline</h2>
               <p className="text-gray-600 dark:text-gray-400 mt-1">
-                Strategic roadmap showing frameworks and strategies
+                Strategic roadmap showing strategies and projects
               </p>
             </div>
             
@@ -170,7 +170,7 @@ export default function Timeline() {
             <div className="text-center py-12">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No timeline data</h3>
               <p className="text-gray-500 dark:text-gray-400">
-                Create frameworks and strategies to see them on the timeline
+                Create strategies and projects to see them on the timeline
               </p>
             </div>
           ) : (
@@ -197,7 +197,7 @@ export default function Timeline() {
                   {/* Month Headers */}
                   <div className="flex border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
                     <div className="w-48 flex-shrink-0 px-4 py-3 border-r border-gray-200 dark:border-gray-800 sticky left-0 bg-gray-50 dark:bg-gray-900 z-20">
-                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Framework</span>
+                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Strategy</span>
                     </div>
                     <div className="flex-shrink-0 relative" style={{ width: `${timelineData.months.length * 100}px` }}>
                       <div className="flex h-full">
