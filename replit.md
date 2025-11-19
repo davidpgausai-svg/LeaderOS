@@ -68,6 +68,17 @@ The platform centers around four core entities (note: database schema names diff
 4. **Outcomes** (DB: outcomes, UI: "Actions"): Measurable results and deliverables associated with projects
 5. **Activities**: Audit trail and activity feed for tracking changes and progress
 
+### Progress Calculation System
+Automatic backend-driven progress calculation with cascading rollups:
+
+- **Action Progress**: Binary (0% incomplete, 100% complete based on status)
+- **Project Progress**: Average of all child actions (empty = 0%)
+- **Strategy Progress**: Average of all child projects (empty = 0%)
+- **Automatic Recalculation**: Backend recalculates progress after any action/project mutation
+- **Excluded from Calculation**: Archived items don't affect parent progress
+- **User Interface**: Progress fields removed from create/edit forms - progress is read-only and auto-calculated
+- **Data Integrity**: Progress persisted in database and recalculated server-side on every change
+
 ### Archiving System
 Comprehensive archiving workflow for completed strategies:
 

@@ -664,9 +664,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateTactic(id: string, updates: Partial<Tactic>): Promise<Tactic | undefined> {
+    // Convert date strings to Date objects
+    const processedUpdates = { ...updates };
+    if (processedUpdates.startDate && typeof processedUpdates.startDate === 'string') {
+      processedUpdates.startDate = new Date(processedUpdates.startDate);
+    }
+    if (processedUpdates.dueDate && typeof processedUpdates.dueDate === 'string') {
+      processedUpdates.dueDate = new Date(processedUpdates.dueDate);
+    }
+
     const [updated] = await db
       .update(tactics)
-      .set(updates)
+      .set(processedUpdates)
       .where(eq(tactics.id, id))
       .returning();
     return updated || undefined;

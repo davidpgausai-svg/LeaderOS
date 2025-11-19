@@ -78,7 +78,6 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
       startDate: new Date(),
       dueDate: new Date(),
       status: "NYS",
-      progress: 0,
       createdBy: currentUser?.id || "",
     },
   });
@@ -101,7 +100,6 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
           startDate: new Date(tactic.startDate),
           dueDate: new Date(tactic.dueDate),
           status: tactic.status || "NYS",
-          progress: tactic.progress || 0,
           createdBy: tactic.createdBy || "",
         });
       } catch (error) {
@@ -397,63 +395,37 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
               </div>
             </div>
 
-            {/* Status and Progress */}
+            {/* Status */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Status & Progress</h3>
+              <h3 className="text-lg font-medium">Status</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Progress is automatically calculated from completed actions
+              </p>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-edit-status">
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="NYS">Not Yet Started</SelectItem>
-                          <SelectItem value="OT">On Track</SelectItem>
-                          <SelectItem value="OH">On Hold</SelectItem>
-                          <SelectItem value="B">Behind</SelectItem>
-                          <SelectItem value="C">Completed</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="progress"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Progress (%)</FormLabel>
-                      <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-edit-progress">
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="0">0%</SelectItem>
-                          <SelectItem value="10">10%</SelectItem>
-                          <SelectItem value="25">25%</SelectItem>
-                          <SelectItem value="50">50%</SelectItem>
-                          <SelectItem value="75">75%</SelectItem>
-                          <SelectItem value="90">90%</SelectItem>
-                          <SelectItem value="100">100%</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-edit-status">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="NYS">Not Yet Started</SelectItem>
+                        <SelectItem value="OT">On Track</SelectItem>
+                        <SelectItem value="OH">On Hold</SelectItem>
+                        <SelectItem value="B">Behind</SelectItem>
+                        <SelectItem value="C">Completed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             {/* Submit Buttons */}
