@@ -381,6 +381,9 @@ export class MemStorage implements IStorage {
     };
     this.tactics.set(id, tactic);
 
+    // Auto-create 7 milestones for the new tactic
+    await this.createMilestones(id);
+
     // Create activity
     await this.createActivity({
       type: "tactic_created",
@@ -770,6 +773,9 @@ export class DatabaseStorage implements IStorage {
       .insert(tactics)
       .values(insertTactic)
       .returning();
+
+    // Auto-create 7 milestones for the new tactic
+    await this.createMilestones(tactic.id);
 
     // Create activity
     await this.createActivity({
