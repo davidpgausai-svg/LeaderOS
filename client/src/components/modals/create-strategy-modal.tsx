@@ -23,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Sparkles, Loader2 } from "lucide-react";
 
 interface CreateStrategyModalProps {
   open: boolean;
@@ -33,6 +34,7 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
   const { currentUser } = useRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const form = useForm<InsertStrategy>({
     resolver: zodResolver(insertStrategySchema),
@@ -91,6 +93,67 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
       });
     },
   });
+
+  const handleGenerateContinuum = async () => {
+    const title = form.getValues("title");
+    const description = form.getValues("description");
+    const goal = form.getValues("goal");
+
+    if (!title || !description || !goal) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in Title, Description, and Goal before generating",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const response = await apiRequest("POST", "/api/strategies/generate-continuum", {
+        title,
+        description,
+        goal,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to generate fields");
+      }
+
+      const data = await response.json();
+
+      if (!data.caseForChange || !data.visionStatement || !data.successMetrics || 
+          !data.stakeholderMap || !data.readinessRating || !data.riskExposureRating || 
+          !data.changeChampionAssignment || !data.reinforcementPlan || !data.benefitsRealizationPlan) {
+        throw new Error("Incomplete data received from AI");
+      }
+
+      form.setValue("caseForChange", data.caseForChange);
+      form.setValue("visionStatement", data.visionStatement);
+      form.setValue("successMetrics", data.successMetrics);
+      form.setValue("stakeholderMap", data.stakeholderMap);
+      form.setValue("readinessRating", data.readinessRating);
+      form.setValue("riskExposureRating", data.riskExposureRating);
+      form.setValue("changeChampionAssignment", data.changeChampionAssignment);
+      form.setValue("reinforcementPlan", data.reinforcementPlan);
+      form.setValue("benefitsRealizationPlan", data.benefitsRealizationPlan);
+
+      toast({
+        title: "Success",
+        description: "Change Continuum fields generated successfully. You can edit them before submitting.",
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to generate Change Continuum fields. Please try again.";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const onSubmit = (data: InsertStrategy) => {
     createStrategyMutation.mutate(data);
@@ -154,6 +217,29 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
                 </FormItem>
               )}
             />
+
+            <div className="flex justify-center py-2">
+              <Button
+                type="button"
+                onClick={handleGenerateContinuum}
+                disabled={isGenerating}
+                variant="outline"
+                className="w-full md:w-auto"
+                data-testid="button-generate-continuum"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generating Change Continuum...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Generate Change Continuum with AI
+                  </>
+                )}
+              </Button>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField

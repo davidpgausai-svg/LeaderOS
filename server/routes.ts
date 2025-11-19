@@ -5,6 +5,7 @@ import { insertStrategySchema, insertTacticSchema, insertOutcomeSchema } from "@
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 import { logger } from "./logger";
+import OpenAI from "openai";
 
 // Validation helpers
 function isValidHexColor(color: string): boolean {
@@ -18,6 +19,12 @@ function validateDateRange(startDate: Date, endDate: Date): boolean {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up Replit Auth
   await setupAuth(app);
+
+  // Initialize OpenAI client
+  const openai = new OpenAI({
+    baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+    apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+  });
 
   // Initialize database with seed data only in development
   if (process.env.NODE_ENV !== 'production' && storage && 'seedData' in storage) {
@@ -135,6 +142,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(strategy);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch strategy" });
+    }
+  });
+
+  app.post("/api/strategies/generate-continuum", isAuthenticated, async (req, res) => {
+    try {
+      const { title, description, goal } = req.body;
+      
+      if (!title || !description || !goal) {
+        return res.status(400).json({ message: "Title, description, and goal are required" });
+      }
+
+      const prompt = `You are a strategic planning expert helping to develop a comprehensive change management framework for an organizational strategy.
+
+Strategy Title: ${title}
+Description: ${description}
+Goal: ${goal}
+
+Based on this information, generate detailed content for the following 9 Change Continuum fields. Provide practical, actionable, and specific content for each field:
+
+1. Case for Change: Explain why this change is necessary and urgent for the organization
+2. Vision Statement: Describe the desired future state after this strategy is successfully implemented
+3. Success Metrics: Define specific, measurable indicators that will demonstrate success
+4. Stakeholder Map: Identify key stakeholders, their roles, and level of influence/interest
+5. Readiness Rating (RAG): Assess organizational readiness using Red/Amber/Green rating with justification
+6. Risk Exposure Rating: Identify potential risks and their mitigation strategies
+7. Change Champion Assignment: Suggest who should lead this change and why
+8. Reinforcement Plan: Describe how the change will be sustained over time
+9. Benefits Realization Plan: Outline how benefits will be tracked and realized
+
+Respond ONLY with a valid JSON object in this exact format:
+{
+  "caseForChange": "...",
+  "visionStatement": "...",
+  "successMetrics": "...",
+  "stakeholderMap": "...",
+  "readinessRating": "...",
+  "riskExposureRating": "...",
+  "changeChampionAssignment": "...",
+  "reinforcementPlan": "...",
+  "benefitsRealizationPlan": "..."
+}`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: "You are a strategic planning and change management expert. Provide detailed, practical guidance for organizational change initiatives. Always respond with valid JSON only."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        response_format: { type: "json_object" }
+      });
+
+      const content = completion.choices[0].message.content;
+      if (!content) {
+        throw new Error("No content received from OpenAI");
+      }
+
+      const generatedFields = JSON.parse(content);
+      res.json(generatedFields);
+    } catch (error) {
+      logger.error("AI generation failed", error);
+      res.status(500).json({ message: "Failed to generate Change Continuum fields. Please try again." });
     }
   });
 
