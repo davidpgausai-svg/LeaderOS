@@ -75,6 +75,7 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
       kpiTracking: "",
       accountableLeaders: "[]",
       resourcesRequired: "",
+      documentFolderUrl: null,
       startDate: new Date(),
       dueDate: new Date(),
       status: "NYS",
@@ -97,6 +98,7 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
           kpiTracking: tactic.kpiTracking || "",
           accountableLeaders: tactic.accountableLeaders || "[]",
           resourcesRequired: tactic.resourcesRequired || "",
+          documentFolderUrl: tactic.documentFolderUrl || null,
           startDate: new Date(tactic.startDate),
           dueDate: new Date(tactic.dueDate),
           status: tactic.status || "NYS",
@@ -337,6 +339,26 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
                         {...field}
                         value={field.value || ""}
                         data-testid="textarea-edit-resources"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="documentFolderUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Document Folder URL (Optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="url"
+                        placeholder="https://drive.google.com/..."
+                        {...field}
+                        value={field.value || ""}
+                        data-testid="input-edit-document-folder-url"
                       />
                     </FormControl>
                     <FormMessage />

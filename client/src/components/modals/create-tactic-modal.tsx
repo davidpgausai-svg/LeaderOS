@@ -75,6 +75,7 @@ export function CreateTacticModal({ isOpen, onClose, strategyId }: CreateTacticM
       kpiTracking: "",
       accountableLeaders: "[]",
       resourcesRequired: "",
+      documentFolderUrl: null,
       startDate: new Date(),
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
       status: "NYS",
@@ -311,6 +312,26 @@ export function CreateTacticModal({ isOpen, onClose, strategyId }: CreateTacticM
                         {...field}
                         value={field.value || ""}
                         data-testid="textarea-resources"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="documentFolderUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Document Folder URL (Optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="url"
+                        placeholder="https://drive.google.com/..."
+                        {...field}
+                        value={field.value || ""}
+                        data-testid="input-document-folder-url"
                       />
                     </FormControl>
                     <FormMessage />
