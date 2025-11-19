@@ -38,6 +38,7 @@ export const strategies = pgTable("strategies", {
   completionDate: timestamp("completion_date"),
   colorCode: text("color_code").notNull().default('#3B82F6'), // Hex color for strategy grouping
   displayOrder: integer("display_order").notNull().default(0), // Order for framework ranking
+  progress: integer("progress").notNull().default(0), // 0-100, auto-calculated from tactics
   createdBy: varchar("created_by").notNull(),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
