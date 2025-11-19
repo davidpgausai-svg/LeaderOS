@@ -1,0 +1,41 @@
+1. Strategy-Level Required Change Continuum Fields
+* For every Strategy, require a Change Continuum section to be completed during Strategy creation.
+* Make these fields blocking/mandatory before a Strategy can be saved or activated.
+* Treat them as generic text/structured fields (e.g., textareas/inputs) — I will define the exact labels later.
+* Persist these fields in the Strategy data model and surface them in the Strategy detail view as a dedicated “Change Continuum” panel.
+
+2. Project-Level Change Continuum Milestones + Document Folder Linking
+* For every Project created under a Strategy, automatically generate 7 standard Change Continuum milestones (1–7).
+* Each Project should also support document folder linking:
+    * Allow the user to store a OneDrive or Google Drive URL at the Project level that represents the project’s main documents folder.
+    * Show this link prominently in the Project detail view.
+
+3. Reports Dashboard – Change Continuum Reporting
+* Build a Reports dashboard view that can be accessed from the main navigation.
+* Include a report that summarizes Change Continuum status across Strategies and Projects (e.g., which Strategies/Projects have required fields completed and which milestones are in progress or done).
+* The implementation details of the visuals are up to you, but the data must be driven strictly by the Strategy-level continuum fields and the Project-level milestones.
+
+4. Timeline Alignment Across Strategies
+* Within the Reports dashboard, add a Timeline Alignment report that:
+    * Plots key Strategy and Project milestones on a shared timeline.
+    * Makes it easy to see when major milestones from different Strategies overlap.
+* Use this for basic conflict/overlap visibility only (no extra logic like risk scoring or capacity modeling).
+
+5. Executive Overview Report with OpenAI Integration
+* In the Reports dashboard, add an “Executive Overview” report type.
+* When the user runs this report, call the OpenAI API (GPT).
+* Provide GPT with:
+    * Strategy-level change continuum fields,
+    * High-level Strategy/Project statuses,
+    * Key milestone dates.
+* Have GPT return a concise, executive-ready narrative summary.
+* Render that narrative in the UI and allow the user to copy it.
+* Keep the OpenAI integration minimal and focused solely on generating this narrative.
+
+6. Communication Templates Feature
+* At the Project level, add a new left-navigation item called “Communication Templates”.
+* For each of the 7 Change Continuum milestones, allow the user to store:
+    * One PPT template link (OneDrive or Google Drive URL),
+    * One Word template link (OneDrive or Google Drive URL).
+* These links are just stored and displayed; no additional file syncing or editing is needed.
+* Clearly label each milestone (1–7) in this view so users know which template corresponds to which Change Continuum milestone.
