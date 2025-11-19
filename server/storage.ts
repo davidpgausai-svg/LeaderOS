@@ -953,9 +953,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateMilestone(id: string, updates: Partial<Milestone>): Promise<Milestone | undefined> {
+    // Convert date strings to Date objects
+    const processedUpdates = { ...updates };
+    if (processedUpdates.startDate && typeof processedUpdates.startDate === 'string') {
+      processedUpdates.startDate = new Date(processedUpdates.startDate);
+    }
+    if (processedUpdates.completionDate && typeof processedUpdates.completionDate === 'string') {
+      processedUpdates.completionDate = new Date(processedUpdates.completionDate);
+    }
+    // Handle null values explicitly
+    if (processedUpdates.completionDate === null) {
+      processedUpdates.completionDate = null;
+    }
+    if (processedUpdates.startDate === null) {
+      processedUpdates.startDate = null;
+    }
+
     const [updated] = await db
       .update(milestones)
-      .set(updates)
+      .set(processedUpdates)
       .where(eq(milestones.id, id))
       .returning();
     return updated || undefined;
