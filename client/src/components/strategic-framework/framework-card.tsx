@@ -1,6 +1,12 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Link } from "wouter";
 import { 
   Target, 
@@ -8,7 +14,9 @@ import {
   Award, 
   CheckCircle, 
   TrendingUp,
-  Star
+  Star,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 
 interface FrameworkCardProps {
@@ -21,6 +29,11 @@ interface FrameworkCardProps {
   icon: React.ReactNode;
   status: string;
   actualProgress?: number;
+  changeDriver?: string;
+  changeStakeholders?: string;
+  changeImpact?: string;
+  changeRisks?: string;
+  changeSuccess?: string;
 }
 
 export function FrameworkCard({ 
@@ -32,8 +45,15 @@ export function FrameworkCard({
   colorCode, 
   icon, 
   status,
-  actualProgress = 0
+  actualProgress = 0,
+  changeDriver,
+  changeStakeholders,
+  changeImpact,
+  changeRisks,
+  changeSuccess
 }: FrameworkCardProps) {
+  const [expandedContinuum, setExpandedContinuum] = useState(false);
+  
   // Calculate completed tactics based on their actual progress (>= 100%)
   const completedTactics = tactics.filter(t => (t.progress || 0) >= 100).length;
   // Calculate completed outcomes based on their status
@@ -86,6 +106,50 @@ export function FrameworkCard({
             {description}
           </p>
         </div>
+
+        {/* Change Continuum Section */}
+        <Collapsible
+          open={expandedContinuum}
+          onOpenChange={setExpandedContinuum}
+        >
+          <CollapsibleTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="w-full flex items-center justify-between text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-2"
+              data-testid="button-toggle-continuum"
+            >
+              <span className="text-xs font-semibold">CHANGE CONTINUUM</span>
+              {expandedContinuum ? (
+                <ChevronUp className="h-3 w-3" />
+              ) : (
+                <ChevronDown className="h-3 w-3" />
+              )}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2 space-y-2">
+            <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
+              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Change Driver</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">{changeDriver || "To be defined"}</div>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
+              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Key Stakeholders</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">{changeStakeholders || "To be defined"}</div>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
+              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Expected Impact</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">{changeImpact || "To be defined"}</div>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
+              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Potential Risks</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">{changeRisks || "To be defined"}</div>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
+              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Success Indicators</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">{changeSuccess || "To be defined"}</div>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Tactics Section */}
         <div className="space-y-3">

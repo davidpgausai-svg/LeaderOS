@@ -149,6 +149,11 @@ export default function Dashboard() {
                       icon={<Target className="w-5 h-5" />}
                       status={strategy.status}
                       actualProgress={averageProgress}
+                      changeDriver={strategy.changeDriver}
+                      changeStakeholders={strategy.changeStakeholders}
+                      changeImpact={strategy.changeImpact}
+                      changeRisks={strategy.changeRisks}
+                      changeSuccess={strategy.changeSuccess}
                     />
                   );
                 })}

@@ -32,7 +32,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Trash2, MoreVertical, Edit, CheckCircle, Archive } from "lucide-react";
+import { Plus, Search, Trash2, MoreVertical, Edit, CheckCircle, Archive, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -47,6 +52,7 @@ export default function Strategies() {
   const [selectedStrategy, setSelectedStrategy] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [expandedContinuum, setExpandedContinuum] = useState<Record<string, boolean>>({});
 
   const { data: strategies, isLoading: strategiesLoading } = useQuery({
     queryKey: ["/api/strategies"],
@@ -341,6 +347,51 @@ export default function Strategies() {
                       <span className="ml-2">{strategy.metrics}</span>
                     </div>
                   </div>
+
+                  {/* Change Continuum Section */}
+                  <Collapsible
+                    open={expandedContinuum[strategy.id]}
+                    onOpenChange={(open) => setExpandedContinuum(prev => ({ ...prev, [strategy.id]: open }))}
+                    className="mt-4"
+                  >
+                    <CollapsibleTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="w-full flex items-center justify-between text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-2"
+                        data-testid={`button-toggle-continuum-${strategy.id}`}
+                      >
+                        <span className="text-sm font-medium">Change Continuum</span>
+                        {expandedContinuum[strategy.id] ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="mt-2 space-y-2 text-sm">
+                      <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                        <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Change Driver</div>
+                        <div className="text-gray-600 dark:text-gray-400">{strategy.changeDriver || "To be defined"}</div>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                        <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Key Stakeholders</div>
+                        <div className="text-gray-600 dark:text-gray-400">{strategy.changeStakeholders || "To be defined"}</div>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                        <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Expected Impact</div>
+                        <div className="text-gray-600 dark:text-gray-400">{strategy.changeImpact || "To be defined"}</div>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                        <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Potential Risks</div>
+                        <div className="text-gray-600 dark:text-gray-400">{strategy.changeRisks || "To be defined"}</div>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                        <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Success Indicators</div>
+                        <div className="text-gray-600 dark:text-gray-400">{strategy.changeSuccess || "To be defined"}</div>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
 
                   <div className="mt-6 pt-4 border-t border-gray-200 space-y-3">
                     <div className="flex items-center justify-between">
