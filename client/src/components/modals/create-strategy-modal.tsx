@@ -115,12 +115,6 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
         description,
         goal,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to generate fields");
-      }
-
       const data = await response.json();
 
       if (!data.caseForChange || !data.visionStatement || !data.successMetrics || 
