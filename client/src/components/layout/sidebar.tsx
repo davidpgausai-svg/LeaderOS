@@ -19,6 +19,7 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
+  FileText,
 } from "lucide-react";
 
 const navigation = [
@@ -27,6 +28,7 @@ const navigation = [
   { name: "Projects", href: "/projects", icon: CheckSquare },
   { name: "Actions", href: "/actions", icon: TrendingUp },
   { name: "Timeline", href: "/timeline", icon: Calendar },
+  { name: "Comm Templates", href: "/communication-templates", icon: FileText },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Settings", href: "/settings", icon: Settings },
 ];

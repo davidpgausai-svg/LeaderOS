@@ -63,6 +63,11 @@ export function EditStrategyModal({ open, onOpenChange, strategy }: EditStrategy
       status: "active",
       colorCode: "#3B82F6",
       createdBy: currentUser?.id || "",
+      continuumField1: "",
+      continuumField2: "",
+      continuumField3: "",
+      continuumField4: "",
+      continuumField5: "",
     },
   });
 
@@ -90,6 +95,11 @@ export function EditStrategyModal({ open, onOpenChange, strategy }: EditStrategy
         status: strategy.status,
         colorCode: strategy.colorCode,
         createdBy: strategy.createdBy,
+        continuumField1: strategy.continuumField1 || "",
+        continuumField2: strategy.continuumField2 || "",
+        continuumField3: strategy.continuumField3 || "",
+        continuumField4: strategy.continuumField4 || "",
+        continuumField5: strategy.continuumField5 || "",
       });
     }
   }, [strategy, open, form]);
@@ -366,6 +376,104 @@ export function EditStrategyModal({ open, onOpenChange, strategy }: EditStrategy
                             </span>
                           </div>
                         </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Change Continuum */}
+              <div className="space-y-4 border-t pt-6">
+                <h3 className="text-lg font-medium">Change Continuum (Required)</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  These fields will be customizable. For now, please provide information for all five fields.
+                </p>
+
+                <FormField
+                  control={form.control}
+                  name="continuumField1"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Continuum Field 1 *</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={2}
+                          placeholder="Enter information for field 1"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="continuumField2"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Continuum Field 2 *</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={2}
+                          placeholder="Enter information for field 2"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="continuumField3"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Continuum Field 3 *</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={2}
+                          placeholder="Enter information for field 3"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="continuumField4"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Continuum Field 4 *</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={2}
+                          placeholder="Enter information for field 4"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="continuumField5"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Continuum Field 5 *</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={2}
+                          placeholder="Enter information for field 5"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

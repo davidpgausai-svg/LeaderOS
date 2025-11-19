@@ -40,11 +40,11 @@ export const strategies = pgTable("strategies", {
   displayOrder: integer("display_order").notNull().default(0), // Order for framework ranking
   progress: integer("progress").notNull().default(0), // 0-100, auto-calculated from tactics
   // Change Continuum fields (generic text fields for user customization)
-  continuumField1: text("continuum_field_1"),
-  continuumField2: text("continuum_field_2"),
-  continuumField3: text("continuum_field_3"),
-  continuumField4: text("continuum_field_4"),
-  continuumField5: text("continuum_field_5"),
+  continuumField1: text("continuum_field_1").notNull().default("To be defined"),
+  continuumField2: text("continuum_field_2").notNull().default("To be defined"),
+  continuumField3: text("continuum_field_3").notNull().default("To be defined"),
+  continuumField4: text("continuum_field_4").notNull().default("To be defined"),
+  continuumField5: text("continuum_field_5").notNull().default("To be defined"),
   createdBy: varchar("created_by").notNull(),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
@@ -134,11 +134,11 @@ export const insertStrategySchema = createInsertSchema(strategies).omit({
   startDate: z.coerce.date(),
   targetDate: z.coerce.date(),
   // Make Change Continuum fields mandatory (can be customized by user later)
-  continuumField1: z.string().min(1, "This field is required"),
-  continuumField2: z.string().min(1, "This field is required"),
-  continuumField3: z.string().min(1, "This field is required"),
-  continuumField4: z.string().min(1, "This field is required"),
-  continuumField5: z.string().min(1, "This field is required"),
+  continuumField1: z.string().trim().min(1, "This field is required"),
+  continuumField2: z.string().trim().min(1, "This field is required"),
+  continuumField3: z.string().trim().min(1, "This field is required"),
+  continuumField4: z.string().trim().min(1, "This field is required"),
+  continuumField5: z.string().trim().min(1, "This field is required"),
 });
 
 export const insertTacticSchema = createInsertSchema(tactics).omit({

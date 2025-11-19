@@ -52,7 +52,8 @@ import {
   Filter,
   ChevronDown,
   ChevronRight,
-  Edit
+  Edit,
+  ExternalLink
 } from "lucide-react";
 
 type Strategy = {
@@ -82,6 +83,7 @@ type Tactic = {
   kpiTracking?: string;
   accountableLeaders: string; // JSON array of user IDs
   resourcesRequired?: string;
+  documentFolderUrl?: string | null;
   startDate: string;
   dueDate: string;
   status: string; // C, OT, OH, B, NYS
@@ -559,6 +561,24 @@ export default function Tactics() {
                                         <p className="text-sm text-gray-600 dark:text-gray-400">
                                           {tactic.resourcesRequired}
                                         </p>
+                                      </div>
+                                    )}
+
+                                    {tactic.documentFolderUrl && (
+                                      <div className="space-y-2">
+                                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                          Document Folder
+                                        </span>
+                                        <a
+                                          href={tactic.documentFolderUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                                          data-testid="link-document-folder"
+                                        >
+                                          <ExternalLink className="w-4 h-4" />
+                                          Open Project Documents
+                                        </a>
                                       </div>
                                     )}
                                   </div>
