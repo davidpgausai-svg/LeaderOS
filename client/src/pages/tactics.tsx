@@ -296,13 +296,13 @@ export default function Tactics() {
         <header className="bg-white dark:bg-gray-800 shadow-sm border-b px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Strategies</h1>
-              <p className="text-gray-600 dark:text-gray-400">Track your assigned strategies and progress</p>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Projects</h1>
+              <p className="text-gray-600 dark:text-gray-400">Track your assigned projects and progress</p>
             </div>
             {canCreateTactics() && (
               <Button onClick={() => setIsCreateTacticOpen(true)} data-testid="button-create-tactic">
                 <Plus className="w-4 h-4 mr-2" />
-                New Strategy
+                New Project
               </Button>
             )}
           </div>
@@ -345,7 +345,7 @@ export default function Tactics() {
                 <SelectValue placeholder="Filter by strategy" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Strategies</SelectItem>
+                <SelectItem value="all">All Projects</SelectItem>
                 {(strategies as Strategy[])?.map((strategy) => (
                   <SelectItem key={strategy.id} value={strategy.id}>
                     {strategy.title}
