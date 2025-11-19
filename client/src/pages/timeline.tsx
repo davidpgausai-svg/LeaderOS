@@ -191,43 +191,45 @@ export default function Timeline() {
                 </div>
               </div>
 
-              {/* Timeline Grid */}
-              <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden">
-                {/* Month Headers */}
-                <div className="flex border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
-                  <div className="w-48 flex-shrink-0 px-4 py-3 border-r border-gray-200 dark:border-gray-800">
-                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Framework</span>
-                  </div>
-                  <div className="flex-1 relative">
-                    <div className="flex h-full">
-                      {timelineData.months.map((month, idx) => (
-                        <div
-                          key={idx}
-                          className="flex-1 min-w-0 px-2 py-3 text-center border-r border-gray-200 dark:border-gray-800 last:border-r-0"
-                        >
-                          <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                            {format(month, 'MMM yyyy')}
-                          </span>
-                        </div>
-                      ))}
+              {/* Timeline Grid with synchronized horizontal scroll */}
+              <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg overflow-x-auto">
+                <div className="inline-block min-w-full">
+                  {/* Month Headers */}
+                  <div className="flex border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+                    <div className="w-48 flex-shrink-0 px-4 py-3 border-r border-gray-200 dark:border-gray-800 sticky left-0 bg-gray-50 dark:bg-gray-900 z-20">
+                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Framework</span>
+                    </div>
+                    <div className="flex-shrink-0 relative" style={{ width: `${timelineData.months.length * 100}px` }}>
+                      <div className="flex h-full">
+                        {timelineData.months.map((month, idx) => (
+                          <div
+                            key={idx}
+                            className="flex-shrink-0 px-2 py-3 text-center border-r border-gray-200 dark:border-gray-800 last:border-r-0"
+                            style={{ width: '100px' }}
+                          >
+                            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                              {format(month, 'MMM yyyy')}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Framework Rows (Swimlanes) */}
-                {timelineData.frameworks.map((framework, frameworkIndex) => {
-                  const startPos = getPositionPercentage(framework.startDate);
-                  const endPos = getPositionPercentage(framework.targetDate);
-                  const width = Math.max(endPos - startPos, 2);
+                  {/* Framework Rows (Swimlanes) */}
+                  {timelineData.frameworks.map((framework, frameworkIndex) => {
+                    const startPos = getPositionPercentage(framework.startDate);
+                    const endPos = getPositionPercentage(framework.targetDate);
+                    const width = Math.max(endPos - startPos, 2);
 
-                  return (
-                    <div
-                      key={framework.id}
-                      className={`flex ${frameworkIndex % 2 === 0 ? 'bg-white dark:bg-black' : 'bg-gray-50 dark:bg-gray-900'} border-b border-gray-200 dark:border-gray-800 last:border-b-0`}
-                      data-testid={`timeline-row-${framework.id}`}
-                    >
-                      {/* Framework Label */}
-                      <div className={`w-48 flex-shrink-0 px-4 py-6 border-r border-gray-200 dark:border-gray-800 ${framework.status === 'Archived' ? 'opacity-50' : ''}`}>
+                    return (
+                      <div
+                        key={framework.id}
+                        className={`flex ${frameworkIndex % 2 === 0 ? 'bg-white dark:bg-black' : 'bg-gray-50 dark:bg-gray-900'} border-b border-gray-200 dark:border-gray-800 last:border-b-0`}
+                        data-testid={`timeline-row-${framework.id}`}
+                      >
+                        {/* Framework Label */}
+                        <div className={`w-48 flex-shrink-0 px-4 py-6 border-r border-gray-200 dark:border-gray-800 sticky left-0 z-10 ${framework.status === 'Archived' ? 'opacity-50' : ''} ${frameworkIndex % 2 === 0 ? 'bg-white dark:bg-black' : 'bg-gray-50 dark:bg-gray-900'}`}>
                         <div className="flex items-start space-x-2">
                           <div
                             className="w-3 h-3 rounded-full mt-1 flex-shrink-0"
@@ -260,7 +262,7 @@ export default function Timeline() {
                       </div>
 
                       {/* Timeline Bar */}
-                      <div className={`flex-1 relative py-6 px-4 min-h-[120px] ${framework.status === 'Archived' ? 'opacity-50' : ''}`}>
+                      <div className={`flex-shrink-0 relative py-6 px-4 min-h-[120px] ${framework.status === 'Archived' ? 'opacity-50' : ''}`} style={{ width: `${timelineData.months.length * 100}px` }}>
                         {/* Framework Duration Bar */}
                         <div
                           className="absolute top-1/2 h-8 rounded-lg transform -translate-y-1/2 flex items-center justify-center shadow-sm"
@@ -367,6 +369,7 @@ export default function Timeline() {
                     </div>
                   );
                 })}
+                </div>
               </div>
 
               {/* Legend */}
