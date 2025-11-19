@@ -109,6 +109,7 @@ export const insertStrategySchema = createInsertSchema(strategies).omit({
 export const insertTacticSchema = createInsertSchema(tactics).omit({
   id: true,
   createdAt: true,
+  progress: true, // Progress is auto-calculated, not user-provided
 }).extend({
   startDate: z.coerce.date(),
   dueDate: z.coerce.date(),
