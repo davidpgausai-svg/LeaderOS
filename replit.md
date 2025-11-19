@@ -56,6 +56,8 @@ The platform centers around four core entities:
 
 1. **Users**: Role-based user accounts (executives and leaders)
 2. **Strategies**: High-level organizational objectives with metrics and timelines (called "Frameworks" in UI)
+   - Each framework has a customizable color code for visual identification
+   - Color pickers available in both create and edit forms with predefined palette options
 3. **Tactics**: Specific actionable items assigned to users under strategies (called "Strategies" in UI)
 4. **Activities**: Audit trail and activity feed for tracking changes and progress
 
