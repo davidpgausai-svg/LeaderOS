@@ -42,6 +42,10 @@ export interface IStorage {
   createOutcome(outcome: InsertOutcome): Promise<Outcome>;
   updateOutcome(id: string, updates: Partial<Outcome>): Promise<Outcome | undefined>;
   deleteOutcome(id: string): Promise<boolean>;
+
+  // Progress recalculation methods
+  recalculateTacticProgress(tacticId: string): Promise<void>;
+  recalculateStrategyProgress(strategyId: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -104,8 +108,10 @@ export class MemStorage implements IStorage {
       targetDate: new Date("2024-12-31"),
       metrics: "25% revenue increase, 3 new markets",
       status: "active",
+      completionDate: null,
       colorCode: "#22C55E",
       displayOrder: 0,
+      progress: 0,
       createdBy: adminUser.id,
       createdAt: new Date()
     };
@@ -119,8 +125,10 @@ export class MemStorage implements IStorage {
       targetDate: new Date("2024-10-31"),
       metrics: "50% efficiency improvement, 95% system uptime",
       status: "active",
+      completionDate: null,
       colorCode: "#3B82F6",
       displayOrder: 1,
+      progress: 0,
       createdBy: executiveUser.id,
       createdAt: new Date()
     };
@@ -142,6 +150,7 @@ export class MemStorage implements IStorage {
       dueDate: new Date("2024-03-15"),
       status: "C",
       progress: 100,
+      isArchived: "false",
       createdBy: executiveUser.id,
       createdAt: new Date()
     };
@@ -159,6 +168,7 @@ export class MemStorage implements IStorage {
       dueDate: new Date("2024-06-30"),
       status: "OT",
       progress: 65,
+      isArchived: "false",
       createdBy: executiveUser.id,
       createdAt: new Date()
     };
@@ -438,6 +448,49 @@ export class MemStorage implements IStorage {
   async deleteOutcome(id: string): Promise<boolean> {
     return this.outcomes.delete(id);
   }
+
+  // Progress recalculation methods
+  async recalculateTacticProgress(tacticId: string): Promise<void> {
+    const tactic = this.tactics.get(tacticId);
+    if (!tactic) return;
+
+    // Get all non-archived outcomes for this tactic
+    const tacticOutcomes = Array.from(this.outcomes.values()).filter(
+      outcome => outcome.tacticId === tacticId && outcome.isArchived !== 'true'
+    );
+
+    if (tacticOutcomes.length === 0) {
+      // No outcomes, set progress to 0
+      tactic.progress = 0;
+    } else {
+      // Count completed outcomes (status === 'achieved')
+      const completedCount = tacticOutcomes.filter(outcome => outcome.status === 'achieved').length;
+      tactic.progress = Math.floor((completedCount / tacticOutcomes.length) * 100);
+    }
+
+    this.tactics.set(tacticId, tactic);
+  }
+
+  async recalculateStrategyProgress(strategyId: string): Promise<void> {
+    const strategy = this.strategies.get(strategyId);
+    if (!strategy) return;
+
+    // Get all non-archived tactics for this strategy
+    const strategyTactics = Array.from(this.tactics.values()).filter(
+      tactic => tactic.strategyId === strategyId && tactic.isArchived !== 'true'
+    );
+
+    if (strategyTactics.length === 0) {
+      // No tactics, set progress to 0
+      strategy.progress = 0;
+    } else {
+      // Calculate average of tactic progress percentages
+      const totalProgress = strategyTactics.reduce((sum, tactic) => sum + tactic.progress, 0);
+      strategy.progress = Math.floor(totalProgress / strategyTactics.length);
+    }
+
+    this.strategies.set(strategyId, strategy);
+  }
 }
 
 // DatabaseStorage implementation
@@ -684,6 +737,53 @@ export class DatabaseStorage implements IStorage {
   async deleteOutcome(id: string): Promise<boolean> {
     const result = await db.delete(outcomes).where(eq(outcomes.id, id));
     return (result.rowCount ?? 0) > 0;
+  }
+
+  // Progress recalculation methods
+  async recalculateTacticProgress(tacticId: string): Promise<void> {
+    // Get all non-archived outcomes for this tactic
+    const tacticOutcomes = await db
+      .select()
+      .from(outcomes)
+      .where(eq(outcomes.tacticId, tacticId));
+
+    const nonArchivedOutcomes = tacticOutcomes.filter(outcome => outcome.isArchived !== 'true');
+
+    let progress = 0;
+    if (nonArchivedOutcomes.length > 0) {
+      // Count completed outcomes (status === 'achieved')
+      const completedCount = nonArchivedOutcomes.filter(outcome => outcome.status === 'achieved').length;
+      progress = Math.floor((completedCount / nonArchivedOutcomes.length) * 100);
+    }
+
+    // Update tactic progress
+    await db
+      .update(tactics)
+      .set({ progress })
+      .where(eq(tactics.id, tacticId));
+  }
+
+  async recalculateStrategyProgress(strategyId: string): Promise<void> {
+    // Get all non-archived tactics for this strategy
+    const strategyTactics = await db
+      .select()
+      .from(tactics)
+      .where(eq(tactics.strategyId, strategyId));
+
+    const nonArchivedTactics = strategyTactics.filter(tactic => tactic.isArchived !== 'true');
+
+    let progress = 0;
+    if (nonArchivedTactics.length > 0) {
+      // Calculate average of tactic progress percentages
+      const totalProgress = nonArchivedTactics.reduce((sum, tactic) => sum + tactic.progress, 0);
+      progress = Math.floor(totalProgress / nonArchivedTactics.length);
+    }
+
+    // Update strategy progress
+    await db
+      .update(strategies)
+      .set({ progress })
+      .where(eq(strategies.id, strategyId));
   }
 
   async seedData() {
