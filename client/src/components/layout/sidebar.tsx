@@ -34,6 +34,9 @@ const navigation = [
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
+// Special navigation item for notifications (shows dropdown instead of navigating)
+const notificationNavItem = { name: "Notifications", icon: Bell };
+
 export function Sidebar() {
   const [location] = useLocation();
   const { currentRole, currentUser } = useRole();
@@ -65,18 +68,15 @@ export function Sidebar() {
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">Executive Planner</h1>
           </div>
         )}
-        <div className="flex items-center gap-2">
-          {!isCollapsed && <NotificationBell />}
-          <Button
-            onClick={toggleSidebar}
-            variant="ghost"
-            size="sm"
-            className="text-gray-500 hover:text-gray-900 dark:hover:text-white"
-            data-testid="button-toggle-sidebar"
-          >
-            {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-          </Button>
-        </div>
+        <Button
+          onClick={toggleSidebar}
+          variant="ghost"
+          size="sm"
+          className="text-gray-500 hover:text-gray-900 dark:hover:text-white"
+          data-testid="button-toggle-sidebar"
+        >
+          {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+        </Button>
       </div>
       
       {/* Navigation Menu */}
@@ -115,6 +115,11 @@ export function Sidebar() {
             </Link>
           );
         })}
+        
+        {/* Notifications - Special navigation item that shows dropdown */}
+        <div className={`${isCollapsed ? 'flex justify-center' : ''}`}>
+          <NotificationBell isCollapsed={isCollapsed} />
+        </div>
       </nav>
       
       {/* User Profile */}

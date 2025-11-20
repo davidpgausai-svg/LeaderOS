@@ -25,7 +25,7 @@ export async function checkDueDateNotifications() {
       }
 
       // Skip completed or achieved actions
-      if (outcome.status === "in_progress" || outcome.status === "achieved") {
+      if (outcome.status === "completed" || outcome.status === "achieved") {
         continue;
       }
 

@@ -4,9 +4,18 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { type Notification } from "@shared/schema";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { formatDistanceToNow } from "date-fns";
 
-export function NotificationBell() {
+interface NotificationBellProps {
+  isCollapsed?: boolean;
+}
+
+export function NotificationBell({ isCollapsed = false }: NotificationBellProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -104,29 +113,51 @@ export function NotificationBell() {
     return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
   };
 
-  return (
-    <div className="relative" ref={dropdownRef}>
-      {/* Bell Icon Button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-        data-testid="notification-bell-button"
-      >
-        <Bell className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+  const buttonContent = (
+    <button
+      onClick={() => setIsOpen(!isOpen)}
+      className={`flex items-center w-full ${isCollapsed ? 'justify-center px-3' : 'px-3'} py-2 text-sm font-medium rounded-md transition-colors ${
+        isOpen
+          ? "text-white bg-primary"
+          : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+      }`}
+      data-testid="notification-bell-button"
+    >
+      <div className="relative">
+        <Bell className={`${isCollapsed ? '' : 'mr-3'} h-4 w-4`} />
         {unreadCount > 0 && (
           <span
-            className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center"
+            className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center"
             data-testid="notification-badge"
           >
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
-      </button>
+      </div>
+      {!isCollapsed && <span>Notifications</span>}
+    </button>
+  );
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      {/* Bell Icon Button */}
+      {isCollapsed ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            {buttonContent}
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            Notifications {unreadCount > 0 && `(${unreadCount})`}
+          </TooltipContent>
+        </Tooltip>
+      ) : (
+        buttonContent
+      )}
 
       {/* Dropdown Panel */}
       {isOpen && (
         <div
-          className="absolute right-0 mt-2 w-96 bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50"
+          className="absolute left-full ml-2 top-0 w-96 bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50"
           data-testid="notification-dropdown"
         >
           {/* Header */}

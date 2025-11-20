@@ -758,10 +758,21 @@ Respond ONLY with a valid JSON object in this exact format:
 
   app.patch("/api/notifications/:id/read", isAuthenticated, async (req: any, res) => {
     try {
-      const notification = await storage.markNotificationAsRead(req.params.id);
-      if (!notification) {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      // First, verify the notification exists and belongs to the user BEFORE mutating
+      const userNotifications = await storage.getNotificationsByUser(userId);
+      const notificationToUpdate = userNotifications.find(n => n.id === req.params.id);
+      
+      if (!notificationToUpdate) {
         return res.status(404).json({ message: "Notification not found" });
       }
+
+      // Now that ownership is verified, perform the mutation
+      const notification = await storage.markNotificationAsRead(req.params.id);
       res.json(notification);
     } catch (error) {
       logger.error("Failed to mark notification as read", error);
@@ -771,10 +782,21 @@ Respond ONLY with a valid JSON object in this exact format:
 
   app.patch("/api/notifications/:id/unread", isAuthenticated, async (req: any, res) => {
     try {
-      const notification = await storage.markNotificationAsUnread(req.params.id);
-      if (!notification) {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      // First, verify the notification exists and belongs to the user BEFORE mutating
+      const userNotifications = await storage.getNotificationsByUser(userId);
+      const notificationToUpdate = userNotifications.find(n => n.id === req.params.id);
+      
+      if (!notificationToUpdate) {
         return res.status(404).json({ message: "Notification not found" });
       }
+
+      // Now that ownership is verified, perform the mutation
+      const notification = await storage.markNotificationAsUnread(req.params.id);
       res.json(notification);
     } catch (error) {
       logger.error("Failed to mark notification as unread", error);
@@ -799,10 +821,25 @@ Respond ONLY with a valid JSON object in this exact format:
 
   app.delete("/api/notifications/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const deleted = await storage.deleteNotification(req.params.id);
-      if (!deleted) {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      // First, get the notification to verify ownership
+      const notifications = await storage.getNotificationsByUser(userId);
+      const notification = notifications.find(n => n.id === req.params.id);
+      
+      if (!notification) {
         return res.status(404).json({ message: "Notification not found" });
       }
+
+      // Delete the notification
+      const deleted = await storage.deleteNotification(req.params.id);
+      if (!deleted) {
+        return res.status(500).json({ message: "Failed to delete notification" });
+      }
+      
       res.json({ message: "Notification deleted" });
     } catch (error) {
       logger.error("Failed to delete notification", error);
