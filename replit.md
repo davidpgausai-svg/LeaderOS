@@ -156,6 +156,35 @@ Strategy and Project cards include View functionality for read-only access:
   - Projects: All project details, 7 milestones with completion status, KPIs, resources
 - **Purpose**: Allow users to review details without requiring edit permissions
 
+### Notification System
+Comprehensive real-time notification system for tracking project events and updates:
+
+- **Location**: Notification bell icon in left sidebar navigation with unread count badge
+- **Notification Types**:
+  - Action achieved/completed notifications
+  - Project progress milestone notifications (25%, 50%, 75%, 100%)
+  - Strategy status change notifications
+  - Readiness rating and risk exposure change notifications
+  - Milestone completion notifications
+  - Action due date warnings (14, 7, 1 day before due)
+  - Action overdue alerts (1, 7 days past due)
+- **Features**:
+  - Real-time polling every 30 seconds for new notifications
+  - Unread count badge on bell icon
+  - Interactive dropdown panel with notification list
+  - Click to toggle read/unread status
+  - Delete individual notifications
+  - "Mark all as read" bulk action
+  - Color-coded notification types (green for achievements, red for overdue, yellow for due soon, etc.)
+  - Timestamps showing relative time (e.g., "5 minutes ago")
+- **Due Date Scheduler**: Background job runs hourly to check for actions approaching due dates or overdue
+- **Security**: Ownership verification ensures users can only access and modify their own notifications
+- **Responsive Design**: 
+  - Dropdown appears to the right of sidebar in both collapsed and expanded states
+  - Tooltip support when sidebar is collapsed
+  - Navigation item styling matches other sidebar menu items
+  - Full dark mode support
+
 ### Development and Build System
 Modern development toolchain:
 

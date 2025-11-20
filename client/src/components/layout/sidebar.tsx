@@ -9,6 +9,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+  Bell,
   ChartLine,
   Target,
   CheckSquare,
