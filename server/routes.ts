@@ -201,11 +201,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Strategy routes
-  app.get("/api/strategies", async (req, res) => {
+  app.get("/api/strategies", isAuthenticated, async (req: any, res) => {
     try {
-      const strategies = await storage.getAllStrategies();
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      let strategies;
+      
+      // Administrators see all strategies
+      if (user.role === 'administrator') {
+        strategies = await storage.getAllStrategies();
+      } else {
+        // Co-Lead and View users see only assigned strategies
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        const allStrategies = await storage.getAllStrategies();
+        strategies = allStrategies.filter(s => assignedStrategyIds.includes(s.id));
+      }
+      
       res.json(strategies);
     } catch (error) {
+      logger.error("Failed to fetch strategies", error);
       res.status(500).json({ message: "Failed to fetch strategies" });
     }
   });
@@ -478,8 +497,15 @@ Respond ONLY with a valid JSON object in this exact format:
   });
 
   // Tactic routes
-  app.get("/api/tactics", async (req, res) => {
+  app.get("/api/tactics", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
       const { strategyId, assignedTo } = req.query;
       let tactics;
       
@@ -491,8 +517,15 @@ Respond ONLY with a valid JSON object in this exact format:
         tactics = await storage.getAllTactics();
       }
       
+      // Filter by assigned strategies for non-administrators
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        tactics = tactics.filter((t: any) => assignedStrategyIds.includes(t.strategyId));
+      }
+      
       res.json(tactics);
     } catch (error) {
+      logger.error("Failed to fetch tactics", error);
       res.status(500).json({ message: "Failed to fetch tactics" });
     }
   });
@@ -608,29 +641,58 @@ Respond ONLY with a valid JSON object in this exact format:
   });
 
   // Activity routes
-  app.get("/api/activities", async (req, res) => {
+  app.get("/api/activities", isAuthenticated, async (req: any, res) => {
     try {
-      const { userId } = req.query;
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      const { userId: queryUserId } = req.query;
       let activities;
       
-      if (userId) {
-        activities = await storage.getActivitiesByUser(userId as string);
+      if (queryUserId) {
+        activities = await storage.getActivitiesByUser(queryUserId as string);
       } else {
         activities = await storage.getAllActivities();
       }
       
+      // Filter by assigned strategies for non-administrators
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        activities = activities.filter((a: any) => assignedStrategyIds.includes(a.strategyId));
+      }
+      
       res.json(activities);
     } catch (error) {
+      logger.error("Failed to fetch activities", error);
       res.status(500).json({ message: "Failed to fetch activities" });
     }
   });
 
   // Outcomes routes
-  app.get("/api/outcomes", async (req, res) => {
+  app.get("/api/outcomes", isAuthenticated, async (req: any, res) => {
     try {
-      const outcomes = await storage.getAllOutcomes();
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      let outcomes = await storage.getAllOutcomes();
+      
+      // Filter by assigned strategies for non-administrators
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        outcomes = outcomes.filter((o: any) => assignedStrategyIds.includes(o.strategyId));
+      }
+      
       res.json(outcomes);
     } catch (error) {
+      logger.error("Failed to fetch outcomes", error);
       res.status(500).json({ message: "Failed to fetch outcomes" });
     }
   });
@@ -863,9 +925,27 @@ Respond ONLY with a valid JSON object in this exact format:
   });
 
   // Milestone routes
-  app.get("/api/milestones", async (req, res) => {
+  app.get("/api/milestones", isAuthenticated, async (req: any, res) => {
     try {
-      const milestones = await storage.getAllMilestones();
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      let milestones = await storage.getAllMilestones();
+      
+      // Filter by assigned strategies for non-administrators
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        const allTactics = await storage.getAllTactics();
+        const assignedTacticIds = allTactics
+          .filter((t: any) => assignedStrategyIds.includes(t.strategyId))
+          .map((t: any) => t.id);
+        milestones = milestones.filter((m: any) => assignedTacticIds.includes(m.tacticId));
+      }
+      
       res.json(milestones);
     } catch (error) {
       logger.error("Failed to fetch all milestones", error);
@@ -948,7 +1028,21 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(401).json({ message: "User not authenticated" });
       }
       
-      const notifications = await storage.getNotificationsByUser(userId);
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      
+      let notifications = await storage.getNotificationsByUser(userId);
+      
+      // Filter by assigned strategies for non-administrators
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        notifications = notifications.filter((n: any) => 
+          n.strategyId && assignedStrategyIds.includes(n.strategyId)
+        );
+      }
+      
       res.json(notifications);
     } catch (error) {
       logger.error("Failed to fetch notifications", error);
