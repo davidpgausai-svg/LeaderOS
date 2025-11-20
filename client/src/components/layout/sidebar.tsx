@@ -21,6 +21,7 @@ import {
   ChevronRight,
   FileText,
 } from "lucide-react";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: ChartLine },
@@ -64,15 +65,18 @@ export function Sidebar() {
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">Executive Planner</h1>
           </div>
         )}
-        <Button
-          onClick={toggleSidebar}
-          variant="ghost"
-          size="sm"
-          className={`${isCollapsed ? 'mx-auto' : ''} text-gray-500 hover:text-gray-900 dark:hover:text-white`}
-          data-testid="button-toggle-sidebar"
-        >
-          {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-        </Button>
+        <div className="flex items-center gap-2">
+          {!isCollapsed && <NotificationBell />}
+          <Button
+            onClick={toggleSidebar}
+            variant="ghost"
+            size="sm"
+            className="text-gray-500 hover:text-gray-900 dark:hover:text-white"
+            data-testid="button-toggle-sidebar"
+          >
+            {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </Button>
+        </div>
       </div>
       
       {/* Navigation Menu */}

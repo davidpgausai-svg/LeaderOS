@@ -6,6 +6,7 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 import { logger } from "./logger";
 import OpenAI from "openai";
+import { notifyActionCompleted, notifyActionAchieved, notifyProjectProgress, notifyProjectStatusChanged, notifyStrategyStatusChanged, notifyReadinessRatingChanged, notifyRiskExposureChanged, notifyMilestoneCompleted } from "./notifications";
 
 // Validation helpers
 function isValidHexColor(color: string): boolean {
@@ -240,6 +241,9 @@ Respond ONLY with a valid JSON object in this exact format:
 
   app.patch("/api/strategies/:id", async (req, res) => {
     try {
+      // Get the old strategy to compare changes
+      const oldStrategy = await storage.getStrategy(req.params.id);
+      
       const validatedData = insertStrategySchema.parse(req.body);
       
       // Validate color code format
@@ -257,6 +261,31 @@ Respond ONLY with a valid JSON object in this exact format:
       if (!strategy) {
         return res.status(404).json({ message: "Strategy not found" });
       }
+      
+      // Send notifications for significant changes
+      if (oldStrategy) {
+        // Get all executives to notify
+        const allUsers = await storage.getAllUsers();
+        const executiveUserIds = allUsers
+          .filter(u => u.role === "executive" || u.role === "administrator")
+          .map(u => u.id);
+        
+        // Notify for status changes
+        if (oldStrategy.status !== strategy.status) {
+          await notifyStrategyStatusChanged(strategy.id, strategy.title, oldStrategy.status, strategy.status, executiveUserIds);
+        }
+        
+        // Notify for readiness rating changes
+        if (oldStrategy.readinessRating !== strategy.readinessRating) {
+          await notifyReadinessRatingChanged(strategy.id, strategy.title, oldStrategy.readinessRating, strategy.readinessRating, executiveUserIds);
+        }
+        
+        // Notify for risk exposure changes
+        if (oldStrategy.riskExposureRating !== strategy.riskExposureRating) {
+          await notifyRiskExposureChanged(strategy.id, strategy.title, oldStrategy.riskExposureRating, strategy.riskExposureRating, executiveUserIds);
+        }
+      }
+      
       res.json(strategy);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -434,9 +463,35 @@ Respond ONLY with a valid JSON object in this exact format:
 
   app.patch("/api/tactics/:id", async (req, res) => {
     try {
+      // Get the old tactic to compare changes
+      const oldTactic = await storage.getTactic(req.params.id);
+      
       const tactic = await storage.updateTactic(req.params.id, req.body);
       if (!tactic) {
         return res.status(404).json({ message: "Tactic not found" });
+      }
+
+      // Send notifications for progress milestones and status changes
+      if (oldTactic) {
+        const assignedUserIds = JSON.parse(tactic.accountableLeaders);
+        
+        // Notify for status changes
+        if (oldTactic.status !== tactic.status) {
+          await notifyProjectStatusChanged(tactic.id, tactic.title, oldTactic.status, tactic.status, assignedUserIds);
+        }
+        
+        // Notify for progress milestones (25%, 50%, 75%, 100%)
+        const oldProgress = oldTactic.progress;
+        const newProgress = tactic.progress;
+        
+        // Check if we crossed a milestone threshold
+        const milestones = [25, 50, 75, 100];
+        for (const milestone of milestones) {
+          if (oldProgress < milestone && newProgress >= milestone) {
+            await notifyProjectProgress(tactic.id, tactic.title, milestone, assignedUserIds);
+            break; // Only notify for the first milestone crossed
+          }
+        }
       }
 
       // Recalculate parent strategy progress when a tactic is updated (non-blocking)
@@ -535,6 +590,9 @@ Respond ONLY with a valid JSON object in this exact format:
 
   app.patch("/api/outcomes/:id", async (req, res) => {
     try {
+      // Get the old outcome to compare status changes
+      const oldOutcome = await storage.getOutcome(req.params.id);
+      
       const validatedData = insertOutcomeSchema.parse(req.body);
       const outcome = await storage.updateOutcome(req.params.id, validatedData);
       if (!outcome) {
@@ -548,6 +606,19 @@ Respond ONLY with a valid JSON object in this exact format:
         strategyId: outcome.strategyId,
         tacticId: outcome.tacticId,
       });
+
+      // Send notifications for status changes
+      if (oldOutcome && outcome.tacticId) {
+        const tactic = await storage.getTactic(outcome.tacticId);
+        if (tactic) {
+          const assignedUserIds = JSON.parse(tactic.accountableLeaders);
+          
+          // Notify when action is achieved
+          if (oldOutcome.status !== "achieved" && outcome.status === "achieved") {
+            await notifyActionAchieved(outcome.id, outcome.title, assignedUserIds);
+          }
+        }
+      }
 
       // Recalculate progress: outcome -> tactic -> strategy
       if (outcome.tacticId) {
@@ -614,10 +685,24 @@ Respond ONLY with a valid JSON object in this exact format:
 
   app.patch("/api/milestones/:id", async (req, res) => {
     try {
+      // Get the old milestone to compare status changes
+      const allMilestones = await storage.getAllMilestones();
+      const oldMilestone = allMilestones.find(m => m.id === req.params.id);
+      
       const milestone = await storage.updateMilestone(req.params.id, req.body);
       if (!milestone) {
         return res.status(404).json({ message: "Milestone not found" });
       }
+      
+      // Send notification when milestone is completed
+      if (oldMilestone && oldMilestone.status !== "completed" && milestone.status === "completed") {
+        const tactic = await storage.getTactic(milestone.tacticId);
+        if (tactic) {
+          const assignedUserIds = JSON.parse(tactic.accountableLeaders);
+          await notifyMilestoneCompleted(tactic.id, tactic.title, milestone.milestoneNumber, assignedUserIds);
+        }
+      }
+      
       res.json(milestone);
     } catch (error) {
       logger.error("Failed to update milestone", error);
@@ -652,6 +737,63 @@ Respond ONLY with a valid JSON object in this exact format:
     } catch (error) {
       logger.error("Failed to update communication template", error);
       res.status(500).json({ message: "Failed to update communication template" });
+    }
+  });
+
+  // Notification routes
+  app.get("/api/notifications", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+      
+      const notifications = await storage.getNotificationsByUser(userId);
+      res.json(notifications);
+    } catch (error) {
+      logger.error("Failed to fetch notifications", error);
+      res.status(500).json({ message: "Failed to fetch notifications" });
+    }
+  });
+
+  app.patch("/api/notifications/:id/read", isAuthenticated, async (req: any, res) => {
+    try {
+      const notification = await storage.markNotificationAsRead(req.params.id);
+      if (!notification) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+      res.json(notification);
+    } catch (error) {
+      logger.error("Failed to mark notification as read", error);
+      res.status(500).json({ message: "Failed to mark notification as read" });
+    }
+  });
+
+  app.patch("/api/notifications/read-all", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+      
+      await storage.markAllNotificationsAsRead(userId);
+      res.json({ message: "All notifications marked as read" });
+    } catch (error) {
+      logger.error("Failed to mark all notifications as read", error);
+      res.status(500).json({ message: "Failed to mark all notifications as read" });
+    }
+  });
+
+  app.delete("/api/notifications/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const deleted = await storage.deleteNotification(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+      res.json({ message: "Notification deleted" });
+    } catch (error) {
+      logger.error("Failed to delete notification", error);
+      res.status(500).json({ message: "Failed to delete notification" });
     }
   });
 

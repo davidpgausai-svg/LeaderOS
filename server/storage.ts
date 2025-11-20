@@ -1,4 +1,4 @@
-import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Tactic, type InsertTactic, type Activity, type InsertActivity, type Outcome, type InsertOutcome, type Milestone, type InsertMilestone, type CommunicationTemplate, type InsertCommunicationTemplate, users, strategies, tactics, activities, outcomes, milestones, communicationTemplates } from "@shared/schema";
+import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Tactic, type InsertTactic, type Activity, type InsertActivity, type Outcome, type InsertOutcome, type Milestone, type InsertMilestone, type CommunicationTemplate, type InsertCommunicationTemplate, type Notification, type InsertNotification, users, strategies, tactics, activities, outcomes, milestones, communicationTemplates, notifications } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, asc } from "drizzle-orm";
@@ -57,6 +57,13 @@ export interface IStorage {
   getCommunicationTemplatesByTactic(tacticId: string): Promise<CommunicationTemplate[]>;
   createCommunicationTemplates(tacticId: string): Promise<CommunicationTemplate[]>; // Auto-generate 7 templates
   updateCommunicationTemplate(id: string, updates: Partial<CommunicationTemplate>): Promise<CommunicationTemplate | undefined>;
+
+  // Notification methods
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  getNotificationsByUser(userId: string): Promise<Notification[]>;
+  markNotificationAsRead(id: string): Promise<Notification | undefined>;
+  markAllNotificationsAsRead(userId: string): Promise<void>;
+  deleteNotification(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -614,6 +621,27 @@ export class MemStorage implements IStorage {
     this.communicationTemplatesMap.set(id, updated);
     return updated;
   }
+
+  // Notification methods (stub - not used in production)
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    throw new Error("MemStorage notification methods not implemented");
+  }
+
+  async getNotificationsByUser(userId: string): Promise<Notification[]> {
+    return [];
+  }
+
+  async markNotificationAsRead(id: string): Promise<Notification | undefined> {
+    return undefined;
+  }
+
+  async markAllNotificationsAsRead(userId: string): Promise<void> {
+    return;
+  }
+
+  async deleteNotification(id: string): Promise<boolean> {
+    return false;
+  }
 }
 
 // DatabaseStorage implementation
@@ -1008,6 +1036,47 @@ export class DatabaseStorage implements IStorage {
       .where(eq(communicationTemplates.id, id))
       .returning();
     return updated || undefined;
+  }
+
+  // Notification methods
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const [created] = await db
+      .insert(notifications)
+      .values(notification)
+      .returning();
+    return created;
+  }
+
+  async getNotificationsByUser(userId: string): Promise<Notification[]> {
+    const results = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(asc(notifications.createdAt));
+    return results;
+  }
+
+  async markNotificationAsRead(id: string): Promise<Notification | undefined> {
+    const [updated] = await db
+      .update(notifications)
+      .set({ isRead: 'true' })
+      .where(eq(notifications.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async markAllNotificationsAsRead(userId: string): Promise<void> {
+    await db
+      .update(notifications)
+      .set({ isRead: 'true' })
+      .where(eq(notifications.userId, userId));
+  }
+
+  async deleteNotification(id: string): Promise<boolean> {
+    const result = await db
+      .delete(notifications)
+      .where(eq(notifications.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
   }
 
   async seedData() {

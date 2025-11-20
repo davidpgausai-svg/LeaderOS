@@ -119,6 +119,19 @@ export const communicationTemplates = pgTable("communication_templates", {
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
+// Notifications - User notifications for strategic planning events
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(), // User receiving the notification
+  type: text("type").notNull(), // Type of notification (action_completed, progress_milestone, etc.)
+  title: text("title").notNull(), // Short notification title
+  message: text("message").notNull(), // Full notification message
+  relatedEntityId: varchar("related_entity_id"), // Optional - ID of related strategy/tactic/outcome
+  relatedEntityType: text("related_entity_type"), // Optional - 'strategy', 'tactic', 'outcome'
+  isRead: text("is_read").notNull().default('false'), // 'true' or 'false'
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
 export const upsertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
   updatedAt: true,
@@ -189,6 +202,11 @@ export const insertCommunicationTemplateSchema = createInsertSchema(communicatio
   createdAt: true,
 });
 
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -204,3 +222,5 @@ export type InsertMilestone = z.infer<typeof insertMilestoneSchema>;
 export type Milestone = typeof milestones.$inferSelect;
 export type InsertCommunicationTemplate = z.infer<typeof insertCommunicationTemplateSchema>;
 export type CommunicationTemplate = typeof communicationTemplates.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;
