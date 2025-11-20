@@ -69,6 +69,9 @@ The platform centers around six core entities (note: database schema names diffe
    - Each project includes 7 milestones for tracking implementation progress
    - Document folder URL field for centralized project documentation
 4. **Outcomes** (DB: outcomes, UI: "Actions"): Measurable results and deliverables associated with projects
+   - Actions page includes two-tier filtering: strategy filter (top-level) and project filter (per-strategy card)
+   - Project filter dropdown appears on each strategy card when projects exist for that strategy
+   - Project filtering allows users to narrow down actions within complex strategies with multiple projects
 5. **Milestones**: 7 predefined milestones per project tracking change management phases
 6. **Communication Templates**: URL links to presentation and documentation templates for each milestone
 7. **Activities**: Audit trail and activity feed for tracking changes and progress

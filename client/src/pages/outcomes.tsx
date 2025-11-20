@@ -79,6 +79,7 @@ type Outcome = {
   measurementUnit?: string;
   status: string;
   dueDate?: string;
+  isArchived: string;
   createdBy: string;
   createdAt: string;
   strategy?: Strategy;
@@ -93,6 +94,7 @@ export default function Actions() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [strategyFilter, setStrategyFilter] = useState("all");
   const [collapsedStrategies, setCollapsedStrategies] = useState<Set<string>>(new Set());
+  const [projectFilterByStrategy, setProjectFilterByStrategy] = useState<Record<string, string>>({});
   const [isCreateOutcomeOpen, setIsCreateOutcomeOpen] = useState(false);
   const [isEditOutcomeOpen, setIsEditOutcomeOpen] = useState(false);
   const [selectedOutcome, setSelectedOutcome] = useState<Outcome | null>(null);
@@ -199,6 +201,25 @@ export default function Actions() {
     setCollapsedStrategies(newCollapsed);
   };
 
+  const handleProjectFilterChange = (strategyId: string, projectId: string) => {
+    setProjectFilterByStrategy(prev => ({
+      ...prev,
+      [strategyId]: projectId
+    }));
+  };
+
+  const getFilteredOutcomesForStrategy = (strategyId: string, outcomes: Outcome[]) => {
+    const projectFilter = projectFilterByStrategy[strategyId] || "all";
+    if (projectFilter === "all") {
+      return outcomes;
+    }
+    return outcomes.filter(outcome => outcome.tacticId === projectFilter);
+  };
+
+  const getProjectsForStrategy = (strategyId: string) => {
+    return (tactics as Tactic[])?.filter(t => t.strategyId === strategyId) || [];
+  };
+
   if (outcomesLoading) {
     return (
       <div className="flex h-screen">
@@ -302,6 +323,9 @@ export default function Actions() {
               {Object.entries(outcomesByStrategy).map(([strategyId, strategyOutcomes]) => {
                 const strategy = (strategies as Strategy[])?.find((s) => s.id === strategyId);
                 const isCollapsed = collapsedStrategies.has(strategyId);
+                const strategyProjects = getProjectsForStrategy(strategyId);
+                const filteredOutcomes = getFilteredOutcomesForStrategy(strategyId, strategyOutcomes);
+                const currentProjectFilter = projectFilterByStrategy[strategyId] || "all";
                 
                 if (!strategy) return null;
 
@@ -333,6 +357,27 @@ export default function Actions() {
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
+                          {strategyProjects.length > 0 && (
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <Select 
+                                value={currentProjectFilter} 
+                                onValueChange={(value) => handleProjectFilterChange(strategyId, value)}
+                              >
+                                <SelectTrigger className="w-48" data-testid={`select-project-filter-${strategyId}`}>
+                                  <Filter className="w-4 h-4 mr-2" />
+                                  <SelectValue placeholder="Filter by project" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="all">All Projects</SelectItem>
+                                  {strategyProjects.map((project) => (
+                                    <SelectItem key={project.id} value={project.id}>
+                                      {project.title}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
                           <Badge variant="outline" style={{ color: strategy.colorCode }}>
                             {strategy.status}
                           </Badge>
@@ -343,7 +388,7 @@ export default function Actions() {
                     {!isCollapsed && (
                       <CardContent className="p-0">
                         <div className="space-y-4 p-6 pt-0">
-                          {strategyOutcomes.map((outcome) => {
+                          {filteredOutcomes.map((outcome) => {
                             const statusInfo = getStatusDisplay(outcome.status);
                             
                             return (
