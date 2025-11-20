@@ -41,7 +41,9 @@ interface CreateTacticModalProps {
 
 type User = {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
+  email: string;
   role: string;
 };
 
@@ -285,7 +287,10 @@ export function CreateTacticModal({ isOpen, onClose, strategyId }: CreateTacticM
                         htmlFor={`leader-${user.id}`}
                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                       >
-                        {user.name} ({user.role})
+                        {user.firstName && user.lastName 
+                          ? `${user.firstName} ${user.lastName} (${user.email})`
+                          : user.email
+                        }
                       </label>
                     </div>
                   ))}
