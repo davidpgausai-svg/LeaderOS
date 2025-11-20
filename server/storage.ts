@@ -1,4 +1,4 @@
-import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Tactic, type InsertTactic, type Activity, type InsertActivity, type Outcome, type InsertOutcome, type Milestone, type InsertMilestone, type CommunicationTemplate, type InsertCommunicationTemplate, type Notification, type InsertNotification, users, strategies, tactics, activities, outcomes, milestones, communicationTemplates, notifications } from "@shared/schema";
+import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Tactic, type InsertTactic, type Activity, type InsertActivity, type Outcome, type InsertOutcome, type Milestone, type InsertMilestone, type CommunicationTemplate, type InsertCommunicationTemplate, type Notification, type InsertNotification, type OutcomeDocument, type InsertOutcomeDocument, type OutcomeChecklistItem, type InsertOutcomeChecklistItem, users, strategies, tactics, activities, outcomes, milestones, communicationTemplates, notifications, outcomeDocuments, outcomeChecklistItems } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, asc } from "drizzle-orm";
@@ -65,6 +65,18 @@ export interface IStorage {
   markNotificationAsUnread(id: string): Promise<Notification | undefined>;
   markAllNotificationsAsRead(userId: string): Promise<void>;
   deleteNotification(id: string): Promise<boolean>;
+
+  // Outcome Document methods
+  getOutcomeDocuments(outcomeId: string): Promise<OutcomeDocument[]>;
+  createOutcomeDocument(document: InsertOutcomeDocument): Promise<OutcomeDocument>;
+  updateOutcomeDocument(id: string, updates: Partial<OutcomeDocument>): Promise<OutcomeDocument | undefined>;
+  deleteOutcomeDocument(id: string): Promise<boolean>;
+
+  // Outcome Checklist Item methods
+  getOutcomeChecklistItems(outcomeId: string): Promise<OutcomeChecklistItem[]>;
+  createOutcomeChecklistItem(item: InsertOutcomeChecklistItem): Promise<OutcomeChecklistItem>;
+  updateOutcomeChecklistItem(id: string, updates: Partial<OutcomeChecklistItem>): Promise<OutcomeChecklistItem | undefined>;
+  deleteOutcomeChecklistItem(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -1090,6 +1102,66 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .delete(notifications)
       .where(eq(notifications.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Outcome Document methods
+  async getOutcomeDocuments(outcomeId: string): Promise<OutcomeDocument[]> {
+    return await db
+      .select()
+      .from(outcomeDocuments)
+      .where(eq(outcomeDocuments.outcomeId, outcomeId))
+      .orderBy(asc(outcomeDocuments.createdAt));
+  }
+
+  async createOutcomeDocument(document: InsertOutcomeDocument): Promise<OutcomeDocument> {
+    const [created] = await db.insert(outcomeDocuments).values(document).returning();
+    return created;
+  }
+
+  async updateOutcomeDocument(id: string, updates: Partial<OutcomeDocument>): Promise<OutcomeDocument | undefined> {
+    const [updated] = await db
+      .update(outcomeDocuments)
+      .set(updates)
+      .where(eq(outcomeDocuments.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteOutcomeDocument(id: string): Promise<boolean> {
+    const result = await db
+      .delete(outcomeDocuments)
+      .where(eq(outcomeDocuments.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Outcome Checklist Item methods
+  async getOutcomeChecklistItems(outcomeId: string): Promise<OutcomeChecklistItem[]> {
+    return await db
+      .select()
+      .from(outcomeChecklistItems)
+      .where(eq(outcomeChecklistItems.outcomeId, outcomeId))
+      .orderBy(asc(outcomeChecklistItems.orderIndex));
+  }
+
+  async createOutcomeChecklistItem(item: InsertOutcomeChecklistItem): Promise<OutcomeChecklistItem> {
+    const [created] = await db.insert(outcomeChecklistItems).values(item).returning();
+    return created;
+  }
+
+  async updateOutcomeChecklistItem(id: string, updates: Partial<OutcomeChecklistItem>): Promise<OutcomeChecklistItem | undefined> {
+    const [updated] = await db
+      .update(outcomeChecklistItems)
+      .set(updates)
+      .where(eq(outcomeChecklistItems.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteOutcomeChecklistItem(id: string): Promise<boolean> {
+    const result = await db
+      .delete(outcomeChecklistItems)
+      .where(eq(outcomeChecklistItems.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
   }
 
