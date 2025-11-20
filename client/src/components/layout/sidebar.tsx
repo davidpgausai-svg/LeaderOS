@@ -9,7 +9,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  Bell,
   ChartLine,
   Target,
   CheckSquare,
@@ -34,9 +33,6 @@ const navigation = [
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
-
-// Special navigation item for notifications (shows dropdown instead of navigating)
-const notificationNavItem = { name: "Notifications", icon: Bell };
 
 export function Sidebar() {
   const [location] = useLocation();
