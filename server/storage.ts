@@ -1,7 +1,7 @@
 import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Tactic, type InsertTactic, type Activity, type InsertActivity, type Outcome, type InsertOutcome, type Milestone, type InsertMilestone, type CommunicationTemplate, type InsertCommunicationTemplate, type Notification, type InsertNotification, type OutcomeDocument, type InsertOutcomeDocument, type OutcomeChecklistItem, type InsertOutcomeChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, users, strategies, tactics, activities, outcomes, milestones, communicationTemplates, notifications, outcomeDocuments, outcomeChecklistItems, userStrategyAssignments } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, and } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -77,6 +77,13 @@ export interface IStorage {
   createOutcomeChecklistItem(item: InsertOutcomeChecklistItem): Promise<OutcomeChecklistItem>;
   updateOutcomeChecklistItem(id: string, updates: Partial<OutcomeChecklistItem>): Promise<OutcomeChecklistItem | undefined>;
   deleteOutcomeChecklistItem(id: string): Promise<boolean>;
+
+  // User Strategy Assignment methods
+  getUserStrategyAssignments(userId: string): Promise<UserStrategyAssignment[]>;
+  getStrategyAssignments(strategyId: string): Promise<UserStrategyAssignment[]>;
+  assignStrategy(userId: string, strategyId: string, assignedBy: string): Promise<UserStrategyAssignment>;
+  unassignStrategy(userId: string, strategyId: string): Promise<boolean>;
+  getUserAssignedStrategyIds(userId: string): Promise<string[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -87,6 +94,7 @@ export class MemStorage implements IStorage {
   private outcomes: Map<string, Outcome> = new Map();
   private milestonesMap: Map<string, Milestone> = new Map();
   private communicationTemplatesMap: Map<string, CommunicationTemplate> = new Map();
+  private userStrategyAssignmentsMap: Map<string, UserStrategyAssignment> = new Map();
 
   constructor() {
     this.seedData();
@@ -659,6 +667,77 @@ export class MemStorage implements IStorage {
   async deleteNotification(id: string): Promise<boolean> {
     return false;
   }
+
+  // Outcome Document methods (stub - not used in production)
+  async getOutcomeDocuments(outcomeId: string): Promise<OutcomeDocument[]> {
+    return [];
+  }
+
+  async createOutcomeDocument(document: InsertOutcomeDocument): Promise<OutcomeDocument> {
+    throw new Error("MemStorage outcome document methods not implemented");
+  }
+
+  async updateOutcomeDocument(id: string, updates: Partial<OutcomeDocument>): Promise<OutcomeDocument | undefined> {
+    return undefined;
+  }
+
+  async deleteOutcomeDocument(id: string): Promise<boolean> {
+    return false;
+  }
+
+  // Outcome Checklist Item methods (stub - not used in production)
+  async getOutcomeChecklistItems(outcomeId: string): Promise<OutcomeChecklistItem[]> {
+    return [];
+  }
+
+  async createOutcomeChecklistItem(item: InsertOutcomeChecklistItem): Promise<OutcomeChecklistItem> {
+    throw new Error("MemStorage checklist methods not implemented");
+  }
+
+  async updateOutcomeChecklistItem(id: string, updates: Partial<OutcomeChecklistItem>): Promise<OutcomeChecklistItem | undefined> {
+    return undefined;
+  }
+
+  async deleteOutcomeChecklistItem(id: string): Promise<boolean> {
+    return false;
+  }
+
+  // User Strategy Assignment methods
+  async getUserStrategyAssignments(userId: string): Promise<UserStrategyAssignment[]> {
+    return Array.from(this.userStrategyAssignmentsMap.values()).filter(a => a.userId === userId);
+  }
+
+  async getStrategyAssignments(strategyId: string): Promise<UserStrategyAssignment[]> {
+    return Array.from(this.userStrategyAssignmentsMap.values()).filter(a => a.strategyId === strategyId);
+  }
+
+  async assignStrategy(userId: string, strategyId: string, assignedBy: string): Promise<UserStrategyAssignment> {
+    const id = randomUUID();
+    const assignment: UserStrategyAssignment = {
+      id,
+      userId,
+      strategyId,
+      assignedBy,
+      assignedAt: new Date()
+    };
+    this.userStrategyAssignmentsMap.set(id, assignment);
+    return assignment;
+  }
+
+  async unassignStrategy(userId: string, strategyId: string): Promise<boolean> {
+    const assignment = Array.from(this.userStrategyAssignmentsMap.values())
+      .find(a => a.userId === userId && a.strategyId === strategyId);
+    if (assignment) {
+      this.userStrategyAssignmentsMap.delete(assignment.id);
+      return true;
+    }
+    return false;
+  }
+
+  async getUserAssignedStrategyIds(userId: string): Promise<string[]> {
+    const assignments = await this.getUserStrategyAssignments(userId);
+    return assignments.map(a => a.strategyId);
+  }
 }
 
 // DatabaseStorage implementation
@@ -1163,6 +1242,47 @@ export class DatabaseStorage implements IStorage {
       .delete(outcomeChecklistItems)
       .where(eq(outcomeChecklistItems.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // User Strategy Assignment methods
+  async getUserStrategyAssignments(userId: string): Promise<UserStrategyAssignment[]> {
+    return await db
+      .select()
+      .from(userStrategyAssignments)
+      .where(eq(userStrategyAssignments.userId, userId));
+  }
+
+  async getStrategyAssignments(strategyId: string): Promise<UserStrategyAssignment[]> {
+    return await db
+      .select()
+      .from(userStrategyAssignments)
+      .where(eq(userStrategyAssignments.strategyId, strategyId));
+  }
+
+  async assignStrategy(userId: string, strategyId: string, assignedBy: string): Promise<UserStrategyAssignment> {
+    const [assignment] = await db.insert(userStrategyAssignments).values({
+      userId,
+      strategyId,
+      assignedBy
+    }).returning();
+    return assignment;
+  }
+
+  async unassignStrategy(userId: string, strategyId: string): Promise<boolean> {
+    const result = await db
+      .delete(userStrategyAssignments)
+      .where(
+        and(
+          eq(userStrategyAssignments.userId, userId),
+          eq(userStrategyAssignments.strategyId, strategyId)
+        )
+      );
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async getUserAssignedStrategyIds(userId: string): Promise<string[]> {
+    const assignments = await this.getUserStrategyAssignments(userId);
+    return assignments.map(a => a.strategyId);
   }
 
   async seedData() {
