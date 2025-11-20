@@ -98,6 +98,25 @@ export const outcomes = pgTable("outcomes", {
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
+// Outcome Documents - Links to external documents (OneDrive, Google Docs, etc.)
+export const outcomeDocuments = pgTable("outcome_documents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  outcomeId: varchar("outcome_id").notNull(), // Action this document belongs to
+  name: text("name").notNull(), // Display name for the document
+  url: text("url").notNull(), // URL to the document
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+// Outcome Checklist Items - Checklist for each action
+export const outcomeChecklistItems = pgTable("outcome_checklist_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  outcomeId: varchar("outcome_id").notNull(), // Action this checklist item belongs to
+  title: text("title").notNull(), // Checklist item description
+  isCompleted: text("is_completed").notNull().default('false'), // 'true' or 'false'
+  orderIndex: integer("order_index").notNull().default(0), // For sorting items
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
 // Change Continuum Milestones - 7 milestones per project
 export const milestones = pgTable("milestones", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -207,6 +226,16 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
   createdAt: true,
 });
 
+export const insertOutcomeDocumentSchema = createInsertSchema(outcomeDocuments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertOutcomeChecklistItemSchema = createInsertSchema(outcomeChecklistItems).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -224,3 +253,7 @@ export type InsertCommunicationTemplate = z.infer<typeof insertCommunicationTemp
 export type CommunicationTemplate = typeof communicationTemplates.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Notification = typeof notifications.$inferSelect;
+export type InsertOutcomeDocument = z.infer<typeof insertOutcomeDocumentSchema>;
+export type OutcomeDocument = typeof outcomeDocuments.$inferSelect;
+export type InsertOutcomeChecklistItem = z.infer<typeof insertOutcomeChecklistItemSchema>;
+export type OutcomeChecklistItem = typeof outcomeChecklistItems.$inferSelect;
