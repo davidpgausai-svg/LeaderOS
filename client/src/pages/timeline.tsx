@@ -262,7 +262,7 @@ export default function Timeline() {
                               />
                               
                               {/* Tooltip on Hover */}
-                              <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 hidden group-hover:block z-50 w-48">
+                              <div className={`absolute ${frameworkIndex === 0 ? 'top-8' : 'bottom-8'} left-1/2 transform -translate-x-1/2 hidden group-hover:block z-50 w-48`}>
                                 <div
                                   className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border-2 p-3"
                                   style={{ borderColor: framework.colorCode }}
