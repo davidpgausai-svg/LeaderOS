@@ -378,13 +378,14 @@ export default function Settings() {
 
                     <div className="space-y-2">
                       <Label htmlFor="role">Role</Label>
-                      <Select value={currentUser?.role || 'leader'} disabled>
+                      <Select value={currentUser?.role || 'co_lead'} disabled>
                         <SelectTrigger data-testid="select-role">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="executive">Executive</SelectItem>
-                          <SelectItem value="leader">Leader</SelectItem>
+                          <SelectItem value="administrator">Administrator</SelectItem>
+                          <SelectItem value="co_lead">Co-Lead</SelectItem>
+                          <SelectItem value="view">View</SelectItem>
                         </SelectContent>
                       </Select>
                       <p className="text-sm text-gray-500">
@@ -643,9 +644,9 @@ export default function Settings() {
                               <p className="text-xs text-gray-400 dark:text-gray-500">
                                 {user.role === 'administrator' 
                                   ? 'Full modification power over the app'
-                                  : user.role === 'executive' 
-                                    ? 'Can edit all strategies & tactics'
-                                    : 'Can edit assigned tactics only'
+                                  : user.role === 'co_lead' 
+                                    ? 'Can edit tactics and actions for assigned strategies'
+                                    : 'View-only access to assigned strategies'
                                 }
                               </p>
                             </div>
@@ -654,11 +655,11 @@ export default function Settings() {
                             <Badge className={
                               user.role === 'administrator'
                                 ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                                : user.role === 'executive' 
+                                : user.role === 'co_lead' 
                                   ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' 
                                   : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
                             }>
-                              {user.role === 'administrator' ? 'Administrator' : user.role === 'executive' ? 'Executive' : 'Leader'}
+                              {user.role === 'administrator' ? 'Administrator' : user.role === 'co_lead' ? 'Co-Lead' : 'View'}
                             </Badge>
                             <Select 
                               value={user.role} 
@@ -669,8 +670,8 @@ export default function Settings() {
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="administrator">Administrator</SelectItem>
-                                <SelectItem value="executive">Executive</SelectItem>
-                                <SelectItem value="leader">Leader</SelectItem>
+                                <SelectItem value="co_lead">Co-Lead</SelectItem>
+                                <SelectItem value="view">View</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
