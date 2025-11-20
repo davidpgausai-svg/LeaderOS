@@ -309,8 +309,16 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.post("/api/strategies", async (req, res) => {
+  app.post("/api/strategies", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      // Only administrators can create strategies
+      if (!user || user.role !== 'administrator') {
+        return res.status(403).json({ message: "Forbidden: Only administrators can create strategies" });
+      }
+
       const validatedData = insertStrategySchema.parse(req.body);
       
       // Validate color code format
@@ -330,12 +338,21 @@ Respond ONLY with a valid JSON object in this exact format:
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
+      logger.error("Failed to create strategy", error);
       res.status(500).json({ message: "Failed to create strategy" });
     }
   });
 
-  app.patch("/api/strategies/:id", async (req, res) => {
+  app.patch("/api/strategies/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      // Only administrators can update strategies
+      if (!user || user.role !== 'administrator') {
+        return res.status(403).json({ message: "Forbidden: Only administrators can update strategies" });
+      }
+
       // Get the old strategy to compare changes
       const oldStrategy = await storage.getStrategy(req.params.id);
       
@@ -359,10 +376,10 @@ Respond ONLY with a valid JSON object in this exact format:
       
       // Send notifications for significant changes
       if (oldStrategy) {
-        // Get all executives to notify
+        // Get all administrators to notify
         const allUsers = await storage.getAllUsers();
         const executiveUserIds = allUsers
-          .filter(u => u.role === "executive" || u.role === "administrator")
+          .filter(u => u.role === "administrator")
           .map(u => u.id);
         
         // Notify for status changes
@@ -458,8 +475,16 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.patch("/api/strategies/:id/archive", async (req, res) => {
+  app.patch("/api/strategies/:id/archive", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      // Only administrators can archive strategies
+      if (!user || user.role !== 'administrator') {
+        return res.status(403).json({ message: "Forbidden: Only administrators can archive strategies" });
+      }
+
       const strategy = await storage.getStrategy(req.params.id);
       if (!strategy) {
         return res.status(404).json({ message: "Strategy not found" });
