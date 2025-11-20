@@ -175,7 +175,7 @@ export function FrameworkCard({
           </CollapsibleContent>
         </Collapsible>
 
-        {/* Tactics Section */}
+        {/* Projects Section */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
@@ -183,7 +183,7 @@ export function FrameworkCard({
                 className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: colorCode }}
               />
-              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">STRATEGIES</span>
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">PROJECTS</span>
             </div>
             <Badge variant="secondary" className="text-xs">
               {completedTactics}/{tactics.length}
@@ -205,19 +205,19 @@ export function FrameworkCard({
             ))}
             {tactics.length > 3 && (
               <p className="text-xs text-gray-500 dark:text-gray-500 italic">
-                +{tactics.length - 3} more tactics
+                +{tactics.length - 3} more projects
               </p>
             )}
           </div>
         </div>
 
-        {/* Outcomes Section */}
+        {/* Actions Section */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <TrendingUp className="w-4 h-4" style={{ color: colorCode }} />
               <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                OUTCOMES
+                ACTIONS
               </span>
             </div>
             <Badge variant="secondary" className="text-xs">
@@ -239,7 +239,7 @@ export function FrameworkCard({
             ))}
             {outcomes.length > 4 && (
               <p className="text-xs text-gray-500 dark:text-gray-500 italic">
-                +{outcomes.length - 4} more outcomes
+                +{outcomes.length - 4} more actions
               </p>
             )}
           </div>
