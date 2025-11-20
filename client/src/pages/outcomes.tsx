@@ -167,6 +167,99 @@ export default function Actions() {
     return statusMap[status as keyof typeof statusMap] || statusMap['not_started'];
   };
 
+  // Calculate days until/past due date (timezone-agnostic)
+  const getDaysUntilDue = (dueDate: string): number => {
+    const today = new Date();
+    const due = new Date(dueDate);
+    
+    // Use UTC dates to avoid timezone issues
+    const todayUTC = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+    const dueUTC = Date.UTC(due.getFullYear(), due.getMonth(), due.getDate());
+    
+    const diffTime = dueUTC - todayUTC;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  // Get due date display info with color gradient
+  const getDueDateDisplay = (dueDate: string) => {
+    const days = getDaysUntilDue(dueDate);
+    
+    // Determine color based on days
+    let bgColor = '';
+    let textColor = '';
+    
+    if (days >= 30) {
+      // 30+ days: Dark green
+      bgColor = 'bg-green-600 dark:bg-green-700';
+      textColor = 'text-white';
+    } else if (days >= 21) {
+      // 21-29 days: Green
+      bgColor = 'bg-green-500 dark:bg-green-600';
+      textColor = 'text-white';
+    } else if (days >= 14) {
+      // 14-20 days: Light green
+      bgColor = 'bg-green-400 dark:bg-green-500';
+      textColor = 'text-white';
+    } else if (days >= 7) {
+      // 7-13 days: Yellow-green
+      bgColor = 'bg-yellow-400 dark:bg-yellow-500';
+      textColor = 'text-gray-900 dark:text-white';
+    } else if (days >= 3) {
+      // 3-6 days: Yellow
+      bgColor = 'bg-yellow-500 dark:bg-yellow-600';
+      textColor = 'text-gray-900 dark:text-white';
+    } else if (days >= 1) {
+      // 1-2 days: Orange
+      bgColor = 'bg-orange-500 dark:bg-orange-600';
+      textColor = 'text-white';
+    } else if (days === 0) {
+      // Due today: Dark orange
+      bgColor = 'bg-orange-600 dark:bg-orange-700';
+      textColor = 'text-white';
+    } else if (days >= -1) {
+      // 1 day overdue: Red-orange
+      bgColor = 'bg-red-500 dark:bg-red-600';
+      textColor = 'text-white';
+    } else if (days >= -7) {
+      // 2-7 days overdue: Red
+      bgColor = 'bg-red-600 dark:bg-red-700';
+      textColor = 'text-white';
+    } else if (days >= -14) {
+      // 8-14 days overdue: Dark red
+      bgColor = 'bg-red-700 dark:bg-red-800';
+      textColor = 'text-white';
+    } else if (days >= -30) {
+      // 15-30 days overdue: Darker red
+      bgColor = 'bg-red-800 dark:bg-red-900';
+      textColor = 'text-white';
+    } else if (days >= -45) {
+      // 31-45 days overdue: Very dark red
+      bgColor = 'bg-red-900 dark:bg-red-950';
+      textColor = 'text-white';
+    } else if (days >= -60) {
+      // 46-60 days overdue: Almost black red
+      bgColor = 'bg-red-950 dark:bg-red-950';
+      textColor = 'text-white';
+    } else {
+      // 61+ days overdue: Black-red
+      bgColor = 'bg-red-950 dark:bg-red-950';
+      textColor = 'text-white';
+    }
+    
+    // Format label
+    let label = '';
+    if (days > 0) {
+      label = `Due in ${days} day${days === 1 ? '' : 's'}`;
+    } else if (days === 0) {
+      label = 'Due today';
+    } else {
+      label = `${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'} overdue`;
+    }
+    
+    return { label, bgColor, textColor };
+  };
+
   // Filter outcomes
   const filteredOutcomes = outcomesWithDetails.filter((outcome) => {
     const matchesSearch = outcome.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -390,6 +483,7 @@ export default function Actions() {
                         <div className="space-y-4 p-6 pt-0">
                           {filteredOutcomes.map((outcome) => {
                             const statusInfo = getStatusDisplay(outcome.status);
+                            const dueDateInfo = outcome.dueDate ? getDueDateDisplay(outcome.dueDate) : null;
                             
                             return (
                               <Card key={outcome.id} className="border border-gray-200 dark:border-gray-700">
@@ -406,6 +500,14 @@ export default function Actions() {
                                         >
                                           {statusInfo.label}
                                         </Badge>
+                                        {dueDateInfo && (
+                                          <Badge 
+                                            className={`${dueDateInfo.bgColor} ${dueDateInfo.textColor}`}
+                                            data-testid={`badge-due-date-${outcome.id}`}
+                                          >
+                                            {dueDateInfo.label}
+                                          </Badge>
+                                        )}
                                       </div>
                                       <p className="text-gray-600 dark:text-gray-400 mb-4">
                                         {outcome.description}
