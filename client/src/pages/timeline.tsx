@@ -125,11 +125,11 @@ export default function Timeline() {
               </div>
 
               {/* Timeline Grid with synchronized horizontal scroll */}
-              <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg overflow-x-auto">
+              <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg overflow-x-auto overflow-y-visible">
                 <div className="inline-block min-w-full">
                   {/* Month Headers */}
                   <div className="flex border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
-                    <div className="w-48 flex-shrink-0 px-4 py-3 border-r border-gray-200 dark:border-gray-800 sticky left-0 bg-gray-50 dark:bg-gray-900 z-20">
+                    <div className="w-48 flex-shrink-0 px-4 py-3 border-r border-gray-200 dark:border-gray-800 sticky left-0 bg-gray-50 dark:bg-gray-900 z-10">
                       <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Strategy</span>
                     </div>
                     <div className="flex-shrink-0 relative" style={{ width: `${timelineData.months.length * 100}px` }}>
@@ -262,9 +262,9 @@ export default function Timeline() {
                               />
                               
                               {/* Tooltip on Hover */}
-                              <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 hidden group-hover:block z-10 w-48">
+                              <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 hidden group-hover:block z-50 w-48">
                                 <div
-                                  className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border-2 p-3"
+                                  className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border-2 p-3"
                                   style={{ borderColor: framework.colorCode }}
                                 >
                                   <div className="flex items-center space-x-1 mb-1">
