@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertStrategySchema, insertTacticSchema, insertOutcomeSchema } from "@shared/schema";
+import { insertStrategySchema, insertTacticSchema, insertOutcomeSchema, insertOutcomeDocumentSchema, insertOutcomeChecklistItemSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 import { logger } from "./logger";
@@ -667,6 +667,122 @@ Respond ONLY with a valid JSON object in this exact format:
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete outcome" });
+    }
+  });
+
+  // Outcome Document routes
+  app.get("/api/outcomes/:outcomeId/documents", async (req, res) => {
+    try {
+      const documents = await storage.getOutcomeDocuments(req.params.outcomeId);
+      res.json(documents);
+    } catch (error) {
+      logger.error("Failed to fetch outcome documents", error);
+      res.status(500).json({ message: "Failed to fetch documents" });
+    }
+  });
+
+  app.post("/api/outcomes/:outcomeId/documents", async (req, res) => {
+    try {
+      const validatedData = insertOutcomeDocumentSchema.parse({
+        ...req.body,
+        outcomeId: req.params.outcomeId,
+      });
+      const document = await storage.createOutcomeDocument(validatedData);
+      res.status(201).json(document);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      logger.error("Failed to create outcome document", error);
+      res.status(500).json({ message: "Failed to create document" });
+    }
+  });
+
+  app.patch("/api/outcomes/:outcomeId/documents/:id", async (req, res) => {
+    try {
+      const validatedData = insertOutcomeDocumentSchema.partial().parse(req.body);
+      const document = await storage.updateOutcomeDocument(req.params.id, validatedData);
+      if (!document) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+      res.json(document);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      logger.error("Failed to update outcome document", error);
+      res.status(500).json({ message: "Failed to update document" });
+    }
+  });
+
+  app.delete("/api/outcomes/:outcomeId/documents/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteOutcomeDocument(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      logger.error("Failed to delete outcome document", error);
+      res.status(500).json({ message: "Failed to delete document" });
+    }
+  });
+
+  // Outcome Checklist Item routes
+  app.get("/api/outcomes/:outcomeId/checklist", async (req, res) => {
+    try {
+      const items = await storage.getOutcomeChecklistItems(req.params.outcomeId);
+      res.json(items);
+    } catch (error) {
+      logger.error("Failed to fetch checklist items", error);
+      res.status(500).json({ message: "Failed to fetch checklist items" });
+    }
+  });
+
+  app.post("/api/outcomes/:outcomeId/checklist", async (req, res) => {
+    try {
+      const validatedData = insertOutcomeChecklistItemSchema.parse({
+        ...req.body,
+        outcomeId: req.params.outcomeId,
+      });
+      const item = await storage.createOutcomeChecklistItem(validatedData);
+      res.status(201).json(item);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      logger.error("Failed to create checklist item", error);
+      res.status(500).json({ message: "Failed to create checklist item" });
+    }
+  });
+
+  app.patch("/api/outcomes/:outcomeId/checklist/:id", async (req, res) => {
+    try {
+      const validatedData = insertOutcomeChecklistItemSchema.partial().parse(req.body);
+      const item = await storage.updateOutcomeChecklistItem(req.params.id, validatedData);
+      if (!item) {
+        return res.status(404).json({ message: "Checklist item not found" });
+      }
+      res.json(item);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      logger.error("Failed to update checklist item", error);
+      res.status(500).json({ message: "Failed to update checklist item" });
+    }
+  });
+
+  app.delete("/api/outcomes/:outcomeId/checklist/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteOutcomeChecklistItem(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Checklist item not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      logger.error("Failed to delete checklist item", error);
+      res.status(500).json({ message: "Failed to delete checklist item" });
     }
   });
 
