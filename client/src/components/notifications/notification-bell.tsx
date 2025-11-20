@@ -29,6 +29,16 @@ export function NotificationBell() {
     },
   });
 
+  // Mark notification as unread mutation
+  const markAsUnreadMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("PATCH", `/api/notifications/${id}/unread`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+    },
+  });
+
   // Mark all notifications as read mutation
   const markAllAsReadMutation = useMutation({
     mutationFn: async () => {
@@ -67,8 +77,11 @@ export function NotificationBell() {
   }, [isOpen]);
 
   const handleNotificationClick = (notification: Notification) => {
+    // Toggle read/unread status
     if (notification.isRead === "false") {
       markAsReadMutation.mutate(notification.id);
+    } else {
+      markAsUnreadMutation.mutate(notification.id);
     }
   };
 

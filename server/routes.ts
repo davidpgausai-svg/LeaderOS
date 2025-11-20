@@ -743,7 +743,7 @@ Respond ONLY with a valid JSON object in this exact format:
   // Notification routes
   app.get("/api/notifications", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "User not authenticated" });
       }
@@ -769,9 +769,22 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
+  app.patch("/api/notifications/:id/unread", isAuthenticated, async (req: any, res) => {
+    try {
+      const notification = await storage.markNotificationAsUnread(req.params.id);
+      if (!notification) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+      res.json(notification);
+    } catch (error) {
+      logger.error("Failed to mark notification as unread", error);
+      res.status(500).json({ message: "Failed to mark notification as unread" });
+    }
+  });
+
   app.patch("/api/notifications/read-all", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "User not authenticated" });
       }

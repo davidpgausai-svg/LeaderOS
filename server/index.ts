@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { startDueDateScheduler } from "./scheduler";
 
 const app = express();
 
@@ -84,6 +85,10 @@ app.use((req, res, next) => {
   } else {
     serveStatic(app);
   }
+
+  // Start the due date notification scheduler
+  // Check every hour for actions that are due soon or overdue
+  startDueDateScheduler(60);
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
   // Other ports are firewalled. Default to 5000 if not specified.

@@ -62,6 +62,7 @@ export interface IStorage {
   createNotification(notification: InsertNotification): Promise<Notification>;
   getNotificationsByUser(userId: string): Promise<Notification[]>;
   markNotificationAsRead(id: string): Promise<Notification | undefined>;
+  markNotificationAsUnread(id: string): Promise<Notification | undefined>;
   markAllNotificationsAsRead(userId: string): Promise<void>;
   deleteNotification(id: string): Promise<boolean>;
 }
@@ -635,6 +636,10 @@ export class MemStorage implements IStorage {
     return undefined;
   }
 
+  async markNotificationAsUnread(id: string): Promise<Notification | undefined> {
+    return undefined;
+  }
+
   async markAllNotificationsAsRead(userId: string): Promise<void> {
     return;
   }
@@ -1060,6 +1065,15 @@ export class DatabaseStorage implements IStorage {
     const [updated] = await db
       .update(notifications)
       .set({ isRead: 'true' })
+      .where(eq(notifications.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async markNotificationAsUnread(id: string): Promise<Notification | undefined> {
+    const [updated] = await db
+      .update(notifications)
+      .set({ isRead: 'false' })
       .where(eq(notifications.id, id))
       .returning();
     return updated || undefined;
