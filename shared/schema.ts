@@ -21,9 +21,18 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
-  role: text("role").notNull().default('leader'), // 'administrator', 'executive', or 'leader'
+  role: text("role").notNull().default('co_lead'), // 'administrator', 'co_lead', or 'view'
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// User Strategy Assignments - Links users to strategies they can access
+export const userStrategyAssignments = pgTable("user_strategy_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(), // User being assigned
+  strategyId: varchar("strategy_id").notNull(), // Strategy they can access
+  assignedBy: varchar("assigned_by").notNull(), // Administrator who made the assignment
+  assignedAt: timestamp("assigned_at").default(sql`now()`),
 });
 
 export const strategies = pgTable("strategies", {
@@ -236,6 +245,11 @@ export const insertOutcomeChecklistItemSchema = createInsertSchema(outcomeCheckl
   createdAt: true,
 });
 
+export const insertUserStrategyAssignmentSchema = createInsertSchema(userStrategyAssignments).omit({
+  id: true,
+  assignedAt: true,
+});
+
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -257,3 +271,5 @@ export type InsertOutcomeDocument = z.infer<typeof insertOutcomeDocumentSchema>;
 export type OutcomeDocument = typeof outcomeDocuments.$inferSelect;
 export type InsertOutcomeChecklistItem = z.infer<typeof insertOutcomeChecklistItemSchema>;
 export type OutcomeChecklistItem = typeof outcomeChecklistItems.$inferSelect;
+export type InsertUserStrategyAssignment = z.infer<typeof insertUserStrategyAssignmentSchema>;
+export type UserStrategyAssignment = typeof userStrategyAssignments.$inferSelect;
