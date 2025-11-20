@@ -1,8 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertOutcomeSchema, type InsertOutcome, type Outcome } from "@shared/schema";
+import { insertOutcomeSchema, type InsertOutcome, type Outcome, type OutcomeDocument, type OutcomeChecklistItem } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -35,9 +35,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Plus, Trash2, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface EditOutcomeModalProps {
   open: boolean;
@@ -60,6 +61,9 @@ type Tactic = {
 export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [newDocName, setNewDocName] = useState("");
+  const [newDocUrl, setNewDocUrl] = useState("");
+  const [newChecklistItem, setNewChecklistItem] = useState("");
 
   const { data: strategies } = useQuery({
     queryKey: ["/api/strategies"],
@@ -69,6 +73,16 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
     queryKey: ["/api/tactics"],
   });
 
+  const { data: documents = [] } = useQuery<OutcomeDocument[]>({
+    queryKey: ["/api/outcomes", outcome?.id, "documents"],
+    enabled: !!outcome?.id,
+  });
+
+  const { data: checklistItems = [] } = useQuery<OutcomeChecklistItem[]>({
+    queryKey: ["/api/outcomes", outcome?.id, "checklist"],
+    enabled: !!outcome?.id,
+  });
+
   const form = useForm<InsertOutcome>({
     resolver: zodResolver(insertOutcomeSchema),
     defaultValues: {
@@ -76,9 +90,6 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
       description: "",
       strategyId: "",
       tacticId: undefined,
-      targetValue: "",
-      currentValue: "",
-      measurementUnit: "",
       status: "in_progress",
       dueDate: undefined,
       createdBy: "",
@@ -93,9 +104,6 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
         description: outcome.description,
         strategyId: outcome.strategyId,
         tacticId: outcome.tacticId || undefined,
-        targetValue: outcome.targetValue || "",
-        currentValue: outcome.currentValue || "",
-        measurementUnit: outcome.measurementUnit || "",
         status: outcome.status,
         dueDate: outcome.dueDate ? new Date(outcome.dueDate) : undefined,
         createdBy: outcome.createdBy,
@@ -125,6 +133,114 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
     },
   });
 
+  // Document mutations
+  const createDocumentMutation = useMutation({
+    mutationFn: async ({ outcomeId, name, url }: { outcomeId: string; name: string; url: string }) => {
+      const response = await apiRequest("POST", `/api/outcomes/${outcomeId}/documents`, { name, url });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/outcomes", outcome?.id, "documents"] });
+      setNewDocName("");
+      setNewDocUrl("");
+      toast({
+        title: "Success",
+        description: "Document added successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add document",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteDocumentMutation = useMutation({
+    mutationFn: async ({ outcomeId, docId }: { outcomeId: string; docId: string }) => {
+      await apiRequest("DELETE", `/api/outcomes/${outcomeId}/documents/${docId}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/outcomes", outcome?.id, "documents"] });
+      toast({
+        title: "Success",
+        description: "Document deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete document",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Checklist item mutations
+  const createChecklistItemMutation = useMutation({
+    mutationFn: async ({ outcomeId, title }: { outcomeId: string; title: string }) => {
+      const response = await apiRequest("POST", `/api/outcomes/${outcomeId}/checklist`, {
+        title,
+        isCompleted: false,
+        orderIndex: checklistItems.length,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/outcomes", outcome?.id, "checklist"] });
+      setNewChecklistItem("");
+      toast({
+        title: "Success",
+        description: "Checklist item added successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add checklist item",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateChecklistItemMutation = useMutation({
+    mutationFn: async ({ outcomeId, itemId, isCompleted }: { outcomeId: string; itemId: string; isCompleted: boolean }) => {
+      const response = await apiRequest("PATCH", `/api/outcomes/${outcomeId}/checklist/${itemId}`, { isCompleted });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/outcomes", outcome?.id, "checklist"] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update checklist item",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteChecklistItemMutation = useMutation({
+    mutationFn: async ({ outcomeId, itemId }: { outcomeId: string; itemId: string }) => {
+      await apiRequest("DELETE", `/api/outcomes/${outcomeId}/checklist/${itemId}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/outcomes", outcome?.id, "checklist"] });
+      toast({
+        title: "Success",
+        description: "Checklist item deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete checklist item",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: InsertOutcome) => {
     if (!outcome) return;
 
@@ -142,12 +258,34 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
     const cleanData: InsertOutcome = {
       ...data,
       tacticId: data.tacticId === "none" ? undefined : data.tacticId || undefined,
-      targetValue: data.targetValue || undefined,
-      currentValue: data.currentValue || undefined,
-      measurementUnit: data.measurementUnit || undefined,
       dueDate: data.dueDate || undefined,
     };
     updateOutcomeMutation.mutate({ id: outcome.id, data: cleanData });
+  };
+
+  const handleAddDocument = () => {
+    if (!outcome || !newDocName.trim() || !newDocUrl.trim()) return;
+    createDocumentMutation.mutate({ outcomeId: outcome.id, name: newDocName.trim(), url: newDocUrl.trim() });
+  };
+
+  const handleDeleteDocument = (docId: string) => {
+    if (!outcome) return;
+    deleteDocumentMutation.mutate({ outcomeId: outcome.id, docId });
+  };
+
+  const handleAddChecklistItem = () => {
+    if (!outcome || !newChecklistItem.trim()) return;
+    createChecklistItemMutation.mutate({ outcomeId: outcome.id, title: newChecklistItem.trim() });
+  };
+
+  const handleToggleChecklistItem = (itemId: string, isCompleted: boolean) => {
+    if (!outcome) return;
+    updateChecklistItemMutation.mutate({ outcomeId: outcome.id, itemId, isCompleted: !isCompleted });
+  };
+
+  const handleDeleteChecklistItem = (itemId: string) => {
+    if (!outcome) return;
+    deleteChecklistItemMutation.mutate({ outcomeId: outcome.id, itemId });
   };
 
   const selectedStrategy = form.watch("strategyId");
@@ -271,52 +409,122 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
                 />
               </div>
 
-              {/* Measurement Details */}
+              {/* Documents */}
               <div className="space-y-4">
-                <h3 className="text-lg font-medium">Measurement</h3>
+                <h3 className="text-lg font-medium">Documents</h3>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="targetValue"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Target Value</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., 100" {...field} value={field.value || ""} data-testid="input-edit-outcome-target" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <div className="space-y-2">
+                  {documents.map((doc) => (
+                    <div key={doc.id} className="flex items-center justify-between p-2 border rounded bg-background dark:bg-gray-800">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <a 
+                          href={doc.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="flex items-center gap-2 hover:underline text-blue-600 dark:text-blue-400 truncate"
+                          data-testid={`link-document-${doc.id}`}
+                        >
+                          <ExternalLink className="h-4 w-4 flex-shrink-0" />
+                          <span className="truncate">{doc.name}</span>
+                        </a>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteDocument(doc.id)}
+                        data-testid={`button-delete-document-${doc.id}`}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
+                      </Button>
+                    </div>
+                  ))}
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <Input
+                      placeholder="Document name..."
+                      value={newDocName}
+                      onChange={(e) => setNewDocName(e.target.value)}
+                      data-testid="input-new-document-name"
+                    />
+                    <Input
+                      placeholder="Document URL..."
+                      value={newDocUrl}
+                      onChange={(e) => setNewDocUrl(e.target.value)}
+                      data-testid="input-new-document-url"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAddDocument}
+                    disabled={!newDocName.trim() || !newDocUrl.trim() || createDocumentMutation.isPending}
+                    data-testid="button-add-document"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Document
+                  </Button>
+                </div>
+              </div>
 
-                  <FormField
-                    control={form.control}
-                    name="currentValue"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Current Value</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., 25" {...field} value={field.value || ""} data-testid="input-edit-outcome-current" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="measurementUnit"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Unit</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., %/units/dollars" {...field} value={field.value || ""} data-testid="input-edit-outcome-unit" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              {/* Checklist */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Checklist</h3>
+                
+                <div className="space-y-2">
+                  {checklistItems.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between p-2 border rounded bg-background dark:bg-gray-800">
+                      <div className="flex items-center gap-2 flex-1">
+                        <Checkbox
+                          checked={item.isCompleted}
+                          onCheckedChange={() => handleToggleChecklistItem(item.id, item.isCompleted)}
+                          data-testid={`checkbox-checklist-${item.id}`}
+                        />
+                        <span className={cn(
+                          "flex-1",
+                          item.isCompleted && "line-through text-muted-foreground"
+                        )}>
+                          {item.title}
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteChecklistItem(item.id)}
+                        data-testid={`button-delete-checklist-${item.id}`}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
+                      </Button>
+                    </div>
+                  ))}
+                  
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="New checklist item..."
+                      value={newChecklistItem}
+                      onChange={(e) => setNewChecklistItem(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddChecklistItem();
+                        }
+                      }}
+                      data-testid="input-new-checklist-item"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAddChecklistItem}
+                      disabled={!newChecklistItem.trim() || createChecklistItemMutation.isPending}
+                      data-testid="button-add-checklist-item"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add
+                    </Button>
+                  </div>
                 </div>
               </div>
 
