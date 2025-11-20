@@ -102,7 +102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email,
         firstName,
         lastName,
-        role: "leader", // Default role for new users
+        role: "co_lead", // Default role for new users
       });
 
       res.status(201).json(user);
@@ -121,6 +121,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(user);
     } catch (error) {
       res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  // User Strategy Assignment routes
+  app.get("/api/users/:userId/strategy-assignments", isAuthenticated, async (req: any, res) => {
+    try {
+      const requestingUserId = req.user.claims.sub;
+      const requestingUser = await storage.getUser(requestingUserId);
+      
+      // Only administrators can view other users' assignments
+      if (requestingUser?.role !== 'administrator' && requestingUserId !== req.params.userId) {
+        return res.status(403).json({ message: "Forbidden: Cannot view other users' assignments" });
+      }
+
+      const assignments = await storage.getUserStrategyAssignments(req.params.userId);
+      res.json(assignments);
+    } catch (error) {
+      logger.error("Failed to fetch strategy assignments", error);
+      res.status(500).json({ message: "Failed to fetch strategy assignments" });
+    }
+  });
+
+  app.post("/api/users/:userId/strategy-assignments", isAuthenticated, async (req: any, res) => {
+    try {
+      const requestingUserId = req.user.claims.sub;
+      const requestingUser = await storage.getUser(requestingUserId);
+      
+      // Only administrators can assign strategies
+      if (requestingUser?.role !== 'administrator') {
+        return res.status(403).json({ message: "Forbidden: Only administrators can assign strategies" });
+      }
+
+      const { strategyId } = req.body;
+      if (!strategyId) {
+        return res.status(400).json({ message: "Strategy ID is required" });
+      }
+
+      // Verify strategy exists
+      const strategy = await storage.getStrategy(strategyId);
+      if (!strategy) {
+        return res.status(404).json({ message: "Strategy not found" });
+      }
+
+      // Verify user exists
+      const user = await storage.getUser(req.params.userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const assignment = await storage.assignStrategy(req.params.userId, strategyId, requestingUserId);
+      res.status(201).json(assignment);
+    } catch (error) {
+      logger.error("Failed to assign strategy", error);
+      res.status(500).json({ message: "Failed to assign strategy" });
+    }
+  });
+
+  app.delete("/api/users/:userId/strategy-assignments/:strategyId", isAuthenticated, async (req: any, res) => {
+    try {
+      const requestingUserId = req.user.claims.sub;
+      const requestingUser = await storage.getUser(requestingUserId);
+      
+      // Only administrators can unassign strategies
+      if (requestingUser?.role !== 'administrator') {
+        return res.status(403).json({ message: "Forbidden: Only administrators can unassign strategies" });
+      }
+
+      const success = await storage.unassignStrategy(req.params.userId, req.params.strategyId);
+      if (!success) {
+        return res.status(404).json({ message: "Assignment not found" });
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      logger.error("Failed to unassign strategy", error);
+      res.status(500).json({ message: "Failed to unassign strategy" });
     }
   });
 
