@@ -98,7 +98,7 @@ export default function Timeline() {
         </header>
 
         {/* Timeline Content */}
-        <div className="p-6">
+        <div className="p-6 overflow-visible">
           {timelineData.frameworks.length === 0 ? (
             <div className="text-center py-12">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No timeline data</h3>
@@ -107,7 +107,7 @@ export default function Timeline() {
               </p>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-6 overflow-visible">
               {/* Date Range Summary */}
               <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
                 <div className="flex items-center justify-between text-sm">
@@ -125,7 +125,7 @@ export default function Timeline() {
               </div>
 
               {/* Timeline Grid with synchronized horizontal scroll */}
-              <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg overflow-x-auto overflow-y-visible">
+              <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg overflow-x-auto" style={{ overflowY: 'visible' }}>
                 <div className="inline-block min-w-full">
                   {/* Month Headers */}
                   <div className="flex border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
