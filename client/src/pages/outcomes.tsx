@@ -423,7 +423,7 @@ export default function Actions() {
                                           onClick={() => handleEditOutcome(outcome)}
                                           data-testid={`button-edit-${outcome.id}`}
                                         >
-                                          Edit Outcome
+                                          Edit Action
                                         </DropdownMenuItem>
                                         <AlertDialog>
                                           <AlertDialogTrigger asChild>
