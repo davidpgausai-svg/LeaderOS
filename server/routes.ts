@@ -608,16 +608,24 @@ Respond ONLY with a valid JSON object in this exact format:
       });
 
       // Send notifications for status changes
-      if (oldOutcome && outcome.tacticId) {
-        const tactic = await storage.getTactic(outcome.tacticId);
-        if (tactic) {
-          const assignedUserIds = JSON.parse(tactic.accountableLeaders);
-          
-          // Notify when action is achieved
-          if (oldOutcome.status !== "achieved" && outcome.status === "achieved") {
-            await notifyActionAchieved(outcome.id, outcome.title, assignedUserIds);
+      if (oldOutcome && oldOutcome.status !== "achieved" && outcome.status === "achieved") {
+        let assignedUserIds: string[] = [];
+        
+        // If action is linked to a project, notify project's assigned users
+        if (outcome.tacticId) {
+          const tactic = await storage.getTactic(outcome.tacticId);
+          if (tactic) {
+            assignedUserIds = JSON.parse(tactic.accountableLeaders);
           }
         }
+        
+        // If no project users, notify the creator of the action
+        if (assignedUserIds.length === 0) {
+          assignedUserIds = [outcome.createdBy];
+        }
+        
+        // Send the notification
+        await notifyActionAchieved(outcome.id, outcome.title, assignedUserIds);
       }
 
       // Recalculate progress: outcome -> tactic -> strategy
