@@ -182,7 +182,7 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
     mutationFn: async ({ outcomeId, title }: { outcomeId: string; title: string }) => {
       const response = await apiRequest("POST", `/api/outcomes/${outcomeId}/checklist`, {
         title,
-        isCompleted: false,
+        isCompleted: 'false',
         orderIndex: checklistItems.length,
       });
       return response.json();
