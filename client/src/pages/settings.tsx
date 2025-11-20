@@ -21,6 +21,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -45,7 +51,170 @@ import {
   Globe,
   GripVertical,
   Target,
+  ChevronDown,
 } from "lucide-react";
+
+interface UserStrategyRowProps {
+  user: any;
+  strategies: any[];
+  onRoleChange: (userId: string, newRole: string) => void;
+  onStrategyToggle: (userId: string, strategyId: string, isAssigned: boolean) => void;
+}
+
+function UserStrategyRow({ user, strategies, onRoleChange, onStrategyToggle }: UserStrategyRowProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  const { data: userAssignments } = useQuery({
+    queryKey: [`/api/users/${user.id}/strategy-assignments`],
+    enabled: user.role !== 'administrator',
+  });
+
+  const assignedStrategyIds = React.useMemo(() => {
+    if (user.role === 'administrator') return [];
+    return (userAssignments as any[] || []).map((a: any) => a.strategyId);
+  }, [userAssignments, user.role]);
+
+  const assignedCount = user.role === 'administrator' 
+    ? strategies?.length || 0 
+    : assignedStrategyIds.length;
+
+  return (
+    <div 
+      className="flex flex-col p-4 border dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
+      data-testid={`admin-user-item-${user.id}`}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <Avatar>
+            <AvatarFallback>
+              {user.firstName?.[0] || user.lastName?.[0] || user.email?.[0]?.toUpperCase() || 'U'}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <p className="font-medium text-gray-900 dark:text-white" data-testid="text-admin-user-name">
+              {user.firstName && user.lastName 
+                ? `${user.firstName} ${user.lastName}` 
+                : user.email || 'Unknown User'
+              }
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">
+              {user.role === 'administrator' 
+                ? 'Full modification power over the app'
+                : user.role === 'co_lead' 
+                  ? 'Can edit tactics and actions for assigned strategies'
+                  : 'View-only access to assigned strategies'
+              }
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center space-x-3">
+          <Badge className={
+            user.role === 'administrator'
+              ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+              : user.role === 'co_lead' 
+                ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' 
+                : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+          }>
+            {user.role === 'administrator' ? 'Administrator' : user.role === 'co_lead' ? 'Co-Lead' : 'View'}
+          </Badge>
+          <Select 
+            value={user.role} 
+            onValueChange={(value) => onRoleChange(user.id, value)}
+          >
+            <SelectTrigger className="w-32" data-testid={`select-admin-user-role-${user.id}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="administrator">Administrator</SelectItem>
+              <SelectItem value="co_lead">Co-Lead</SelectItem>
+              <SelectItem value="view">View</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      
+      {user.role !== 'administrator' && (
+        <div className="mt-4 pt-4 border-t dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Label className="text-sm font-medium">Assigned Strategies</Label>
+              <Badge variant="outline" className="text-xs">
+                {assignedCount} of {strategies?.length || 0}
+              </Badge>
+            </div>
+            <Popover open={isOpen} onOpenChange={setIsOpen}>
+              <PopoverTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  data-testid={`button-assign-strategies-${user.id}`}
+                >
+                  Manage Assignments
+                  <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-4" align="end">
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="font-medium text-sm mb-2">Select Strategies</h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                      Choose which strategies this user can access
+                    </p>
+                  </div>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {strategies?.map((strategy: any) => {
+                      const isAssigned = assignedStrategyIds.includes(strategy.id);
+                      return (
+                        <div 
+                          key={strategy.id} 
+                          className="flex items-center space-x-2 p-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded"
+                        >
+                          <Checkbox
+                            id={`${user.id}-${strategy.id}`}
+                            checked={isAssigned}
+                            onCheckedChange={() => onStrategyToggle(user.id, strategy.id, isAssigned)}
+                            data-testid={`checkbox-strategy-${strategy.id}-${user.id}`}
+                          />
+                          <label
+                            htmlFor={`${user.id}-${strategy.id}`}
+                            className="flex-1 text-sm cursor-pointer flex items-center space-x-2"
+                          >
+                            <div 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: strategy.colorCode }}
+                            />
+                            <span>{strategy.title}</span>
+                          </label>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+          {assignedCount > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {strategies
+                ?.filter((s: any) => assignedStrategyIds.includes(s.id))
+                .map((strategy: any) => (
+                  <Badge 
+                    key={strategy.id}
+                    variant="secondary"
+                    className="text-xs"
+                    style={{ borderLeft: `3px solid ${strategy.colorCode}` }}
+                  >
+                    {strategy.title}
+                  </Badge>
+                ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Settings() {
   const { currentRole, currentUser, setCurrentUser, canManageUsers } = useRole();
@@ -211,6 +380,55 @@ export default function Settings() {
       displayOrder: index
     }));
     reorderFrameworksMutation.mutate(strategyOrders);
+  };
+
+  const assignStrategyMutation = useMutation({
+    mutationFn: async ({ userId, strategyId }: { userId: string; strategyId: string }) => {
+      const response = await apiRequest("POST", `/api/users/${userId}/strategy-assignments`, { strategyId });
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({
+        title: "Success",
+        description: "Strategy assigned successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to assign strategy",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const unassignStrategyMutation = useMutation({
+    mutationFn: async ({ userId, strategyId }: { userId: string; strategyId: string }) => {
+      await apiRequest("DELETE", `/api/users/${userId}/strategy-assignments/${strategyId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({
+        title: "Success",
+        description: "Strategy unassigned successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to unassign strategy",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleStrategyAssignmentToggle = async (userId: string, strategyId: string, isAssigned: boolean) => {
+    if (isAssigned) {
+      unassignStrategyMutation.mutate({ userId, strategyId });
+    } else {
+      assignStrategyMutation.mutate({ userId, strategyId });
+    }
   };
 
   const handleAddUser = () => {
@@ -622,60 +840,13 @@ export default function Settings() {
                   <CardContent>
                     <div className="space-y-4">
                       {(users as any[])?.map((user: any) => (
-                        <div 
-                          key={user.id} 
-                          className="flex items-center justify-between p-4 border dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
-                          data-testid={`admin-user-item-${user.id}`}
-                        >
-                          <div className="flex items-center space-x-3">
-                            <Avatar>
-                              <AvatarFallback>
-                                {user.firstName?.[0] || user.lastName?.[0] || user.email?.[0]?.toUpperCase() || 'U'}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-medium text-gray-900 dark:text-white" data-testid="text-admin-user-name">
-                                {user.firstName && user.lastName 
-                                  ? `${user.firstName} ${user.lastName}` 
-                                  : user.email || 'Unknown User'
-                                }
-                              </p>
-                              <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
-                              <p className="text-xs text-gray-400 dark:text-gray-500">
-                                {user.role === 'administrator' 
-                                  ? 'Full modification power over the app'
-                                  : user.role === 'co_lead' 
-                                    ? 'Can edit tactics and actions for assigned strategies'
-                                    : 'View-only access to assigned strategies'
-                                }
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-3">
-                            <Badge className={
-                              user.role === 'administrator'
-                                ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                                : user.role === 'co_lead' 
-                                  ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' 
-                                  : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                            }>
-                              {user.role === 'administrator' ? 'Administrator' : user.role === 'co_lead' ? 'Co-Lead' : 'View'}
-                            </Badge>
-                            <Select 
-                              value={user.role} 
-                              onValueChange={(value) => handleUserRoleChange(user.id, value)}
-                            >
-                              <SelectTrigger className="w-32" data-testid={`select-admin-user-role-${user.id}`}>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="administrator">Administrator</SelectItem>
-                                <SelectItem value="co_lead">Co-Lead</SelectItem>
-                                <SelectItem value="view">View</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
+                        <UserStrategyRow
+                          key={user.id}
+                          user={user}
+                          strategies={strategies as any[]}
+                          onRoleChange={handleUserRoleChange}
+                          onStrategyToggle={handleStrategyAssignmentToggle}
+                        />
                       ))}
                     </div>
                   </CardContent>
