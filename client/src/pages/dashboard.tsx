@@ -70,8 +70,19 @@ export default function Dashboard() {
         {/* Header */}
         <header className="bg-white dark:bg-gray-800 shadow-sm border-b px-6 py-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Strategy → Project → Actions</h1>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <Target className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Strategy</h1>
+              </div>
+              <div className="flex items-center space-x-2">
+                <CheckSquare className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Project</h1>
+              </div>
+              <div className="flex items-center space-x-2">
+                <TrendingUp className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Action</h1>
+              </div>
             </div>
             <div className="flex space-x-3">
               {currentRole === 'administrator' && (
