@@ -477,13 +477,13 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
                     <div key={item.id} className="flex items-center justify-between p-2 border rounded bg-background dark:bg-gray-800">
                       <div className="flex items-center gap-2 flex-1">
                         <Checkbox
-                          checked={item.isCompleted}
-                          onCheckedChange={() => handleToggleChecklistItem(item.id, item.isCompleted)}
+                          checked={item.isCompleted === 'true'}
+                          onCheckedChange={() => handleToggleChecklistItem(item.id, item.isCompleted === 'true')}
                           data-testid={`checkbox-checklist-${item.id}`}
                         />
                         <span className={cn(
                           "flex-1",
-                          item.isCompleted && "line-through text-muted-foreground"
+                          item.isCompleted === 'true' && "line-through text-muted-foreground"
                         )}>
                           {item.title}
                         </span>

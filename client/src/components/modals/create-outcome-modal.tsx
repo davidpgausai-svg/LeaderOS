@@ -79,9 +79,6 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
       description: "",
       strategyId: strategyId || undefined,
       tacticId: tacticId || undefined,
-      targetValue: "",
-      currentValue: "",
-      measurementUnit: "",
       status: "in_progress",
       dueDate: undefined,
       createdBy: currentUser?.id || "",
@@ -126,9 +123,6 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
     const cleanData = {
       ...data,
       tacticId: data.tacticId === "none" ? undefined : data.tacticId || undefined,
-      targetValue: data.targetValue || undefined,
-      currentValue: data.currentValue || undefined,
-      measurementUnit: data.measurementUnit || undefined,
       dueDate: data.dueDate || undefined,
     };
     createOutcomeMutation.mutate(cleanData);
@@ -251,55 +245,6 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
                     </FormItem>
                   )}
                 />
-              </div>
-
-              {/* Measurement Details */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Measurement</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="targetValue"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Target Value</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., 100" {...field} value={field.value || ""} data-testid="input-outcome-target" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="currentValue"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Current Value</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., 25" {...field} value={field.value || ""} data-testid="input-outcome-current" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="measurementUnit"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Unit</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., %/units/dollars" {...field} value={field.value || ""} data-testid="input-outcome-unit" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
               </div>
 
               {/* Status & Timeline */}
