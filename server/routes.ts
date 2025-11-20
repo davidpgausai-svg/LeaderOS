@@ -112,14 +112,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/users/:id", async (req, res) => {
+  app.patch("/api/users/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const requestingUserId = req.user.claims.sub;
+      const requestingUser = await storage.getUser(requestingUserId);
+      
+      if (!requestingUser) {
+        return res.status(404).json({ message: "Requesting user not found" });
+      }
+      
+      // Only administrators can update user roles
+      if (req.body.role && requestingUser.role !== 'administrator') {
+        return res.status(403).json({ message: "Forbidden: Only administrators can update user roles" });
+      }
+      
+      // Users can only update their own profile unless they are administrators
+      if (req.params.id !== requestingUserId && requestingUser.role !== 'administrator') {
+        return res.status(403).json({ message: "Forbidden: Cannot update other users' information" });
+      }
+      
       const user = await storage.updateUser(req.params.id, req.body);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
       res.json(user);
     } catch (error) {
+      logger.error("Failed to update user", error);
       res.status(500).json({ message: "Failed to update user" });
     }
   });
@@ -409,8 +427,16 @@ Respond ONLY with a valid JSON object in this exact format:
   });
 
   // Bulk reorder strategies endpoint
-  app.post("/api/strategies/reorder", async (req, res) => {
+  app.post("/api/strategies/reorder", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      // Only administrators can reorder strategies
+      if (!user || user.role !== 'administrator') {
+        return res.status(403).json({ message: "Forbidden: Only administrators can reorder strategies" });
+      }
+      
       const { strategyOrders } = req.body;
       if (!Array.isArray(strategyOrders)) {
         return res.status(400).json({ message: "strategyOrders must be an array" });
@@ -430,32 +456,37 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.delete("/api/strategies/:id", async (req, res) => {
+  app.delete("/api/strategies/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      // Only administrators can delete strategies
+      if (!user || user.role !== 'administrator') {
+        return res.status(403).json({ message: "Forbidden: Only administrators can delete strategies" });
+      }
+      
       const deleted = await storage.deleteStrategy(req.params.id);
       if (!deleted) {
         return res.status(404).json({ message: "Strategy not found" });
       }
       res.json({ message: "Strategy deleted successfully" });
     } catch (error) {
+      logger.error("Failed to delete strategy", error);
       res.status(500).json({ message: "Failed to delete strategy" });
     }
   });
 
-  app.delete("/api/strategies/:id", async (req, res) => {
+  app.patch("/api/strategies/:id/complete", isAuthenticated, async (req: any, res) => {
     try {
-      const deleted = await storage.deleteStrategy(req.params.id);
-      if (!deleted) {
-        return res.status(404).json({ message: "Strategy not found" });
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      // Only administrators can complete strategies
+      if (!user || user.role !== 'administrator') {
+        return res.status(403).json({ message: "Forbidden: Only administrators can complete strategies" });
       }
-      res.json({ message: "Strategy deleted successfully" });
-    } catch (error) {
-      res.status(500).json({ message: "Failed to delete strategy" });
-    }
-  });
-
-  app.patch("/api/strategies/:id/complete", async (req, res) => {
-    try {
+      
       const strategy = await storage.getStrategy(req.params.id);
       if (!strategy) {
         return res.status(404).json({ message: "Strategy not found" });
@@ -567,9 +598,29 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.post("/api/tactics", async (req, res) => {
+  app.post("/api/tactics", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
       const validatedData = insertTacticSchema.parse(req.body);
+      
+      // Check if user has access to the strategy (administrators see all, others need assignment)
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        if (!assignedStrategyIds.includes(validatedData.strategyId)) {
+          return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
+        }
+      }
+      
+      // View role cannot create tactics
+      if (user.role === 'view') {
+        return res.status(403).json({ message: "Forbidden: View users cannot create projects" });
+      }
       
       // Validate date range
       if (validatedData.startDate && validatedData.dueDate && 
@@ -591,14 +642,38 @@ Respond ONLY with a valid JSON object in this exact format:
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
+      logger.error("Failed to create tactic", error);
       res.status(500).json({ message: "Failed to create tactic" });
     }
   });
 
-  app.patch("/api/tactics/:id", async (req, res) => {
+  app.patch("/api/tactics/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // View role cannot update tactics
+      if (user.role === 'view') {
+        return res.status(403).json({ message: "Forbidden: View users cannot update projects" });
+      }
+      
       // Get the old tactic to compare changes
       const oldTactic = await storage.getTactic(req.params.id);
+      if (!oldTactic) {
+        return res.status(404).json({ message: "Tactic not found" });
+      }
+      
+      // Check if user has access to the strategy (administrators see all, others need assignment)
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        if (!assignedStrategyIds.includes(oldTactic.strategyId)) {
+          return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
+        }
+      }
       
       const tactic = await storage.updateTactic(req.params.id, req.body);
       if (!tactic) {
@@ -643,12 +718,32 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.delete("/api/tactics/:id", async (req, res) => {
+  app.delete("/api/tactics/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // View role cannot delete tactics
+      if (user.role === 'view') {
+        return res.status(403).json({ message: "Forbidden: View users cannot delete projects" });
+      }
+      
       // Get tactic details before deleting to know which strategy to recalculate
       const tactic = await storage.getTactic(req.params.id);
       if (!tactic) {
         return res.status(404).json({ message: "Tactic not found" });
+      }
+      
+      // Check if user has access to the strategy (administrators see all, others need assignment)
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        if (!assignedStrategyIds.includes(tactic.strategyId)) {
+          return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
+        }
       }
 
       const deleted = await storage.deleteTactic(req.params.id);
@@ -661,6 +756,7 @@ Respond ONLY with a valid JSON object in this exact format:
 
       res.status(204).send();
     } catch (error) {
+      logger.error("Failed to delete tactic", error);
       res.status(500).json({ message: "Failed to delete tactic" });
     }
   });
@@ -722,9 +818,30 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.post("/api/outcomes", async (req, res) => {
+  app.post("/api/outcomes", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // View role cannot create outcomes
+      if (user.role === 'view') {
+        return res.status(403).json({ message: "Forbidden: View users cannot create actions" });
+      }
+      
       const validatedData = insertOutcomeSchema.parse(req.body);
+      
+      // Check if user has access to the strategy (administrators see all, others need assignment)
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        if (!assignedStrategyIds.includes(validatedData.strategyId)) {
+          return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
+        }
+      }
+      
       const outcome = await storage.createOutcome(validatedData);
       
       await storage.createActivity({
@@ -751,10 +868,33 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.patch("/api/outcomes/:id", async (req, res) => {
+  app.patch("/api/outcomes/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // View role cannot update outcomes
+      if (user.role === 'view') {
+        return res.status(403).json({ message: "Forbidden: View users cannot update actions" });
+      }
+      
       // Get the old outcome to compare status changes
       const oldOutcome = await storage.getOutcome(req.params.id);
+      if (!oldOutcome) {
+        return res.status(404).json({ message: "Outcome not found" });
+      }
+      
+      // Check if user has access to the strategy (administrators see all, others need assignment)
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        if (!assignedStrategyIds.includes(oldOutcome.strategyId)) {
+          return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
+        }
+      }
       
       const validatedData = insertOutcomeSchema.parse(req.body);
       const outcome = await storage.updateOutcome(req.params.id, validatedData);
@@ -808,12 +948,32 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.delete("/api/outcomes/:id", async (req, res) => {
+  app.delete("/api/outcomes/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // View role cannot delete outcomes
+      if (user.role === 'view') {
+        return res.status(403).json({ message: "Forbidden: View users cannot delete actions" });
+      }
+      
       // Get outcome details before deleting to know which tactic/strategy to recalculate
       const outcome = await storage.getOutcome(req.params.id);
       if (!outcome) {
         return res.status(404).json({ message: "Outcome not found" });
+      }
+      
+      // Check if user has access to the strategy (administrators see all, others need assignment)
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        if (!assignedStrategyIds.includes(outcome.strategyId)) {
+          return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
+        }
       }
 
       const deleted = await storage.deleteOutcome(req.params.id);
@@ -829,6 +989,7 @@ Respond ONLY with a valid JSON object in this exact format:
 
       res.status(204).send();
     } catch (error) {
+      logger.error("Failed to delete outcome", error);
       res.status(500).json({ message: "Failed to delete outcome" });
     }
   });
@@ -844,8 +1005,31 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.post("/api/outcomes/:outcomeId/documents", async (req, res) => {
+  app.post("/api/outcomes/:outcomeId/documents", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      if (user.role === 'view') {
+        return res.status(403).json({ message: "Forbidden: View users cannot create documents" });
+      }
+      
+      const outcome = await storage.getOutcome(req.params.outcomeId);
+      if (!outcome) {
+        return res.status(404).json({ message: "Outcome not found" });
+      }
+      
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        if (!assignedStrategyIds.includes(outcome.strategyId)) {
+          return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
+        }
+      }
+      
       const validatedData = insertOutcomeDocumentSchema.parse({
         ...req.body,
         outcomeId: req.params.outcomeId,
@@ -861,8 +1045,31 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.patch("/api/outcomes/:outcomeId/documents/:id", async (req, res) => {
+  app.patch("/api/outcomes/:outcomeId/documents/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      if (user.role === 'view') {
+        return res.status(403).json({ message: "Forbidden: View users cannot update documents" });
+      }
+      
+      const outcome = await storage.getOutcome(req.params.outcomeId);
+      if (!outcome) {
+        return res.status(404).json({ message: "Outcome not found" });
+      }
+      
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        if (!assignedStrategyIds.includes(outcome.strategyId)) {
+          return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
+        }
+      }
+      
       const validatedData = insertOutcomeDocumentSchema.partial().parse(req.body);
       const document = await storage.updateOutcomeDocument(req.params.id, validatedData);
       if (!document) {
@@ -878,8 +1085,31 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.delete("/api/outcomes/:outcomeId/documents/:id", async (req, res) => {
+  app.delete("/api/outcomes/:outcomeId/documents/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      if (user.role === 'view') {
+        return res.status(403).json({ message: "Forbidden: View users cannot delete documents" });
+      }
+      
+      const outcome = await storage.getOutcome(req.params.outcomeId);
+      if (!outcome) {
+        return res.status(404).json({ message: "Outcome not found" });
+      }
+      
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        if (!assignedStrategyIds.includes(outcome.strategyId)) {
+          return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
+        }
+      }
+      
       const deleted = await storage.deleteOutcomeDocument(req.params.id);
       if (!deleted) {
         return res.status(404).json({ message: "Document not found" });
@@ -902,8 +1132,31 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.post("/api/outcomes/:outcomeId/checklist", async (req, res) => {
+  app.post("/api/outcomes/:outcomeId/checklist", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      if (user.role === 'view') {
+        return res.status(403).json({ message: "Forbidden: View users cannot create checklist items" });
+      }
+      
+      const outcome = await storage.getOutcome(req.params.outcomeId);
+      if (!outcome) {
+        return res.status(404).json({ message: "Outcome not found" });
+      }
+      
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        if (!assignedStrategyIds.includes(outcome.strategyId)) {
+          return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
+        }
+      }
+      
       const validatedData = insertOutcomeChecklistItemSchema.parse({
         ...req.body,
         outcomeId: req.params.outcomeId,
@@ -919,8 +1172,31 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.patch("/api/outcomes/:outcomeId/checklist/:id", async (req, res) => {
+  app.patch("/api/outcomes/:outcomeId/checklist/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      if (user.role === 'view') {
+        return res.status(403).json({ message: "Forbidden: View users cannot update checklist items" });
+      }
+      
+      const outcome = await storage.getOutcome(req.params.outcomeId);
+      if (!outcome) {
+        return res.status(404).json({ message: "Outcome not found" });
+      }
+      
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        if (!assignedStrategyIds.includes(outcome.strategyId)) {
+          return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
+        }
+      }
+      
       const validatedData = insertOutcomeChecklistItemSchema.partial().parse(req.body);
       const item = await storage.updateOutcomeChecklistItem(req.params.id, validatedData);
       if (!item) {
@@ -936,8 +1212,31 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.delete("/api/outcomes/:outcomeId/checklist/:id", async (req, res) => {
+  app.delete("/api/outcomes/:outcomeId/checklist/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      if (user.role === 'view') {
+        return res.status(403).json({ message: "Forbidden: View users cannot delete checklist items" });
+      }
+      
+      const outcome = await storage.getOutcome(req.params.outcomeId);
+      if (!outcome) {
+        return res.status(404).json({ message: "Outcome not found" });
+      }
+      
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        if (!assignedStrategyIds.includes(outcome.strategyId)) {
+          return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
+        }
+      }
+      
       const deleted = await storage.deleteOutcomeChecklistItem(req.params.id);
       if (!deleted) {
         return res.status(404).json({ message: "Checklist item not found" });
