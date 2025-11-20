@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 
 export default function Dashboard() {
-  const { currentRole } = useRole();
+  const { currentRole, canCreateStrategies } = useRole();
   const [isCreateStrategyOpen, setIsCreateStrategyOpen] = useState(false);
   const [isCreateTacticOpen, setIsCreateTacticOpen] = useState(false);
 
@@ -85,7 +85,7 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="flex space-x-3">
-              {currentRole === 'administrator' && (
+              {canCreateStrategies() && (
                 <Button onClick={() => setIsCreateStrategyOpen(true)}>
                   <Plus className="w-4 h-4 mr-2" />
                   New Strategy
