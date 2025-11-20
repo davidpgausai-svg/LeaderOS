@@ -298,13 +298,6 @@ export default function Tactics() {
     });
   };
 
-  const handleProgressChange = (tacticId: string, newProgress: number) => {
-    updateTacticMutation.mutate({
-      id: tacticId,
-      updates: { progress: newProgress }
-    });
-  };
-
   const handleDeleteTactic = (tacticId: string) => {
     deleteTacticMutation.mutate(tacticId);
   };
@@ -739,21 +732,10 @@ export default function Tactics() {
                                         </SelectContent>
                                       </Select>
                                       
-                                      <Select
-                                        value={tactic.progress.toString()}
-                                        onValueChange={(value) => handleProgressChange(tactic.id, parseInt(value))}
-                                      >
-                                        <SelectTrigger className="w-32" data-testid={`select-progress-${tactic.id}`}>
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="0">0%</SelectItem>
-                                          <SelectItem value="25">25%</SelectItem>
-                                          <SelectItem value="50">50%</SelectItem>
-                                          <SelectItem value="75">75%</SelectItem>
-                                          <SelectItem value="100">100%</SelectItem>
-                                        </SelectContent>
-                                      </Select>
+                                      <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-md">
+                                        <span className="text-sm text-gray-600 dark:text-gray-400">Progress:</span>
+                                        <span className="text-sm font-semibold text-gray-900 dark:text-white">{tactic.progress}%</span>
+                                      </div>
                                     </div>
                                   )}
                                 </CardContent>
