@@ -158,7 +158,7 @@ export default function Timeline() {
                     return (
                       <div
                         key={framework.id}
-                        className={`flex ${frameworkIndex % 2 === 0 ? 'bg-white dark:bg-black' : 'bg-gray-50 dark:bg-gray-900'} border-b border-gray-200 dark:border-gray-800 last:border-b-0`}
+                        className={`flex overflow-visible ${frameworkIndex % 2 === 0 ? 'bg-white dark:bg-black' : 'bg-gray-50 dark:bg-gray-900'} border-b border-gray-200 dark:border-gray-800 last:border-b-0`}
                         data-testid={`timeline-row-${framework.id}`}
                       >
                         {/* Framework Label */}
@@ -195,7 +195,7 @@ export default function Timeline() {
                       </div>
 
                       {/* Timeline Bar */}
-                      <div className={`flex-shrink-0 relative py-6 px-4 min-h-[120px] ${framework.status === 'Archived' ? 'opacity-50' : ''}`} style={{ width: `${timelineData.months.length * 100}px` }}>
+                      <div className={`flex-shrink-0 relative py-6 px-4 min-h-[120px] overflow-visible ${framework.status === 'Archived' ? 'opacity-50' : ''}`} style={{ width: `${timelineData.months.length * 100}px` }}>
                         {/* Framework Duration Bar */}
                         <div
                           className="absolute top-1/2 h-8 rounded-lg transform -translate-y-1/2 flex items-center justify-center shadow-sm"
