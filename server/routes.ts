@@ -1293,7 +1293,18 @@ Respond ONLY with a valid JSON object in this exact format:
       const allMilestones = await storage.getAllMilestones();
       const oldMilestone = allMilestones.find(m => m.id === req.params.id);
       
-      const milestone = await storage.updateMilestone(req.params.id, req.body);
+      // Automatically set timestamps based on status changes
+      const updates = { ...req.body };
+      if (updates.status === 'completed' && oldMilestone?.status !== 'completed') {
+        updates.completionDate = new Date().toISOString();
+      } else if (updates.status === 'in_progress' && oldMilestone?.status === 'not_started') {
+        updates.startDate = new Date().toISOString();
+      } else if (updates.status === 'not_started') {
+        updates.startDate = null;
+        updates.completionDate = null;
+      }
+      
+      const milestone = await storage.updateMilestone(req.params.id, updates);
       if (!milestone) {
         return res.status(404).json({ message: "Milestone not found" });
       }
