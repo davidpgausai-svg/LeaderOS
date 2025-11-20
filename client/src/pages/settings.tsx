@@ -387,8 +387,9 @@ export default function Settings() {
       const response = await apiRequest("POST", `/api/users/${userId}/strategy-assignments`, { strategyId });
       return await response.json();
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${variables.userId}/strategy-assignments`] });
       toast({
         title: "Success",
         description: "Strategy assigned successfully",
@@ -407,8 +408,9 @@ export default function Settings() {
     mutationFn: async ({ userId, strategyId }: { userId: string; strategyId: string }) => {
       await apiRequest("DELETE", `/api/users/${userId}/strategy-assignments/${strategyId}`);
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${variables.userId}/strategy-assignments`] });
       toast({
         title: "Success",
         description: "Strategy unassigned successfully",
