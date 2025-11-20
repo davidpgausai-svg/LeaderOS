@@ -1,4 +1,4 @@
-import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Tactic, type InsertTactic, type Activity, type InsertActivity, type Outcome, type InsertOutcome, type Milestone, type InsertMilestone, type CommunicationTemplate, type InsertCommunicationTemplate, type Notification, type InsertNotification, type OutcomeDocument, type InsertOutcomeDocument, type OutcomeChecklistItem, type InsertOutcomeChecklistItem, users, strategies, tactics, activities, outcomes, milestones, communicationTemplates, notifications, outcomeDocuments, outcomeChecklistItems } from "@shared/schema";
+import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Tactic, type InsertTactic, type Activity, type InsertActivity, type Outcome, type InsertOutcome, type Milestone, type InsertMilestone, type CommunicationTemplate, type InsertCommunicationTemplate, type Notification, type InsertNotification, type OutcomeDocument, type InsertOutcomeDocument, type OutcomeChecklistItem, type InsertOutcomeChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, users, strategies, tactics, activities, outcomes, milestones, communicationTemplates, notifications, outcomeDocuments, outcomeChecklistItems, userStrategyAssignments } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, asc } from "drizzle-orm";
@@ -105,31 +105,31 @@ export class MemStorage implements IStorage {
       updatedAt: new Date()
     };
     
-    const executiveUser: User = {
+    const coLeadUser1: User = {
       id: randomUUID(),
       email: "mike.wilson@example.com",
       firstName: "Mike",
       lastName: "Wilson",
       profileImageUrl: null,
-      role: "executive",
+      role: "co_lead",
       createdAt: new Date(),
       updatedAt: new Date()
     };
     
-    const leaderUser: User = {
+    const coLeadUser2: User = {
       id: randomUUID(),
       email: "sarah.johnson@example.com",
       firstName: "Sarah",
       lastName: "Johnson",
       profileImageUrl: null,
-      role: "leader",
+      role: "co_lead",
       createdAt: new Date(),
       updatedAt: new Date()
     };
 
     this.users.set(adminUser.id, adminUser);
-    this.users.set(executiveUser.id, executiveUser);
-    this.users.set(leaderUser.id, leaderUser);
+    this.users.set(coLeadUser1.id, coLeadUser1);
+    this.users.set(coLeadUser2.id, coLeadUser2);
 
     // Create sample strategies
     const strategy1: Strategy = {
@@ -151,7 +151,7 @@ export class MemStorage implements IStorage {
       stakeholderMap: "Executive team (sponsors), Sales leaders (champions), Regional managers (key stakeholders), Legal & Compliance (advisors)",
       readinessRating: "Amber - Moderate readiness, some resource constraints",
       riskExposureRating: "Amber - Medium risk due to market uncertainties and regulatory requirements",
-      changeChampionAssignment: "Mike Wilson (Executive) - Primary sponsor, Sarah Johnson (Leader) - Implementation champion",
+      changeChampionAssignment: "Mike Wilson (Co-Lead) - Primary sponsor, Sarah Johnson (Co-Lead) - Implementation champion",
       reinforcementPlan: "Quarterly business reviews, monthly progress updates to stakeholders, recognition program for early wins",
       benefitsRealizationPlan: "Track market share monthly, revenue impact quarterly, customer acquisition metrics weekly",
       createdBy: adminUser.id,
@@ -177,10 +177,10 @@ export class MemStorage implements IStorage {
       stakeholderMap: "CTO (sponsor), IT Directors (champions), Department heads (key stakeholders), End users (impacted)",
       readinessRating: "Green - Strong readiness with executive support and allocated budget",
       riskExposureRating: "Amber - Medium risk due to technical complexity and change adoption challenges",
-      changeChampionAssignment: "David Gaus (Administrator) - Executive sponsor, Mike Wilson (Executive) - Technical champion",
+      changeChampionAssignment: "David Gaus (Administrator) - Executive sponsor, Mike Wilson (Co-Lead) - Technical champion",
       reinforcementPlan: "Weekly team huddles, bi-weekly stakeholder updates, training programs, success stories communication",
       benefitsRealizationPlan: "Monitor system performance metrics daily, efficiency gains monthly, user adoption rates weekly",
-      createdBy: executiveUser.id,
+      createdBy: coLeadUser1.id,
       createdAt: new Date()
     };
 
@@ -195,7 +195,7 @@ export class MemStorage implements IStorage {
       strategyId: strategy1.id,
       kpi: "Number of markets analyzed",
       kpiTracking: "3 out of 5 markets completed",
-      accountableLeaders: JSON.stringify([leaderUser.id]),
+      accountableLeaders: JSON.stringify([coLeadUser2.id]),
       resourcesRequired: "Research team, market analysis tools, $50k budget",
       startDate: new Date("2024-01-15"),
       dueDate: new Date("2024-03-15"),
@@ -203,7 +203,7 @@ export class MemStorage implements IStorage {
       progress: 100,
       isArchived: "false",
       documentFolderUrl: null,
-      createdBy: executiveUser.id,
+      createdBy: coLeadUser1.id,
       createdAt: new Date()
     };
 
@@ -214,7 +214,7 @@ export class MemStorage implements IStorage {
       strategyId: strategy1.id,
       kpi: "Number of strategic partnerships established",
       kpiTracking: "2 partnerships signed, 3 in negotiation",
-      accountableLeaders: JSON.stringify([leaderUser.id, executiveUser.id]),
+      accountableLeaders: JSON.stringify([coLeadUser2.id, coLeadUser1.id]),
       resourcesRequired: "Legal team, business development resources, travel budget",
       startDate: new Date("2024-03-01"),
       dueDate: new Date("2024-06-30"),
@@ -222,7 +222,7 @@ export class MemStorage implements IStorage {
       progress: 65,
       isArchived: "false",
       documentFolderUrl: null,
-      createdBy: executiveUser.id,
+      createdBy: coLeadUser1.id,
       createdAt: new Date()
     };
 
@@ -242,7 +242,7 @@ export class MemStorage implements IStorage {
       firstName: userData.firstName ?? null,
       lastName: userData.lastName ?? null,
       profileImageUrl: userData.profileImageUrl ?? null,
-      role: userData.role ?? 'leader',
+      role: userData.role ?? 'co_lead',
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -258,7 +258,7 @@ export class MemStorage implements IStorage {
       firstName: insertUser.firstName ?? null,
       lastName: insertUser.lastName ?? null,
       profileImageUrl: insertUser.profileImageUrl ?? null,
-      role: insertUser.role ?? 'leader',
+      role: insertUser.role ?? 'co_lead',
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -1194,30 +1194,30 @@ export class DatabaseStorage implements IStorage {
       adminUser = created;
     }
     
-    const execResult = await db.select().from(users).where(eq(users.email, 'exec@example.com'));
-    let executiveUser = execResult[0];
-    if (!executiveUser) {
+    const coLead1Result = await db.select().from(users).where(eq(users.email, 'colead1@example.com'));
+    let coLeadUser1 = coLead1Result[0];
+    if (!coLeadUser1) {
       const [created] = await db.insert(users).values({
-        email: "exec@example.com",
-        firstName: "Executive",
-        lastName: "User",
+        email: "colead1@example.com",
+        firstName: "Co-Lead",
+        lastName: "User 1",
         profileImageUrl: null,
-        role: "executive"
+        role: "co_lead"
       }).returning();
-      executiveUser = created;
+      coLeadUser1 = created;
     }
     
-    const leaderResult = await db.select().from(users).where(eq(users.email, 'leader@example.com'));
-    let leaderUser = leaderResult[0];
-    if (!leaderUser) {
+    const coLead2Result = await db.select().from(users).where(eq(users.email, 'colead2@example.com'));
+    let coLeadUser2 = coLead2Result[0];
+    if (!coLeadUser2) {
       const [created] = await db.insert(users).values({
-        email: "leader@example.com",
-        firstName: "Leader",
-        lastName: "User",
+        email: "colead2@example.com",
+        firstName: "Co-Lead",
+        lastName: "User 2",
         profileImageUrl: null,
-        role: "leader"
+        role: "co_lead"
       }).returning();
-      leaderUser = created;
+      coLeadUser2 = created;
     }
 
     // Create sample strategies for development
@@ -1238,10 +1238,10 @@ export class DatabaseStorage implements IStorage {
       stakeholderMap: "Executive team (sponsors), IT department (implementers), All departments (impacted users)",
       readinessRating: "Green - Strong executive support and allocated budget",
       riskExposureRating: "Amber - Medium risk due to scale and complexity of transformation",
-      changeChampionAssignment: "Executive User - Executive sponsor and primary champion",
+      changeChampionAssignment: "Co-Lead User 1 - Executive sponsor and primary champion",
       reinforcementPlan: "Monthly progress reviews, quarterly celebrations of milestones, continuous communication of benefits",
       benefitsRealizationPlan: "Track cost savings monthly, measure customer satisfaction quarterly, monitor adoption rates weekly",
-      createdBy: executiveUser.id
+      createdBy: coLeadUser1.id
     });
 
     const strategy2 = await this.createStrategy({
@@ -1261,10 +1261,10 @@ export class DatabaseStorage implements IStorage {
       stakeholderMap: "Customer service team (champions), Sales team (key stakeholders), All customer-facing staff (implementers)",
       readinessRating: "Green - High readiness with experienced customer service leadership",
       riskExposureRating: "Green - Low risk due to clear metrics and proven methodologies",
-      changeChampionAssignment: "Leader User - Customer experience champion and implementation lead",
+      changeChampionAssignment: "Co-Lead User 2 - Customer experience champion and implementation lead",
       reinforcementPlan: "Weekly team huddles, monthly recognition of customer service wins, ongoing customer feedback sharing",
       benefitsRealizationPlan: "Track NPS monthly, monitor complaint resolution times daily, review retention rates quarterly",
-      createdBy: executiveUser.id
+      createdBy: coLeadUser1.id
     });
 
     // Create sample tactics for development
@@ -1274,14 +1274,38 @@ export class DatabaseStorage implements IStorage {
       strategyId: strategy1.id,
       kpi: "Number of markets analyzed",
       kpiTracking: "3 out of 5 markets completed",
-      accountableLeaders: JSON.stringify([leaderUser.id]),
+      accountableLeaders: JSON.stringify([coLeadUser2.id]),
       resourcesRequired: "Research team, market analysis tools, $50k budget",
       startDate: new Date("2024-01-01"),
       dueDate: new Date("2024-03-14"),
       status: "C",
       isArchived: 'false',
-      createdBy: executiveUser.id
+      createdBy: coLeadUser1.id
     });
+
+    // Create strategy assignments for co-lead users (assign all strategies to all co-leads)
+    await db.insert(userStrategyAssignments).values([
+      {
+        userId: coLeadUser1.id,
+        strategyId: strategy1.id,
+        assignedBy: adminUser.id
+      },
+      {
+        userId: coLeadUser1.id,
+        strategyId: strategy2.id,
+        assignedBy: adminUser.id
+      },
+      {
+        userId: coLeadUser2.id,
+        strategyId: strategy1.id,
+        assignedBy: adminUser.id
+      },
+      {
+        userId: coLeadUser2.id,
+        strategyId: strategy2.id,
+        assignedBy: adminUser.id
+      }
+    ]);
 
     console.log('Development data seeded successfully');
   }
