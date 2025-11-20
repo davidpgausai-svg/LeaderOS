@@ -429,7 +429,7 @@ export default function Tactics() {
                 <SelectValue placeholder="Filter by strategy" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Projects</SelectItem>
+                <SelectItem value="all">All Strategies</SelectItem>
                 {(strategies as Strategy[])?.map((strategy) => (
                   <SelectItem key={strategy.id} value={strategy.id}>
                     {strategy.title}
@@ -490,7 +490,7 @@ export default function Tactics() {
                               {strategy.title}
                             </CardTitle>
                             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                              {strategyTactics.length} tactic{strategyTactics.length !== 1 ? 's' : ''}
+                              {strategyTactics.length} project{strategyTactics.length !== 1 ? 's' : ''}
                             </p>
                           </div>
                         </div>
