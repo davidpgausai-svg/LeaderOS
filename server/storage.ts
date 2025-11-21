@@ -580,6 +580,16 @@ export class MemStorage implements IStorage {
   }
 
   async createMilestones(tacticId: string): Promise<Milestone[]> {
+    const defaultTitles = [
+      "Stakeholder & Readiness Assessment",
+      "Executive Governance Review",
+      "Directors Meeting Authorization",
+      "Strategic Communication Deployment",
+      "Staff Meetings & Huddles Activation",
+      "Education & Enablement Completion",
+      "Operational Feedback + Governance Close-Out"
+    ];
+    
     const milestones: Milestone[] = [];
     
     for (let i = 1; i <= 7; i++) {
@@ -588,6 +598,7 @@ export class MemStorage implements IStorage {
         id,
         tacticId,
         milestoneNumber: i,
+        title: defaultTitles[i - 1],
         status: 'not_started',
         startDate: null,
         completionDate: null,
@@ -1055,12 +1066,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMilestones(tacticId: string): Promise<Milestone[]> {
+    const defaultTitles = [
+      "Stakeholder & Readiness Assessment",
+      "Executive Governance Review",
+      "Directors Meeting Authorization",
+      "Strategic Communication Deployment",
+      "Staff Meetings & Huddles Activation",
+      "Education & Enablement Completion",
+      "Operational Feedback + Governance Close-Out"
+    ];
+    
     const milestonesToCreate: InsertMilestone[] = [];
     
     for (let i = 1; i <= 7; i++) {
       milestonesToCreate.push({
         tacticId,
         milestoneNumber: i,
+        title: defaultTitles[i - 1],
         status: 'not_started',
         startDate: undefined,
         completionDate: undefined,
