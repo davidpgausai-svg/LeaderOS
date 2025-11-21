@@ -80,10 +80,12 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
     queryKey: ["/api/users"],
   });
 
-  const { data: milestones } = useQuery<Milestone[]>({
-    queryKey: ["/api/milestones", tactic?.id],
-    enabled: !!tactic?.id && isOpen,
+  const { data: allMilestones } = useQuery<Milestone[]>({
+    queryKey: ["/api/milestones"],
   });
+
+  // Filter milestones for the current tactic
+  const milestones = allMilestones?.filter(m => m.tacticId === tactic?.id) || [];
 
   const form = useForm<InsertTactic>({
     resolver: zodResolver(insertTacticSchema),
