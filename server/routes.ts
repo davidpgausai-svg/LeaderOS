@@ -1688,6 +1688,150 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
+  // Generate AI status report for meeting notes
+  app.post("/api/meeting-notes/generate-ai-report", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      const { strategyId, projectIds, actionIds } = req.body;
+
+      if (!strategyId) {
+        return res.status(400).json({ message: "Strategy ID is required" });
+      }
+
+      // Check strategy access for non-administrators
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        if (!assignedStrategyIds.includes(strategyId)) {
+          return res.status(403).json({ message: "Access denied to this strategy" });
+        }
+      }
+
+      // Fetch strategy data
+      const strategy = await storage.getStrategy(strategyId);
+      if (!strategy) {
+        return res.status(404).json({ message: "Strategy not found" });
+      }
+
+      // Parse and validate project/action IDs
+      let parsedProjectIds: string[];
+      let parsedActionIds: string[];
+      
+      try {
+        parsedProjectIds = JSON.parse(projectIds || '[]');
+        parsedActionIds = JSON.parse(actionIds || '[]');
+        
+        if (!Array.isArray(parsedProjectIds) || !Array.isArray(parsedActionIds)) {
+          return res.status(400).json({ message: "Invalid project or action IDs format" });
+        }
+      } catch (error) {
+        return res.status(400).json({ message: "Invalid JSON format for project or action IDs" });
+      }
+
+      // Fetch projects data and verify they belong to the selected strategy
+      const projects = [];
+      for (const projectId of parsedProjectIds) {
+        const project = await storage.getTactic(projectId);
+        
+        // Security check: reject if project doesn't exist
+        if (!project) {
+          return res.status(404).json({ message: `Project not found: ${projectId}` });
+        }
+        
+        // Security check: verify project belongs to the requested strategy
+        if (project.strategyId !== strategyId) {
+          return res.status(403).json({ message: "Access denied - project does not belong to selected strategy" });
+        }
+        
+        projects.push(project);
+      }
+
+      // Fetch actions data and verify they belong to selected projects
+      const actions = [];
+      for (const actionId of parsedActionIds) {
+        const action = await storage.getOutcome(actionId);
+        
+        // Security check: reject if action doesn't exist
+        if (!action) {
+          return res.status(404).json({ message: `Action not found: ${actionId}` });
+        }
+        
+        // Security check: reject actions without a project assignment
+        if (!action.tacticId) {
+          return res.status(403).json({ message: "Access denied - action must be assigned to a project" });
+        }
+        
+        // Security check: verify action belongs to one of the selected projects
+        if (!parsedProjectIds.includes(action.tacticId)) {
+          return res.status(403).json({ message: "Access denied - action does not belong to selected projects" });
+        }
+        
+        // Security check: verify action belongs to the same strategy
+        if (!action.strategyId || action.strategyId !== strategyId) {
+          return res.status(403).json({ message: "Access denied - action does not belong to selected strategy" });
+        }
+        
+        actions.push(action);
+      }
+
+      // Build prompt for OpenAI
+      const prompt = `You are an executive assistant preparing a concise status report for a strategic planning meeting. Generate a professional 1-sentence status update for each item below. Focus on progress, status, and key highlights.
+
+STRATEGY:
+- Title: ${strategy.title}
+- Description: ${strategy.description || 'N/A'}
+- Status: ${strategy.status}
+- Progress: ${strategy.progress}%
+
+PROJECTS (${projects.length} selected):
+${projects.map((p, i) => `${i + 1}. ${p.title} - Status: ${p.status}, Progress: ${p.progress}%, Description: ${p.description || 'N/A'}`).join('\n')}
+
+ACTIONS (${actions.length} selected):
+${actions.map((a, i) => `${i + 1}. ${a.title} - Status: ${a.status}, Description: ${a.description || 'N/A'}`).join('\n')}
+
+Please provide output in this exact format:
+STRATEGY STATUS:
+[1-sentence status for the strategy]
+
+PROJECT UPDATES:
+${projects.map((p, i) => `${i + 1}. ${p.title}: [1-sentence update]`).join('\n')}
+
+ACTION ITEMS:
+${actions.map((a, i) => `${i + 1}. ${a.title}: [1-sentence update]`).join('\n')}`;
+
+      // Call OpenAI - the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
+      const response = await openai.chat.completions.create({
+        model: "gpt-5",
+        messages: [
+          {
+            role: "system",
+            content: "You are an executive assistant who writes concise, professional status reports. Each status should be exactly one sentence that captures progress, current status, and key highlights."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        max_completion_tokens: 8192,
+      });
+
+      const generatedReport = response.choices[0]?.message?.content || "";
+
+      res.json({ report: generatedReport });
+    } catch (error) {
+      logger.error("Failed to generate AI report", error);
+      res.status(500).json({ message: "Failed to generate AI report" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

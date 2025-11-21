@@ -34,7 +34,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { FileText, Calendar as CalendarIcon, Target, CheckSquare } from "lucide-react";
+import { FileText, Calendar as CalendarIcon, Target, CheckSquare, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CreateEditMeetingNoteModalProps {
@@ -177,6 +177,31 @@ export function CreateEditMeetingNoteModal({ isOpen, onClose, note }: CreateEdit
     },
   });
 
+  const generateAIReportMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/meeting-notes/generate-ai-report", {
+        strategyId: selectedStrategyId,
+        projectIds: JSON.stringify(selectedProjectIds),
+        actionIds: JSON.stringify(selectedActionIds),
+      });
+      return response.json();
+    },
+    onSuccess: (data: { report: string }) => {
+      form.setValue("notes", data.report);
+      toast({
+        title: "Success",
+        description: "AI report generated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate AI report",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleStrategyChange = (strategyId: string) => {
     setSelectedStrategyId(strategyId);
     // Reset projects and actions when strategy changes
@@ -247,6 +272,18 @@ export function CreateEditMeetingNoteModal({ isOpen, onClose, note }: CreateEdit
   const filteredOutcomes = (outcomes as Outcome[])?.filter(
     outcome => outcome.tacticId && selectedProjectIds.includes(outcome.tacticId)
   ) || [];
+
+  const handleGenerateAIReport = () => {
+    if (!selectedStrategyId) {
+      toast({
+        title: "Strategy Required",
+        description: "Please select a strategy first",
+        variant: "destructive",
+      });
+      return;
+    }
+    generateAIReportMutation.mutate();
+  };
 
   const isLoading = createMeetingNoteMutation.isPending || updateMeetingNoteMutation.isPending;
 
@@ -441,7 +478,21 @@ export function CreateEditMeetingNoteModal({ isOpen, onClose, note }: CreateEdit
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Meeting Notes *</FormLabel>
+                  <div className="flex items-center justify-between mb-2">
+                    <FormLabel>Meeting Notes *</FormLabel>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleGenerateAIReport}
+                      disabled={!selectedStrategyId || generateAIReportMutation.isPending}
+                      data-testid="button-generate-ai-report"
+                      className="flex items-center gap-2"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      {generateAIReportMutation.isPending ? "Generating..." : "Generate AI Report"}
+                    </Button>
+                  </div>
                   <FormControl>
                     <Textarea
                       placeholder="Enter meeting notes and discussion points"
