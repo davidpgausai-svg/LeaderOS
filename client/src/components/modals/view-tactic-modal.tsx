@@ -90,18 +90,7 @@ export function ViewTacticModal({ isOpen, onClose, tactic }: ViewTacticModalProp
     return statusMap[status as keyof typeof statusMap] || statusMap['NYS'];
   };
 
-  const getMilestoneTitle = (milestoneNumber: number): string => {
-    const titles = {
-      1: "Stakeholder & Readiness Assessment",
-      2: "Executive Governance Review",
-      3: "Directors Meeting Authorization",
-      4: "Strategic Communication Deployment",
-      5: "Staff Meetings & Huddles Activation",
-      6: "Education & Enablement Completion",
-      7: "Operational Feedback + Governance Close-Out"
-    };
-    return titles[milestoneNumber as keyof typeof titles] || `Milestone ${milestoneNumber}`;
-  };
+  // Milestone titles now come from database
 
   const getTacticMilestones = (): Milestone[] => {
     return (milestones as Milestone[])?.filter(m => m.tacticId === tactic.id) || [];
@@ -301,7 +290,7 @@ export function ViewTacticModal({ isOpen, onClose, tactic }: ViewTacticModalProp
                     </div>
                     <div className="flex-1">
                       <div className="font-medium text-gray-900 dark:text-white">
-                        {getMilestoneTitle(milestoneNum)}
+                        {milestone?.title || `Milestone ${milestoneNum}`}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                         Status: {milestone?.status === 'completed' ? 'Completed' : milestone?.status === 'in_progress' ? 'In Progress' : 'Not Started'}

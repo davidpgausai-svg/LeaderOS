@@ -193,19 +193,7 @@ export default function Tactics() {
     strategy: (strategies as Strategy[])?.find((s) => s.id === tactic.strategyId),
   })) || [];
 
-  // Helper functions
-  const getMilestoneTitle = (milestoneNumber: number): string => {
-    const titles = {
-      1: "Stakeholder & Readiness Assessment",
-      2: "Executive Governance Review",
-      3: "Directors Meeting Authorization",
-      4: "Strategic Communication Deployment",
-      5: "Staff Meetings & Huddles Activation",
-      6: "Education & Enablement Completion",
-      7: "Operational Feedback + Governance Close-Out"
-    };
-    return titles[milestoneNumber as keyof typeof titles] || `Milestone ${milestoneNumber}`;
-  };
+  // Helper functions - milestone titles now come from database
 
   const getTacticMilestones = (tacticId: string): Milestone[] => {
     return (milestones as Milestone[])?.filter(m => m.tacticId === tacticId) || [];
@@ -706,7 +694,7 @@ export default function Tactics() {
                                                 <Circle className="w-4 h-4 text-gray-400 flex-shrink-0" />
                                               )}
                                               <span className={isCompleted ? "text-gray-900 dark:text-white" : "text-gray-600 dark:text-gray-400"}>
-                                                {getMilestoneTitle(milestoneNum)}
+                                                {milestone?.title || `Milestone ${milestoneNum}`}
                                               </span>
                                             </div>
                                             {isCompleted && milestone?.completionDate && (
