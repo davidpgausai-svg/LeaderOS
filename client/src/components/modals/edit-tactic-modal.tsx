@@ -132,16 +132,16 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
     }
   }, [tactic, isOpen, form]);
 
-  // Initialize milestone edits when milestones are loaded
+  // Initialize milestone edits when modal opens or tactic changes
   useEffect(() => {
-    if (milestones && isOpen) {
+    if (milestones && milestones.length > 0 && isOpen) {
       const edits: Record<string, string> = {};
       milestones.forEach(m => {
         edits[m.id] = m.title;
       });
       setMilestoneEdits(edits);
     }
-  }, [milestones, isOpen]);
+  }, [tactic?.id, isOpen]);
 
   const updateTacticMutation = useMutation({
     mutationFn: async (data: InsertTactic) => {
