@@ -173,6 +173,17 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/milestones"] });
+      toast({
+        title: "Success",
+        description: "Milestone title updated",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update milestone title",
+        variant: "destructive",
+      });
     },
   });
 
