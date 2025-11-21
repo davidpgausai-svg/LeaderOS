@@ -80,8 +80,9 @@ type Strategy = {
 
 type User = {
   id: string;
-  name: string;
-  initials: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
   role: string;
 };
 
@@ -213,6 +214,28 @@ export default function Tactics() {
     } catch {
       return [];
     }
+  };
+
+  const getUserInitials = (user: User): string => {
+    if (user.firstName && user.lastName) {
+      return `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
+    } else if (user.firstName) {
+      return user.firstName.substring(0, 2).toUpperCase();
+    } else if (user.email) {
+      return user.email.substring(0, 2).toUpperCase();
+    }
+    return "??";
+  };
+
+  const getUserName = (user: User): string => {
+    if (user.firstName && user.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    } else if (user.firstName) {
+      return user.firstName;
+    } else if (user.lastName) {
+      return user.lastName;
+    }
+    return user.email;
   };
 
   const canEditTactic = (tactic: Tactic) => {
@@ -624,11 +647,11 @@ export default function Tactics() {
                                                   className="w-8 h-8 rounded-full bg-purple-500 dark:bg-purple-600 flex items-center justify-center text-white text-xs font-medium cursor-default"
                                                   data-testid={`leader-initial-${leader.id}`}
                                                 >
-                                                  {leader.initials}
+                                                  {getUserInitials(leader)}
                                                 </div>
                                               </TooltipTrigger>
                                               <TooltipContent>
-                                                <p>{leader.name}</p>
+                                                <p>{getUserName(leader)}</p>
                                               </TooltipContent>
                                             </Tooltip>
                                           ))}
