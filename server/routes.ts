@@ -630,8 +630,8 @@ Respond ONLY with a valid JSON object in this exact format:
       
       const tactic = await storage.createTactic(validatedData);
 
-      // Auto-generate 7 milestones and 7 communication templates for the new tactic
-      await storage.createMilestones(tactic.id);
+      // Note: Milestones are auto-created inside createTactic method
+      // Create communication templates for the new tactic
       await storage.createCommunicationTemplates(tactic.id);
 
       // Recalculate parent strategy progress when a tactic is created
