@@ -42,6 +42,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { 
   Plus, 
   Search, 
@@ -610,11 +616,23 @@ export default function Tactics() {
                                         </span>
                                       </div>
                                       <div className="flex flex-wrap gap-2">
-                                        {accountableLeaders.map((leader) => (
-                                          <Badge key={leader.id} variant="secondary" className="text-xs">
-                                            {leader.name}
-                                          </Badge>
-                                        ))}
+                                        <TooltipProvider>
+                                          {accountableLeaders.map((leader) => (
+                                            <Tooltip key={leader.id}>
+                                              <TooltipTrigger asChild>
+                                                <div 
+                                                  className="w-8 h-8 rounded-full bg-purple-500 dark:bg-purple-600 flex items-center justify-center text-white text-xs font-medium cursor-default"
+                                                  data-testid={`leader-initial-${leader.id}`}
+                                                >
+                                                  {leader.initials}
+                                                </div>
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                <p>{leader.name}</p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          ))}
+                                        </TooltipProvider>
                                       </div>
                                     </div>
 
