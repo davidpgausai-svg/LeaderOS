@@ -60,12 +60,14 @@ type Strategy = {
   description: string;
   colorCode: string;
   status: string;
+  displayOrder?: number;
 };
 
 type Tactic = {
   id: string;
   title: string;
   strategyId: string;
+  createdAt: string;
 };
 
 type Outcome = {
@@ -303,14 +305,22 @@ export default function Actions() {
 
   const getFilteredOutcomesForStrategy = (strategyId: string, outcomes: Outcome[]) => {
     const projectFilter = projectFilterByStrategy[strategyId] || "all";
-    if (projectFilter === "all") {
-      return outcomes;
-    }
-    return outcomes.filter(outcome => outcome.tacticId === projectFilter);
+    const filtered = projectFilter === "all" 
+      ? outcomes 
+      : outcomes.filter(outcome => outcome.tacticId === projectFilter);
+    
+    // Sort outcomes by creation date
+    return [...filtered].sort((a, b) => 
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
   };
 
   const getProjectsForStrategy = (strategyId: string) => {
-    return (tactics as Tactic[])?.filter(t => t.strategyId === strategyId) || [];
+    const projects = (tactics as Tactic[])?.filter(t => t.strategyId === strategyId) || [];
+    // Sort projects by creation date
+    return [...projects].sort((a, b) => 
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
   };
 
   if (outcomesLoading) {
@@ -413,7 +423,13 @@ export default function Actions() {
             </div>
           ) : (
             <div className="space-y-6">
-              {Object.entries(outcomesByStrategy).map(([strategyId, strategyOutcomes]) => {
+              {Object.entries(outcomesByStrategy)
+                .sort(([aId], [bId]) => {
+                  const strategyA = (strategies as Strategy[])?.find((s) => s.id === aId);
+                  const strategyB = (strategies as Strategy[])?.find((s) => s.id === bId);
+                  return (strategyA?.displayOrder || 0) - (strategyB?.displayOrder || 0);
+                })
+                .map(([strategyId, strategyOutcomes]) => {
                 const strategy = (strategies as Strategy[])?.find((s) => s.id === strategyId);
                 const isCollapsed = collapsedStrategies.has(strategyId);
                 const strategyProjects = getProjectsForStrategy(strategyId);
@@ -481,7 +497,12 @@ export default function Actions() {
                     {!isCollapsed && (
                       <CardContent className="p-0">
                         <div className="space-y-4 p-6 pt-0">
-                          {filteredOutcomes.map((outcome) => {
+                          {filteredOutcomes.length === 0 ? (
+                            <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                              No actions established
+                            </p>
+                          ) : (
+                            filteredOutcomes.map((outcome) => {
                             const statusInfo = getStatusDisplay(outcome.status);
                             const dueDateInfo = outcome.dueDate ? getDueDateDisplay(outcome.dueDate) : null;
                             
@@ -626,7 +647,8 @@ export default function Actions() {
                                 </CardContent>
                               </Card>
                             );
-                          })}
+                          }))
+                          }
                         </div>
                       </CardContent>
                     )}

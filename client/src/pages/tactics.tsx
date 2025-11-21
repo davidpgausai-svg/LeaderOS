@@ -76,6 +76,7 @@ type Strategy = {
   startDate: string;
   targetDate: string;
   metrics: string;
+  displayOrder?: number;
 };
 
 type User = {
@@ -482,11 +483,22 @@ export default function Tactics() {
             </div>
           ) : (
             <div className="space-y-6">
-              {Object.entries(tacticsByStrategy).map(([strategyId, strategyTactics]) => {
+              {Object.entries(tacticsByStrategy)
+                .sort(([aId], [bId]) => {
+                  const strategyA = (strategies as Strategy[])?.find((s) => s.id === aId);
+                  const strategyB = (strategies as Strategy[])?.find((s) => s.id === bId);
+                  return (strategyA?.displayOrder || 0) - (strategyB?.displayOrder || 0);
+                })
+                .map(([strategyId, strategyTactics]) => {
                 const strategy = (strategies as Strategy[])?.find((s) => s.id === strategyId);
                 const isCollapsed = collapsedStrategies.has(strategyId);
                 
                 if (!strategy) return null;
+                
+                // Sort tactics by creation date within each strategy
+                const sortedTactics = [...strategyTactics].sort((a, b) => 
+                  new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                );
 
                 return (
                   <Card key={strategyId} className="overflow-hidden">
@@ -526,7 +538,12 @@ export default function Tactics() {
                     {!isCollapsed && (
                       <CardContent className="p-0">
                         <div className="space-y-4 p-6 pt-0">
-                          {strategyTactics.map((tactic) => {
+                          {sortedTactics.length === 0 ? (
+                            <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                              No projects established
+                            </p>
+                          ) : (
+                            sortedTactics.map((tactic) => {
                             const statusInfo = getStatusDisplay(tactic.status);
                             const accountableLeaders = getAccountableLeaders(tactic);
                             
@@ -778,7 +795,8 @@ export default function Tactics() {
                                 </CardContent>
                               </Card>
                             );
-                          })}
+                          })
+                          )}
                         </div>
                       </CardContent>
                     )}

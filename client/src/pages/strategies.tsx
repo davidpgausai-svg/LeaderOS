@@ -70,18 +70,20 @@ export default function Strategies() {
     tactics: (tactics as any[])?.filter((tactic: any) => tactic.strategyId === strategy.id) || []
   })) || [];
 
-  // Filter strategies
-  const filteredStrategies = strategiesWithTactics.filter((strategy: any) => {
-    const matchesSearch = strategy.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         strategy.description.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    // Default filter hides archived items unless explicitly selected
-    const matchesStatus = statusFilter === "all" 
-      ? strategy.status !== 'Archived' 
-      : strategy.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
+  // Filter and sort strategies
+  const filteredStrategies = strategiesWithTactics
+    .filter((strategy: any) => {
+      const matchesSearch = strategy.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           strategy.description.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // Default filter hides archived items unless explicitly selected
+      const matchesStatus = statusFilter === "all" 
+        ? strategy.status !== 'Archived' 
+        : strategy.status === statusFilter;
+      
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a: any, b: any) => (a.displayOrder || 0) - (b.displayOrder || 0));
 
   const handleCreateTactic = (strategyId: string) => {
     setSelectedStrategyId(strategyId);
