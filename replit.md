@@ -24,7 +24,7 @@ The application employs Drizzle ORM for type-safe PostgreSQL interactions. Drizz
 A role-based access control system integrates Replit OpenID Connect for authentication. Roles include Administrator, Co-Lead, and View, with permissions enforced at the API level based on user roles and strategy assignments. Administrators manage user roles and strategy assignments, ensuring data isolation.
 
 ### Key Data Models
-Core entities include Users, User Strategy Assignments (linking users to strategies), Strategies (high-level objectives with a Change Continuum Framework and customizable colors), Tactics (Projects with 7 milestones and documentation URLs), Outcomes (Actions with two-tier filtering), Milestones, Communication Templates, and Activities (audit trail).
+Core entities include Users, User Strategy Assignments (linking users to strategies), Strategies (high-level objectives with a Change Continuum Framework and customizable colors), Tactics (Projects with 7 customizable milestones and documentation URLs), Outcomes (Actions with two-tier filtering), Milestones (with customizable per-project titles), Communication Templates, Meeting Notes (report-out notes with dynamic project/action selection and PDF export), and Activities (audit trail).
 
 ### Progress Calculation
 A backend-driven system automatically calculates progress for actions, projects, and strategies with cascading rollups. Progress is read-only in the UI and recalculated server-side upon data changes, excluding archived items.
@@ -46,6 +46,9 @@ All Strategy and Project cards offer view-only access via dedicated buttons, dis
 
 ### Notification System
 A real-time notification system alerts users to action completions, project progress, strategy status changes, and due date warnings/overdue alerts. Notifications appear in a dedicated panel with an unread count, read/unread toggling, and deletion options. A background job handles due date alerts.
+
+### Meeting Notes (Report-Out Meetings)
+A comprehensive system for creating and managing report-out meeting notes with dynamic content selection. Users can create notes tied to a specific strategy, then dynamically select which projects and actions to include (not all). Features include: hierarchical cascading selectors (Strategy → Projects → Actions), rich text notes field, meeting date tracking, PDF export for email distribution, and proper authorization (users can only create notes for assigned strategies and must be the creator or an administrator to edit/delete). Notes are stored in the database with selected projects and actions as JSON arrays. Accessible via the "Meeting Notes" link in the sidebar (above Communication Templates).
 
 ### Development Environment
 The project uses Vite for fast development and optimized builds, Tailwind CSS for styling, and TypeScript for static type checking.
@@ -78,3 +81,6 @@ The project uses Vite for fast development and optimized builds, Tailwind CSS fo
 ### Development Tools
 - `vite`
 - `typescript`
+
+### Document Generation
+- `react-to-print` - PDF export functionality for meeting notes

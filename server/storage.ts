@@ -1,4 +1,4 @@
-import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Tactic, type InsertTactic, type Activity, type InsertActivity, type Outcome, type InsertOutcome, type Milestone, type InsertMilestone, type CommunicationTemplate, type InsertCommunicationTemplate, type Notification, type InsertNotification, type OutcomeDocument, type InsertOutcomeDocument, type OutcomeChecklistItem, type InsertOutcomeChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, users, strategies, tactics, activities, outcomes, milestones, communicationTemplates, notifications, outcomeDocuments, outcomeChecklistItems, userStrategyAssignments } from "@shared/schema";
+import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Tactic, type InsertTactic, type Activity, type InsertActivity, type Outcome, type InsertOutcome, type Milestone, type InsertMilestone, type CommunicationTemplate, type InsertCommunicationTemplate, type Notification, type InsertNotification, type OutcomeDocument, type InsertOutcomeDocument, type OutcomeChecklistItem, type InsertOutcomeChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, users, strategies, tactics, activities, outcomes, milestones, communicationTemplates, notifications, outcomeDocuments, outcomeChecklistItems, userStrategyAssignments, meetingNotes } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, asc, and } from "drizzle-orm";
@@ -84,6 +84,13 @@ export interface IStorage {
   assignStrategy(userId: string, strategyId: string, assignedBy: string): Promise<UserStrategyAssignment>;
   unassignStrategy(userId: string, strategyId: string): Promise<boolean>;
   getUserAssignedStrategyIds(userId: string): Promise<string[]>;
+
+  // Meeting Notes methods
+  getAllMeetingNotes(): Promise<MeetingNote[]>;
+  getMeetingNote(id: string): Promise<MeetingNote | undefined>;
+  createMeetingNote(note: InsertMeetingNote): Promise<MeetingNote>;
+  updateMeetingNote(id: string, updates: Partial<MeetingNote>): Promise<MeetingNote | undefined>;
+  deleteMeetingNote(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -749,6 +756,27 @@ export class MemStorage implements IStorage {
     const assignments = await this.getUserStrategyAssignments(userId);
     return assignments.map(a => a.strategyId);
   }
+
+  // Meeting Notes methods (stub - not used in production)
+  async getAllMeetingNotes(): Promise<MeetingNote[]> {
+    return [];
+  }
+
+  async getMeetingNote(id: string): Promise<MeetingNote | undefined> {
+    return undefined;
+  }
+
+  async createMeetingNote(note: InsertMeetingNote): Promise<MeetingNote> {
+    throw new Error("MemStorage meeting notes methods not implemented");
+  }
+
+  async updateMeetingNote(id: string, updates: Partial<MeetingNote>): Promise<MeetingNote | undefined> {
+    return undefined;
+  }
+
+  async deleteMeetingNote(id: string): Promise<boolean> {
+    return false;
+  }
 }
 
 // DatabaseStorage implementation
@@ -1305,6 +1333,46 @@ export class DatabaseStorage implements IStorage {
   async getUserAssignedStrategyIds(userId: string): Promise<string[]> {
     const assignments = await this.getUserStrategyAssignments(userId);
     return assignments.map(a => a.strategyId);
+  }
+
+  // Meeting Notes methods
+  async getAllMeetingNotes(): Promise<MeetingNote[]> {
+    return await db
+      .select()
+      .from(meetingNotes)
+      .orderBy(asc(meetingNotes.meetingDate));
+  }
+
+  async getMeetingNote(id: string): Promise<MeetingNote | undefined> {
+    const [note] = await db
+      .select()
+      .from(meetingNotes)
+      .where(eq(meetingNotes.id, id));
+    return note;
+  }
+
+  async createMeetingNote(note: InsertMeetingNote): Promise<MeetingNote> {
+    const [created] = await db
+      .insert(meetingNotes)
+      .values(note)
+      .returning();
+    return created;
+  }
+
+  async updateMeetingNote(id: string, updates: Partial<MeetingNote>): Promise<MeetingNote | undefined> {
+    const [updated] = await db
+      .update(meetingNotes)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(meetingNotes.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteMeetingNote(id: string): Promise<boolean> {
+    const result = await db
+      .delete(meetingNotes)
+      .where(eq(meetingNotes.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
   }
 
   async seedData() {

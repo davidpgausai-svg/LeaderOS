@@ -161,6 +161,20 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
+// Meeting Notes - Report-out meeting notes with dynamic strategy/project/action selection
+export const meetingNotes = pgTable("meeting_notes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(), // Meeting title
+  meetingDate: timestamp("meeting_date").notNull(), // When the meeting occurred
+  strategyId: varchar("strategy_id").notNull(), // Strategy this meeting is about
+  selectedProjectIds: text("selected_project_ids").notNull(), // JSON array of selected project IDs
+  selectedActionIds: text("selected_action_ids").notNull(), // JSON array of selected action IDs
+  notes: text("notes").notNull(), // Meeting notes content
+  createdBy: varchar("created_by").notNull(), // User who created these notes
+  createdAt: timestamp("created_at").default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+});
+
 export const upsertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
   updatedAt: true,
@@ -251,6 +265,28 @@ export const insertUserStrategyAssignmentSchema = createInsertSchema(userStrateg
   assignedAt: true,
 });
 
+export const insertMeetingNoteSchema = createInsertSchema(meetingNotes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  meetingDate: z.coerce.date(),
+  selectedProjectIds: z.string().transform((str) => {
+    try {
+      return JSON.stringify(JSON.parse(str));
+    } catch {
+      return JSON.stringify([]);
+    }
+  }),
+  selectedActionIds: z.string().transform((str) => {
+    try {
+      return JSON.stringify(JSON.parse(str));
+    } catch {
+      return JSON.stringify([]);
+    }
+  }),
+});
+
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -274,3 +310,5 @@ export type InsertOutcomeChecklistItem = z.infer<typeof insertOutcomeChecklistIt
 export type OutcomeChecklistItem = typeof outcomeChecklistItems.$inferSelect;
 export type InsertUserStrategyAssignment = z.infer<typeof insertUserStrategyAssignmentSchema>;
 export type UserStrategyAssignment = typeof userStrategyAssignments.$inferSelect;
+export type InsertMeetingNote = z.infer<typeof insertMeetingNoteSchema>;
+export type MeetingNote = typeof meetingNotes.$inferSelect;

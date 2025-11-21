@@ -20,6 +20,7 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
+  Clipboard,
 } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 
@@ -29,6 +30,7 @@ const navigation = [
   { name: "Projects", href: "/projects", icon: CheckSquare },
   { name: "Actions", href: "/actions", icon: TrendingUp },
   { name: "Timeline", href: "/timeline", icon: Calendar },
+  { name: "Meeting Notes", href: "/meeting-notes", icon: Clipboard },
   { name: "Comm Templates", href: "/communication-templates", icon: FileText },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Settings", href: "/settings", icon: Settings },

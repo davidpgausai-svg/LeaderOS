@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertStrategySchema, insertTacticSchema, insertOutcomeSchema, insertOutcomeDocumentSchema, insertOutcomeChecklistItemSchema } from "@shared/schema";
+import { insertStrategySchema, insertTacticSchema, insertOutcomeSchema, insertOutcomeDocumentSchema, insertOutcomeChecklistItemSchema, insertMeetingNoteSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 import { logger } from "./logger";
@@ -1473,6 +1473,218 @@ Respond ONLY with a valid JSON object in this exact format:
     } catch (error) {
       logger.error("Failed to delete notification", error);
       res.status(500).json({ message: "Failed to delete notification" });
+    }
+  });
+
+  // Meeting Notes routes
+  app.get("/api/meeting-notes", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      let meetingNotes = await storage.getAllMeetingNotes();
+      
+      // Filter by assigned strategies for non-administrators
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        meetingNotes = meetingNotes.filter((note: any) => 
+          assignedStrategyIds.includes(note.strategyId)
+        );
+      }
+      
+      res.json(meetingNotes);
+    } catch (error) {
+      logger.error("Failed to fetch meeting notes", error);
+      res.status(500).json({ message: "Failed to fetch meeting notes" });
+    }
+  });
+
+  app.get("/api/meeting-notes/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      const note = await storage.getMeetingNote(req.params.id);
+      if (!note) {
+        return res.status(404).json({ message: "Meeting note not found" });
+      }
+
+      // Check access: administrators can access all, others only assigned strategies
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        if (!assignedStrategyIds.includes(note.strategyId)) {
+          return res.status(403).json({ message: "Access denied to this meeting note" });
+        }
+      }
+
+      res.json(note);
+    } catch (error) {
+      logger.error("Failed to fetch meeting note", error);
+      res.status(500).json({ message: "Failed to fetch meeting note" });
+    }
+  });
+
+  app.post("/api/meeting-notes", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // Validate request body
+      const validatedData = insertMeetingNoteSchema.parse({
+        ...req.body,
+        createdBy: userId,
+      });
+
+      // Check access: user must have access to the strategy
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        if (!assignedStrategyIds.includes(validatedData.strategyId)) {
+          return res.status(403).json({ message: "Access denied to this strategy" });
+        }
+      }
+
+      const note = await storage.createMeetingNote(validatedData);
+      res.status(201).json(note);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      logger.error("Failed to create meeting note", error);
+      res.status(500).json({ message: "Failed to create meeting note" });
+    }
+  });
+
+  app.patch("/api/meeting-notes/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      const existingNote = await storage.getMeetingNote(req.params.id);
+      if (!existingNote) {
+        return res.status(404).json({ message: "Meeting note not found" });
+      }
+
+      // Check strategy access for non-administrators (must be currently assigned to the strategy)
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        if (!assignedStrategyIds.includes(existingNote.strategyId)) {
+          return res.status(403).json({ message: "Access denied - you are not assigned to this strategy" });
+        }
+        
+        // Additionally, must be the creator (not just any user assigned to the strategy)
+        if (existingNote.createdBy !== userId) {
+          return res.status(403).json({ message: "Only the creator or an administrator can edit this note" });
+        }
+      }
+
+      // Whitelist updatable fields to prevent field spoofing
+      // Note: strategyId is NOT updatable to prevent privilege escalation
+      const { title, meetingDate, selectedProjectIds, selectedActionIds, notes } = req.body;
+      
+      // Parse and validate JSON arrays to prevent corruption
+      let parsedProjectIds: string[];
+      let parsedActionIds: string[];
+      
+      try {
+        parsedProjectIds = JSON.parse(selectedProjectIds || '[]');
+        parsedActionIds = JSON.parse(selectedActionIds || '[]');
+        
+        if (!Array.isArray(parsedProjectIds) || !Array.isArray(parsedActionIds)) {
+          throw new Error("Invalid array format");
+        }
+      } catch (error) {
+        return res.status(400).json({ message: "Invalid project or action IDs format" });
+      }
+
+      const updates = {
+        title,
+        meetingDate,
+        selectedProjectIds: JSON.stringify(parsedProjectIds),
+        selectedActionIds: JSON.stringify(parsedActionIds),
+        notes
+      };
+
+      // Validate the update data with schema
+      const validatedUpdates = insertMeetingNoteSchema.partial().omit({ strategyId: true, createdBy: true }).parse(updates);
+
+      const note = await storage.updateMeetingNote(req.params.id, validatedUpdates);
+      res.json(note);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      logger.error("Failed to update meeting note", error);
+      res.status(500).json({ message: "Failed to update meeting note" });
+    }
+  });
+
+  app.delete("/api/meeting-notes/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      const existingNote = await storage.getMeetingNote(req.params.id);
+      if (!existingNote) {
+        return res.status(404).json({ message: "Meeting note not found" });
+      }
+
+      // Check strategy access for non-administrators
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        if (!assignedStrategyIds.includes(existingNote.strategyId)) {
+          return res.status(403).json({ message: "Access denied to this strategy" });
+        }
+      }
+
+      // Check access: user must be the creator or an administrator
+      if (user.role !== 'administrator' && existingNote.createdBy !== userId) {
+        return res.status(403).json({ message: "Only the creator or an administrator can delete this note" });
+      }
+
+      const deleted = await storage.deleteMeetingNote(req.params.id);
+      if (!deleted) {
+        return res.status(500).json({ message: "Failed to delete meeting note" });
+      }
+
+      res.json({ message: "Meeting note deleted" });
+    } catch (error) {
+      logger.error("Failed to delete meeting note", error);
+      res.status(500).json({ message: "Failed to delete meeting note" });
     }
   });
 
