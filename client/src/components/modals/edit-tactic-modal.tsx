@@ -53,11 +53,24 @@ type Strategy = {
   colorCode: string;
 };
 
+type Milestone = {
+  id: string;
+  tacticId: string;
+  milestoneNumber: number;
+  title: string;
+  status: string;
+  startDate: Date | null;
+  completionDate: Date | null;
+  notes: string | null;
+  createdAt: Date | null;
+};
+
 export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProps) {
   const { currentUser } = useRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedLeaders, setSelectedLeaders] = useState<string[]>([]);
+  const [milestoneEdits, setMilestoneEdits] = useState<Record<string, string>>({});
 
   const { data: strategies } = useQuery({
     queryKey: ["/api/strategies"],
@@ -65,6 +78,11 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
 
   const { data: users } = useQuery({
     queryKey: ["/api/users"],
+  });
+
+  const { data: milestones } = useQuery<Milestone[]>({
+    queryKey: ["/api/milestones", tactic?.id],
+    enabled: !!tactic?.id && isOpen,
   });
 
   const form = useForm<InsertTactic>({
@@ -112,6 +130,17 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
     }
   }, [tactic, isOpen, form]);
 
+  // Initialize milestone edits when milestones are loaded
+  useEffect(() => {
+    if (milestones && isOpen) {
+      const edits: Record<string, string> = {};
+      milestones.forEach(m => {
+        edits[m.id] = m.title;
+      });
+      setMilestoneEdits(edits);
+    }
+  }, [milestones, isOpen]);
+
   const updateTacticMutation = useMutation({
     mutationFn: async (data: InsertTactic) => {
       const response = await apiRequest("PATCH", `/api/tactics/${tactic.id}`, data);
@@ -135,6 +164,16 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
     },
   });
 
+  const updateMilestoneMutation = useMutation({
+    mutationFn: async ({ milestoneId, title }: { milestoneId: string; title: string }) => {
+      const response = await apiRequest("PATCH", `/api/milestones/${milestoneId}`, { title });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/milestones"] });
+    },
+  });
+
   const handleLeaderChange = (leaderId: string, checked: boolean) => {
     let newLeaders;
     if (checked) {
@@ -144,6 +183,17 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
     }
     setSelectedLeaders(newLeaders);
     form.setValue("accountableLeaders", JSON.stringify(newLeaders));
+  };
+
+  const handleMilestoneTitleChange = (milestoneId: string, newTitle: string) => {
+    setMilestoneEdits(prev => ({ ...prev, [milestoneId]: newTitle }));
+  };
+
+  const handleSaveMilestoneTitle = (milestoneId: string) => {
+    const newTitle = milestoneEdits[milestoneId];
+    if (newTitle && newTitle.trim()) {
+      updateMilestoneMutation.mutate({ milestoneId, title: newTitle.trim() });
+    }
   };
 
   const onSubmit = (data: InsertTactic) => {
@@ -420,6 +470,43 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
                   )}
                 />
               </div>
+            </div>
+
+            {/* Milestones */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium flex items-center space-x-2">
+                <Target className="w-5 h-5 text-purple-500" />
+                <span>Project Milestones</span>
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Customize the names of the 7 milestones for this project
+              </p>
+              
+              {milestones && milestones.length > 0 ? (
+                <div className="space-y-3">
+                  {milestones
+                    .sort((a, b) => a.milestoneNumber - b.milestoneNumber)
+                    .map((milestone) => (
+                      <div key={milestone.id} className="flex items-center gap-2">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center text-sm font-medium text-purple-700 dark:text-purple-300">
+                          {milestone.milestoneNumber}
+                        </div>
+                        <Input
+                          value={milestoneEdits[milestone.id] || ""}
+                          onChange={(e) => handleMilestoneTitleChange(milestone.id, e.target.value)}
+                          onBlur={() => handleSaveMilestoneTitle(milestone.id)}
+                          placeholder={`Milestone ${milestone.milestoneNumber} title`}
+                          className="flex-1"
+                          data-testid={`input-milestone-title-${milestone.milestoneNumber}`}
+                        />
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  Loading milestones...
+                </div>
+              )}
             </div>
 
             {/* Status */}
