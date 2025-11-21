@@ -131,6 +131,7 @@ export const milestones = pgTable("milestones", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tacticId: varchar("tactic_id").notNull(), // Project this milestone belongs to
   milestoneNumber: integer("milestone_number").notNull(), // 1-7
+  title: text("title").notNull(), // Customizable milestone name
   status: text("status").notNull().default('not_started'), // 'not_started', 'in_progress', 'completed'
   startDate: timestamp("start_date"),
   completionDate: timestamp("completion_date"),
