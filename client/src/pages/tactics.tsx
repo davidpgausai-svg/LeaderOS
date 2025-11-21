@@ -348,6 +348,9 @@ export default function Tactics() {
   });
 
   const handleMilestoneClick = (tacticId: string, milestoneNum: number) => {
+    // Prevent multiple clicks while mutation is in progress
+    if (updateMilestoneMutation.isPending) return;
+    
     const tacticMilestones = getTacticMilestones(tacticId);
     const milestone = tacticMilestones.find(m => m.milestoneNumber === milestoneNum);
     
@@ -687,7 +690,11 @@ export default function Tactics() {
                                         return (
                                           <div 
                                             key={milestoneNum} 
-                                            className="flex items-center justify-between text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded transition-colors"
+                                            className={`flex items-center justify-between text-sm p-2 rounded transition-colors ${
+                                              updateMilestoneMutation.isPending 
+                                                ? 'opacity-50 cursor-not-allowed' 
+                                                : 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800'
+                                            }`}
                                             onClick={() => handleMilestoneClick(tactic.id, milestoneNum)}
                                             title="Click to toggle completion status"
                                             data-testid={`milestone-${tactic.id}-${milestoneNum}`}
