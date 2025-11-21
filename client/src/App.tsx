@@ -7,8 +7,8 @@ import { UserInitializer } from "@/components/user-initializer";
 import { useAuth } from "@/hooks/useAuth";
 import Dashboard from "@/pages/dashboard";
 import Strategies from "@/pages/strategies";
-import Tactics from "@/pages/tactics";
-import Actions from "@/pages/outcomes";
+import Projects from "@/pages/projects";
+import Actions from "@/pages/actions";
 import CommunicationTemplates from "@/pages/communication-templates";
 import MeetingNotes from "@/pages/meeting-notes";
 import Reports from "@/pages/reports";
@@ -32,7 +32,7 @@ function Router() {
         <>
           <Route path="/" component={Dashboard} />
           <Route path="/strategies" component={Strategies} />
-          <Route path="/projects" component={Tactics} />
+          <Route path="/projects" component={Projects} />
           <Route path="/timeline" component={Timeline} />
           <Route path="/actions" component={Actions} />
           <Route path="/communication-templates" component={CommunicationTemplates} />
