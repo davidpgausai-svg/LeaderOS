@@ -103,6 +103,7 @@ type Milestone = {
   id: string;
   tacticId: string;
   milestoneNumber: number;
+  title: string;
   status: string;
   startDate?: string;
   completionDate?: string;
