@@ -297,6 +297,16 @@ export default function Tactics() {
     return groups;
   }, {} as Record<string, Tactic[]>);
 
+  // Get all active strategies sorted by displayOrder (with fallback to title for stable sorting)
+  const sortedStrategies = ((strategies as Strategy[]) || [])
+    .filter(s => s.status !== 'Archived')
+    .sort((a, b) => {
+      const orderA = a.displayOrder ?? Number.MAX_SAFE_INTEGER;
+      const orderB = b.displayOrder ?? Number.MAX_SAFE_INTEGER;
+      if (orderA !== orderB) return orderA - orderB;
+      return a.title.localeCompare(b.title); // Secondary sort by title for stability
+    });
+
   // Toggle strategy collapse/expand - start with all strategies collapsed
   const toggleStrategyCollapse = (strategyId: string) => {
     setCollapsedStrategies(prev => {
@@ -464,7 +474,7 @@ export default function Tactics() {
 
         {/* Main Content */}
         <div className="flex-1 overflow-auto p-6">
-          {Object.entries(tacticsByStrategy).length === 0 ? (
+          {sortedStrategies.length === 0 ? (
             <div className="text-center py-12">
               <Target className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No strategies found</h3>
@@ -483,14 +493,9 @@ export default function Tactics() {
             </div>
           ) : (
             <div className="space-y-6">
-              {Object.entries(tacticsByStrategy)
-                .sort(([aId], [bId]) => {
-                  const strategyA = (strategies as Strategy[])?.find((s) => s.id === aId);
-                  const strategyB = (strategies as Strategy[])?.find((s) => s.id === bId);
-                  return (strategyA?.displayOrder || 0) - (strategyB?.displayOrder || 0);
-                })
-                .map(([strategyId, strategyTactics]) => {
-                const strategy = (strategies as Strategy[])?.find((s) => s.id === strategyId);
+              {sortedStrategies.map((strategy) => {
+                const strategyTactics = tacticsByStrategy[strategy.id] || [];
+                const strategyId = strategy.id;
                 const isCollapsed = collapsedStrategies.has(strategyId);
                 
                 if (!strategy) return null;

@@ -286,6 +286,16 @@ export default function Actions() {
     return groups;
   }, {} as Record<string, Outcome[]>);
 
+  // Get all active strategies sorted by displayOrder (with fallback to title for stable sorting)
+  const sortedStrategies = ((strategies as Strategy[]) || [])
+    .filter(s => s.status !== 'Archived')
+    .sort((a, b) => {
+      const orderA = a.displayOrder ?? Number.MAX_SAFE_INTEGER;
+      const orderB = b.displayOrder ?? Number.MAX_SAFE_INTEGER;
+      if (orderA !== orderB) return orderA - orderB;
+      return a.title.localeCompare(b.title); // Secondary sort by title for stability
+    });
+
   const toggleStrategyCollapse = (strategyId: string) => {
     const newCollapsed = new Set(collapsedStrategies);
     if (newCollapsed.has(strategyId)) {
@@ -404,13 +414,13 @@ export default function Actions() {
 
         {/* Main Content */}
         <div className="flex-1 overflow-auto p-6">
-          {Object.entries(outcomesByStrategy).length === 0 ? (
+          {sortedStrategies.length === 0 ? (
             <div className="text-center py-12">
               <BarChart3 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No outcomes found</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No strategies found</h3>
               <p className="text-gray-600 dark:text-gray-400 mb-6">
                 {searchTerm || statusFilter !== "all" || strategyFilter !== "all" 
-                  ? "Try adjusting your filters to see more outcomes."
+                  ? "Try adjusting your filters to see more strategies."
                   : "Get started by creating your first outcome."
                 }
               </p>
@@ -423,14 +433,9 @@ export default function Actions() {
             </div>
           ) : (
             <div className="space-y-6">
-              {Object.entries(outcomesByStrategy)
-                .sort(([aId], [bId]) => {
-                  const strategyA = (strategies as Strategy[])?.find((s) => s.id === aId);
-                  const strategyB = (strategies as Strategy[])?.find((s) => s.id === bId);
-                  return (strategyA?.displayOrder || 0) - (strategyB?.displayOrder || 0);
-                })
-                .map(([strategyId, strategyOutcomes]) => {
-                const strategy = (strategies as Strategy[])?.find((s) => s.id === strategyId);
+              {sortedStrategies.map((strategy) => {
+                const strategyId = strategy.id;
+                const strategyOutcomes = outcomesByStrategy[strategyId] || [];
                 const isCollapsed = collapsedStrategies.has(strategyId);
                 const strategyProjects = getProjectsForStrategy(strategyId);
                 const filteredOutcomes = getFilteredOutcomesForStrategy(strategyId, strategyOutcomes);
