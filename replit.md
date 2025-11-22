@@ -33,7 +33,7 @@ A backend-driven system automatically calculates progress for actions, projects,
 Strategies follow an Active → Completed → Archived lifecycle. Archiving a strategy cascades to its associated projects and actions. Archived items are hidden by default but appear on the Timeline with completion metrics.
 
 ### Change Continuum Framework
-Each strategy incorporates 9 mandatory fields for change management: Case for Change, Vision Statement, Success Metrics, Stakeholder Map, Readiness Rating, Risk Exposure Rating, Change Champion Assignment, Reinforcement Plan, and Benefits Realization Plan. These fields are enforced for completion and displayed in collapsible sections with full dark mode support.
+Each strategy incorporates 9 mandatory fields for change management: Case for Change, Vision Statement, Success Metrics, Stakeholder Map, Readiness Rating, Risk Exposure Rating, Change Champion Assignment, Reinforcement Plan, and Benefits Realization Plan. These fields are enforced for completion and displayed in collapsible sections with full dark mode support. AI generation includes data sanitization to ensure all fields are converted to readable strings (handles objects/arrays properly) to prevent "[object Object]" display errors.
 
 ### Project Milestones
 Every project includes 7 predefined milestones for change implementation (e.g., Stakeholder & Readiness Assessment, Executive Governance Review). These milestones track status, include start/completion dates and notes, and integrate with Communication Templates.

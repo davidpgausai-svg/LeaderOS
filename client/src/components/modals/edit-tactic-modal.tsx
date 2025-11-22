@@ -80,7 +80,7 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
     queryKey: ["/api/users"],
   });
 
-  const { data: allMilestones } = useQuery<Milestone[]>({
+  const { data: allMilestones, isLoading: milestonesLoading } = useQuery<Milestone[]>({
     queryKey: ["/api/milestones"],
   });
 
@@ -495,7 +495,11 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
                 Customize the names of the 7 milestones for this project
               </p>
               
-              {milestones && milestones.length > 0 ? (
+              {milestonesLoading ? (
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  Loading milestones...
+                </div>
+              ) : milestones.length > 0 ? (
                 <div className="space-y-3">
                   {milestones
                     .sort((a, b) => a.milestoneNumber - b.milestoneNumber)
@@ -517,7 +521,7 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
                 </div>
               ) : (
                 <div className="text-sm text-gray-500 dark:text-gray-400">
-                  Loading milestones...
+                  No milestones created yet for this project
                 </div>
               )}
             </div>

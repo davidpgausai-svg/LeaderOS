@@ -324,21 +324,35 @@ Respond ONLY with a valid JSON object in this exact format:
       const generatedFields = JSON.parse(content);
       
       // Convert all fields to strings to avoid [object Object] errors
-      // If a field is an object or array, stringify it properly
+      // Recursively handles deeply nested objects/arrays
       const sanitizeValue = (value: any): string => {
+        if (value === null || value === undefined) {
+          return '';
+        }
         if (typeof value === 'string') {
           return value;
         }
-        if (typeof value === 'object' && value !== null) {
-          // If it's an array, join items with newlines
+        if (typeof value === 'number' || typeof value === 'boolean') {
+          return String(value);
+        }
+        if (typeof value === 'object') {
+          // If it's an array, recursively process items and join with newlines
           if (Array.isArray(value)) {
-            return value.map(item => 
-              typeof item === 'string' ? item : JSON.stringify(item, null, 2)
-            ).join('\n');
+            return value.map(item => {
+              if (typeof item === 'string') {
+                return item;
+              }
+              if (typeof item === 'object' && item !== null) {
+                // Recursively stringify nested objects
+                return JSON.stringify(item, null, 2);
+              }
+              return String(item);
+            }).join('\n\n');
           }
-          // If it's an object, format it nicely
+          // If it's an object, format it as readable JSON
           return JSON.stringify(value, null, 2);
         }
+        // Fallback: ensure we always return a string
         return String(value);
       };
 

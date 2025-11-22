@@ -145,7 +145,7 @@ export default function Tactics() {
     queryKey: ["/api/users"],
   });
 
-  const { data: milestones } = useQuery({
+  const { data: milestones, isLoading: milestonesLoading } = useQuery({
     queryKey: ["/api/milestones"],
   });
 
@@ -733,43 +733,49 @@ export default function Tactics() {
                                         Milestones
                                       </span>
                                     </div>
-                                    <div className="space-y-2">
-                                      {[1, 2, 3, 4, 5, 6, 7].map((milestoneNum) => {
-                                        const tacticMilestones = getTacticMilestones(tactic.id);
-                                        const milestone = tacticMilestones.find(m => m.milestoneNumber === milestoneNum);
-                                        const isCompleted = milestone?.status === 'completed';
-                                        
-                                        return (
-                                          <div 
-                                            key={milestoneNum} 
-                                            className={`flex items-center justify-between text-sm p-2 rounded transition-colors ${
-                                              updateMilestoneMutation.isPending 
-                                                ? 'opacity-50 cursor-not-allowed' 
-                                                : 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800'
-                                            }`}
-                                            onClick={() => handleMilestoneClick(tactic.id, milestoneNum)}
-                                            title="Click to toggle completion status"
-                                            data-testid={`milestone-${tactic.id}-${milestoneNum}`}
-                                          >
-                                            <div className="flex items-center space-x-2">
-                                              {isCompleted ? (
-                                                <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
-                                              ) : (
-                                                <Circle className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                    {milestonesLoading ? (
+                                      <div className="text-sm text-gray-500 dark:text-gray-400 p-2">
+                                        Loading milestones...
+                                      </div>
+                                    ) : (
+                                      <div className="space-y-2">
+                                        {[1, 2, 3, 4, 5, 6, 7].map((milestoneNum) => {
+                                          const tacticMilestones = getTacticMilestones(tactic.id);
+                                          const milestone = tacticMilestones.find(m => m.milestoneNumber === milestoneNum);
+                                          const isCompleted = milestone?.status === 'completed';
+                                          
+                                          return (
+                                            <div 
+                                              key={milestoneNum} 
+                                              className={`flex items-center justify-between text-sm p-2 rounded transition-colors ${
+                                                updateMilestoneMutation.isPending 
+                                                  ? 'opacity-50 cursor-not-allowed' 
+                                                  : 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800'
+                                              }`}
+                                              onClick={() => handleMilestoneClick(tactic.id, milestoneNum)}
+                                              title="Click to toggle completion status"
+                                              data-testid={`milestone-${tactic.id}-${milestoneNum}`}
+                                            >
+                                              <div className="flex items-center space-x-2">
+                                                {isCompleted ? (
+                                                  <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                                ) : (
+                                                  <Circle className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                                )}
+                                                <span className={isCompleted ? "text-gray-900 dark:text-white" : "text-gray-600 dark:text-gray-400"}>
+                                                  {milestone?.title || `Milestone ${milestoneNum}`}
+                                                </span>
+                                              </div>
+                                              {isCompleted && milestone?.completionDate && (
+                                                <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                                                  {format(new Date(milestone.completionDate), 'MMM d, yyyy h:mm a')}
+                                                </span>
                                               )}
-                                              <span className={isCompleted ? "text-gray-900 dark:text-white" : "text-gray-600 dark:text-gray-400"}>
-                                                {milestone?.title || `Milestone ${milestoneNum}`}
-                                              </span>
                                             </div>
-                                            {isCompleted && milestone?.completionDate && (
-                                              <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-                                                {format(new Date(milestone.completionDate), 'MMM d, yyyy h:mm a')}
-                                              </span>
-                                            )}
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
                                   </div>
 
                                   {/* Action Controls */}
