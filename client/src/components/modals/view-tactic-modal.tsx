@@ -225,6 +225,22 @@ export function ViewTacticModal({ isOpen, onClose, tactic }: ViewTacticModalProp
                 </a>
               </div>
             )}
+            
+            {tactic.communicationUrl && (
+              <div className="space-y-1">
+                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Communication URL</div>
+                <a 
+                  href={tactic.communicationUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-2 text-blue-600 dark:text-blue-400 hover:underline"
+                  data-testid="view-communication-url-link"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span>Open Communication Material</span>
+                </a>
+              </div>
+            )}
           </div>
         </div>
 

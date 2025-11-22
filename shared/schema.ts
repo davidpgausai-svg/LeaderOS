@@ -77,6 +77,7 @@ export const tactics = pgTable("tactics", {
   progress: integer("progress").notNull().default(0), // 0-100
   isArchived: text("is_archived").notNull().default('false'), // 'true' or 'false' for cascade archival
   documentFolderUrl: text("document_folder_url"), // OneDrive/Google Drive URL for project documents
+  communicationUrl: text("communication_url"), // Custom communication template URL
   createdBy: varchar("created_by").notNull(),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
@@ -123,28 +124,6 @@ export const outcomeChecklistItems = pgTable("outcome_checklist_items", {
   title: text("title").notNull(), // Checklist item description
   isCompleted: text("is_completed").notNull().default('false'), // 'true' or 'false'
   orderIndex: integer("order_index").notNull().default(0), // For sorting items
-  createdAt: timestamp("created_at").default(sql`now()`),
-});
-
-// Change Continuum Milestones - 7 milestones per project
-export const milestones = pgTable("milestones", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tacticId: varchar("tactic_id").notNull(), // Project this milestone belongs to
-  milestoneNumber: integer("milestone_number").notNull(), // 1-7
-  title: text("title").notNull(), // Customizable milestone name
-  status: text("status").notNull().default('not_started'), // 'not_started', 'in_progress', 'completed'
-  startDate: timestamp("start_date"),
-  completionDate: timestamp("completion_date"),
-  notes: text("notes"),
-  createdAt: timestamp("created_at").default(sql`now()`),
-});
-
-// Communication Templates - Template URLs for each milestone
-export const communicationTemplates = pgTable("communication_templates", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tacticId: varchar("tactic_id").notNull(), // Project this template belongs to
-  milestoneNumber: integer("milestone_number").notNull(), // 1-7, matches milestone
-  templateUrl: text("template_url"),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
@@ -218,6 +197,7 @@ export const insertTacticSchema = createInsertSchema(tactics).omit({
       return JSON.stringify([str]);
     }
   }),
+  communicationUrl: z.string().nullable().optional(),
 });
 
 export const insertActivitySchema = createInsertSchema(activities).omit({
@@ -230,19 +210,6 @@ export const insertOutcomeSchema = createInsertSchema(outcomes).omit({
   createdAt: true,
 }).extend({
   dueDate: z.coerce.date().optional(),
-});
-
-export const insertMilestoneSchema = createInsertSchema(milestones).omit({
-  id: true,
-  createdAt: true,
-}).extend({
-  startDate: z.coerce.date().optional(),
-  completionDate: z.coerce.date().optional(),
-});
-
-export const insertCommunicationTemplateSchema = createInsertSchema(communicationTemplates).omit({
-  id: true,
-  createdAt: true,
 });
 
 export const insertNotificationSchema = createInsertSchema(notifications).omit({
@@ -298,10 +265,6 @@ export type InsertActivity = z.infer<typeof insertActivitySchema>;
 export type Activity = typeof activities.$inferSelect;
 export type InsertOutcome = z.infer<typeof insertOutcomeSchema>;
 export type Outcome = typeof outcomes.$inferSelect;
-export type InsertMilestone = z.infer<typeof insertMilestoneSchema>;
-export type Milestone = typeof milestones.$inferSelect;
-export type InsertCommunicationTemplate = z.infer<typeof insertCommunicationTemplateSchema>;
-export type CommunicationTemplate = typeof communicationTemplates.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Notification = typeof notifications.$inferSelect;
 export type InsertOutcomeDocument = z.infer<typeof insertOutcomeDocumentSchema>;

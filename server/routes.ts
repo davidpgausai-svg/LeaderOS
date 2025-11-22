@@ -678,10 +678,6 @@ Respond ONLY with a valid JSON object in this exact format:
       
       const tactic = await storage.createTactic(validatedData);
 
-      // Note: Milestones are auto-created inside createTactic method
-      // Create communication templates for the new tactic
-      await storage.createCommunicationTemplates(tactic.id);
-
       // Recalculate parent strategy progress when a tactic is created
       await storage.recalculateStrategyProgress(tactic.strategyId);
 
@@ -1293,36 +1289,6 @@ Respond ONLY with a valid JSON object in this exact format:
     } catch (error) {
       logger.error("Failed to delete checklist item", error);
       res.status(500).json({ message: "Failed to delete checklist item" });
-    }
-  });
-
-  // Communication Template routes
-  app.get("/api/communication-templates/:tacticId", async (req, res) => {
-    try {
-      let templates = await storage.getCommunicationTemplatesByTactic(req.params.tacticId);
-      
-      // Auto-create templates if they don't exist for this tactic
-      if (templates.length === 0) {
-        templates = await storage.createCommunicationTemplates(req.params.tacticId);
-      }
-      
-      res.json(templates);
-    } catch (error) {
-      logger.error("Failed to fetch communication templates", error);
-      res.status(500).json({ message: "Failed to fetch communication templates" });
-    }
-  });
-
-  app.patch("/api/communication-templates/:id", async (req, res) => {
-    try {
-      const template = await storage.updateCommunicationTemplate(req.params.id, req.body);
-      if (!template) {
-        return res.status(404).json({ message: "Communication template not found" });
-      }
-      res.json(template);
-    } catch (error) {
-      logger.error("Failed to update communication template", error);
-      res.status(500).json({ message: "Failed to update communication template" });
     }
   });
 

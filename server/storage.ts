@@ -1,4 +1,4 @@
-import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Tactic, type InsertTactic, type Activity, type InsertActivity, type Outcome, type InsertOutcome, type CommunicationTemplate, type InsertCommunicationTemplate, type Notification, type InsertNotification, type OutcomeDocument, type InsertOutcomeDocument, type OutcomeChecklistItem, type InsertOutcomeChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, users, strategies, tactics, activities, outcomes, communicationTemplates, notifications, outcomeDocuments, outcomeChecklistItems, userStrategyAssignments, meetingNotes } from "@shared/schema";
+import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Tactic, type InsertTactic, type Activity, type InsertActivity, type Outcome, type InsertOutcome, type Notification, type InsertNotification, type OutcomeDocument, type InsertOutcomeDocument, type OutcomeChecklistItem, type InsertOutcomeChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, users, strategies, tactics, activities, outcomes, notifications, outcomeDocuments, outcomeChecklistItems, userStrategyAssignments, meetingNotes } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, asc, and } from "drizzle-orm";
@@ -47,11 +47,6 @@ export interface IStorage {
   recalculateTacticProgress(tacticId: string): Promise<void>;
   recalculateStrategyProgress(strategyId: string): Promise<void>;
 
-  // Communication Template methods
-  getCommunicationTemplatesByTactic(tacticId: string): Promise<CommunicationTemplate[]>;
-  createCommunicationTemplates(tacticId: string): Promise<CommunicationTemplate[]>; // Auto-generate 7 templates
-  updateCommunicationTemplate(id: string, updates: Partial<CommunicationTemplate>): Promise<CommunicationTemplate | undefined>;
-
   // Notification methods
   createNotification(notification: InsertNotification): Promise<Notification>;
   getNotificationsByUser(userId: string): Promise<Notification[]>;
@@ -93,7 +88,6 @@ export class MemStorage implements IStorage {
   private tactics: Map<string, Tactic> = new Map();
   private activities: Map<string, Activity> = new Map();
   private outcomes: Map<string, Outcome> = new Map();
-  private communicationTemplatesMap: Map<string, CommunicationTemplate> = new Map();
   private userStrategyAssignmentsMap: Map<string, UserStrategyAssignment> = new Map();
 
   constructor() {
@@ -567,39 +561,6 @@ export class MemStorage implements IStorage {
     this.strategies.set(strategyId, strategy);
   }
 
-  // Communication Template methods
-  async getCommunicationTemplatesByTactic(tacticId: string): Promise<CommunicationTemplate[]> {
-    return Array.from(this.communicationTemplatesMap.values()).filter(template => template.tacticId === tacticId);
-  }
-
-  async createCommunicationTemplates(tacticId: string): Promise<CommunicationTemplate[]> {
-    const templates: CommunicationTemplate[] = [];
-    
-    for (let i = 1; i <= 7; i++) {
-      const id = randomUUID();
-      const template: CommunicationTemplate = {
-        id,
-        tacticId,
-        milestoneNumber: i,
-        templateUrl: null,
-        createdAt: new Date()
-      };
-      this.communicationTemplatesMap.set(id, template);
-      templates.push(template);
-    }
-    
-    return templates;
-  }
-
-  async updateCommunicationTemplate(id: string, updates: Partial<CommunicationTemplate>): Promise<CommunicationTemplate | undefined> {
-    const existing = this.communicationTemplatesMap.get(id);
-    if (!existing) return undefined;
-    
-    const updated = { ...existing, ...updates };
-    this.communicationTemplatesMap.set(id, updated);
-    return updated;
-  }
-
   // Notification methods (stub - not used in production)
   async createNotification(notification: InsertNotification): Promise<Notification> {
     throw new Error("MemStorage notification methods not implemented");
@@ -1018,39 +979,6 @@ export class DatabaseStorage implements IStorage {
       .update(strategies)
       .set({ progress })
       .where(eq(strategies.id, strategyId));
-  }
-
-  // Communication Template methods
-  async getCommunicationTemplatesByTactic(tacticId: string): Promise<CommunicationTemplate[]> {
-    return await db.select().from(communicationTemplates).where(eq(communicationTemplates.tacticId, tacticId));
-  }
-
-  async createCommunicationTemplates(tacticId: string): Promise<CommunicationTemplate[]> {
-    const templatesToCreate: InsertCommunicationTemplate[] = [];
-    
-    for (let i = 1; i <= 7; i++) {
-      templatesToCreate.push({
-        tacticId,
-        milestoneNumber: i,
-        templateUrl: null
-      });
-    }
-    
-    const createdTemplates = await db
-      .insert(communicationTemplates)
-      .values(templatesToCreate)
-      .returning();
-    
-    return createdTemplates;
-  }
-
-  async updateCommunicationTemplate(id: string, updates: Partial<CommunicationTemplate>): Promise<CommunicationTemplate | undefined> {
-    const [updated] = await db
-      .update(communicationTemplates)
-      .set(updates)
-      .where(eq(communicationTemplates.id, id))
-      .returning();
-    return updated || undefined;
   }
 
   // Notification methods

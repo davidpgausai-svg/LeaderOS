@@ -78,6 +78,7 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
       accountableLeaders: "[]",
       resourcesRequired: "",
       documentFolderUrl: null,
+      communicationUrl: null,
       startDate: new Date(),
       dueDate: new Date(),
       status: "NYS",
@@ -101,6 +102,7 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
           accountableLeaders: tactic.accountableLeaders || "[]",
           resourcesRequired: tactic.resourcesRequired || "",
           documentFolderUrl: tactic.documentFolderUrl || null,
+          communicationUrl: tactic.communicationUrl || null,
           startDate: new Date(tactic.startDate),
           dueDate: new Date(tactic.dueDate),
           status: tactic.status || "NYS",
@@ -364,6 +366,26 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
                         {...field}
                         value={field.value || ""}
                         data-testid="input-edit-document-folder-url"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="communicationUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Communication URL (Optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="url"
+                        placeholder="https://..."
+                        {...field}
+                        value={field.value || ""}
+                        data-testid="input-edit-communication-url"
                       />
                     </FormControl>
                     <FormMessage />

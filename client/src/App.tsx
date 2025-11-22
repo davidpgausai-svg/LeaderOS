@@ -9,7 +9,6 @@ import Dashboard from "@/pages/dashboard";
 import Strategies from "@/pages/strategies";
 import Projects from "@/pages/projects";
 import Actions from "@/pages/actions";
-import CommunicationTemplates from "@/pages/communication-templates";
 import MeetingNotes from "@/pages/meeting-notes";
 import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
@@ -35,7 +34,6 @@ function Router() {
           <Route path="/projects" component={Projects} />
           <Route path="/timeline" component={Timeline} />
           <Route path="/actions" component={Actions} />
-          <Route path="/communication-templates" component={CommunicationTemplates} />
           <Route path="/meeting-notes" component={MeetingNotes} />
           <Route path="/reports" component={Reports} />
           <Route path="/settings" component={Settings} />
