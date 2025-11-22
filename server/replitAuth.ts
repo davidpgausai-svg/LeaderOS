@@ -73,6 +73,13 @@ async function upsertUser(
     throw error;
   }
   
+  // Block SME users from logging in - they're for tracking only
+  if (allowedUser?.role === 'sme') {
+    const error = new Error("ACCESS_DENIED");
+    (error as any).userMessage = "SME users cannot log in. SME accounts are for tracking purposes only. Please contact an administrator if you need system access.";
+    throw error;
+  }
+  
   // Determine role: default admin always gets administrator, otherwise use assigned role
   const userRole = isDefaultAdmin ? "administrator" : (allowedUser?.role || "leader");
   
