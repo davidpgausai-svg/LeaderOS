@@ -18,7 +18,6 @@ export const NotificationTypes = {
   USER_ASSIGNED_TO_PROJECT: "user_assigned_to_project",
   STRATEGY_STATUS_CHANGED: "strategy_status_changed",
   PROJECT_STATUS_CHANGED: "project_status_changed",
-  MILESTONE_COMPLETED: "milestone_completed",
   READINESS_RATING_CHANGED: "readiness_rating_changed",
   RISK_EXPOSURE_CHANGED: "risk_exposure_changed",
   CHANGE_CHAMPION_ASSIGNED: "change_champion_assigned",
@@ -251,34 +250,6 @@ export async function notifyProjectStatusChanged(
     NotificationTypes.PROJECT_STATUS_CHANGED,
     "Project Status Updated",
     `Project "${tacticTitle}" status changed from ${oldStatus} to ${newStatus}`,
-    tacticId,
-    "tactic"
-  );
-}
-
-export async function notifyMilestoneCompleted(
-  tacticId: string,
-  tacticTitle: string,
-  milestoneNumber: number,
-  assignedUserIds: string[]
-) {
-  const milestoneNames = [
-    "Stakeholder & Readiness Assessment",
-    "Executive Governance Review",
-    "Directors Meeting Authorization",
-    "Strategic Communication Deployment",
-    "Staff Meetings & Huddles Activation",
-    "Education & Enablement Completion",
-    "Operational Feedback + Governance Close-Out",
-  ];
-
-  const milestoneName = milestoneNames[milestoneNumber - 1] || `Milestone ${milestoneNumber}`;
-
-  await notifyUsers(
-    assignedUserIds,
-    NotificationTypes.MILESTONE_COMPLETED,
-    "Milestone Completed",
-    `Milestone "${milestoneName}" completed for project "${tacticTitle}"`,
     tacticId,
     "tactic"
   );

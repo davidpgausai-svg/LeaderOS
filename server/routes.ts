@@ -6,7 +6,7 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 import { logger } from "./logger";
 import OpenAI from "openai";
-import { notifyActionCompleted, notifyActionAchieved, notifyProjectProgress, notifyProjectStatusChanged, notifyStrategyStatusChanged, notifyReadinessRatingChanged, notifyRiskExposureChanged, notifyMilestoneCompleted } from "./notifications";
+import { notifyActionCompleted, notifyActionAchieved, notifyProjectProgress, notifyProjectStatusChanged, notifyStrategyStatusChanged, notifyReadinessRatingChanged, notifyRiskExposureChanged } from "./notifications";
 
 // Validation helpers
 function isValidHexColor(color: string): boolean {
@@ -1293,83 +1293,6 @@ Respond ONLY with a valid JSON object in this exact format:
     } catch (error) {
       logger.error("Failed to delete checklist item", error);
       res.status(500).json({ message: "Failed to delete checklist item" });
-    }
-  });
-
-  // Milestone routes
-  app.get("/api/milestones", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      
-      if (!user) {
-        return res.status(401).json({ message: "User not found" });
-      }
-
-      let milestones = await storage.getAllMilestones();
-      
-      // Filter by assigned strategies for non-administrators
-      if (user.role !== 'administrator') {
-        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
-        const allTactics = await storage.getAllTactics();
-        const assignedTacticIds = allTactics
-          .filter((t: any) => assignedStrategyIds.includes(t.strategyId))
-          .map((t: any) => t.id);
-        milestones = milestones.filter((m: any) => assignedTacticIds.includes(m.tacticId));
-      }
-      
-      res.json(milestones);
-    } catch (error) {
-      logger.error("Failed to fetch all milestones", error);
-      res.status(500).json({ message: "Failed to fetch milestones" });
-    }
-  });
-
-  app.get("/api/milestones/:tacticId", async (req, res) => {
-    try {
-      const milestones = await storage.getMilestonesByTactic(req.params.tacticId);
-      res.json(milestones);
-    } catch (error) {
-      logger.error("Failed to fetch milestones", error);
-      res.status(500).json({ message: "Failed to fetch milestones" });
-    }
-  });
-
-  app.patch("/api/milestones/:id", async (req, res) => {
-    try {
-      // Get the old milestone to compare status changes
-      const allMilestones = await storage.getAllMilestones();
-      const oldMilestone = allMilestones.find(m => m.id === req.params.id);
-      
-      // Automatically set timestamps based on status changes
-      const updates = { ...req.body };
-      if (updates.status === 'completed' && oldMilestone?.status !== 'completed') {
-        updates.completionDate = new Date().toISOString();
-      } else if (updates.status === 'in_progress' && oldMilestone?.status === 'not_started') {
-        updates.startDate = new Date().toISOString();
-      } else if (updates.status === 'not_started') {
-        updates.startDate = null;
-        updates.completionDate = null;
-      }
-      
-      const milestone = await storage.updateMilestone(req.params.id, updates);
-      if (!milestone) {
-        return res.status(404).json({ message: "Milestone not found" });
-      }
-      
-      // Send notification when milestone is completed
-      if (oldMilestone && oldMilestone.status !== "completed" && milestone.status === "completed") {
-        const tactic = await storage.getTactic(milestone.tacticId);
-        if (tactic) {
-          const assignedUserIds = JSON.parse(tactic.accountableLeaders);
-          await notifyMilestoneCompleted(tactic.id, tactic.title, milestone.milestoneNumber, assignedUserIds);
-        }
-      }
-      
-      res.json(milestone);
-    } catch (error) {
-      logger.error("Failed to update milestone", error);
-      res.status(500).json({ message: "Failed to update milestone" });
     }
   });
 

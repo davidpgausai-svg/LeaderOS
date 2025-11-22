@@ -14,10 +14,7 @@ import {
   Target, 
   Users, 
   Calendar, 
-  ExternalLink,
-  CheckCircle2,
-  Circle,
-  Clock
+  ExternalLink
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -42,18 +39,6 @@ type Strategy = {
   colorCode: string;
 };
 
-type Milestone = {
-  id: string;
-  tacticId: string;
-  milestoneNumber: number;
-  title: string;
-  status: string;
-  startDate?: string;
-  completionDate?: string;
-  notes?: string;
-  createdAt: string;
-};
-
 export function ViewTacticModal({ isOpen, onClose, tactic }: ViewTacticModalProps) {
   const { data: strategies } = useQuery({
     queryKey: ["/api/strategies"],
@@ -61,10 +46,6 @@ export function ViewTacticModal({ isOpen, onClose, tactic }: ViewTacticModalProp
 
   const { data: users } = useQuery({
     queryKey: ["/api/users"],
-  });
-
-  const { data: milestones } = useQuery({
-    queryKey: ["/api/milestones"],
   });
 
   if (!tactic) return null;
@@ -91,15 +72,8 @@ export function ViewTacticModal({ isOpen, onClose, tactic }: ViewTacticModalProp
     return statusMap[status as keyof typeof statusMap] || statusMap['NYS'];
   };
 
-  // Milestone titles now come from database
-
-  const getTacticMilestones = (): Milestone[] => {
-    return (milestones as Milestone[])?.filter(m => m.tacticId === tactic.id) || [];
-  };
-
   const statusInfo = getStatusDisplay(tactic.status);
   const accountableLeaders = getAccountableLeaders();
-  const tacticMilestones = getTacticMilestones();
 
   const InfoField = ({ label, value, icon }: { label: string; value: string; icon?: any }) => (
     <div className="space-y-1">
@@ -251,66 +225,6 @@ export function ViewTacticModal({ isOpen, onClose, tactic }: ViewTacticModalProp
                 </a>
               </div>
             )}
-          </div>
-
-          <Separator />
-
-          {/* Milestones */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold border-b pb-2">Project Milestones</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              7-milestone framework for project execution
-            </p>
-            
-            <div className="space-y-3">
-              {[1, 2, 3, 4, 5, 6, 7].map((milestoneNum) => {
-                const milestone = tacticMilestones.find(m => m.milestoneNumber === milestoneNum);
-                const isCompleted = milestone?.status === 'completed';
-                const isInProgress = milestone?.status === 'in_progress';
-                
-                return (
-                  <div 
-                    key={milestoneNum}
-                    className={`flex items-start space-x-3 p-3 rounded-lg border ${
-                      isCompleted 
-                        ? 'bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800' 
-                        : isInProgress
-                        ? 'bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800'
-                        : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
-                    }`}
-                    data-testid={`view-milestone-${milestoneNum}`}
-                  >
-                    <div className="flex-shrink-0 mt-1">
-                      {isCompleted ? (
-                        <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
-                      ) : isInProgress ? (
-                        <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                      ) : (
-                        <Circle className="w-5 h-5 text-gray-400" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-medium text-gray-900 dark:text-white">
-                        {milestone?.title || `Milestone ${milestoneNum}`}
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Status: {milestone?.status === 'completed' ? 'Completed' : milestone?.status === 'in_progress' ? 'In Progress' : 'Not Started'}
-                      </div>
-                      {milestone?.completionDate && (
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          Completed: {format(new Date(milestone.completionDate), "PPP")}
-                        </div>
-                      )}
-                      {milestone?.notes && (
-                        <div className="text-sm text-gray-700 dark:text-gray-300 mt-2 italic">
-                          {milestone.notes}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           </div>
         </div>
 

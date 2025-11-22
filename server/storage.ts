@@ -1,4 +1,4 @@
-import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Tactic, type InsertTactic, type Activity, type InsertActivity, type Outcome, type InsertOutcome, type Milestone, type InsertMilestone, type CommunicationTemplate, type InsertCommunicationTemplate, type Notification, type InsertNotification, type OutcomeDocument, type InsertOutcomeDocument, type OutcomeChecklistItem, type InsertOutcomeChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, users, strategies, tactics, activities, outcomes, milestones, communicationTemplates, notifications, outcomeDocuments, outcomeChecklistItems, userStrategyAssignments, meetingNotes } from "@shared/schema";
+import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Tactic, type InsertTactic, type Activity, type InsertActivity, type Outcome, type InsertOutcome, type CommunicationTemplate, type InsertCommunicationTemplate, type Notification, type InsertNotification, type OutcomeDocument, type InsertOutcomeDocument, type OutcomeChecklistItem, type InsertOutcomeChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, users, strategies, tactics, activities, outcomes, communicationTemplates, notifications, outcomeDocuments, outcomeChecklistItems, userStrategyAssignments, meetingNotes } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, asc, and } from "drizzle-orm";
@@ -47,12 +47,6 @@ export interface IStorage {
   recalculateTacticProgress(tacticId: string): Promise<void>;
   recalculateStrategyProgress(strategyId: string): Promise<void>;
 
-  // Milestone methods
-  getAllMilestones(): Promise<Milestone[]>;
-  getMilestonesByTactic(tacticId: string): Promise<Milestone[]>;
-  createMilestones(tacticId: string): Promise<Milestone[]>; // Auto-generate 7 milestones
-  updateMilestone(id: string, updates: Partial<Milestone>): Promise<Milestone | undefined>;
-
   // Communication Template methods
   getCommunicationTemplatesByTactic(tacticId: string): Promise<CommunicationTemplate[]>;
   createCommunicationTemplates(tacticId: string): Promise<CommunicationTemplate[]>; // Auto-generate 7 templates
@@ -99,7 +93,6 @@ export class MemStorage implements IStorage {
   private tactics: Map<string, Tactic> = new Map();
   private activities: Map<string, Activity> = new Map();
   private outcomes: Map<string, Outcome> = new Map();
-  private milestonesMap: Map<string, Milestone> = new Map();
   private communicationTemplatesMap: Map<string, CommunicationTemplate> = new Map();
   private userStrategyAssignmentsMap: Map<string, UserStrategyAssignment> = new Map();
 
@@ -416,9 +409,6 @@ export class MemStorage implements IStorage {
     };
     this.tactics.set(id, tactic);
 
-    // Auto-create 7 milestones for the new tactic
-    await this.createMilestones(id);
-
     // Create activity
     await this.createActivity({
       type: "tactic_created",
@@ -575,57 +565,6 @@ export class MemStorage implements IStorage {
     }
 
     this.strategies.set(strategyId, strategy);
-  }
-
-  // Milestone methods
-  async getAllMilestones(): Promise<Milestone[]> {
-    return Array.from(this.milestonesMap.values());
-  }
-
-  async getMilestonesByTactic(tacticId: string): Promise<Milestone[]> {
-    return Array.from(this.milestonesMap.values()).filter(milestone => milestone.tacticId === tacticId);
-  }
-
-  async createMilestones(tacticId: string): Promise<Milestone[]> {
-    const defaultTitles = [
-      "Stakeholder & Readiness Assessment",
-      "Executive Governance Review",
-      "Directors Meeting Authorization",
-      "Strategic Communication Deployment",
-      "Staff Meetings & Huddles Activation",
-      "Education & Enablement Completion",
-      "Operational Feedback + Governance Close-Out"
-    ];
-    
-    const milestones: Milestone[] = [];
-    
-    for (let i = 1; i <= 7; i++) {
-      const id = randomUUID();
-      const milestone: Milestone = {
-        id,
-        tacticId,
-        milestoneNumber: i,
-        title: defaultTitles[i - 1],
-        status: 'not_started',
-        startDate: null,
-        completionDate: null,
-        notes: null,
-        createdAt: new Date()
-      };
-      this.milestonesMap.set(id, milestone);
-      milestones.push(milestone);
-    }
-    
-    return milestones;
-  }
-
-  async updateMilestone(id: string, updates: Partial<Milestone>): Promise<Milestone | undefined> {
-    const existing = this.milestonesMap.get(id);
-    if (!existing) return undefined;
-    
-    const updated = { ...existing, ...updates };
-    this.milestonesMap.set(id, updated);
-    return updated;
   }
 
   // Communication Template methods
@@ -937,9 +876,6 @@ export class DatabaseStorage implements IStorage {
       .values(insertTactic)
       .returning();
 
-    // Auto-create 7 milestones for the new tactic
-    await this.createMilestones(tactic.id);
-
     // Create activity
     await this.createActivity({
       type: "tactic_created",
@@ -1082,73 +1018,6 @@ export class DatabaseStorage implements IStorage {
       .update(strategies)
       .set({ progress })
       .where(eq(strategies.id, strategyId));
-  }
-
-  // Milestone methods
-  async getAllMilestones(): Promise<Milestone[]> {
-    return await db.select().from(milestones);
-  }
-
-  async getMilestonesByTactic(tacticId: string): Promise<Milestone[]> {
-    return await db.select().from(milestones).where(eq(milestones.tacticId, tacticId));
-  }
-
-  async createMilestones(tacticId: string): Promise<Milestone[]> {
-    const defaultTitles = [
-      "Stakeholder & Readiness Assessment",
-      "Executive Governance Review",
-      "Directors Meeting Authorization",
-      "Strategic Communication Deployment",
-      "Staff Meetings & Huddles Activation",
-      "Education & Enablement Completion",
-      "Operational Feedback + Governance Close-Out"
-    ];
-    
-    const milestonesToCreate: InsertMilestone[] = [];
-    
-    for (let i = 1; i <= 7; i++) {
-      milestonesToCreate.push({
-        tacticId,
-        milestoneNumber: i,
-        title: defaultTitles[i - 1],
-        status: 'not_started',
-        startDate: undefined,
-        completionDate: undefined,
-        notes: undefined
-      });
-    }
-    
-    const createdMilestones = await db
-      .insert(milestones)
-      .values(milestonesToCreate)
-      .returning();
-    
-    return createdMilestones;
-  }
-
-  async updateMilestone(id: string, updates: Partial<Milestone>): Promise<Milestone | undefined> {
-    // Convert date strings to Date objects
-    const processedUpdates = { ...updates };
-    if (processedUpdates.startDate && typeof processedUpdates.startDate === 'string') {
-      processedUpdates.startDate = new Date(processedUpdates.startDate);
-    }
-    if (processedUpdates.completionDate && typeof processedUpdates.completionDate === 'string') {
-      processedUpdates.completionDate = new Date(processedUpdates.completionDate);
-    }
-    // Handle null values explicitly
-    if (processedUpdates.completionDate === null) {
-      processedUpdates.completionDate = null;
-    }
-    if (processedUpdates.startDate === null) {
-      processedUpdates.startDate = null;
-    }
-
-    const [updated] = await db
-      .update(milestones)
-      .set(processedUpdates)
-      .where(eq(milestones.id, id))
-      .returning();
-    return updated || undefined;
   }
 
   // Communication Template methods

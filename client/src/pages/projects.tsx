@@ -62,9 +62,7 @@ import {
   ChevronRight,
   Edit,
   Eye,
-  ExternalLink,
-  CheckCircle2,
-  Circle
+  ExternalLink
 } from "lucide-react";
 
 type Strategy = {
@@ -107,18 +105,6 @@ type Tactic = {
   strategy?: Strategy;
 };
 
-type Milestone = {
-  id: string;
-  tacticId: string;
-  milestoneNumber: number;
-  title: string;
-  status: string;
-  startDate?: string;
-  completionDate?: string;
-  notes?: string;
-  createdAt: string;
-};
-
 export default function Tactics() {
   const { currentRole, currentUser, canCreateTactics, canEditTactics } = useRole();
   const { toast } = useToast();
@@ -143,10 +129,6 @@ export default function Tactics() {
 
   const { data: users } = useQuery({
     queryKey: ["/api/users"],
-  });
-
-  const { data: milestones, isLoading: milestonesLoading } = useQuery({
-    queryKey: ["/api/milestones"],
   });
 
   // Initialize all strategies as collapsed by default when strategies data loads
@@ -202,11 +184,7 @@ export default function Tactics() {
     strategy: (strategies as Strategy[])?.find((s) => s.id === tactic.strategyId),
   })) || [];
 
-  // Helper functions - milestone titles now come from database
-
-  const getTacticMilestones = (tacticId: string): Milestone[] => {
-    return (milestones as Milestone[])?.filter(m => m.tacticId === tacticId) || [];
-  };
+  // Helper functions
 
   const getAccountableLeaders = (tactic: Tactic): User[] => {
     try {
@@ -349,48 +327,6 @@ export default function Tactics() {
   const closeViewModal = () => {
     setIsViewTacticOpen(false);
     setViewingTactic(null);
-  };
-
-  // Mutation for updating milestone status
-  const updateMilestoneMutation = useMutation({
-    mutationFn: async ({ milestoneId, status }: { milestoneId: string; status: string }) => {
-      const response = await apiRequest("PATCH", `/api/milestones/${milestoneId}`, { 
-        status, 
-        completionDate: status === 'completed' ? new Date().toISOString() : null 
-      });
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/milestones'] });
-      toast({
-        title: "Milestone updated",
-        description: "Milestone status has been updated successfully.",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update milestone status.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleMilestoneClick = (tacticId: string, milestoneNum: number) => {
-    // Prevent multiple clicks while mutation is in progress
-    if (updateMilestoneMutation.isPending) return;
-    
-    const tacticMilestones = getTacticMilestones(tacticId);
-    const milestone = tacticMilestones.find(m => m.milestoneNumber === milestoneNum);
-    
-    if (!milestone) return;
-
-    // Toggle between not_started and completed for simplicity
-    const newStatus = milestone.status === 'completed' ? 'not_started' : 'completed';
-    updateMilestoneMutation.mutate({ 
-      milestoneId: milestone.id, 
-      status: newStatus 
-    });
   };
 
   if (tacticsLoading) {
@@ -722,58 +658,6 @@ export default function Tactics() {
                                           <ExternalLink className="w-4 h-4" />
                                           Open Project Documents
                                         </a>
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {/* Milestones Component */}
-                                  <div className="space-y-3 mb-4">
-                                    <div className="flex items-center space-x-2 mb-3">
-                                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Milestones
-                                      </span>
-                                    </div>
-                                    {milestonesLoading ? (
-                                      <div className="text-sm text-gray-500 dark:text-gray-400 p-2">
-                                        Loading milestones...
-                                      </div>
-                                    ) : (
-                                      <div className="space-y-2">
-                                        {[1, 2, 3, 4, 5, 6, 7].map((milestoneNum) => {
-                                          const tacticMilestones = getTacticMilestones(tactic.id);
-                                          const milestone = tacticMilestones.find(m => m.milestoneNumber === milestoneNum);
-                                          const isCompleted = milestone?.status === 'completed';
-                                          
-                                          return (
-                                            <div 
-                                              key={milestoneNum} 
-                                              className={`flex items-center justify-between text-sm p-2 rounded transition-colors ${
-                                                updateMilestoneMutation.isPending 
-                                                  ? 'opacity-50 cursor-not-allowed' 
-                                                  : 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800'
-                                              }`}
-                                              onClick={() => handleMilestoneClick(tactic.id, milestoneNum)}
-                                              title="Click to toggle completion status"
-                                              data-testid={`milestone-${tactic.id}-${milestoneNum}`}
-                                            >
-                                              <div className="flex items-center space-x-2">
-                                                {isCompleted ? (
-                                                  <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
-                                                ) : (
-                                                  <Circle className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                                                )}
-                                                <span className={isCompleted ? "text-gray-900 dark:text-white" : "text-gray-600 dark:text-gray-400"}>
-                                                  {milestone?.title || `Milestone ${milestoneNum}`}
-                                                </span>
-                                              </div>
-                                              {isCompleted && milestone?.completionDate && (
-                                                <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-                                                  {format(new Date(milestone.completionDate), 'MMM d, yyyy h:mm a')}
-                                                </span>
-                                              )}
-                                            </div>
-                                          );
-                                        })}
                                       </div>
                                     )}
                                   </div>
