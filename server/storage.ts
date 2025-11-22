@@ -206,6 +206,7 @@ export class MemStorage implements IStorage {
       progress: 100,
       isArchived: "false",
       documentFolderUrl: null,
+      communicationUrl: null,
       createdBy: coLeadUser1.id,
       createdAt: new Date()
     };
@@ -225,6 +226,7 @@ export class MemStorage implements IStorage {
       progress: 65,
       isArchived: "false",
       documentFolderUrl: null,
+      communicationUrl: null,
       createdBy: coLeadUser1.id,
       createdAt: new Date()
     };
@@ -404,6 +406,7 @@ export class MemStorage implements IStorage {
       kpiTracking: insertTactic.kpiTracking || null,
       resourcesRequired: insertTactic.resourcesRequired || null,
       documentFolderUrl: insertTactic.documentFolderUrl || null,
+      communicationUrl: insertTactic.communicationUrl || null,
       createdAt: new Date()
     };
     this.tactics.set(id, tactic);

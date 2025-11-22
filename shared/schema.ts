@@ -47,7 +47,7 @@ export const strategies = pgTable("strategies", {
   completionDate: timestamp("completion_date"),
   colorCode: text("color_code").notNull().default('#3B82F6'), // Hex color for strategy grouping
   displayOrder: integer("display_order").notNull().default(0), // Order for framework ranking
-  progress: integer("progress").notNull().default(0), // 0-100, auto-calculated from tactics
+  progress: integer("progress").notNull().default(0), // 0-100, auto-calculated from projects
   // Change Continuum fields - specific framework fields
   caseForChange: text("case_for_change").notNull().default("To be defined"),
   visionStatement: text("vision_statement").notNull().default("To be defined"),
@@ -62,10 +62,10 @@ export const strategies = pgTable("strategies", {
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
-export const tactics = pgTable("tactics", {
+export const projects = pgTable("projects", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  title: text("title").notNull(), // Component 2: Tactic name
-  description: text("description").notNull(), // Component 3: Tactic description
+  title: text("title").notNull(), // Component 2: Project name
+  description: text("description").notNull(), // Component 3: Project description
   strategyId: varchar("strategy_id").notNull(), // Component 1: Strategy it is linked to
   kpi: text("kpi").notNull(), // Component 4: Key Performance Indicator
   kpiTracking: text("kpi_tracking"), // Component 5: Tracking the KPI (current value/measurement)
@@ -84,20 +84,20 @@ export const tactics = pgTable("tactics", {
 
 export const activities = pgTable("activities", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  type: text("type").notNull(), // 'strategy_created', 'tactic_completed', 'tactic_overdue', etc.
+  type: text("type").notNull(), // 'strategy_created', 'project_completed', 'project_overdue', etc.
   description: text("description").notNull(),
   userId: varchar("user_id").notNull(),
   strategyId: varchar("strategy_id"),
-  tacticId: varchar("tactic_id"),
+  projectId: varchar("project_id"),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
-export const outcomes = pgTable("outcomes", {
+export const actions = pgTable("actions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
   description: text("description").notNull(),
   strategyId: varchar("strategy_id").notNull(),
-  tacticId: varchar("tactic_id"), // Optional - outcomes can be linked to tactics
+  projectId: varchar("project_id"), // Optional - actions can be linked to projects
   targetValue: text("target_value"),
   currentValue: text("current_value"),
   measurementUnit: text("measurement_unit"),
@@ -108,19 +108,19 @@ export const outcomes = pgTable("outcomes", {
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
-// Outcome Documents - Links to external documents (OneDrive, Google Docs, etc.)
-export const outcomeDocuments = pgTable("outcome_documents", {
+// Action Documents - Links to external documents (OneDrive, Google Docs, etc.)
+export const actionDocuments = pgTable("action_documents", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  outcomeId: varchar("outcome_id").notNull(), // Action this document belongs to
+  actionId: varchar("action_id").notNull(), // Action this document belongs to
   name: text("name").notNull(), // Display name for the document
   url: text("url").notNull(), // URL to the document
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
-// Outcome Checklist Items - Checklist for each action
-export const outcomeChecklistItems = pgTable("outcome_checklist_items", {
+// Action Checklist Items - Checklist for each action
+export const actionChecklistItems = pgTable("action_checklist_items", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  outcomeId: varchar("outcome_id").notNull(), // Action this checklist item belongs to
+  actionId: varchar("action_id").notNull(), // Action this checklist item belongs to
   title: text("title").notNull(), // Checklist item description
   isCompleted: text("is_completed").notNull().default('false'), // 'true' or 'false'
   orderIndex: integer("order_index").notNull().default(0), // For sorting items
@@ -135,7 +135,7 @@ export const notifications = pgTable("notifications", {
   title: text("title").notNull(), // Short notification title
   message: text("message").notNull(), // Full notification message
   relatedEntityId: varchar("related_entity_id"), // Optional - ID of related strategy/tactic/outcome
-  relatedEntityType: text("related_entity_type"), // Optional - 'strategy', 'tactic', 'outcome'
+  relatedEntityType: text("related_entity_type"), // Optional - 'strategy', 'project', 'action'
   isRead: text("is_read").notNull().default('false'), // 'true' or 'false'
   createdAt: timestamp("created_at").default(sql`now()`),
 });
@@ -183,7 +183,7 @@ export const insertStrategySchema = createInsertSchema(strategies).omit({
   benefitsRealizationPlan: z.string().optional().transform(val => val?.trim() || "To be defined"),
 });
 
-export const insertTacticSchema = createInsertSchema(tactics).omit({
+export const insertProjectSchema = createInsertSchema(projects).omit({
   id: true,
   createdAt: true,
   progress: true, // Progress is auto-calculated, not user-provided
@@ -205,7 +205,7 @@ export const insertActivitySchema = createInsertSchema(activities).omit({
   createdAt: true,
 });
 
-export const insertOutcomeSchema = createInsertSchema(outcomes).omit({
+export const insertActionSchema = createInsertSchema(actions).omit({
   id: true,
   createdAt: true,
 }).extend({
@@ -217,12 +217,12 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
   createdAt: true,
 });
 
-export const insertOutcomeDocumentSchema = createInsertSchema(outcomeDocuments).omit({
+export const insertActionDocumentSchema = createInsertSchema(actionDocuments).omit({
   id: true,
   createdAt: true,
 });
 
-export const insertOutcomeChecklistItemSchema = createInsertSchema(outcomeChecklistItems).omit({
+export const insertActionChecklistItemSchema = createInsertSchema(actionChecklistItems).omit({
   id: true,
   createdAt: true,
 });
@@ -259,18 +259,18 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertStrategy = z.infer<typeof insertStrategySchema>;
 export type Strategy = typeof strategies.$inferSelect;
-export type InsertTactic = z.infer<typeof insertTacticSchema>;
-export type Tactic = typeof tactics.$inferSelect;
+export type InsertProject = z.infer<typeof insertProjectSchema>;
+export type Project = typeof projects.$inferSelect;
 export type InsertActivity = z.infer<typeof insertActivitySchema>;
 export type Activity = typeof activities.$inferSelect;
-export type InsertOutcome = z.infer<typeof insertOutcomeSchema>;
-export type Outcome = typeof outcomes.$inferSelect;
+export type InsertAction = z.infer<typeof insertActionSchema>;
+export type Action = typeof actions.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Notification = typeof notifications.$inferSelect;
-export type InsertOutcomeDocument = z.infer<typeof insertOutcomeDocumentSchema>;
-export type OutcomeDocument = typeof outcomeDocuments.$inferSelect;
-export type InsertOutcomeChecklistItem = z.infer<typeof insertOutcomeChecklistItemSchema>;
-export type OutcomeChecklistItem = typeof outcomeChecklistItems.$inferSelect;
+export type InsertActionDocument = z.infer<typeof insertActionDocumentSchema>;
+export type ActionDocument = typeof actionDocuments.$inferSelect;
+export type InsertActionChecklistItem = z.infer<typeof insertActionChecklistItemSchema>;
+export type ActionChecklistItem = typeof actionChecklistItems.$inferSelect;
 export type InsertUserStrategyAssignment = z.infer<typeof insertUserStrategyAssignmentSchema>;
 export type UserStrategyAssignment = typeof userStrategyAssignments.$inferSelect;
 export type InsertMeetingNote = z.infer<typeof insertMeetingNoteSchema>;
