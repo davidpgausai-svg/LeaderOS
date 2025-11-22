@@ -1268,15 +1268,14 @@ Respond ONLY with a valid JSON object in this exact format:
         }
       }
       
-      const validatedData = insertOutcomeChecklistItemSchema.partial().parse(req.body);
-      
-      // Convert boolean isCompleted to string if needed (database stores as text 'true'/'false')
-      const updateData = {
-        ...validatedData,
+      // Convert boolean isCompleted to string before validation (database stores as text 'true'/'false')
+      const bodyData = {
+        ...req.body,
         ...(req.body.isCompleted !== undefined && { isCompleted: String(req.body.isCompleted) })
       };
       
-      const item = await storage.updateOutcomeChecklistItem(req.params.id, updateData);
+      const validatedData = insertOutcomeChecklistItemSchema.partial().parse(bodyData);
+      const item = await storage.updateOutcomeChecklistItem(req.params.id, validatedData);
       if (!item) {
         return res.status(404).json({ message: "Checklist item not found" });
       }
