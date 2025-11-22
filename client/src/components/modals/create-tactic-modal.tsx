@@ -89,6 +89,10 @@ export function CreateTacticModal({ isOpen, onClose, strategyId }: CreateTacticM
   const createTacticMutation = useMutation({
     mutationFn: async (data: InsertTactic) => {
       const response = await apiRequest("POST", "/api/tactics", data);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to create project");
+      }
       return response.json();
     },
     onSuccess: () => {
@@ -96,16 +100,16 @@ export function CreateTacticModal({ isOpen, onClose, strategyId }: CreateTacticM
       queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
       toast({
         title: "Success",
-        description: "Tactic created successfully",
+        description: "Project created successfully",
       });
       form.reset();
       setSelectedLeaders([]);
       onClose();
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
-        description: "Failed to create tactic",
+        description: error.message || "Failed to create project",
         variant: "destructive",
       });
     },
@@ -123,6 +127,16 @@ export function CreateTacticModal({ isOpen, onClose, strategyId }: CreateTacticM
   };
 
   const onSubmit = (data: InsertTactic) => {
+    // Validate that at least one leader is selected
+    if (selectedLeaders.length === 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please select at least one accountable leader",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Ensure accountableLeaders is properly formatted
     const submitData = {
       ...data,
