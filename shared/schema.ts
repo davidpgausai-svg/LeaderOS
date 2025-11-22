@@ -171,16 +171,16 @@ export const insertStrategySchema = createInsertSchema(strategies).omit({
 }).extend({
   startDate: z.coerce.date(),
   targetDate: z.coerce.date(),
-  // Make Change Continuum fields mandatory
-  caseForChange: z.string().trim().min(1, "Case for Change is required"),
-  visionStatement: z.string().trim().min(1, "Vision Statement is required"),
-  successMetrics: z.string().trim().min(1, "Success Metrics is required"),
-  stakeholderMap: z.string().trim().min(1, "Stakeholder Map is required"),
-  readinessRating: z.string().trim().min(1, "Readiness Rating is required"),
-  riskExposureRating: z.string().trim().min(1, "Risk Exposure Rating is required"),
-  changeChampionAssignment: z.string().trim().min(1, "Change Champion Assignment is required"),
-  reinforcementPlan: z.string().trim().min(1, "Reinforcement Plan is required"),
-  benefitsRealizationPlan: z.string().trim().min(1, "Benefits Realization Plan is required"),
+  // Change Continuum fields - allow defaults and transform empty to "To be defined"
+  caseForChange: z.string().transform(val => val.trim() || "To be defined"),
+  visionStatement: z.string().transform(val => val.trim() || "To be defined"),
+  successMetrics: z.string().transform(val => val.trim() || "To be defined"),
+  stakeholderMap: z.string().transform(val => val.trim() || "To be defined"),
+  readinessRating: z.string().transform(val => val.trim() || "To be defined"),
+  riskExposureRating: z.string().transform(val => val.trim() || "To be defined"),
+  changeChampionAssignment: z.string().transform(val => val.trim() || "To be defined"),
+  reinforcementPlan: z.string().transform(val => val.trim() || "To be defined"),
+  benefitsRealizationPlan: z.string().transform(val => val.trim() || "To be defined"),
 });
 
 export const insertTacticSchema = createInsertSchema(tactics).omit({
