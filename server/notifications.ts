@@ -56,7 +56,14 @@ export async function notifyUsers(
   relatedEntityId?: string,
   relatedEntityType?: "strategy" | "tactic" | "outcome"
 ) {
-  const promises = userIds.map((userId) =>
+  // Filter out SME users - they cannot log in and should not receive notifications
+  const allUsers = await storage.getAllUsers();
+  const filteredUserIds = userIds.filter((userId) => {
+    const user = allUsers.find((u) => u.id === userId);
+    return user && user.role !== 'sme';
+  });
+  
+  const promises = filteredUserIds.map((userId) =>
     createNotification(userId, type, title, message, relatedEntityId, relatedEntityType)
   );
   return await Promise.all(promises);
