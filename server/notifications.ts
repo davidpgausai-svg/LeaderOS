@@ -218,6 +218,12 @@ export async function notifyUserAssignedToProject(
   tacticId: string,
   tacticTitle: string
 ) {
+  // Don't notify SME users - they cannot log in
+  const user = await storage.getUser(userId);
+  if (!user || user.role === 'sme') {
+    return;
+  }
+  
   await createNotification(
     userId,
     NotificationTypes.USER_ASSIGNED_TO_PROJECT,
@@ -301,6 +307,12 @@ export async function notifyChangeChampionAssigned(
   strategyId: string,
   strategyTitle: string
 ) {
+  // Don't notify SME users - they cannot log in
+  const user = await storage.getUser(userId);
+  if (!user || user.role === 'sme') {
+    return;
+  }
+  
   await createNotification(
     userId,
     NotificationTypes.CHANGE_CHAMPION_ASSIGNED,
