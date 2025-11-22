@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Sidebar } from "@/components/layout/sidebar";
 import { useMemo } from "react";
 import { format, min, max, differenceInDays, eachMonthOfInterval } from "date-fns";
-import type { Strategy, Project } from "@shared/schema";
+import type { Strategy, Project, Action } from "@shared/schema";
 
 export default function Timeline() {
   const { data: strategies, isLoading: strategiesLoading } = useQuery<Strategy[]>({
@@ -13,8 +13,12 @@ export default function Timeline() {
     queryKey: ["/api/projects"],
   });
 
+  const { data: actions, isLoading: actionsLoading } = useQuery<Action[]>({
+    queryKey: ["/api/actions"],
+  });
+
   const timelineData = useMemo(() => {
-    if (!strategies || !projects) {
+    if (!strategies || !projects || !actions) {
       return { 
         frameworks: [], 
         minDate: new Date(), 
@@ -32,6 +36,11 @@ export default function Timeline() {
     projects.forEach(t => {
       allDates.push(new Date(t.dueDate));
     });
+    actions.forEach(a => {
+      if (a.dueDate) {
+        allDates.push(new Date(a.dueDate));
+      }
+    });
 
     const minDate = allDates.length > 0 ? min(allDates) : new Date();
     const maxDate = allDates.length > 0 ? max(allDates) : new Date();
@@ -40,9 +49,10 @@ export default function Timeline() {
     // Generate month markers
     const months = eachMonthOfInterval({ start: minDate, end: maxDate });
 
-    // Group projects by strategy
+    // Group projects and actions by strategy
     const frameworks = strategies.map(strategy => {
       const strategyProjects = projects.filter(t => t.strategyId === strategy.id);
+      const strategyActions = actions.filter(a => a.strategyId === strategy.id && a.dueDate);
       
       return {
         id: strategy.id,
@@ -58,18 +68,24 @@ export default function Timeline() {
           date: new Date(project.dueDate),
           status: project.status,
         })),
+        actionMarkers: strategyActions.map(action => ({
+          id: action.id,
+          title: action.title,
+          date: new Date(action.dueDate!),
+          status: action.status,
+        })),
       };
     });
 
     return { frameworks, minDate, maxDate, totalDays, months };
-  }, [strategies, projects]);
+  }, [strategies, projects, actions]);
 
   const getPositionPercentage = (date: Date) => {
     const daysSinceStart = differenceInDays(date, timelineData.minDate);
     return Math.min(Math.max((daysSinceStart / timelineData.totalDays) * 100, 0), 100);
   };
 
-  if (strategiesLoading || projectsLoading) {
+  if (strategiesLoading || projectsLoading || actionsLoading) {
     return (
       <div className="min-h-screen flex">
         <Sidebar />
@@ -92,7 +108,7 @@ export default function Timeline() {
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Timeline</h2>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Strategic roadmap showing all strategies and projects
+              Strategic roadmap showing all strategies, projects, and actions
             </p>
           </div>
         </header>
@@ -242,7 +258,7 @@ export default function Timeline() {
                           </div>
                         </div>
 
-                        {/* Strategy Milestones */}
+                        {/* Project Milestones (Large Markers) */}
                         {framework.milestones.map((milestone) => {
                           const milestonePos = getPositionPercentage(milestone.date);
                           
@@ -268,8 +284,8 @@ export default function Timeline() {
                                   style={{ borderColor: framework.colorCode }}
                                 >
                                   <div className="flex items-center space-x-1 mb-1">
-                                    <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-                                      Strategy
+                                    <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
+                                      Project
                                     </span>
                                     <span
                                       className={`px-2 py-0.5 rounded text-xs font-medium ${
@@ -292,6 +308,60 @@ export default function Timeline() {
                                   </h4>
                                   <p className="text-xs text-gray-600 dark:text-gray-400">
                                     Due: {format(milestone.date, 'MMM dd, yyyy')}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {/* Action Markers (Smaller Line Markers) */}
+                        {framework.actionMarkers.map((action) => {
+                          const actionPos = getPositionPercentage(action.date);
+                          
+                          return (
+                            <div
+                              key={action.id}
+                              className="absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2 group"
+                              style={{ left: `${actionPos}%` }}
+                            >
+                              {/* Action Line Marker */}
+                              <div
+                                className="w-0.5 h-6 cursor-pointer hover:h-8 transition-all shadow-sm"
+                                style={{
+                                  backgroundColor: framework.colorCode,
+                                }}
+                              />
+                              
+                              {/* Tooltip on Hover */}
+                              <div className={`absolute ${frameworkIndex === 0 ? 'top-10' : 'bottom-10'} left-1/2 transform -translate-x-1/2 hidden group-hover:block z-50 w-48`}>
+                                <div
+                                  className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border-2 p-3"
+                                  style={{ borderColor: framework.colorCode }}
+                                >
+                                  <div className="flex items-center space-x-1 mb-1">
+                                    <span className="px-2 py-0.5 rounded text-xs font-medium bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300">
+                                      Action
+                                    </span>
+                                    <span
+                                      className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                        action.status === 'achieved'
+                                          ? 'bg-green-100 text-green-700'
+                                          : action.status === 'in_progress'
+                                          ? 'bg-blue-100 text-blue-700'
+                                          : action.status === 'at_risk'
+                                          ? 'bg-red-100 text-red-700'
+                                          : 'bg-gray-100 text-gray-700'
+                                      }`}
+                                    >
+                                      {action.status === 'in_progress' ? 'In Progress' : action.status === 'achieved' ? 'Achieved' : action.status === 'at_risk' ? 'At Risk' : 'Not Started'}
+                                    </span>
+                                  </div>
+                                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                                    {action.title}
+                                  </h4>
+                                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                                    Due: {format(action.date, 'MMM dd, yyyy')}
                                   </p>
                                 </div>
                               </div>
@@ -337,9 +407,10 @@ export default function Timeline() {
                   <div>
                     <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">Timeline Elements:</p>
                     <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
-                      <div>• Small dots = Framework start/end dates</div>
-                      <div>• Large dots = Strategy milestones (hover for details)</div>
-                      <div>• Colored bars = Framework duration</div>
+                      <div>• Small dots = Strategy start/end dates</div>
+                      <div>• Large dots = Projects (hover for details)</div>
+                      <div>• Vertical lines = Actions (hover for details)</div>
+                      <div>• Colored bars = Strategy duration</div>
                     </div>
                   </div>
                 </div>
