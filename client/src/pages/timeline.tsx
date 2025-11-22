@@ -2,19 +2,19 @@ import { useQuery } from "@tanstack/react-query";
 import { Sidebar } from "@/components/layout/sidebar";
 import { useMemo } from "react";
 import { format, min, max, differenceInDays, eachMonthOfInterval } from "date-fns";
-import type { Strategy, Tactic } from "@shared/schema";
+import type { Strategy, Project } from "@shared/schema";
 
 export default function Timeline() {
   const { data: strategies, isLoading: strategiesLoading } = useQuery<Strategy[]>({
     queryKey: ["/api/strategies"],
   });
 
-  const { data: tactics, isLoading: tacticsLoading } = useQuery<Tactic[]>({
-    queryKey: ["/api/tactics"],
+  const { data: projects, isLoading: projectsLoading } = useQuery<Project[]>({
+    queryKey: ["/api/projects"],
   });
 
   const timelineData = useMemo(() => {
-    if (!strategies || !tactics) {
+    if (!strategies || !projects) {
       return { 
         frameworks: [], 
         minDate: new Date(), 
@@ -29,7 +29,7 @@ export default function Timeline() {
     strategies.forEach(s => {
       allDates.push(new Date(s.startDate), new Date(s.targetDate));
     });
-    tactics.forEach(t => {
+    projects.forEach(t => {
       allDates.push(new Date(t.dueDate));
     });
 
@@ -40,9 +40,9 @@ export default function Timeline() {
     // Generate month markers
     const months = eachMonthOfInterval({ start: minDate, end: maxDate });
 
-    // Group strategies (tactics) by framework (strategy)
+    // Group projects by strategy
     const frameworks = strategies.map(strategy => {
-      const strategyTactics = tactics.filter(t => t.strategyId === strategy.id);
+      const strategyProjects = projects.filter(t => t.strategyId === strategy.id);
       
       return {
         id: strategy.id,
@@ -52,24 +52,24 @@ export default function Timeline() {
         targetDate: new Date(strategy.targetDate),
         completionDate: strategy.completionDate ? new Date(strategy.completionDate) : null,
         status: strategy.status,
-        milestones: strategyTactics.map(tactic => ({
-          id: tactic.id,
-          title: tactic.title,
-          date: new Date(tactic.dueDate),
-          status: tactic.status,
+        milestones: strategyProjects.map(project => ({
+          id: project.id,
+          title: project.title,
+          date: new Date(project.dueDate),
+          status: project.status,
         })),
       };
     });
 
     return { frameworks, minDate, maxDate, totalDays, months };
-  }, [strategies, tactics]);
+  }, [strategies, projects]);
 
   const getPositionPercentage = (date: Date) => {
     const daysSinceStart = differenceInDays(date, timelineData.minDate);
     return Math.min(Math.max((daysSinceStart / timelineData.totalDays) * 100, 0), 100);
   };
 
-  if (strategiesLoading || tacticsLoading) {
+  if (strategiesLoading || projectsLoading) {
     return (
       <div className="min-h-screen flex">
         <Sidebar />

@@ -18,10 +18,10 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 
-interface ViewTacticModalProps {
+interface ViewProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  tactic: any;
+  project: any;
 }
 
 type User = {
@@ -39,7 +39,7 @@ type Strategy = {
   colorCode: string;
 };
 
-export function ViewTacticModal({ isOpen, onClose, tactic }: ViewTacticModalProps) {
+export function ViewProjectModal({ isOpen, onClose, project }: ViewProjectModalProps) {
   const { data: strategies } = useQuery({
     queryKey: ["/api/strategies"],
   });
@@ -48,13 +48,13 @@ export function ViewTacticModal({ isOpen, onClose, tactic }: ViewTacticModalProp
     queryKey: ["/api/users"],
   });
 
-  if (!tactic) return null;
+  if (!project) return null;
 
-  const strategy = (strategies as Strategy[])?.find((s) => s.id === tactic.strategyId);
+  const strategy = (strategies as Strategy[])?.find((s) => s.id === project.strategyId);
 
   const getAccountableLeaders = (): User[] => {
     try {
-      const leaderIds = JSON.parse(tactic.accountableLeaders);
+      const leaderIds = JSON.parse(project.accountableLeaders);
       return (users as User[])?.filter((user) => leaderIds.includes(user.id)) || [];
     } catch {
       return [];
@@ -72,7 +72,7 @@ export function ViewTacticModal({ isOpen, onClose, tactic }: ViewTacticModalProp
     return statusMap[status as keyof typeof statusMap] || statusMap['NYS'];
   };
 
-  const statusInfo = getStatusDisplay(tactic.status);
+  const statusInfo = getStatusDisplay(project.status);
   const accountableLeaders = getAccountableLeaders();
 
   const InfoField = ({ label, value, icon }: { label: string; value: string; icon?: any }) => (
@@ -102,17 +102,17 @@ export function ViewTacticModal({ isOpen, onClose, tactic }: ViewTacticModalProp
             
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <InfoField label="Project Title" value={tactic.title} />
+                <InfoField label="Project Title" value={project.title} />
               </div>
               <Badge 
                 className={`${statusInfo.color} text-white ml-4`}
-                data-testid="view-tactic-status-badge"
+                data-testid="view-project-status-badge"
               >
                 {statusInfo.label}
               </Badge>
             </div>
 
-            <InfoField label="Description" value={tactic.description} />
+            <InfoField label="Description" value={project.description} />
 
             {strategy && (
               <div className="space-y-1">
@@ -137,9 +137,9 @@ export function ViewTacticModal({ isOpen, onClose, tactic }: ViewTacticModalProp
               <span>Key Performance Indicator</span>
             </h3>
             
-            <InfoField label="KPI Definition" value={tactic.kpi} />
-            {tactic.kpiTracking && (
-              <InfoField label="Current KPI Value" value={tactic.kpiTracking} />
+            <InfoField label="KPI Definition" value={project.kpi} />
+            {project.kpiTracking && (
+              <InfoField label="Current KPI Value" value={project.kpiTracking} />
             )}
           </div>
 
@@ -193,11 +193,11 @@ export function ViewTacticModal({ isOpen, onClose, tactic }: ViewTacticModalProp
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <InfoField 
                 label="Start Date" 
-                value={format(new Date(tactic.startDate), "PPP")} 
+                value={format(new Date(project.startDate), "PPP")} 
               />
               <InfoField 
                 label="Due Date" 
-                value={format(new Date(tactic.dueDate), "PPP")} 
+                value={format(new Date(project.dueDate), "PPP")} 
               />
             </div>
           </div>
@@ -208,13 +208,13 @@ export function ViewTacticModal({ isOpen, onClose, tactic }: ViewTacticModalProp
           <div className="space-y-4">
             <h3 className="text-lg font-semibold border-b pb-2">Resources</h3>
             
-            <InfoField label="Resources Required" value={tactic.resourcesRequired || "Not specified"} />
+            <InfoField label="Resources Required" value={project.resourcesRequired || "Not specified"} />
             
-            {tactic.documentFolderUrl && (
+            {project.documentFolderUrl && (
               <div className="space-y-1">
                 <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Document Folder</div>
                 <a 
-                  href={tactic.documentFolderUrl}
+                  href={project.documentFolderUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center space-x-2 text-blue-600 dark:text-blue-400 hover:underline"
@@ -226,11 +226,11 @@ export function ViewTacticModal({ isOpen, onClose, tactic }: ViewTacticModalProp
               </div>
             )}
             
-            {tactic.communicationUrl && (
+            {project.communicationUrl && (
               <div className="space-y-1">
                 <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Communication URL</div>
                 <a 
-                  href={tactic.communicationUrl}
+                  href={project.communicationUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center space-x-2 text-blue-600 dark:text-blue-400 hover:underline"
@@ -247,7 +247,7 @@ export function ViewTacticModal({ isOpen, onClose, tactic }: ViewTacticModalProp
         <div className="flex justify-end pt-4 border-t">
           <Button
             onClick={onClose}
-            data-testid="button-close-view-tactic"
+            data-testid="button-close-view-project"
           >
             Close
           </Button>

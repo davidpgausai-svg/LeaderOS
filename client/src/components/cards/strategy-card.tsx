@@ -1,9 +1,9 @@
-import { Strategy, Tactic } from "@shared/schema";
+import { Strategy, Project } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 
 interface StrategyCardProps {
-  strategy: Strategy & { tactics?: Tactic[] };
+  strategy: Strategy & { projects?: Project[] };
   onClick?: () => void;
 }
 
@@ -34,9 +34,9 @@ export function StrategyCard({ strategy, onClick }: StrategyCardProps) {
     }
   };
 
-  const completedTactics = strategy.tactics?.filter(t => t.status === 'completed').length || 0;
-  const totalTactics = strategy.tactics?.length || 0;
-  const progress = totalTactics > 0 ? Math.round((completedTactics / totalTactics) * 100) : 0;
+  const completedProjects = strategy.projects?.filter(t => t.status === 'completed').length || 0;
+  const totalProjects = strategy.projects?.length || 0;
+  const progress = totalProjects > 0 ? Math.round((completedProjects / totalProjects) * 100) : 0;
 
   return (
     <div 
@@ -54,7 +54,7 @@ export function StrategyCard({ strategy, onClick }: StrategyCardProps) {
             {getStatusText(strategy.status)}
           </Badge>
           <span className="text-xs text-gray-500">
-            {totalTactics} tactics
+            {totalProjects} projects
           </span>
           <span className="text-xs text-gray-500">
             {progress}% complete

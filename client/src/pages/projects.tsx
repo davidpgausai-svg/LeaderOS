@@ -4,7 +4,7 @@ import { useRole } from "@/hooks/use-role";
 import { Sidebar } from "@/components/layout/sidebar";
 import { CreateProjectModal } from "@/components/modals/create-project-modal";
 import { EditProjectModal } from "@/components/modals/edit-project-modal";
-import { ViewTacticModal } from "@/components/modals/view-tactic-modal";
+import { ViewProjectModal } from "@/components/modals/view-project-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -728,10 +728,10 @@ export default function Projects() {
         onClose={closeEditModal}
         project={editingProject}
       />
-      <ViewTacticModal 
+      <ViewProjectModal 
         isOpen={isViewProjectOpen} 
         onClose={closeViewModal}
-        tactic={viewingProject}
+        project={viewingProject}
       />
     </div>
   );
