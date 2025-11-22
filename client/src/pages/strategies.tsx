@@ -308,7 +308,7 @@ export default function Strategies() {
                             {strategy.title}
                           </CardTitle>
                           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            {strategy.tactics.length} project{strategy.tactics.length !== 1 ? 's' : ''}
+                            {strategy.projects.length} project{strategy.projects.length !== 1 ? 's' : ''}
                           </p>
                         </div>
                       </div>

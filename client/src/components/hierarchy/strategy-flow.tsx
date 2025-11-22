@@ -1,8 +1,8 @@
-import { Strategy, Tactic } from "@shared/schema";
+import { Strategy, Project } from "@shared/schema";
 import { CheckCircle, Clock, Circle } from "lucide-react";
 
 interface StrategyFlowProps {
-  strategies: (Strategy & { tactics: Tactic[] })[];
+  strategies: (Strategy & { projects: Project[] })[];
 }
 
 export function StrategyFlow({ strategies }: StrategyFlowProps) {
@@ -33,12 +33,12 @@ export function StrategyFlow({ strategies }: StrategyFlowProps) {
             </span>
           </div>
           <div className="mt-3 ml-4 space-y-2">
-            {strategy.tactics.slice(0, 3).map((tactic) => (
-              <div key={tactic.id} className="flex items-center text-sm text-gray-600">
+            {strategy.projects.slice(0, 3).map((project) => (
+              <div key={project.id} className="flex items-center text-sm text-gray-600">
                 <div className="w-4 h-4 mr-2 flex items-center justify-center">
-                  {getStatusIcon(tactic.status)}
+                  {getStatusIcon(project.status)}
                 </div>
-                <span className="flex-1">{tactic.title}</span>
+                <span className="flex-1">{project.title}</span>
               </div>
             ))}
           </div>

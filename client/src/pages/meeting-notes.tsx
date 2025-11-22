@@ -43,7 +43,7 @@ type MeetingNote = MeetingNoteType & {
 };
 
 export default function MeetingNotes() {
-  const { canEditTactics } = useRole();
+  const { canEditProjects } = useRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -133,7 +133,7 @@ export default function MeetingNotes() {
     }, 100);
   };
 
-  const canEdit = canEditTactics();
+  const canEdit = canEditProjects();
 
   if (notesLoading) {
     return (

@@ -1,39 +1,39 @@
 import { format } from "date-fns";
-import type { MeetingNote, Strategy, Tactic, Outcome } from "@shared/schema";
+import type { MeetingNote, Strategy, Project, Action } from "@shared/schema";
 
 interface MeetingNotePrintViewProps {
   meetingNote: MeetingNote;
   strategy: Strategy | undefined;
-  tactics: Tactic[];
-  outcomes: Outcome[];
+  projects: Project[];
+  actions: Action[];
 }
 
 export function MeetingNotePrintView({
   meetingNote,
   strategy,
-  tactics,
-  outcomes,
+  projects,
+  actions,
 }: MeetingNotePrintViewProps) {
   const selectedProjectIds = JSON.parse(meetingNote.selectedProjectIds || "[]");
   const selectedActionIds = JSON.parse(meetingNote.selectedActionIds || "[]");
 
-  const selectedProjects = tactics.filter((t) =>
+  const selectedProjects = projects.filter((t) =>
     selectedProjectIds.includes(t.id)
   );
 
-  const selectedActions = outcomes.filter((o) =>
+  const selectedActions = actions.filter((o) =>
     selectedActionIds.includes(o.id)
   );
 
-  // Group actions by their associated tactic/project
+  // Group actions by their associated project
   const actionsByProject = selectedActions.reduce((acc, action) => {
-    const projectId = action.tacticId || "unassigned";
+    const projectId = action.projectId || "unassigned";
     if (!acc[projectId]) {
       acc[projectId] = [];
     }
     acc[projectId].push(action);
     return acc;
-  }, {} as Record<string, Outcome[]>);
+  }, {} as Record<string, Action[]>);
 
   return (
     <div className="print-view hidden print:block bg-white text-black p-8">
