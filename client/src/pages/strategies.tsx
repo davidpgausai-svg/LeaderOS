@@ -308,6 +308,69 @@ export default function Strategies() {
                         <Badge variant="outline" style={{ color: strategy.colorCode }}>
                           {strategy.status}
                         </Badge>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="sm" data-testid={`button-strategy-menu-${strategy.id}`}>
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewStrategy(strategy);
+                              }}
+                              data-testid={`button-view-strategy-${strategy.id}`}
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Details
+                            </DropdownMenuItem>
+                            {canEditAllStrategies() && (
+                              <>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditStrategy(strategy);
+                                  }}
+                                  data-testid={`button-edit-strategy-${strategy.id}`}
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Edit Strategy
+                                </DropdownMenuItem>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem
+                                      className="text-red-600 focus:text-red-600"
+                                      onSelect={(e) => e.preventDefault()}
+                                      data-testid={`button-delete-strategy-${strategy.id}`}
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Delete Strategy
+                                    </DropdownMenuItem>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Delete Strategy</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to delete "{strategy.title}"? This action cannot be undone and will also delete all associated projects.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => handleDeleteStrategy(strategy.id)}
+                                        className="bg-red-600 hover:bg-red-700"
+                                        data-testid={`button-confirm-delete-strategy-${strategy.id}`}
+                                      >
+                                        Delete
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   </CardHeader>
