@@ -1269,7 +1269,14 @@ Respond ONLY with a valid JSON object in this exact format:
       }
       
       const validatedData = insertOutcomeChecklistItemSchema.partial().parse(req.body);
-      const item = await storage.updateOutcomeChecklistItem(req.params.id, validatedData);
+      
+      // Convert boolean isCompleted to string if needed (database stores as text 'true'/'false')
+      const updateData = {
+        ...validatedData,
+        ...(req.body.isCompleted !== undefined && { isCompleted: String(req.body.isCompleted) })
+      };
+      
+      const item = await storage.updateOutcomeChecklistItem(req.params.id, updateData);
       if (!item) {
         return res.status(404).json({ message: "Checklist item not found" });
       }
