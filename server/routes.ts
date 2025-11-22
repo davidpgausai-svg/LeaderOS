@@ -285,17 +285,19 @@ Based on this information, generate detailed content for the following 9 Change 
 8. Reinforcement Plan: Describe how the change will be sustained over time
 9. Benefits Realization Plan: Outline how benefits will be tracked and realized
 
+IMPORTANT: Each field must be a plain text string (not an object or array). Format multi-part content as paragraphs or bullet points within a single string.
+
 Respond ONLY with a valid JSON object in this exact format:
 {
-  "caseForChange": "...",
-  "visionStatement": "...",
-  "successMetrics": "...",
-  "stakeholderMap": "...",
-  "readinessRating": "...",
-  "riskExposureRating": "...",
-  "changeChampionAssignment": "...",
-  "reinforcementPlan": "...",
-  "benefitsRealizationPlan": "..."
+  "caseForChange": "plain text string here...",
+  "visionStatement": "plain text string here...",
+  "successMetrics": "plain text string here...",
+  "stakeholderMap": "plain text string here...",
+  "readinessRating": "plain text string here...",
+  "riskExposureRating": "plain text string here...",
+  "changeChampionAssignment": "plain text string here...",
+  "reinforcementPlan": "plain text string here...",
+  "benefitsRealizationPlan": "plain text string here..."
 }`;
 
       const completion = await openai.chat.completions.create({
@@ -320,7 +322,39 @@ Respond ONLY with a valid JSON object in this exact format:
       }
 
       const generatedFields = JSON.parse(content);
-      res.json(generatedFields);
+      
+      // Convert all fields to strings to avoid [object Object] errors
+      // If a field is an object or array, stringify it properly
+      const sanitizeValue = (value: any): string => {
+        if (typeof value === 'string') {
+          return value;
+        }
+        if (typeof value === 'object' && value !== null) {
+          // If it's an array, join items with newlines
+          if (Array.isArray(value)) {
+            return value.map(item => 
+              typeof item === 'string' ? item : JSON.stringify(item, null, 2)
+            ).join('\n');
+          }
+          // If it's an object, format it nicely
+          return JSON.stringify(value, null, 2);
+        }
+        return String(value);
+      };
+
+      const sanitizedFields = {
+        caseForChange: sanitizeValue(generatedFields.caseForChange),
+        visionStatement: sanitizeValue(generatedFields.visionStatement),
+        successMetrics: sanitizeValue(generatedFields.successMetrics),
+        stakeholderMap: sanitizeValue(generatedFields.stakeholderMap),
+        readinessRating: sanitizeValue(generatedFields.readinessRating),
+        riskExposureRating: sanitizeValue(generatedFields.riskExposureRating),
+        changeChampionAssignment: sanitizeValue(generatedFields.changeChampionAssignment),
+        reinforcementPlan: sanitizeValue(generatedFields.reinforcementPlan),
+        benefitsRealizationPlan: sanitizeValue(generatedFields.benefitsRealizationPlan),
+      };
+
+      res.json(sanitizedFields);
     } catch (error) {
       logger.error("AI generation failed", error);
       res.status(500).json({ message: "Failed to generate Change Continuum fields. Please try again." });
