@@ -57,12 +57,15 @@ import {
 interface UserStrategyRowProps {
   user: any;
   strategies: any[];
+  currentUserId: string;
   onRoleChange: (userId: string, newRole: string) => void;
   onStrategyToggle: (userId: string, strategyId: string, isAssigned: boolean) => void;
+  onDelete: (userId: string, userName: string) => void;
 }
 
-function UserStrategyRow({ user, strategies, onRoleChange, onStrategyToggle }: UserStrategyRowProps) {
+function UserStrategyRow({ user, strategies, currentUserId, onRoleChange, onStrategyToggle, onDelete }: UserStrategyRowProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   const { data: userAssignments } = useQuery({
     queryKey: [`/api/users/${user.id}/strategy-assignments`],
@@ -136,6 +139,37 @@ function UserStrategyRow({ user, strategies, onRoleChange, onStrategyToggle }: U
               <SelectItem value="sme">SME (No Login)</SelectItem>
             </SelectContent>
           </Select>
+          
+          <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={user.id === currentUserId}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950"
+                data-testid={`button-delete-user-${user.id}`}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete User</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete {user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.email}? This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => onDelete(user.id, user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.email || 'this user')}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
       
@@ -318,6 +352,26 @@ export default function Settings() {
     },
   });
 
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      await apiRequest("DELETE", `/api/users/${userId}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "User deleted successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete user",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleProfileUpdate = (formData: FormData) => {
     if (!currentUser?.id) {
       toast({
@@ -336,6 +390,10 @@ export default function Settings() {
       role: currentUser.role, // Keep existing role
     };
     updateUserMutation.mutate(profileData);
+  };
+
+  const handleDeleteUser = (userId: string, userName: string) => {
+    deleteUserMutation.mutate(userId);
   };
 
   const handleUserRoleChange = async (userId: string, newRole: string) => {
@@ -851,8 +909,10 @@ export default function Settings() {
                           key={user.id}
                           user={user}
                           strategies={strategies as any[]}
+                          currentUserId={currentUser?.id || ''}
                           onRoleChange={handleUserRoleChange}
                           onStrategyToggle={handleStrategyAssignmentToggle}
+                          onDelete={handleDeleteUser}
                         />
                       ))}
                     </div>

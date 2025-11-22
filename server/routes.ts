@@ -142,6 +142,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/users/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const requestingUserId = req.user.claims.sub;
+      const requestingUser = await storage.getUser(requestingUserId);
+      
+      // Only administrators can delete users
+      if (!requestingUser || requestingUser.role !== 'administrator') {
+        return res.status(403).json({ message: "Forbidden: Only administrators can delete users" });
+      }
+
+      // Prevent deleting yourself
+      if (req.params.id === requestingUserId) {
+        return res.status(400).json({ message: "Cannot delete your own account" });
+      }
+      
+      const deleted = await storage.deleteUser(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      logger.error("Failed to delete user", error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
   // User Strategy Assignment routes
   app.get("/api/users/:userId/strategy-assignments", isAuthenticated, async (req: any, res) => {
     try {
