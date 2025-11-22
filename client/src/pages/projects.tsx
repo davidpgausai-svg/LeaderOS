@@ -62,7 +62,8 @@ import {
   ChevronRight,
   Edit,
   Eye,
-  ExternalLink
+  ExternalLink,
+  MessageSquarePlus
 } from "lucide-react";
 
 type Strategy = {
@@ -507,6 +508,22 @@ export default function Tactics() {
                                       <p className="text-gray-600 dark:text-gray-400 mb-4">
                                         {tactic.description}
                                       </p>
+                                      
+                                      {/* Communication Plan Link */}
+                                      {tactic.communicationUrl && (
+                                        <a
+                                          href={tactic.communicationUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline mb-2"
+                                          data-testid={`link-communication-plan-${tactic.id}`}
+                                          aria-label="Open communication plan in new tab"
+                                        >
+                                          <MessageSquarePlus className="w-4 h-4" />
+                                          Communication Plan
+                                          <ExternalLink className="w-3 h-3" />
+                                        </a>
+                                      )}
                                     </div>
                                     
                                     <DropdownMenu>
