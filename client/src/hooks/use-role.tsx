@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { User } from '@shared/schema';
 
-type Role = 'administrator' | 'co_lead' | 'view';
+type Role = 'administrator' | 'co_lead' | 'view' | 'sme';
 
 interface RoleStore {
   currentRole: Role;
