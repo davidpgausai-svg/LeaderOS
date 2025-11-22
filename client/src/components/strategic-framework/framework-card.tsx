@@ -23,8 +23,8 @@ interface FrameworkCardProps {
   title: string;
   goal: string;
   description: string;
-  tactics: any[];
-  outcomes: any[];
+  projects: any[];
+  actions: any[];
   colorCode: string;
   icon: React.ReactNode;
   status: string;
@@ -44,8 +44,8 @@ export function FrameworkCard({
   title, 
   goal, 
   description, 
-  tactics, 
-  outcomes, 
+  projects, 
+  actions, 
   colorCode, 
   icon, 
   status,
@@ -62,10 +62,10 @@ export function FrameworkCard({
 }: FrameworkCardProps) {
   const [expandedContinuum, setExpandedContinuum] = useState(false);
   
-  // Calculate completed tactics based on their actual progress (>= 100%)
-  const completedTactics = tactics.filter(t => (t.progress || 0) >= 100).length;
-  // Calculate completed outcomes based on their status
-  const completedOutcomes = outcomes.filter(o => o.status === 'achieved').length;
+  // Calculate completed projects based on their actual progress (>= 100%)
+  const completedProjects = projects.filter(t => (t.progress || 0) >= 100).length;
+  // Calculate completed actions based on their status
+  const completedActions = actions.filter(o => o.status === 'achieved').length;
 
   return (
     <Card className="h-full hover:shadow-lg transition-shadow duration-200">
@@ -186,26 +186,26 @@ export function FrameworkCard({
               <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">PROJECTS</span>
             </div>
             <Badge variant="secondary" className="text-xs">
-              {completedTactics}/{tactics.length}
+              {completedProjects}/{projects.length}
             </Badge>
           </div>
           <div className="space-y-2">
-            {tactics.slice(0, 3).map((tactic, index) => (
+            {projects.slice(0, 3).map((project, index) => (
               <div key={index} className="flex items-start justify-between">
                 <div className="flex items-start space-x-2 flex-1">
                   <div className="w-1.5 h-1.5 rounded-full bg-gray-400 mt-2 flex-shrink-0" />
                   <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {tactic.title}
+                    {project.title}
                   </p>
                 </div>
                 <span className="text-xs text-gray-500 font-medium">
-                  {tactic.progress || 0}%
+                  {project.progress || 0}%
                 </span>
               </div>
             ))}
-            {tactics.length > 3 && (
+            {projects.length > 3 && (
               <p className="text-xs text-gray-500 dark:text-gray-500 italic">
-                +{tactics.length - 3} more projects
+                +{projects.length - 3} more projects
               </p>
             )}
           </div>
@@ -221,25 +221,25 @@ export function FrameworkCard({
               </span>
             </div>
             <Badge variant="secondary" className="text-xs">
-              {completedOutcomes}/{outcomes.length}
+              {completedActions}/{actions.length}
             </Badge>
           </div>
           <div className="space-y-2">
-            {outcomes.slice(0, 4).map((outcome, index) => (
+            {actions.slice(0, 4).map((action, index) => (
               <div key={index} className="flex items-start space-x-2">
                 <CheckCircle className={`w-3 h-3 mt-0.5 flex-shrink-0 ${
-                  outcome.status === 'achieved' ? 'text-green-500' : 
-                  outcome.status === 'at_risk' ? 'text-red-500' : 
+                  action.status === 'achieved' ? 'text-green-500' : 
+                  action.status === 'at_risk' ? 'text-red-500' : 
                   'text-gray-400'
                 }`} />
                 <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                  {outcome.title}
+                  {action.title}
                 </p>
               </div>
             ))}
-            {outcomes.length > 4 && (
+            {actions.length > 4 && (
               <p className="text-xs text-gray-500 dark:text-gray-500 italic">
-                +{outcomes.length - 4} more actions
+                +{actions.length - 4} more actions
               </p>
             )}
           </div>

@@ -39,7 +39,7 @@ type Strategy = {
   dueDate: string;
 };
 
-type Tactic = {
+type Project = {
   id: string;
   title: string;
   strategyId: string;
@@ -50,10 +50,10 @@ type Tactic = {
   assignedTo: string;
 };
 
-type Outcome = {
+type Action = {
   id: string;
   title: string;
-  tacticId: string;
+  projectId: string;
   strategyId: string;
   status: string;
   targetDate: string;
@@ -75,12 +75,12 @@ export default function Reports() {
     queryKey: ["/api/strategies"],
   });
 
-  const { data: tactics = [], isLoading: tacticsLoading } = useQuery<Tactic[]>({
-    queryKey: ["/api/tactics"],
+  const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
+    queryKey: ["/api/projects"],
   });
 
-  const { data: outcomes = [], isLoading: outcomesLoading } = useQuery<Outcome[]>({
-    queryKey: ["/api/outcomes"],
+  const { data: actions = [], isLoading: actionsLoading } = useQuery<Action[]>({
+    queryKey: ["/api/actions"],
   });
 
   const { data: users = [] } = useQuery<User[]>({
@@ -104,10 +104,10 @@ export default function Reports() {
   };
 
   // Helper function to determine risk level
-  const getRiskLevel = (item: any, type: 'strategy' | 'tactic' | 'outcome'): 'on-track' | 'at-risk' | 'critical' | 'blocked' => {
+  const getRiskLevel = (item: any, type: 'strategy' | 'project' | 'action'): 'on-track' | 'at-risk' | 'critical' | 'blocked' => {
     const today = new Date();
     
-    if (type === 'outcome') {
+    if (type === 'action') {
       if (item.status === 'achieved') return 'on-track';
       if (item.status === 'blocked') return 'blocked';
       const targetDate = safeDate(item.targetDate);
@@ -118,9 +118,9 @@ export default function Reports() {
       return 'on-track';
     }
 
-    if (type === 'tactic' || type === 'strategy') {
+    if (type === 'project' || type === 'strategy') {
       const progress = item.progress || 0;
-      const dueDateString = type === 'tactic' ? item.dueDate : item.targetDate;
+      const dueDateString = type === 'project' ? item.dueDate : item.targetDate;
       const dueDate = safeDate(dueDateString);
       
       if (!dueDate) return 'on-track';
@@ -169,16 +169,16 @@ export default function Reports() {
   const activeStrategies = strategies.filter(s => s.status === 'active').length;
   const atRiskStrategies = strategies.filter(s => getRiskLevel(s, 'strategy') === 'at-risk' || getRiskLevel(s, 'strategy') === 'critical').length;
 
-  const totalTactics = tactics.length;
-  const overdueTactics = tactics.filter(t => {
+  const totalProjects = projects.length;
+  const overdueProjects = projects.filter(t => {
     const dueDate = safeDate(t.dueDate);
     return dueDate && isPast(dueDate) && t.progress < 100;
   }).length;
 
-  const totalOutcomes = outcomes.length;
-  const achievedOutcomes = outcomes.filter(o => o.status === 'achieved').length;
+  const totalActions = actions.length;
+  const achievedActions = actions.filter(o => o.status === 'achieved').length;
 
-  if (strategiesLoading || tacticsLoading || outcomesLoading) {
+  if (strategiesLoading || projectsLoading || actionsLoading) {
     return (
       <div className="min-h-screen flex bg-white dark:bg-gray-900">
         <Sidebar />
@@ -269,7 +269,7 @@ export default function Reports() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-red-600" data-testid="text-overdue-projects">
-                  {overdueTactics}
+                  {overdueProjects}
                 </div>
                 <div className="text-xs text-red-600 mt-1">
                   past due date
@@ -286,10 +286,10 @@ export default function Reports() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-green-600" data-testid="text-completion-rate">
-                  {totalOutcomes > 0 ? Math.round((achievedOutcomes / totalOutcomes) * 100) : 0}%
+                  {totalActions > 0 ? Math.round((achievedActions / totalActions) * 100) : 0}%
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {achievedOutcomes} of {totalOutcomes}
+                  {achievedActions} of {totalActions}
                 </div>
               </CardContent>
             </Card>
@@ -316,8 +316,8 @@ export default function Reports() {
             <TabsContent value="health" className="space-y-4">
               <StrategyHealthReport
                 strategies={strategies}
-                tactics={tactics}
-                outcomes={outcomes}
+                projects={projects}
+                actions={actions}
                 getRiskLevel={getRiskLevel}
                 getRiskBadge={getRiskBadge}
                 safeDate={safeDate}
@@ -328,8 +328,8 @@ export default function Reports() {
             <TabsContent value="timeline" className="space-y-4">
               <TimelineRiskReport
                 strategies={strategies}
-                tactics={tactics}
-                outcomes={outcomes}
+                projects={projects}
+                actions={actions}
                 getRiskLevel={getRiskLevel}
                 getRiskBadge={getRiskBadge}
                 safeDate={safeDate}
@@ -339,8 +339,8 @@ export default function Reports() {
             {/* Ownership Report */}
             <TabsContent value="ownership" className="space-y-4">
               <OwnershipReport
-                tactics={tactics}
-                outcomes={outcomes}
+                projects={projects}
+                actions={actions}
                 users={users}
                 strategies={strategies}
                 safeDate={safeDate}
@@ -354,8 +354,8 @@ export default function Reports() {
               <h2 className="text-xl font-bold mb-4">Strategy Health Overview</h2>
               <StrategyHealthReport
                 strategies={strategies}
-                tactics={tactics}
-                outcomes={outcomes}
+                projects={projects}
+                actions={actions}
                 getRiskLevel={getRiskLevel}
                 getRiskBadge={getRiskBadge}
                 safeDate={safeDate}
@@ -365,8 +365,8 @@ export default function Reports() {
               <h2 className="text-xl font-bold mb-4">Timeline Risk</h2>
               <TimelineRiskReport
                 strategies={strategies}
-                tactics={tactics}
-                outcomes={outcomes}
+                projects={projects}
+                actions={actions}
                 getRiskLevel={getRiskLevel}
                 getRiskBadge={getRiskBadge}
                 safeDate={safeDate}
@@ -375,8 +375,8 @@ export default function Reports() {
             <div className="page-break">
               <h2 className="text-xl font-bold mb-4">Resource & Ownership</h2>
               <OwnershipReport
-                tactics={tactics}
-                outcomes={outcomes}
+                projects={projects}
+                actions={actions}
                 users={users}
                 strategies={strategies}
                 safeDate={safeDate}
@@ -390,9 +390,9 @@ export default function Reports() {
 }
 
 // Strategy Health Report Component
-function StrategyHealthReport({ strategies, tactics, outcomes, getRiskLevel, getRiskBadge, safeDate }: any) {
+function StrategyHealthReport({ strategies, projects, actions, getRiskLevel, getRiskBadge, safeDate }: any) {
   const [openStrategies, setOpenStrategies] = useState<Set<string>>(new Set());
-  const [openTactics, setOpenTactics] = useState<Set<string>>(new Set());
+  const [openProjects, setOpenProjects] = useState<Set<string>>(new Set());
 
   const toggleStrategy = (id: string) => {
     const newSet = new Set(openStrategies);
@@ -404,14 +404,14 @@ function StrategyHealthReport({ strategies, tactics, outcomes, getRiskLevel, get
     setOpenStrategies(newSet);
   };
 
-  const toggleTactic = (id: string) => {
-    const newSet = new Set(openTactics);
+  const toggleProject = (id: string) => {
+    const newSet = new Set(openProjects);
     if (newSet.has(id)) {
       newSet.delete(id);
     } else {
       newSet.add(id);
     }
-    setOpenTactics(newSet);
+    setOpenProjects(newSet);
   };
 
   return (
@@ -427,7 +427,7 @@ function StrategyHealthReport({ strategies, tactics, outcomes, getRiskLevel, get
       </CardHeader>
       <CardContent className="space-y-4">
         {strategies.map((strategy: any) => {
-          const strategyTactics = tactics.filter((t: any) => t.strategyId === strategy.id);
+          const strategyProjects = projects.filter((t: any) => t.strategyId === strategy.id);
           const strategyRisk = getRiskLevel(strategy, 'strategy');
           const isOpen = openStrategies.has(strategy.id);
 
@@ -448,7 +448,7 @@ function StrategyHealthReport({ strategies, tactics, outcomes, getRiskLevel, get
                       />
                       <div className="text-left flex-1">
                         <h3 className="font-semibold text-gray-900 dark:text-white">{strategy.title}</h3>
-                        <p className="text-sm text-gray-500">{strategyTactics.length} projects</p>
+                        <p className="text-sm text-gray-500">{strategyProjects.length} projects</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-4">
@@ -464,63 +464,63 @@ function StrategyHealthReport({ strategies, tactics, outcomes, getRiskLevel, get
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <div className="pl-8 pr-4 pb-4 space-y-2">
-                    {strategyTactics.length === 0 ? (
+                    {strategyProjects.length === 0 ? (
                       <p className="text-sm text-gray-500 italic py-2">No projects defined</p>
                     ) : (
-                      strategyTactics.map((tactic: any) => {
-                        const tacticOutcomes = outcomes.filter((o: any) => o.tacticId === tactic.id);
-                        const tacticRisk = getRiskLevel(tactic, 'tactic');
-                        const isTacticOpen = openTactics.has(tactic.id);
+                      strategyProjects.map((project: any) => {
+                        const projectActions = actions.filter((o: any) => o.projectId === project.id);
+                        const projectRisk = getRiskLevel(project, 'project');
+                        const isProjectOpen = openProjects.has(project.id);
 
                         return (
-                          <div key={tactic.id} className="border-l-2 border-gray-300 dark:border-gray-600 ml-2" data-testid={`tactic-${tactic.id}`}>
-                            <Collapsible open={isTacticOpen} onOpenChange={() => toggleTactic(tactic.id)}>
+                          <div key={project.id} className="border-l-2 border-gray-300 dark:border-gray-600 ml-2" data-testid={`project-${project.id}`}>
+                            <Collapsible open={isProjectOpen} onOpenChange={() => toggleProject(project.id)}>
                               <CollapsibleTrigger className="w-full">
                                 <div className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                                   <div className="flex items-center space-x-2 flex-1">
-                                    {isTacticOpen ? (
+                                    {isProjectOpen ? (
                                       <ChevronDown className="w-3 h-3 text-gray-500" />
                                     ) : (
                                       <ChevronRight className="w-3 h-3 text-gray-500" />
                                     )}
                                     <div className="text-left flex-1">
-                                      <h4 className="font-medium text-sm text-gray-900 dark:text-white">{tactic.title}</h4>
-                                      <p className="text-xs text-gray-500">{tacticOutcomes.length} actions</p>
+                                      <h4 className="font-medium text-sm text-gray-900 dark:text-white">{project.title}</h4>
+                                      <p className="text-xs text-gray-500">{projectActions.length} actions</p>
                                     </div>
                                   </div>
                                   <div className="flex items-center space-x-3">
-                                    <Progress value={tactic.progress || 0} className="w-24 h-2" />
+                                    <Progress value={project.progress || 0} className="w-24 h-2" />
                                     <span className="text-xs text-gray-600 dark:text-gray-400 w-10">
-                                      {tactic.progress || 0}%
+                                      {project.progress || 0}%
                                     </span>
-                                    {getRiskBadge(tacticRisk)}
+                                    {getRiskBadge(projectRisk)}
                                   </div>
                                 </div>
                               </CollapsibleTrigger>
                               <CollapsibleContent>
                                 <div className="pl-6 pr-3 pb-2 space-y-1">
-                                  {tacticOutcomes.length === 0 ? (
+                                  {projectActions.length === 0 ? (
                                     <p className="text-xs text-gray-500 italic py-1">No actions defined</p>
                                   ) : (
-                                    tacticOutcomes.map((outcome: any) => {
-                                      const outcomeRisk = getRiskLevel(outcome, 'outcome');
-                                      const targetDate = safeDate(outcome.targetDate);
-                                      const isOverdue = targetDate && isPast(targetDate) && outcome.status !== 'achieved';
+                                    projectActions.map((action: any) => {
+                                      const actionRisk = getRiskLevel(action, 'action');
+                                      const targetDate = safeDate(action.targetDate);
+                                      const isOverdue = targetDate && isPast(targetDate) && action.status !== 'achieved';
 
                                       return (
                                         <div
-                                          key={outcome.id}
+                                          key={action.id}
                                           className="flex items-center justify-between p-2 text-sm"
-                                          data-testid={`outcome-${outcome.id}`}
+                                          data-testid={`action-${action.id}`}
                                         >
                                           <div className="flex items-center space-x-2 flex-1">
-                                            {outcome.status === 'achieved' ? (
+                                            {action.status === 'achieved' ? (
                                               <CheckCircle className="w-3 h-3 text-green-600" />
                                             ) : (
                                               <Clock className="w-3 h-3 text-gray-400" />
                                             )}
-                                            <span className={outcome.status === 'achieved' ? 'text-gray-500 line-through' : ''}>
-                                              {outcome.title}
+                                            <span className={action.status === 'achieved' ? 'text-gray-500 line-through' : ''}>
+                                              {action.title}
                                             </span>
                                           </div>
                                           <div className="flex items-center space-x-2">
@@ -564,13 +564,13 @@ function StrategyHealthReport({ strategies, tactics, outcomes, getRiskLevel, get
 }
 
 // Timeline Risk Report Component
-function TimelineRiskReport({ strategies, tactics, outcomes, getRiskLevel, getRiskBadge, safeDate }: any) {
-  const overdueTactics = tactics.filter((t: any) => {
+function TimelineRiskReport({ strategies, projects, actions, getRiskLevel, getRiskBadge, safeDate }: any) {
+  const overdueProjects = projects.filter((t: any) => {
     const dueDate = safeDate(t.dueDate);
     return dueDate && isPast(dueDate) && t.progress < 100;
   });
 
-  const upcomingTactics = tactics.filter((t: any) => {
+  const upcomingProjects = projects.filter((t: any) => {
     const dueDate = safeDate(t.dueDate);
     if (!dueDate) return false;
     const daysUntilDue = differenceInDays(dueDate, new Date());
@@ -589,27 +589,27 @@ function TimelineRiskReport({ strategies, tactics, outcomes, getRiskLevel, getRi
         <CardHeader>
           <CardTitle className="flex items-center text-red-600">
             <XCircle className="w-5 h-5 mr-2" />
-            Overdue Projects ({overdueTactics.length})
+            Overdue Projects ({overdueProjects.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {overdueTactics.length === 0 ? (
+          {overdueProjects.length === 0 ? (
             <div className="text-center py-8">
               <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
               <p className="text-gray-500">No overdue projects</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {overdueTactics.map((tactic: any) => {
-                const strategy = strategies.find((s: any) => s.id === tactic.strategyId);
-                const dueDate = safeDate(tactic.dueDate);
+              {overdueProjects.map((project: any) => {
+                const strategy = strategies.find((s: any) => s.id === project.strategyId);
+                const dueDate = safeDate(project.dueDate);
                 const daysOverdue = dueDate ? differenceInDays(new Date(), dueDate) : 0;
 
                 return (
                   <div
-                    key={tactic.id}
+                    key={project.id}
                     className="p-4 border border-red-200 dark:border-red-800 rounded-lg bg-red-50 dark:bg-red-900/20"
-                    data-testid={`overdue-${tactic.id}`}
+                    data-testid={`overdue-${project.id}`}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center space-x-2">
@@ -619,7 +619,7 @@ function TimelineRiskReport({ strategies, tactics, outcomes, getRiskLevel, getRi
                             style={{ backgroundColor: strategy.colorCode }}
                           />
                         )}
-                        <h4 className="font-semibold text-gray-900 dark:text-white">{tactic.title}</h4>
+                        <h4 className="font-semibold text-gray-900 dark:text-white">{project.title}</h4>
                       </div>
                       <Badge className="bg-red-600 text-white">
                         {daysOverdue} days overdue
@@ -637,8 +637,8 @@ function TimelineRiskReport({ strategies, tactics, outcomes, getRiskLevel, getRi
                         </span>
                       )}
                       <div className="flex items-center space-x-2">
-                        <Progress value={tactic.progress || 0} className="w-32 h-2" />
-                        <span className="text-sm font-medium">{tactic.progress || 0}%</span>
+                        <Progress value={project.progress || 0} className="w-32 h-2" />
+                        <span className="text-sm font-medium">{project.progress || 0}%</span>
                       </div>
                     </div>
                   </div>
@@ -658,24 +658,24 @@ function TimelineRiskReport({ strategies, tactics, outcomes, getRiskLevel, getRi
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {upcomingTactics.length === 0 ? (
+          {upcomingProjects.length === 0 ? (
             <div className="text-center py-8">
               <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500">No upcoming deadlines in the next 30 days</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {upcomingTactics.map((tactic: any) => {
-                const strategy = strategies.find((s: any) => s.id === tactic.strategyId);
-                const dueDate = safeDate(tactic.dueDate);
+              {upcomingProjects.map((project: any) => {
+                const strategy = strategies.find((s: any) => s.id === project.strategyId);
+                const dueDate = safeDate(project.dueDate);
                 const daysUntilDue = dueDate ? differenceInDays(dueDate, new Date()) : 0;
-                const tacticRisk = getRiskLevel(tactic, 'tactic');
+                const projectRisk = getRiskLevel(project, 'project');
 
                 return (
                   <div
-                    key={tactic.id}
+                    key={project.id}
                     className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
-                    data-testid={`upcoming-${tactic.id}`}
+                    data-testid={`upcoming-${project.id}`}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center space-x-2">
@@ -685,9 +685,9 @@ function TimelineRiskReport({ strategies, tactics, outcomes, getRiskLevel, getRi
                             style={{ backgroundColor: strategy.colorCode }}
                           />
                         )}
-                        <h4 className="font-semibold text-gray-900 dark:text-white">{tactic.title}</h4>
+                        <h4 className="font-semibold text-gray-900 dark:text-white">{project.title}</h4>
                       </div>
-                      {getRiskBadge(tacticRisk)}
+                      {getRiskBadge(projectRisk)}
                     </div>
                     {strategy && (
                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
@@ -701,8 +701,8 @@ function TimelineRiskReport({ strategies, tactics, outcomes, getRiskLevel, getRi
                         </span>
                       )}
                       <div className="flex items-center space-x-2">
-                        <Progress value={tactic.progress || 0} className="w-32 h-2" />
-                        <span className="text-sm font-medium">{tactic.progress || 0}%</span>
+                        <Progress value={project.progress || 0} className="w-32 h-2" />
+                        <span className="text-sm font-medium">{project.progress || 0}%</span>
                       </div>
                     </div>
                   </div>
@@ -717,28 +717,28 @@ function TimelineRiskReport({ strategies, tactics, outcomes, getRiskLevel, getRi
 }
 
 // Ownership Report Component
-function OwnershipReport({ tactics, outcomes, users, strategies, safeDate }: any) {
+function OwnershipReport({ projects, actions, users, strategies, safeDate }: any) {
   const userPerformance = users.map((user: any) => {
-    const userTactics = tactics.filter((t: any) => t.assignedTo === user.id);
-    const completedTactics = userTactics.filter((t: any) => t.progress >= 100).length;
-    const inProgressTactics = userTactics.filter((t: any) => t.progress > 0 && t.progress < 100).length;
-    const overdueTactics = userTactics.filter((t: any) => {
+    const userProjects = projects.filter((t: any) => t.assignedTo === user.id);
+    const completedProjects = userProjects.filter((t: any) => t.progress >= 100).length;
+    const inProgressProjects = userProjects.filter((t: any) => t.progress > 0 && t.progress < 100).length;
+    const overdueProjects = userProjects.filter((t: any) => {
       const dueDate = safeDate(t.dueDate);
       return dueDate && isPast(dueDate) && t.progress < 100;
     }).length;
 
-    const avgProgress = userTactics.length > 0
-      ? Math.round(userTactics.reduce((sum: number, t: any) => sum + (t.progress || 0), 0) / userTactics.length)
+    const avgProgress = userProjects.length > 0
+      ? Math.round(userProjects.reduce((sum: number, t: any) => sum + (t.progress || 0), 0) / userProjects.length)
       : 0;
 
     return {
       user,
-      totalProjects: userTactics.length,
-      completedProjects: completedTactics,
-      inProgressProjects: inProgressTactics,
-      overdueProjects: overdueTactics,
+      totalProjects: userProjects.length,
+      completedProjects: completedProjects,
+      inProgressProjects: inProgressProjects,
+      overdueProjects: overdueProjects,
       avgProgress,
-      tactics: userTactics,
+      projects: userProjects,
     };
   }).filter((up: any) => up.totalProjects > 0);
 
@@ -785,16 +785,16 @@ function OwnershipReport({ tactics, outcomes, users, strategies, safeDate }: any
 
             <div className="space-y-2">
               <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300 mb-2">Assigned Projects</h4>
-              {perf.tactics.map((tactic: any) => {
-                const strategy = strategies.find((s: any) => s.id === tactic.strategyId);
-                const dueDate = safeDate(tactic.dueDate);
-                const isOverdue = dueDate && isPast(dueDate) && tactic.progress < 100;
+              {perf.projects.map((project: any) => {
+                const strategy = strategies.find((s: any) => s.id === project.strategyId);
+                const dueDate = safeDate(project.dueDate);
+                const isOverdue = dueDate && isPast(dueDate) && project.progress < 100;
 
                 return (
                   <div
-                    key={tactic.id}
+                    key={project.id}
                     className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded"
-                    data-testid={`user-tactic-${tactic.id}`}
+                    data-testid={`user-project-${project.id}`}
                   >
                     <div className="flex items-center space-x-2 flex-1">
                       {strategy && (
@@ -804,7 +804,7 @@ function OwnershipReport({ tactics, outcomes, users, strategies, safeDate }: any
                         />
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{tactic.title}</p>
+                        <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{project.title}</p>
                         {dueDate && (
                           <p className="text-xs text-gray-500">
                             Due: {format(dueDate, 'MMM dd, yyyy')}
@@ -813,8 +813,8 @@ function OwnershipReport({ tactics, outcomes, users, strategies, safeDate }: any
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
-                      <Progress value={tactic.progress || 0} className="w-24 h-2" />
-                      <span className="text-sm font-medium w-12">{tactic.progress || 0}%</span>
+                      <Progress value={project.progress || 0} className="w-24 h-2" />
+                      <span className="text-sm font-medium w-12">{project.progress || 0}%</span>
                       {isOverdue && (
                         <Badge className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300">
                           Overdue

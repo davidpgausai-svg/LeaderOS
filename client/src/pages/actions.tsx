@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRole } from "@/hooks/use-role";
 import { Sidebar } from "@/components/layout/sidebar";
-import { CreateOutcomeModal } from "@/components/modals/create-outcome-modal";
-import { EditOutcomeModal } from "@/components/modals/edit-outcome-modal";
+import { CreateActionModal } from "@/components/modals/create-action-modal";
+import { EditActionModal } from "@/components/modals/edit-action-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -63,19 +63,19 @@ type Strategy = {
   displayOrder?: number;
 };
 
-type Tactic = {
+type Project = {
   id: string;
   title: string;
   strategyId: string;
   createdAt: string;
 };
 
-type Outcome = {
+type Action = {
   id: string;
   title: string;
   description: string;
   strategyId: string;
-  tacticId?: string;
+  projectId?: string;
   targetValue?: string;
   currentValue?: string;
   measurementUnit?: string;
@@ -85,11 +85,11 @@ type Outcome = {
   createdBy: string;
   createdAt: string;
   strategy?: Strategy;
-  tactic?: Tactic;
+  project?: Project;
 };
 
 export default function Actions() {
-  const { currentRole, currentUser, canCreateTactics } = useRole();
+  const { currentRole, currentUser, canCreateProjects } = useRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
@@ -97,20 +97,20 @@ export default function Actions() {
   const [strategyFilter, setStrategyFilter] = useState("all");
   const [collapsedStrategies, setCollapsedStrategies] = useState<Set<string>>(new Set());
   const [projectFilterByStrategy, setProjectFilterByStrategy] = useState<Record<string, string>>({});
-  const [isCreateOutcomeOpen, setIsCreateOutcomeOpen] = useState(false);
-  const [isEditOutcomeOpen, setIsEditOutcomeOpen] = useState(false);
-  const [selectedOutcome, setSelectedOutcome] = useState<Outcome | null>(null);
+  const [isCreateActionOpen, setIsCreateActionOpen] = useState(false);
+  const [isEditActionOpen, setIsEditActionOpen] = useState(false);
+  const [selectedAction, setSelectedAction] = useState<Action | null>(null);
 
-  const { data: outcomes, isLoading: outcomesLoading } = useQuery({
-    queryKey: ["/api/outcomes"],
+  const { data: actions, isLoading: actionsLoading } = useQuery({
+    queryKey: ["/api/actions"],
   });
 
   const { data: strategies } = useQuery({
     queryKey: ["/api/strategies"],
   });
 
-  const { data: tactics } = useQuery({
-    queryKey: ["/api/tactics"],
+  const { data: projects } = useQuery({
+    queryKey: ["/api/projects"],
   });
 
   // Initialize all strategies as collapsed by default when strategies data loads
@@ -123,19 +123,19 @@ export default function Actions() {
     }
   }, [strategies, hasInitializedCollapsed]);
 
-  // Enhance outcomes with strategy and tactic data
-  const outcomesWithDetails = (outcomes as Outcome[])?.map((outcome) => ({
-    ...outcome,
-    strategy: (strategies as Strategy[])?.find((s) => s.id === outcome.strategyId),
-    tactic: (tactics as Tactic[])?.find((t) => t.id === outcome.tacticId),
+  // Enhance actions with strategy and project data
+  const actionsWithDetails = (actions as Action[])?.map((action) => ({
+    ...action,
+    strategy: (strategies as Strategy[])?.find((s) => s.id === action.strategyId),
+    project: (projects as Project[])?.find((t) => t.id === action.projectId),
   })) || [];
 
-  const deleteOutcomeMutation = useMutation({
-    mutationFn: async (outcomeId: string) => {
-      await apiRequest("DELETE", `/api/outcomes/${outcomeId}`);
+  const deleteActionMutation = useMutation({
+    mutationFn: async (actionId: string) => {
+      await apiRequest("DELETE", `/api/actions/${actionId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/outcomes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
       toast({
         title: "Success",
         description: "Action deleted successfully",
@@ -150,13 +150,13 @@ export default function Actions() {
     },
   });
 
-  const handleEditOutcome = (outcome: Outcome) => {
-    setSelectedOutcome(outcome);
-    setIsEditOutcomeOpen(true);
+  const handleEditAction = (action: Action) => {
+    setSelectedAction(action);
+    setIsEditActionOpen(true);
   };
 
-  const handleDeleteOutcome = (outcomeId: string) => {
-    deleteOutcomeMutation.mutate(outcomeId);
+  const handleDeleteAction = (actionId: string) => {
+    deleteActionMutation.mutate(actionId);
   };
 
   const getStatusDisplay = (status: string) => {
@@ -262,29 +262,29 @@ export default function Actions() {
     return { label, bgColor, textColor };
   };
 
-  // Filter outcomes
-  const filteredOutcomes = outcomesWithDetails.filter((outcome) => {
-    const matchesSearch = outcome.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         outcome.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         outcome.strategy?.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || outcome.status === statusFilter;
-    const matchesStrategy = strategyFilter === "all" || outcome.strategyId === strategyFilter;
+  // Filter actions
+  const filteredActions = actionsWithDetails.filter((action) => {
+    const matchesSearch = action.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         action.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         action.strategy?.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || action.status === statusFilter;
+    const matchesStrategy = strategyFilter === "all" || action.strategyId === strategyFilter;
     
-    // Filter out archived outcomes and outcomes from archived strategies
-    const isNotArchived = outcome.isArchived !== 'true' && outcome.strategy?.status !== 'Archived';
+    // Filter out archived actions and actions from archived strategies
+    const isNotArchived = action.isArchived !== 'true' && action.strategy?.status !== 'Archived';
     
     return matchesSearch && matchesStatus && matchesStrategy && isNotArchived;
   });
 
-  // Group outcomes by strategy
-  const outcomesByStrategy = filteredOutcomes.reduce((groups, outcome) => {
-    const strategyId = outcome.strategyId;
+  // Group actions by strategy
+  const actionsByStrategy = filteredActions.reduce((groups, action) => {
+    const strategyId = action.strategyId;
     if (!groups[strategyId]) {
       groups[strategyId] = [];
     }
-    groups[strategyId].push(outcome);
+    groups[strategyId].push(action);
     return groups;
-  }, {} as Record<string, Outcome[]>);
+  }, {} as Record<string, Action[]>);
 
   // Get all active strategies sorted by displayOrder (with fallback to title for stable sorting)
   const sortedStrategies = ((strategies as Strategy[]) || [])
@@ -313,27 +313,27 @@ export default function Actions() {
     }));
   };
 
-  const getFilteredOutcomesForStrategy = (strategyId: string, outcomes: Outcome[]) => {
+  const getFilteredActionsForStrategy = (strategyId: string, actions: Action[]) => {
     const projectFilter = projectFilterByStrategy[strategyId] || "all";
     const filtered = projectFilter === "all" 
-      ? outcomes 
-      : outcomes.filter(outcome => outcome.tacticId === projectFilter);
+      ? actions 
+      : actions.filter(action => action.projectId === projectFilter);
     
-    // Sort outcomes by creation date
+    // Sort actions by creation date
     return [...filtered].sort((a, b) => 
       new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     );
   };
 
   const getProjectsForStrategy = (strategyId: string) => {
-    const projects = (tactics as Tactic[])?.filter(t => t.strategyId === strategyId) || [];
+    const strategyProjects = (projects as Project[])?.filter(t => t.strategyId === strategyId) || [];
     // Sort projects by creation date
-    return [...projects].sort((a, b) => 
+    return [...strategyProjects].sort((a, b) => 
       new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     );
   };
 
-  if (outcomesLoading) {
+  if (actionsLoading) {
     return (
       <div className="flex h-screen">
         <Sidebar />
@@ -356,8 +356,8 @@ export default function Actions() {
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Actions</h1>
               <p className="text-gray-600 dark:text-gray-400">Track measurable results and achievements</p>
             </div>
-            {canCreateTactics() && (
-              <Button onClick={() => setIsCreateOutcomeOpen(true)} data-testid="button-create-outcome">
+            {canCreateProjects() && (
+              <Button onClick={() => setIsCreateActionOpen(true)} data-testid="button-create-action">
                 <Plus className="w-4 h-4 mr-2" />
                 New Action
               </Button>
@@ -376,7 +376,7 @@ export default function Actions() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
-                  data-testid="input-search-outcomes"
+                  data-testid="input-search-actions"
                 />
               </div>
             </div>
@@ -421,13 +421,13 @@ export default function Actions() {
               <p className="text-gray-600 dark:text-gray-400 mb-6">
                 {searchTerm || statusFilter !== "all" || strategyFilter !== "all" 
                   ? "Try adjusting your filters to see more strategies."
-                  : "Get started by creating your first outcome."
+                  : "Get started by creating your first action."
                 }
               </p>
-              {canCreateTactics() && !searchTerm && statusFilter === "all" && strategyFilter === "all" && (
-                <Button onClick={() => setIsCreateOutcomeOpen(true)}>
+              {canCreateProjects() && !searchTerm && statusFilter === "all" && strategyFilter === "all" && (
+                <Button onClick={() => setIsCreateActionOpen(true)}>
                   <Plus className="w-4 h-4 mr-2" />
-                  Create Your First Outcome
+                  Create Your First Action
                 </Button>
               )}
             </div>
@@ -435,17 +435,17 @@ export default function Actions() {
             <div className="space-y-6">
               {sortedStrategies.map((strategy) => {
                 const strategyId = strategy.id;
-                const strategyOutcomes = outcomesByStrategy[strategyId] || [];
+                const strategyActions = actionsByStrategy[strategyId] || [];
                 const isCollapsed = collapsedStrategies.has(strategyId);
                 const strategyProjects = getProjectsForStrategy(strategyId);
-                const filteredOutcomes = getFilteredOutcomesForStrategy(strategyId, strategyOutcomes);
+                const filteredActions = getFilteredActionsForStrategy(strategyId, strategyActions);
                 const currentProjectFilter = projectFilterByStrategy[strategyId] || "all";
                 
                 if (!strategy) return null;
                 
-                // Skip this strategy if it has no outcomes matching the current filters
+                // Skip this strategy if it has no actions matching the current filters
                 // (Only when a strategy filter is selected)
-                if (strategyFilter !== "all" && strategyOutcomes.length === 0) {
+                if (strategyFilter !== "all" && strategyActions.length === 0) {
                   return null;
                 }
 
@@ -472,7 +472,7 @@ export default function Actions() {
                               {strategy.title}
                             </CardTitle>
                             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                              {strategyOutcomes.length} action{strategyOutcomes.length !== 1 ? 's' : ''}
+                              {strategyActions.length} action{strategyActions.length !== 1 ? 's' : ''}
                             </p>
                           </div>
                         </div>
@@ -508,54 +508,54 @@ export default function Actions() {
                     {!isCollapsed && (
                       <CardContent className="p-0">
                         <div className="space-y-4 p-6 pt-0">
-                          {filteredOutcomes.length === 0 ? (
+                          {filteredActions.length === 0 ? (
                             <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
                               No actions established
                             </p>
                           ) : (
-                            filteredOutcomes.map((outcome) => {
-                            const statusInfo = getStatusDisplay(outcome.status);
-                            const dueDateInfo = outcome.dueDate ? getDueDateDisplay(outcome.dueDate) : null;
+                            filteredActions.map((action) => {
+                            const statusInfo = getStatusDisplay(action.status);
+                            const dueDateInfo = action.dueDate ? getDueDateDisplay(action.dueDate) : null;
                             
                             return (
-                              <Card key={outcome.id} className="border border-gray-200 dark:border-gray-700">
+                              <Card key={action.id} className="border border-gray-200 dark:border-gray-700">
                                 <CardContent className="p-6">
                                   <div className="flex items-start justify-between mb-4">
                                     <div className="flex-1">
                                       <div className="flex items-center space-x-3 mb-2">
                                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                          {outcome.title}
+                                          {action.title}
                                         </h3>
                                         <Badge 
                                           className={`${statusInfo.color} text-white`}
-                                          data-testid={`badge-status-${outcome.id}`}
+                                          data-testid={`badge-status-${action.id}`}
                                         >
                                           {statusInfo.label}
                                         </Badge>
                                         {dueDateInfo && (
                                           <Badge 
                                             className={`${dueDateInfo.bgColor} ${dueDateInfo.textColor}`}
-                                            data-testid={`badge-due-date-${outcome.id}`}
+                                            data-testid={`badge-due-date-${action.id}`}
                                           >
                                             {dueDateInfo.label}
                                           </Badge>
                                         )}
                                       </div>
                                       <p className="text-gray-600 dark:text-gray-400 mb-4">
-                                        {outcome.description}
+                                        {action.description}
                                       </p>
                                     </div>
                                     
                                     <DropdownMenu>
                                       <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="sm" data-testid={`menu-outcome-${outcome.id}`}>
+                                        <Button variant="ghost" size="sm" data-testid={`menu-action-${action.id}`}>
                                           <MoreVertical className="w-4 h-4" />
                                         </Button>
                                       </DropdownMenuTrigger>
                                       <DropdownMenuContent align="end">
                                         <DropdownMenuItem 
-                                          onClick={() => handleEditOutcome(outcome)}
-                                          data-testid={`button-edit-${outcome.id}`}
+                                          onClick={() => handleEditAction(action)}
+                                          data-testid={`button-edit-${action.id}`}
                                         >
                                           Edit Action
                                         </DropdownMenuItem>
@@ -564,7 +564,7 @@ export default function Actions() {
                                             <DropdownMenuItem 
                                               className="text-red-600 focus:text-red-600"
                                               onSelect={(e) => e.preventDefault()}
-                                              data-testid={`button-delete-${outcome.id}`}
+                                              data-testid={`button-delete-${action.id}`}
                                             >
                                               <Trash2 className="w-4 h-4 mr-2" />
                                               Delete
@@ -572,17 +572,17 @@ export default function Actions() {
                                           </AlertDialogTrigger>
                                           <AlertDialogContent>
                                             <AlertDialogHeader>
-                                              <AlertDialogTitle>Delete Outcome</AlertDialogTitle>
+                                              <AlertDialogTitle>Delete Action</AlertDialogTitle>
                                               <AlertDialogDescription>
-                                                Are you sure you want to delete "{outcome.title}"? This action cannot be undone.
+                                                Are you sure you want to delete "{action.title}"? This action cannot be undone.
                                               </AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
                                               <AlertDialogCancel>Cancel</AlertDialogCancel>
                                               <AlertDialogAction
-                                                onClick={() => handleDeleteOutcome(outcome.id)}
+                                                onClick={() => handleDeleteAction(action.id)}
                                                 className="bg-red-600 hover:bg-red-700"
-                                                data-testid={`button-confirm-delete-${outcome.id}`}
+                                                data-testid={`button-confirm-delete-${action.id}`}
                                               >
                                                 Delete
                                               </AlertDialogAction>
@@ -593,10 +593,10 @@ export default function Actions() {
                                     </DropdownMenu>
                                   </div>
 
-                                  {/* Outcome Details Grid */}
+                                  {/* Action Details Grid */}
                                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
                                     {/* Target vs Current */}
-                                    {(outcome.targetValue || outcome.currentValue) && (
+                                    {(action.targetValue || action.currentValue) && (
                                       <div className="space-y-2">
                                         <div className="flex items-center space-x-2">
                                           <TrendingUp className="w-4 h-4 text-green-500" />
@@ -604,21 +604,21 @@ export default function Actions() {
                                             Performance
                                           </span>
                                         </div>
-                                        {outcome.targetValue && (
+                                        {action.targetValue && (
                                           <div className="text-sm">
                                             <span className="text-gray-600 dark:text-gray-400">Target: </span>
-                                            <span className="font-medium">{outcome.targetValue}</span>
-                                            {outcome.measurementUnit && (
-                                              <span className="text-gray-500"> {outcome.measurementUnit}</span>
+                                            <span className="font-medium">{action.targetValue}</span>
+                                            {action.measurementUnit && (
+                                              <span className="text-gray-500"> {action.measurementUnit}</span>
                                             )}
                                           </div>
                                         )}
-                                        {outcome.currentValue && (
+                                        {action.currentValue && (
                                           <div className="text-sm">
                                             <span className="text-gray-600 dark:text-gray-400">Current: </span>
-                                            <span className="font-medium">{outcome.currentValue}</span>
-                                            {outcome.measurementUnit && (
-                                              <span className="text-gray-500"> {outcome.measurementUnit}</span>
+                                            <span className="font-medium">{action.currentValue}</span>
+                                            {action.measurementUnit && (
+                                              <span className="text-gray-500"> {action.measurementUnit}</span>
                                             )}
                                           </div>
                                         )}
@@ -626,7 +626,7 @@ export default function Actions() {
                                     )}
 
                                     {/* Linked Project */}
-                                    {outcome.tactic && (
+                                    {action.project && (
                                       <div className="space-y-2">
                                         <div className="flex items-center space-x-2">
                                           <Target className="w-4 h-4 text-blue-500" />
@@ -635,13 +635,13 @@ export default function Actions() {
                                           </span>
                                         </div>
                                         <p className="text-sm text-gray-900 dark:text-white">
-                                          {outcome.tactic.title}
+                                          {action.project.title}
                                         </p>
                                       </div>
                                     )}
 
                                     {/* Due Date */}
-                                    {outcome.dueDate && (
+                                    {action.dueDate && (
                                       <div className="space-y-2">
                                         <div className="flex items-center space-x-2">
                                           <Calendar className="w-4 h-4 text-orange-500" />
@@ -650,7 +650,7 @@ export default function Actions() {
                                           </span>
                                         </div>
                                         <p className="text-sm text-gray-900 dark:text-white">
-                                          {new Date(outcome.dueDate).toLocaleDateString()}
+                                          {new Date(action.dueDate).toLocaleDateString()}
                                         </p>
                                       </div>
                                     )}
@@ -671,14 +671,14 @@ export default function Actions() {
         </div>
       </div>
 
-      <CreateOutcomeModal 
-        open={isCreateOutcomeOpen} 
-        onOpenChange={setIsCreateOutcomeOpen} 
+      <CreateActionModal 
+        open={isCreateActionOpen} 
+        onOpenChange={setIsCreateActionOpen} 
       />
-      <EditOutcomeModal
-        open={isEditOutcomeOpen}
-        onOpenChange={setIsEditOutcomeOpen}
-        outcome={selectedOutcome}
+      <EditActionModal
+        open={isEditActionOpen}
+        onOpenChange={setIsEditActionOpen}
+        action={selectedAction}
       />
     </div>
   );

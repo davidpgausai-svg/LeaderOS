@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 import { CreateEditMeetingNoteModal } from "@/components/modals/create-edit-meeting-note-modal";
 import { MeetingNotePrintView } from "@/components/meeting-notes/meeting-note-print-view";
-import type { Tactic, Outcome, Strategy, MeetingNote as MeetingNoteType } from "@shared/schema";
+import type { Project, Action, Strategy, MeetingNote as MeetingNoteType } from "@shared/schema";
 
 type MeetingNote = MeetingNoteType & {
   strategy?: Strategy;
@@ -66,12 +66,12 @@ export default function MeetingNotes() {
     queryKey: ["/api/strategies"],
   });
   
-  const { data: tactics } = useQuery({
-    queryKey: ["/api/tactics"],
+  const { data: projects } = useQuery({
+    queryKey: ["/api/projects"],
   });
   
-  const { data: outcomes } = useQuery({
-    queryKey: ["/api/outcomes"],
+  const { data: actions } = useQuery({
+    queryKey: ["/api/actions"],
   });
 
   const deleteMeetingNoteMutation = useMutation({
@@ -337,8 +337,8 @@ export default function MeetingNotes() {
           <MeetingNotePrintView
             meetingNote={printNote as MeetingNoteType}
             strategy={(strategies as Strategy[])?.find((s) => s.id === printNote.strategyId)}
-            tactics={(tactics as Tactic[]) || []}
-            outcomes={(outcomes as Outcome[]) || []}
+            projects={(projects as Project[]) || []}
+            actions={(actions as Action[]) || []}
           />
         </div>
       )}

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertOutcomeSchema, type InsertOutcome } from "@shared/schema";
+import { insertActionSchema, type InsertAction } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useRole } from "@/hooks/use-role";
 import { useToast } from "@/hooks/use-toast";
@@ -40,11 +40,11 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
-interface CreateOutcomeModalProps {
+interface CreateActionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   strategyId?: string;
-  tacticId?: string;
+  projectId?: string;
 }
 
 type Strategy = {
@@ -53,13 +53,13 @@ type Strategy = {
   colorCode: string;
 };
 
-type Tactic = {
+type Project = {
   id: string;
   title: string;
   strategyId: string;
 };
 
-export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }: CreateOutcomeModalProps) {
+export function CreateActionModal({ open, onOpenChange, strategyId, projectId }: CreateActionModalProps) {
   const { currentUser } = useRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -68,30 +68,30 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
     queryKey: ["/api/strategies"],
   });
 
-  const { data: tactics } = useQuery({
-    queryKey: ["/api/tactics"],
+  const { data: projects } = useQuery({
+    queryKey: ["/api/projects"],
   });
 
-  const form = useForm<InsertOutcome>({
-    resolver: zodResolver(insertOutcomeSchema),
+  const form = useForm<InsertAction>({
+    resolver: zodResolver(insertActionSchema),
     defaultValues: {
       title: "",
       description: "",
       strategyId: strategyId || undefined,
-      tacticId: tacticId || undefined,
+      projectId: projectId || undefined,
       status: "in_progress",
       dueDate: undefined,
       createdBy: currentUser?.id || "",
     },
   });
 
-  const createOutcomeMutation = useMutation({
-    mutationFn: async (data: InsertOutcome) => {
-      const response = await apiRequest("POST", "/api/outcomes", data);
+  const createActionMutation = useMutation({
+    mutationFn: async (data: InsertAction) => {
+      const response = await apiRequest("POST", "/api/actions", data);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/outcomes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
       toast({
         title: "Success",
         description: "Action created successfully",
@@ -108,7 +108,7 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
     },
   });
 
-  const onSubmit = (data: InsertOutcome) => {
+  const onSubmit = (data: InsertAction) => {
     // Ensure strategyId is provided (required field)
     if (!data.strategyId || data.strategyId === "placeholder") {
       toast({
@@ -122,15 +122,15 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
     // Filter out empty optional fields
     const cleanData = {
       ...data,
-      tacticId: data.tacticId === "none" ? undefined : data.tacticId || undefined,
+      projectId: data.projectId === "none" ? undefined : data.projectId || undefined,
       dueDate: data.dueDate || undefined,
     };
-    createOutcomeMutation.mutate(cleanData);
+    createActionMutation.mutate(cleanData);
   };
 
   const selectedStrategy = form.watch("strategyId");
-  const filteredTactics = (tactics as Tactic[])?.filter(tactic => 
-    tactic.strategyId === selectedStrategy
+  const filteredProjects = (projects as Project[])?.filter(project => 
+    project.strategyId === selectedStrategy
   ) || [];
 
   return (
@@ -153,7 +153,7 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
                     <FormItem>
                       <FormLabel>Action Title</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter action title..." {...field} data-testid="input-outcome-title" />
+                        <Input placeholder="Enter action title..." {...field} data-testid="input-action-title" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -171,7 +171,7 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
                           placeholder="Describe the expected action..." 
                           className="min-h-[100px]"
                           {...field} 
-                          data-testid="textarea-outcome-description"
+                          data-testid="textarea-action-description"
                         />
                       </FormControl>
                       <FormMessage />
@@ -180,7 +180,7 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
                 />
               </div>
 
-              {/* Strategy & Tactic Assignment */}
+              {/* Strategy & Project Assignment */}
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Assignment</h3>
                 
@@ -192,7 +192,7 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
                       <FormLabel>Strategy</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value || "placeholder"}>
                         <FormControl>
-                          <SelectTrigger data-testid="select-outcome-strategy">
+                          <SelectTrigger data-testid="select-action-strategy">
                             <SelectValue placeholder="Select a strategy" />
                           </SelectTrigger>
                         </FormControl>
@@ -218,25 +218,25 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
 
                 <FormField
                   control={form.control}
-                  name="tacticId"
+                  name="projectId"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Related Project (Optional)</FormLabel>
                       <Select 
                         onValueChange={field.onChange} 
                         defaultValue={field.value || "none"}
-                        disabled={!selectedStrategy || filteredTactics.length === 0}
+                        disabled={!selectedStrategy || filteredProjects.length === 0}
                       >
                         <FormControl>
-                          <SelectTrigger data-testid="select-outcome-tactic">
+                          <SelectTrigger data-testid="select-action-project">
                             <SelectValue placeholder="Select a related project (optional)" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="none">No specific project</SelectItem>
-                          {filteredTactics.map((tactic) => (
-                            <SelectItem key={tactic.id} value={tactic.id}>
-                              {tactic.title}
+                          {filteredProjects.map((project) => (
+                            <SelectItem key={project.id} value={project.id}>
+                              {project.title}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -260,7 +260,7 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
                         <FormLabel>Status</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger data-testid="select-outcome-status">
+                            <SelectTrigger data-testid="select-action-status">
                               <SelectValue />
                             </SelectTrigger>
                           </FormControl>
@@ -291,7 +291,7 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
                                   "w-full pl-3 text-left font-normal",
                                   !field.value && "text-muted-foreground"
                                 )}
-                                data-testid="button-outcome-due-date"
+                                data-testid="button-action-due-date"
                               >
                                 {field.value ? (
                                   format(field.value, "PPP")
@@ -327,16 +327,16 @@ export function CreateOutcomeModal({ open, onOpenChange, strategyId, tacticId }:
                 type="button" 
                 variant="outline" 
                 onClick={() => onOpenChange(false)}
-                data-testid="button-cancel-outcome"
+                data-testid="button-cancel-action"
               >
                 Cancel
               </Button>
               <Button 
                 type="submit" 
-                disabled={createOutcomeMutation.isPending}
-                data-testid="button-create-outcome"
+                disabled={createActionMutation.isPending}
+                data-testid="button-create-action"
               >
-                {createOutcomeMutation.isPending ? "Creating..." : "Create Outcome"}
+                {createActionMutation.isPending ? "Creating..." : "Create Action"}
               </Button>
             </div>
           </form>

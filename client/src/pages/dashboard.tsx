@@ -6,7 +6,7 @@ import { MetricCard } from "@/components/cards/metric-card";
 import { FrameworkCard } from "@/components/strategic-framework/framework-card";
 
 import { CreateStrategyModal } from "@/components/modals/create-strategy-modal";
-import { CreateTacticModal } from "@/components/modals/create-tactic-modal";
+import { CreateProjectModal } from "@/components/modals/create-project-modal";
 import { Button } from "@/components/ui/button";
 import {
   Target,
@@ -20,7 +20,7 @@ import {
 export default function Dashboard() {
   const { currentRole, canCreateStrategies } = useRole();
   const [isCreateStrategyOpen, setIsCreateStrategyOpen] = useState(false);
-  const [isCreateTacticOpen, setIsCreateTacticOpen] = useState(false);
+  const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
 
 
 
@@ -28,31 +28,31 @@ export default function Dashboard() {
     queryKey: ["/api/strategies"],
   });
 
-  const { data: tactics, isLoading: tacticsLoading } = useQuery({
-    queryKey: ["/api/tactics"],
+  const { data: projects, isLoading: projectsLoading } = useQuery({
+    queryKey: ["/api/projects"],
   });
 
   const { data: users } = useQuery({
     queryKey: ["/api/users"],
   });
 
-  const { data: outcomes } = useQuery({
-    queryKey: ["/api/outcomes"],
+  const { data: actions } = useQuery({
+    queryKey: ["/api/actions"],
   });
 
   // Calculate metrics
   const activeStrategies = (strategies as any[])?.filter((s: any) => s.status === 'active').length || 0;
-  const totalTactics = (tactics as any[])?.length || 0;
-  const completedTactics = (tactics as any[])?.filter((t: any) => (t.progress || 0) >= 100).length || 0;
+  const totalProjects = (projects as any[])?.length || 0;
+  const completedProjects = (projects as any[])?.filter((t: any) => (t.progress || 0) >= 100).length || 0;
   const completedStrategies = (strategies as any[])?.filter((s: any) => s.status === 'completed').length || 0;
   const totalStrategies = (strategies as any[])?.length || 0;
   
-  // Calculate overall strategic completion rate (strategies + tactics combined)
-  const totalItems = totalStrategies + totalTactics;
-  const completedItems = completedStrategies + completedTactics;
+  // Calculate overall strategic completion rate (strategies + projects combined)
+  const totalItems = totalStrategies + totalProjects;
+  const completedItems = completedStrategies + completedProjects;
   const completionRate = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
-  if (strategiesLoading || tacticsLoading) {
+  if (strategiesLoading || projectsLoading) {
     return (
       <div className="flex h-screen">
         <Sidebar />
@@ -121,7 +121,7 @@ export default function Dashboard() {
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Strategies Overview</h2>
                   <p className="text-gray-600 dark:text-gray-400 mt-1">
-                    Current organizational strategies with tactics and outcomes tracking
+                    Current organizational strategies with projects and actions tracking
                   </p>
                 </div>
 
@@ -130,12 +130,12 @@ export default function Dashboard() {
               {/* Strategy Cards Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                 {(strategies as any[])?.map((strategy) => {
-                  const strategyTactics = (tactics as any[])?.filter(t => t.strategyId === strategy.id) || [];
-                  const strategyOutcomes = (outcomes as any[])?.filter(o => o.strategyId === strategy.id) || [];
+                  const strategyProjects = (projects as any[])?.filter(t => t.strategyId === strategy.id) || [];
+                  const strategyActions = (actions as any[])?.filter(o => o.strategyId === strategy.id) || [];
                   
-                  // Calculate actual progress based on tactic progress values
-                  const totalTacticProgress = strategyTactics.reduce((sum, tactic) => sum + (tactic.progress || 0), 0);
-                  const averageProgress = strategyTactics.length > 0 ? Math.round(totalTacticProgress / strategyTactics.length) : 0;
+                  // Calculate actual progress based on project progress values
+                  const totalProjectProgress = strategyProjects.reduce((sum, project) => sum + (project.progress || 0), 0);
+                  const averageProgress = strategyProjects.length > 0 ? Math.round(totalProjectProgress / strategyProjects.length) : 0;
                   
                   return (
                     <FrameworkCard
@@ -143,8 +143,8 @@ export default function Dashboard() {
                       title={strategy.title.toUpperCase()}
                       goal={strategy.goal || strategy.description}
                       description={strategy.description}
-                      tactics={strategyTactics}
-                      outcomes={strategyOutcomes}
+                      projects={strategyProjects}
+                      actions={strategyActions}
                       colorCode={strategy.colorCode || "#3B82F6"}
                       icon={<Target className="w-5 h-5" />}
                       status={strategy.status}
@@ -172,9 +172,9 @@ export default function Dashboard() {
         open={isCreateStrategyOpen} 
         onOpenChange={setIsCreateStrategyOpen} 
       />
-      <CreateTacticModal 
-        isOpen={isCreateTacticOpen} 
-        onClose={() => setIsCreateTacticOpen(false)} 
+      <CreateProjectModal 
+        isOpen={isCreateProjectOpen} 
+        onClose={() => setIsCreateProjectOpen(false)} 
       />
     </div>
   );

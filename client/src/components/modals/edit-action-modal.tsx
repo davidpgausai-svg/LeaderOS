@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertOutcomeSchema, type InsertOutcome, type Outcome, type OutcomeDocument, type OutcomeChecklistItem } from "@shared/schema";
+import { insertActionSchema, type InsertAction, type Action, type ActionDocument, type ActionChecklistItem } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -40,10 +40,10 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 
-interface EditOutcomeModalProps {
+interface EditActionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  outcome: Outcome | null;
+  action: Action | null;
 }
 
 type Strategy = {
@@ -52,13 +52,13 @@ type Strategy = {
   colorCode: string;
 };
 
-type Tactic = {
+type Project = {
   id: string;
   title: string;
   strategyId: string;
 };
 
-export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeModalProps) {
+export function EditActionModal({ open, onOpenChange, action }: EditActionModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [newDocName, setNewDocName] = useState("");
@@ -69,55 +69,55 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
     queryKey: ["/api/strategies"],
   });
 
-  const { data: tactics } = useQuery({
-    queryKey: ["/api/tactics"],
+  const { data: projects } = useQuery({
+    queryKey: ["/api/projects"],
   });
 
-  const { data: documents = [] } = useQuery<OutcomeDocument[]>({
-    queryKey: ["/api/outcomes", outcome?.id, "documents"],
-    enabled: !!outcome?.id,
+  const { data: documents = [] } = useQuery<ActionDocument[]>({
+    queryKey: ["/api/actions", action?.id, "documents"],
+    enabled: !!action?.id,
   });
 
-  const { data: checklistItems = [] } = useQuery<OutcomeChecklistItem[]>({
-    queryKey: ["/api/outcomes", outcome?.id, "checklist"],
-    enabled: !!outcome?.id,
+  const { data: checklistItems = [] } = useQuery<ActionChecklistItem[]>({
+    queryKey: ["/api/actions", action?.id, "checklist"],
+    enabled: !!action?.id,
   });
 
-  const form = useForm<InsertOutcome>({
-    resolver: zodResolver(insertOutcomeSchema),
+  const form = useForm<InsertAction>({
+    resolver: zodResolver(insertActionSchema),
     defaultValues: {
       title: "",
       description: "",
       strategyId: "",
-      tacticId: undefined,
+      projectId: undefined,
       status: "in_progress",
       dueDate: undefined,
       createdBy: "",
     },
   });
 
-  // Update form when outcome changes
+  // Update form when action changes
   useEffect(() => {
-    if (outcome) {
+    if (action) {
       form.reset({
-        title: outcome.title,
-        description: outcome.description,
-        strategyId: outcome.strategyId,
-        tacticId: outcome.tacticId || undefined,
-        status: outcome.status,
-        dueDate: outcome.dueDate ? new Date(outcome.dueDate) : undefined,
-        createdBy: outcome.createdBy,
+        title: action.title,
+        description: action.description,
+        strategyId: action.strategyId,
+        projectId: action.projectId || undefined,
+        status: action.status,
+        dueDate: action.dueDate ? new Date(action.dueDate) : undefined,
+        createdBy: action.createdBy,
       });
     }
-  }, [outcome, form]);
+  }, [action, form]);
 
-  const updateOutcomeMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: InsertOutcome }) => {
-      const response = await apiRequest("PATCH", `/api/outcomes/${id}`, data);
+  const updateActionMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: InsertAction }) => {
+      const response = await apiRequest("PATCH", `/api/actions/${id}`, data);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/outcomes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
       toast({
         title: "Success",
         description: "Action updated successfully",
@@ -135,12 +135,12 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
 
   // Document mutations
   const createDocumentMutation = useMutation({
-    mutationFn: async ({ outcomeId, name, url }: { outcomeId: string; name: string; url: string }) => {
-      const response = await apiRequest("POST", `/api/outcomes/${outcomeId}/documents`, { name, url });
+    mutationFn: async ({ actionId, name, url }: { actionId: string; name: string; url: string }) => {
+      const response = await apiRequest("POST", `/api/actions/${actionId}/documents`, { name, url });
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/outcomes", outcome?.id, "documents"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/actions", action?.id, "documents"] });
       setNewDocName("");
       setNewDocUrl("");
       toast({
@@ -158,11 +158,11 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
   });
 
   const deleteDocumentMutation = useMutation({
-    mutationFn: async ({ outcomeId, docId }: { outcomeId: string; docId: string }) => {
-      await apiRequest("DELETE", `/api/outcomes/${outcomeId}/documents/${docId}`, {});
+    mutationFn: async ({ actionId, docId }: { actionId: string; docId: string }) => {
+      await apiRequest("DELETE", `/api/actions/${actionId}/documents/${docId}`, {});
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/outcomes", outcome?.id, "documents"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/actions", action?.id, "documents"] });
       toast({
         title: "Success",
         description: "Document deleted successfully",
@@ -179,8 +179,8 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
 
   // Checklist item mutations
   const createChecklistItemMutation = useMutation({
-    mutationFn: async ({ outcomeId, title }: { outcomeId: string; title: string }) => {
-      const response = await apiRequest("POST", `/api/outcomes/${outcomeId}/checklist`, {
+    mutationFn: async ({ actionId, title }: { actionId: string; title: string }) => {
+      const response = await apiRequest("POST", `/api/actions/${actionId}/checklist`, {
         title,
         isCompleted: 'false',
         orderIndex: checklistItems.length,
@@ -188,7 +188,7 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/outcomes", outcome?.id, "checklist"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/actions", action?.id, "checklist"] });
       setNewChecklistItem("");
       toast({
         title: "Success",
@@ -205,12 +205,12 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
   });
 
   const updateChecklistItemMutation = useMutation({
-    mutationFn: async ({ outcomeId, itemId, isCompleted }: { outcomeId: string; itemId: string; isCompleted: boolean }) => {
-      const response = await apiRequest("PATCH", `/api/outcomes/${outcomeId}/checklist/${itemId}`, { isCompleted });
+    mutationFn: async ({ actionId, itemId, isCompleted }: { actionId: string; itemId: string; isCompleted: boolean }) => {
+      const response = await apiRequest("PATCH", `/api/actions/${actionId}/checklist/${itemId}`, { isCompleted });
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/outcomes", outcome?.id, "checklist"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/actions", action?.id, "checklist"] });
     },
     onError: () => {
       toast({
@@ -222,11 +222,11 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
   });
 
   const deleteChecklistItemMutation = useMutation({
-    mutationFn: async ({ outcomeId, itemId }: { outcomeId: string; itemId: string }) => {
-      await apiRequest("DELETE", `/api/outcomes/${outcomeId}/checklist/${itemId}`, {});
+    mutationFn: async ({ actionId, itemId }: { actionId: string; itemId: string }) => {
+      await apiRequest("DELETE", `/api/actions/${actionId}/checklist/${itemId}`, {});
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/outcomes", outcome?.id, "checklist"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/actions", action?.id, "checklist"] });
       toast({
         title: "Success",
         description: "Checklist item deleted successfully",
@@ -241,8 +241,8 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
     },
   });
 
-  const onSubmit = (data: InsertOutcome) => {
-    if (!outcome) return;
+  const onSubmit = (data: InsertAction) => {
+    if (!action) return;
 
     // Ensure strategyId is provided (required field)
     if (!data.strategyId || data.strategyId === "placeholder") {
@@ -255,45 +255,45 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
     }
 
     // Filter out empty optional fields
-    const cleanData: InsertOutcome = {
+    const cleanData: InsertAction = {
       ...data,
-      tacticId: data.tacticId === "none" ? undefined : data.tacticId || undefined,
+      projectId: data.projectId === "none" ? undefined : data.projectId || undefined,
       dueDate: data.dueDate || undefined,
     };
-    updateOutcomeMutation.mutate({ id: outcome.id, data: cleanData });
+    updateActionMutation.mutate({ id: action.id, data: cleanData });
   };
 
   const handleAddDocument = () => {
-    if (!outcome || !newDocName.trim() || !newDocUrl.trim()) return;
-    createDocumentMutation.mutate({ outcomeId: outcome.id, name: newDocName.trim(), url: newDocUrl.trim() });
+    if (!action || !newDocName.trim() || !newDocUrl.trim()) return;
+    createDocumentMutation.mutate({ actionId: action.id, name: newDocName.trim(), url: newDocUrl.trim() });
   };
 
   const handleDeleteDocument = (docId: string) => {
-    if (!outcome) return;
-    deleteDocumentMutation.mutate({ outcomeId: outcome.id, docId });
+    if (!action) return;
+    deleteDocumentMutation.mutate({ actionId: action.id, docId });
   };
 
   const handleAddChecklistItem = () => {
-    if (!outcome || !newChecklistItem.trim()) return;
-    createChecklistItemMutation.mutate({ outcomeId: outcome.id, title: newChecklistItem.trim() });
+    if (!action || !newChecklistItem.trim()) return;
+    createChecklistItemMutation.mutate({ actionId: action.id, title: newChecklistItem.trim() });
   };
 
   const handleToggleChecklistItem = (itemId: string, isCompleted: boolean) => {
-    if (!outcome) return;
-    updateChecklistItemMutation.mutate({ outcomeId: outcome.id, itemId, isCompleted: !isCompleted });
+    if (!action) return;
+    updateChecklistItemMutation.mutate({ actionId: action.id, itemId, isCompleted: !isCompleted });
   };
 
   const handleDeleteChecklistItem = (itemId: string) => {
-    if (!outcome) return;
-    deleteChecklistItemMutation.mutate({ outcomeId: outcome.id, itemId });
+    if (!action) return;
+    deleteChecklistItemMutation.mutate({ actionId: action.id, itemId });
   };
 
   const selectedStrategy = form.watch("strategyId");
-  const filteredTactics = (tactics as Tactic[])?.filter(tactic => 
-    tactic.strategyId === selectedStrategy
+  const filteredProjects = (projects as Project[])?.filter(project => 
+    project.strategyId === selectedStrategy
   ) || [];
 
-  if (!outcome) return null;
+  if (!action) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -315,7 +315,7 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
                     <FormItem>
                       <FormLabel>Action Title</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter action title..." {...field} data-testid="input-edit-outcome-title" />
+                        <Input placeholder="Enter action title..." {...field} data-testid="input-edit-action-title" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -333,7 +333,7 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
                           placeholder="Describe the expected action..." 
                           className="min-h-[100px]"
                           {...field} 
-                          data-testid="textarea-edit-outcome-description"
+                          data-testid="textarea-edit-action-description"
                         />
                       </FormControl>
                       <FormMessage />
@@ -342,7 +342,7 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
                 />
               </div>
 
-              {/* Strategy & Tactic Assignment */}
+              {/* Strategy & Project Assignment */}
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Assignment</h3>
                 
@@ -354,7 +354,7 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
                       <FormLabel>Strategy</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value || "placeholder"}>
                         <FormControl>
-                          <SelectTrigger data-testid="select-edit-outcome-strategy">
+                          <SelectTrigger data-testid="select-edit-action-strategy">
                             <SelectValue placeholder="Select a strategy" />
                           </SelectTrigger>
                         </FormControl>
@@ -380,25 +380,25 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
 
                 <FormField
                   control={form.control}
-                  name="tacticId"
+                  name="projectId"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Related Project (Optional)</FormLabel>
                       <Select 
                         onValueChange={field.onChange} 
                         value={field.value || "none"}
-                        disabled={!selectedStrategy || filteredTactics.length === 0}
+                        disabled={!selectedStrategy || filteredProjects.length === 0}
                       >
                         <FormControl>
-                          <SelectTrigger data-testid="select-edit-outcome-tactic">
+                          <SelectTrigger data-testid="select-edit-action-project">
                             <SelectValue placeholder="Select a related project (optional)" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="none">No specific project</SelectItem>
-                          {filteredTactics.map((tactic) => (
-                            <SelectItem key={tactic.id} value={tactic.id}>
-                              {tactic.title}
+                          {filteredProjects.map((project) => (
+                            <SelectItem key={project.id} value={project.id}>
+                              {project.title}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -541,7 +541,7 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
                         <FormLabel>Status</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
-                            <SelectTrigger data-testid="select-edit-outcome-status">
+                            <SelectTrigger data-testid="select-edit-action-status">
                               <SelectValue />
                             </SelectTrigger>
                           </FormControl>
@@ -572,7 +572,7 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
                                   "w-full pl-3 text-left font-normal",
                                   !field.value && "text-muted-foreground"
                                 )}
-                                data-testid="button-edit-outcome-due-date"
+                                data-testid="button-edit-action-due-date"
                               >
                                 {field.value ? (
                                   format(field.value, "PPP")
@@ -608,16 +608,16 @@ export function EditOutcomeModal({ open, onOpenChange, outcome }: EditOutcomeMod
                 type="button" 
                 variant="outline" 
                 onClick={() => onOpenChange(false)}
-                data-testid="button-cancel-edit-outcome"
+                data-testid="button-cancel-edit-action"
               >
                 Cancel
               </Button>
               <Button 
                 type="submit" 
-                disabled={updateOutcomeMutation.isPending}
-                data-testid="button-update-outcome"
+                disabled={updateActionMutation.isPending}
+                data-testid="button-update-action"
               >
-                {updateOutcomeMutation.isPending ? "Updating..." : "Update Outcome"}
+                {updateActionMutation.isPending ? "Updating..." : "Update Action"}
               </Button>
             </div>
           </form>

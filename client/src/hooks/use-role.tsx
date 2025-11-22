@@ -12,12 +12,12 @@ interface RoleStore {
   loadAssignedStrategyIds: () => Promise<void>;
   // Permission helpers
   canEditStrategies: () => boolean;
-  canEditTactics: () => boolean;
+  canEditProjects: () => boolean;
   canCreateStrategies: () => boolean;
-  canCreateTactics: () => boolean;
+  canCreateProjects: () => boolean;
   canWriteReports: () => boolean;
   canManageUsers: () => boolean;
-  canEditTactic: (tactic: any) => boolean;
+  canEditProject: (project: any) => boolean;
   canEditAllStrategies: () => boolean;
   isStrategyAssigned: (strategyId: string) => boolean;
 }
@@ -62,9 +62,9 @@ export const useRole = create<RoleStore>((set, get) => ({
     return currentUser?.role === 'administrator';
   },
   
-  canEditTactics: () => {
+  canEditProjects: () => {
     const { currentUser } = get();
-    // Administrators and Co-Leads can edit tactics, View users cannot
+    // Administrators and Co-Leads can edit projects, View users cannot
     return currentUser?.role === 'administrator' || currentUser?.role === 'co_lead';
   },
   
@@ -73,9 +73,9 @@ export const useRole = create<RoleStore>((set, get) => ({
     return currentUser?.role === 'administrator';
   },
   
-  canCreateTactics: () => {
+  canCreateProjects: () => {
     const { currentUser } = get();
-    // Administrators and Co-Leads can create tactics
+    // Administrators and Co-Leads can create projects
     return currentUser?.role === 'administrator' || currentUser?.role === 'co_lead';
   },
   
@@ -89,15 +89,15 @@ export const useRole = create<RoleStore>((set, get) => ({
     return currentUser?.role === 'administrator';
   },
   
-  canEditTactic: (tactic) => {
+  canEditProject: (project) => {
     const { currentUser } = get();
     if (currentUser?.role === 'administrator') {
       return true;
     }
     if (currentUser?.role === 'co_lead') {
-      // Co-Leads can edit tactics if they're assigned to them
+      // Co-Leads can edit projects if they're assigned to them
       try {
-        const accountableLeaders = JSON.parse(tactic.accountableLeaders || '[]');
+        const accountableLeaders = JSON.parse(project.accountableLeaders || '[]');
         return accountableLeaders.includes(currentUser.id);
       } catch {
         return false;

@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { CreateStrategyModal } from "@/components/modals/create-strategy-modal";
 import { EditStrategyModal } from "@/components/modals/edit-strategy-modal";
 import { ViewStrategyModal } from "@/components/modals/view-strategy-modal";
-import { CreateTacticModal } from "@/components/modals/create-tactic-modal";
+import { CreateProjectModal } from "@/components/modals/create-project-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -55,7 +55,7 @@ export default function Strategies() {
   const [isCreateStrategyOpen, setIsCreateStrategyOpen] = useState(false);
   const [isEditStrategyOpen, setIsEditStrategyOpen] = useState(false);
   const [isViewStrategyOpen, setIsViewStrategyOpen] = useState(false);
-  const [isCreateTacticOpen, setIsCreateTacticOpen] = useState(false);
+  const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
   const [selectedStrategyId, setSelectedStrategyId] = useState<string>();
   const [selectedStrategy, setSelectedStrategy] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -67,8 +67,8 @@ export default function Strategies() {
     queryKey: ["/api/strategies"],
   });
 
-  const { data: tactics } = useQuery({
-    queryKey: ["/api/tactics"],
+  const { data: projects } = useQuery({
+    queryKey: ["/api/projects"],
   });
 
   // Initialize all strategies as collapsed on first load
@@ -79,14 +79,14 @@ export default function Strategies() {
     }
   }, [strategies]);
 
-  // Enhance strategies with tactics
-  const strategiesWithTactics = (strategies as any[])?.map((strategy: any) => ({
+  // Enhance strategies with projects
+  const strategiesWithProjects = (strategies as any[])?.map((strategy: any) => ({
     ...strategy,
-    tactics: (tactics as any[])?.filter((tactic: any) => tactic.strategyId === strategy.id) || []
+    projects: (projects as any[])?.filter((project: any) => project.strategyId === strategy.id) || []
   })) || [];
 
   // Filter and sort strategies
-  const filteredStrategies = strategiesWithTactics
+  const filteredStrategies = strategiesWithProjects
     .filter((strategy: any) => {
       const matchesSearch = strategy.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            strategy.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -100,9 +100,9 @@ export default function Strategies() {
     })
     .sort((a: any, b: any) => (a.displayOrder || 0) - (b.displayOrder || 0));
 
-  const handleCreateTactic = (strategyId: string) => {
+  const handleCreateProject = (strategyId: string) => {
     setSelectedStrategyId(strategyId);
-    setIsCreateTacticOpen(true);
+    setIsCreateProjectOpen(true);
   };
 
 
@@ -468,11 +468,11 @@ export default function Strategies() {
                   <div className="mt-6 pt-4 border-t border-gray-200 space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-500">
-                        {strategy.tactics.length} tactics
+                        {strategy.projects.length} projects
                       </span>
                       <Button
                         size="sm"
-                        onClick={() => handleCreateTactic(strategy.id)}
+                        onClick={() => handleCreateProject(strategy.id)}
                         style={{ backgroundColor: strategy.colorCode, borderColor: strategy.colorCode }}
                         className="text-white hover:opacity-90"
                       >
@@ -552,9 +552,9 @@ export default function Strategies() {
         onOpenChange={setIsViewStrategyOpen}
         strategy={selectedStrategy}
       />
-      <CreateTacticModal
-        isOpen={isCreateTacticOpen}
-        onClose={() => setIsCreateTacticOpen(false)}
+      <CreateProjectModal
+        isOpen={isCreateProjectOpen}
+        onClose={() => setIsCreateProjectOpen(false)}
         strategyId={selectedStrategyId}
       />
     </div>

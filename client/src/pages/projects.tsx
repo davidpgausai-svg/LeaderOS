@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRole } from "@/hooks/use-role";
 import { Sidebar } from "@/components/layout/sidebar";
-import { CreateTacticModal } from "@/components/modals/create-tactic-modal";
-import { EditTacticModal } from "@/components/modals/edit-tactic-modal";
+import { CreateProjectModal } from "@/components/modals/create-project-modal";
+import { EditProjectModal } from "@/components/modals/edit-project-modal";
 import { ViewTacticModal } from "@/components/modals/view-tactic-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -86,7 +86,7 @@ type User = {
   role: string;
 };
 
-type Tactic = {
+type Project = {
   id: string;
   title: string;
   description: string;
@@ -106,22 +106,22 @@ type Tactic = {
   strategy?: Strategy;
 };
 
-export default function Tactics() {
-  const { currentRole, currentUser, canCreateTactics, canEditTactics } = useRole();
+export default function Projects() {
+  const { currentRole, currentUser, canCreateProjects, canEditProjects } = useRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [isCreateTacticOpen, setIsCreateTacticOpen] = useState(false);
-  const [isEditTacticOpen, setIsEditTacticOpen] = useState(false);
-  const [isViewTacticOpen, setIsViewTacticOpen] = useState(false);
-  const [editingTactic, setEditingTactic] = useState<Tactic | null>(null);
-  const [viewingTactic, setViewingTactic] = useState<Tactic | null>(null);
+  const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
+  const [isEditProjectOpen, setIsEditProjectOpen] = useState(false);
+  const [isViewProjectOpen, setIsViewProjectOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [viewingProject, setViewingProject] = useState<Project | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [strategyFilter, setStrategyFilter] = useState("all");
   const [collapsedStrategies, setCollapsedStrategies] = useState<Set<string>>(new Set());
 
-  const { data: tactics, isLoading: tacticsLoading } = useQuery({
-    queryKey: ["/api/tactics"],
+  const { data: projects, isLoading: projectsLoading } = useQuery({
+    queryKey: ["/api/projects"],
   });
 
   const { data: strategies } = useQuery({
@@ -142,54 +142,54 @@ export default function Tactics() {
     }
   }, [strategies, hasInitializedCollapsed]);
 
-  const updateTacticMutation = useMutation({
+  const updateProjectMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
-      const response = await apiRequest("PATCH", `/api/tactics/${id}`, updates);
+      const response = await apiRequest("PATCH", `/api/projects/${id}`, updates);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tactics"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
       toast({
         title: "Success",
-        description: "Tactic updated successfully",
+        description: "Project updated successfully",
       });
     },
   });
 
-  const deleteTacticMutation = useMutation({
-    mutationFn: async (tacticId: string) => {
-      const response = await apiRequest("DELETE", `/api/tactics/${tacticId}`);
+  const deleteProjectMutation = useMutation({
+    mutationFn: async (projectId: string) => {
+      const response = await apiRequest("DELETE", `/api/projects/${projectId}`);
       return response;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tactics"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
       toast({
         title: "Success",
-        description: "Tactic deleted successfully",
+        description: "Project deleted successfully",
       });
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to delete tactic",
+        description: "Failed to delete project",
         variant: "destructive",
       });
     },
   });
 
-  // Enhance tactics with strategy data
-  const tacticsWithDetails = (tactics as Tactic[])?.map((tactic) => ({
-    ...tactic,
-    strategy: (strategies as Strategy[])?.find((s) => s.id === tactic.strategyId),
+  // Enhance projects with strategy data
+  const projectsWithDetails = (projects as Project[])?.map((project) => ({
+    ...project,
+    strategy: (strategies as Strategy[])?.find((s) => s.id === project.strategyId),
   })) || [];
 
   // Helper functions
 
-  const getAccountableLeaders = (tactic: Tactic): User[] => {
+  const getAccountableLeaders = (project: Project): User[] => {
     try {
-      const leaderIds = JSON.parse(tactic.accountableLeaders);
+      const leaderIds = JSON.parse(project.accountableLeaders);
       return (users as User[])?.filter((user) => leaderIds.includes(user.id)) || [];
     } catch {
       return [];
@@ -218,12 +218,12 @@ export default function Tactics() {
     return user.email;
   };
 
-  const canEditTactic = (tactic: Tactic) => {
+  const canEditProject = (project: Project) => {
     if (currentRole === 'administrator' || currentRole === 'executive') return true;
     
-    // Leaders can edit tactics where they are accountable
+    // Leaders can edit projects where they are accountable
     try {
-      const leaderIds = JSON.parse(tactic.accountableLeaders);
+      const leaderIds = JSON.parse(project.accountableLeaders);
       return leaderIds.includes(currentUser?.id);
     } catch {
       return false;
@@ -241,22 +241,22 @@ export default function Tactics() {
     return statusMap[status as keyof typeof statusMap] || statusMap['NYS'];
   };
 
-  // Filter tactics
-  const filteredTactics = tacticsWithDetails.filter((tactic) => {
-    const matchesSearch = tactic.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         tactic.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         tactic.strategy?.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || tactic.status === statusFilter;
-    const matchesStrategy = strategyFilter === "all" || tactic.strategyId === strategyFilter;
+  // Filter projects
+  const filteredProjects = projectsWithDetails.filter((project) => {
+    const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         project.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         project.strategy?.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || project.status === statusFilter;
+    const matchesStrategy = strategyFilter === "all" || project.strategyId === strategyFilter;
     
-    // Filter out archived tactics and tactics from archived strategies
-    const isNotArchived = tactic.isArchived !== 'true' && tactic.strategy?.status !== 'Archived';
+    // Filter out archived projects and projects from archived strategies
+    const isNotArchived = project.isArchived !== 'true' && project.strategy?.status !== 'Archived';
     
     // Role-based filtering
     let matchesRole = true;
     if (currentRole === 'leader') {
       try {
-        const leaderIds = JSON.parse(tactic.accountableLeaders);
+        const leaderIds = JSON.parse(project.accountableLeaders);
         matchesRole = leaderIds.includes(currentUser?.id);
       } catch {
         matchesRole = false;
@@ -266,15 +266,15 @@ export default function Tactics() {
     return matchesSearch && matchesStatus && matchesStrategy && isNotArchived && matchesRole;
   });
 
-  // Group tactics by strategy
-  const tacticsByStrategy = filteredTactics.reduce((groups, tactic) => {
-    const strategyId = tactic.strategyId;
+  // Group projects by strategy
+  const projectsByStrategy = filteredProjects.reduce((groups, project) => {
+    const strategyId = project.strategyId;
     if (!groups[strategyId]) {
       groups[strategyId] = [];
     }
-    groups[strategyId].push(tactic);
+    groups[strategyId].push(project);
     return groups;
-  }, {} as Record<string, Tactic[]>);
+  }, {} as Record<string, Project[]>);
 
   // Get all active strategies sorted by displayOrder (with fallback to title for stable sorting)
   const sortedStrategies = ((strategies as Strategy[]) || [])
@@ -299,43 +299,43 @@ export default function Tactics() {
     });
   };
 
-  const handleStatusChange = (tacticId: string, newStatus: string) => {
-    updateTacticMutation.mutate({
-      id: tacticId,
+  const handleStatusChange = (projectId: string, newStatus: string) => {
+    updateProjectMutation.mutate({
+      id: projectId,
       updates: { status: newStatus }
     });
   };
 
-  const handleDeleteTactic = (tacticId: string) => {
-    deleteTacticMutation.mutate(tacticId);
+  const handleDeleteProject = (projectId: string) => {
+    deleteProjectMutation.mutate(projectId);
   };
 
-  const handleEditTactic = (tactic: Tactic) => {
-    setEditingTactic(tactic);
-    setIsEditTacticOpen(true);
+  const handleEditProject = (project: Project) => {
+    setEditingProject(project);
+    setIsEditProjectOpen(true);
   };
 
-  const handleViewTactic = (tactic: Tactic) => {
-    setViewingTactic(tactic);
-    setIsViewTacticOpen(true);
+  const handleViewProject = (project: Project) => {
+    setViewingProject(project);
+    setIsViewProjectOpen(true);
   };
 
   const closeEditModal = () => {
-    setIsEditTacticOpen(false);
-    setEditingTactic(null);
+    setIsEditProjectOpen(false);
+    setEditingProject(null);
   };
 
   const closeViewModal = () => {
-    setIsViewTacticOpen(false);
-    setViewingTactic(null);
+    setIsViewProjectOpen(false);
+    setViewingProject(null);
   };
 
-  if (tacticsLoading) {
+  if (projectsLoading) {
     return (
       <div className="flex h-screen">
         <Sidebar />
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-lg">Loading tactics...</div>
+          <div className="text-lg">Loading projects...</div>
         </div>
       </div>
     );
@@ -352,8 +352,8 @@ export default function Tactics() {
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Projects</h1>
               <p className="text-gray-600 dark:text-gray-400">Track your assigned projects and progress</p>
             </div>
-            {canCreateTactics() && (
-              <Button onClick={() => setIsCreateTacticOpen(true)} data-testid="button-create-tactic">
+            {canCreateProjects() && (
+              <Button onClick={() => setIsCreateProjectOpen(true)} data-testid="button-create-project">
                 <Plus className="w-4 h-4 mr-2" />
                 New Project
               </Button>
@@ -368,11 +368,11 @@ export default function Tactics() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
-                  placeholder="Search tactics..."
+                  placeholder="Search projects..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
-                  data-testid="input-search-tactics"
+                  data-testid="input-search-projects"
                 />
               </div>
             </div>
@@ -418,27 +418,27 @@ export default function Tactics() {
               <p className="text-gray-600 dark:text-gray-400 mb-6">
                 {searchTerm || statusFilter !== "all" || strategyFilter !== "all" 
                   ? "Try adjusting your filters to see more strategies."
-                  : "Get started by creating your first tactic."
+                  : "Get started by creating your first project."
                 }
               </p>
-              {canCreateTactics() && !searchTerm && statusFilter === "all" && strategyFilter === "all" && (
-                <Button onClick={() => setIsCreateTacticOpen(true)}>
+              {canCreateProjects() && !searchTerm && statusFilter === "all" && strategyFilter === "all" && (
+                <Button onClick={() => setIsCreateProjectOpen(true)}>
                   <Plus className="w-4 h-4 mr-2" />
-                  Create Your First Tactic
+                  Create Your First Project
                 </Button>
               )}
             </div>
           ) : (
             <div className="space-y-6">
               {sortedStrategies.map((strategy) => {
-                const strategyTactics = tacticsByStrategy[strategy.id] || [];
+                const strategyProjects = projectsByStrategy[strategy.id] || [];
                 const strategyId = strategy.id;
                 const isCollapsed = collapsedStrategies.has(strategyId);
                 
                 if (!strategy) return null;
                 
-                // Sort tactics by creation date within each strategy
-                const sortedTactics = [...strategyTactics].sort((a, b) => 
+                // Sort projects by creation date within each strategy
+                const sortedProjects = [...strategyProjects].sort((a, b) => 
                   new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
                 );
 
@@ -465,7 +465,7 @@ export default function Tactics() {
                               {strategy.title}
                             </CardTitle>
                             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                              {strategyTactics.length} project{strategyTactics.length !== 1 ? 's' : ''}
+                              {strategyProjects.length} project{strategyProjects.length !== 1 ? 's' : ''}
                             </p>
                           </div>
                         </div>
@@ -480,43 +480,43 @@ export default function Tactics() {
                     {!isCollapsed && (
                       <CardContent className="p-0">
                         <div className="space-y-4 p-6 pt-0">
-                          {sortedTactics.length === 0 ? (
+                          {sortedProjects.length === 0 ? (
                             <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
                               No projects established
                             </p>
                           ) : (
-                            sortedTactics.map((tactic) => {
-                            const statusInfo = getStatusDisplay(tactic.status);
-                            const accountableLeaders = getAccountableLeaders(tactic);
+                            sortedProjects.map((project) => {
+                            const statusInfo = getStatusDisplay(project.status);
+                            const accountableLeaders = getAccountableLeaders(project);
                             
                             return (
-                              <Card key={tactic.id} className="border border-gray-200 dark:border-gray-700">
+                              <Card key={project.id} className="border border-gray-200 dark:border-gray-700">
                                 <CardContent className="p-6">
                                   <div className="flex items-start justify-between mb-4">
                                     <div className="flex-1">
                                       <div className="flex items-center space-x-3 mb-2">
                                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                          {tactic.title}
+                                          {project.title}
                                         </h3>
                                         <Badge 
                                           className={`${statusInfo.color} text-white`}
-                                          data-testid={`badge-status-${tactic.id}`}
+                                          data-testid={`badge-status-${project.id}`}
                                         >
                                           {statusInfo.label}
                                         </Badge>
                                       </div>
                                       <p className="text-gray-600 dark:text-gray-400 mb-4">
-                                        {tactic.description}
+                                        {project.description}
                                       </p>
                                       
                                       {/* Communication Plan Link */}
-                                      {tactic.communicationUrl && (
+                                      {project.communicationUrl && (
                                         <a
-                                          href={tactic.communicationUrl}
+                                          href={project.communicationUrl}
                                           target="_blank"
                                           rel="noopener noreferrer"
                                           className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline mb-2"
-                                          data-testid={`link-communication-plan-${tactic.id}`}
+                                          data-testid={`link-communication-plan-${project.id}`}
                                           aria-label="Open communication plan in new tab"
                                         >
                                           <MessageSquarePlus className="w-4 h-4" />
@@ -528,33 +528,33 @@ export default function Tactics() {
                                     
                                     <DropdownMenu>
                                       <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="sm" data-testid={`menu-tactic-${tactic.id}`}>
+                                        <Button variant="ghost" size="sm" data-testid={`menu-project-${project.id}`}>
                                           <MoreVertical className="w-4 h-4" />
                                         </Button>
                                       </DropdownMenuTrigger>
                                       <DropdownMenuContent align="end">
                                         <DropdownMenuItem 
-                                          onClick={() => handleViewTactic(tactic)}
-                                          data-testid={`button-view-${tactic.id}`}
+                                          onClick={() => handleViewProject(project)}
+                                          data-testid={`button-view-${project.id}`}
                                         >
                                           <Eye className="w-4 h-4 mr-2" />
                                           View Details
                                         </DropdownMenuItem>
-                                        {canEditTactic(tactic) && (
+                                        {canEditProject(project) && (
                                           <>
                                             <DropdownMenuItem 
-                                              onClick={() => handleEditTactic(tactic)}
-                                              data-testid={`button-edit-${tactic.id}`}
+                                              onClick={() => handleEditProject(project)}
+                                              data-testid={`button-edit-${project.id}`}
                                             >
                                               <Edit className="w-4 h-4 mr-2" />
-                                              Edit Tactic
+                                              Edit Project
                                             </DropdownMenuItem>
                                             <AlertDialog>
                                               <AlertDialogTrigger asChild>
                                                 <DropdownMenuItem 
                                                   onSelect={(e) => e.preventDefault()}
                                                   className="text-red-600"
-                                                  data-testid={`button-delete-${tactic.id}`}
+                                                  data-testid={`button-delete-${project.id}`}
                                                 >
                                                   <Trash2 className="w-4 h-4 mr-2" />
                                                   Delete
@@ -562,15 +562,15 @@ export default function Tactics() {
                                               </AlertDialogTrigger>
                                             <AlertDialogContent>
                                               <AlertDialogHeader>
-                                                <AlertDialogTitle>Delete Tactic</AlertDialogTitle>
+                                                <AlertDialogTitle>Delete Project</AlertDialogTitle>
                                                 <AlertDialogDescription>
-                                                  Are you sure you want to delete "{tactic.title}"? This action cannot be undone.
+                                                  Are you sure you want to delete "{project.title}"? This action cannot be undone.
                                                 </AlertDialogDescription>
                                               </AlertDialogHeader>
                                               <AlertDialogFooter>
                                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                                                 <AlertDialogAction
-                                                  onClick={() => handleDeleteTactic(tactic.id)}
+                                                  onClick={() => handleDeleteProject(project.id)}
                                                   className="bg-red-600 hover:bg-red-700"
                                                 >
                                                   Delete
@@ -594,12 +594,12 @@ export default function Tactics() {
                                           Key Performance Indicator
                                         </span>
                                       </div>
-                                      <p className="text-gray-900 dark:text-white font-medium">{tactic.kpi}</p>
-                                      {tactic.kpiTracking && (
+                                      <p className="text-gray-900 dark:text-white font-medium">{project.kpi}</p>
+                                      {project.kpiTracking && (
                                         <div className="flex items-center space-x-2">
                                           <TrendingUp className="w-4 h-4 text-green-500" />
                                           <span className="text-sm text-gray-600 dark:text-gray-400">
-                                            {tactic.kpiTracking}
+                                            {project.kpiTracking}
                                           </span>
                                         </div>
                                       )}
@@ -643,30 +643,30 @@ export default function Tactics() {
                                         </span>
                                       </div>
                                       <div className="text-sm text-gray-600 dark:text-gray-400">
-                                        <div>Start: {new Date(tactic.startDate).toLocaleDateString()}</div>
-                                        <div>Due: {new Date(tactic.dueDate).toLocaleDateString()}</div>
+                                        <div>Start: {new Date(project.startDate).toLocaleDateString()}</div>
+                                        <div>Due: {new Date(project.dueDate).toLocaleDateString()}</div>
                                       </div>
                                     </div>
 
                                     {/* Resources Component */}
-                                    {tactic.resourcesRequired && (
+                                    {project.resourcesRequired && (
                                       <div className="space-y-2">
                                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                           Resources Required
                                         </span>
                                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                                          {tactic.resourcesRequired}
+                                          {project.resourcesRequired}
                                         </p>
                                       </div>
                                     )}
 
-                                    {tactic.documentFolderUrl && (
+                                    {project.documentFolderUrl && (
                                       <div className="space-y-2">
                                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                           Document Folder
                                         </span>
                                         <a
-                                          href={tactic.documentFolderUrl}
+                                          href={project.documentFolderUrl}
                                           target="_blank"
                                           rel="noopener noreferrer"
                                           className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
@@ -680,13 +680,13 @@ export default function Tactics() {
                                   </div>
 
                                   {/* Action Controls */}
-                                  {canEditTactic(tactic) && (
+                                  {canEditProject(project) && (
                                     <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                                       <Select
-                                        value={tactic.status}
-                                        onValueChange={(value) => handleStatusChange(tactic.id, value)}
+                                        value={project.status}
+                                        onValueChange={(value) => handleStatusChange(project.id, value)}
                                       >
-                                        <SelectTrigger className="w-40" data-testid={`select-status-${tactic.id}`}>
+                                        <SelectTrigger className="w-40" data-testid={`select-status-${project.id}`}>
                                           <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -700,7 +700,7 @@ export default function Tactics() {
                                       
                                       <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-md">
                                         <span className="text-sm text-gray-600 dark:text-gray-400">Progress:</span>
-                                        <span className="text-sm font-semibold text-gray-900 dark:text-white">{tactic.progress}%</span>
+                                        <span className="text-sm font-semibold text-gray-900 dark:text-white">{project.progress}%</span>
                                       </div>
                                     </div>
                                   )}
@@ -719,19 +719,19 @@ export default function Tactics() {
           )}
         </div>
       </div>
-      <CreateTacticModal 
-        isOpen={isCreateTacticOpen} 
-        onClose={() => setIsCreateTacticOpen(false)} 
+      <CreateProjectModal 
+        isOpen={isCreateProjectOpen} 
+        onClose={() => setIsCreateProjectOpen(false)} 
       />
-      <EditTacticModal 
-        isOpen={isEditTacticOpen} 
+      <EditProjectModal 
+        isOpen={isEditProjectOpen} 
         onClose={closeEditModal}
-        tactic={editingTactic}
+        project={editingProject}
       />
       <ViewTacticModal 
-        isOpen={isViewTacticOpen} 
+        isOpen={isViewProjectOpen} 
         onClose={closeViewModal}
-        tactic={viewingTactic}
+        tactic={viewingProject}
       />
     </div>
   );

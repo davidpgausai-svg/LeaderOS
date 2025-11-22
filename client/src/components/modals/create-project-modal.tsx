@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertTacticSchema, type InsertTactic } from "@shared/schema";
+import { insertProjectSchema, type InsertProject } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useRole } from "@/hooks/use-role";
 import { useToast } from "@/hooks/use-toast";
@@ -31,12 +31,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar, Users, Target, Edit } from "lucide-react";
+import { Calendar, Users, Target } from "lucide-react";
 
-interface EditTacticModalProps {
+interface CreateProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  tactic: any;
+  strategyId?: string;
 }
 
 type User = {
@@ -53,7 +53,7 @@ type Strategy = {
   colorCode: string;
 };
 
-export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProps) {
+export function CreateProjectModal({ isOpen, onClose, strategyId }: CreateProjectModalProps) {
   const { currentUser } = useRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -67,12 +67,12 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
     queryKey: ["/api/users"],
   });
 
-  const form = useForm<InsertTactic>({
-    resolver: zodResolver(insertTacticSchema),
+  const form = useForm<InsertProject>({
+    resolver: zodResolver(insertProjectSchema),
     defaultValues: {
       title: "",
       description: "",
-      strategyId: "",
+      strategyId: strategyId || "",
       kpi: "",
       kpiTracking: "",
       accountableLeaders: "[]",
@@ -80,58 +80,36 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
       documentFolderUrl: null,
       communicationUrl: null,
       startDate: new Date(),
-      dueDate: new Date(),
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
       status: "NYS",
       createdBy: currentUser?.id || "",
     },
   });
 
-  // Update form when tactic changes
-  useEffect(() => {
-    if (tactic && isOpen) {
-      try {
-        const leaders = JSON.parse(tactic.accountableLeaders || "[]");
-        setSelectedLeaders(leaders);
-        
-        form.reset({
-          title: tactic.title || "",
-          description: tactic.description || "",
-          strategyId: tactic.strategyId || "",
-          kpi: tactic.kpi || "",
-          kpiTracking: tactic.kpiTracking || "",
-          accountableLeaders: tactic.accountableLeaders || "[]",
-          resourcesRequired: tactic.resourcesRequired || "",
-          documentFolderUrl: tactic.documentFolderUrl || null,
-          communicationUrl: tactic.communicationUrl || null,
-          startDate: new Date(tactic.startDate),
-          dueDate: new Date(tactic.dueDate),
-          status: tactic.status || "NYS",
-          createdBy: tactic.createdBy || "",
-        });
-      } catch (error) {
-        console.error("Error parsing tactic data:", error);
+  const createProjectMutation = useMutation({
+    mutationFn: async (data: InsertProject) => {
+      const response = await apiRequest("POST", "/api/projects", data);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to create project");
       }
-    }
-  }, [tactic, isOpen, form]);
-
-  const updateTacticMutation = useMutation({
-    mutationFn: async (data: InsertTactic) => {
-      const response = await apiRequest("PATCH", `/api/tactics/${tactic.id}`, data);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tactics"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
       toast({
         title: "Success",
-        description: "Tactic updated successfully",
+        description: "Project created successfully",
       });
+      form.reset();
+      setSelectedLeaders([]);
       onClose();
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
-        description: "Failed to update tactic",
+        description: error.message || "Failed to create project",
         variant: "destructive",
       });
     },
@@ -148,27 +126,38 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
     form.setValue("accountableLeaders", JSON.stringify(newLeaders));
   };
 
-  const onSubmit = (data: InsertTactic) => {
+  const onSubmit = (data: InsertProject) => {
+    // Validate that at least one leader is selected
+    if (selectedLeaders.length === 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please select at least one accountable leader",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Ensure accountableLeaders is properly formatted
     const submitData = {
       ...data,
       accountableLeaders: JSON.stringify(selectedLeaders),
     };
-    updateTacticMutation.mutate(submitData);
+    createProjectMutation.mutate(submitData);
   };
 
   const handleClose = () => {
+    form.reset();
+    setSelectedLeaders([]);
     onClose();
   };
-
-  if (!tactic) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
-            <Edit className="w-5 h-5 text-blue-500" />
-            <span>Edit Tactic</span>
+            <Target className="w-5 h-5 text-blue-500" />
+            <span>Create New Project</span>
           </DialogTitle>
         </DialogHeader>
 
@@ -183,12 +172,12 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tactic Title *</FormLabel>
+                    <FormLabel>Project Title *</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Enter tactic title"
+                        placeholder="Enter project title"
                         {...field}
-                        data-testid="input-edit-tactic-title"
+                        data-testid="input-project-title"
                       />
                     </FormControl>
                     <FormMessage />
@@ -204,9 +193,9 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
                     <FormLabel>Description *</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Describe this tactic and its objectives"
+                        placeholder="Describe this project and its objectives"
                         {...field}
-                        data-testid="textarea-edit-tactic-description"
+                        data-testid="textarea-project-description"
                       />
                     </FormControl>
                     <FormMessage />
@@ -222,7 +211,7 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
                     <FormLabel>Strategy *</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger data-testid="select-edit-strategy">
+                        <SelectTrigger data-testid="select-strategy">
                           <SelectValue placeholder="Select a strategy" />
                         </SelectTrigger>
                       </FormControl>
@@ -246,8 +235,8 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
               />
             </div>
 
-            {/* KPI Section - Key Focus Area */}
-            <div className="space-y-4 bg-blue-50 dark:bg-blue-950 p-4 rounded-lg">
+            {/* KPI Section */}
+            <div className="space-y-4">
               <h3 className="text-lg font-medium flex items-center space-x-2">
                 <Target className="w-5 h-5 text-green-500" />
                 <span>Key Performance Indicator</span>
@@ -258,12 +247,12 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
                 name="kpi"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>KPI Definition *</FormLabel>
+                    <FormLabel>KPI *</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="e.g., Reduce employee turnover below 17%"
+                        placeholder="e.g., Number of partnerships established"
                         {...field}
-                        data-testid="input-edit-kpi"
+                        data-testid="input-kpi"
                       />
                     </FormControl>
                     <FormMessage />
@@ -276,18 +265,15 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
                 name="kpiTracking"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Current KPI Value</FormLabel>
+                    <FormLabel>KPI Tracking (Optional)</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="e.g., Current turnover rate: 17.9%"
+                        placeholder="e.g., 2 out of 5 partnerships signed"
                         {...field}
                         value={field.value || ""}
-                        data-testid="input-edit-kpi-tracking"
+                        data-testid="input-kpi-tracking"
                       />
                     </FormControl>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      Track your current progress against the KPI target
-                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -307,13 +293,13 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
                   {(users as User[])?.map((user) => (
                     <div key={user.id} className="flex items-center space-x-2">
                       <Checkbox
-                        id={`edit-leader-${user.id}`}
+                        id={`leader-${user.id}`}
                         checked={selectedLeaders.includes(user.id)}
                         onCheckedChange={(checked) => handleLeaderChange(user.id, !!checked)}
-                        data-testid={`checkbox-edit-leader-${user.id}`}
+                        data-testid={`checkbox-leader-${user.id}`}
                       />
                       <label 
-                        htmlFor={`edit-leader-${user.id}`}
+                        htmlFor={`leader-${user.id}`}
                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                       >
                         {user.firstName && user.lastName 
@@ -339,13 +325,13 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
                 name="resourcesRequired"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Resources Required</FormLabel>
+                    <FormLabel>Resources Required (Optional)</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="e.g., HR team, budget for training programs, exit interview software"
+                        placeholder="e.g., Legal team, budget of $50k, marketing materials"
                         {...field}
                         value={field.value || ""}
-                        data-testid="textarea-edit-resources"
+                        data-testid="textarea-resources"
                       />
                     </FormControl>
                     <FormMessage />
@@ -365,27 +351,7 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
                         placeholder="https://drive.google.com/..."
                         {...field}
                         value={field.value || ""}
-                        data-testid="input-edit-document-folder-url"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="communicationUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Communication URL (Optional)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="url"
-                        placeholder="https://..."
-                        {...field}
-                        value={field.value || ""}
-                        data-testid="input-edit-communication-url"
+                        data-testid="input-document-folder-url"
                       />
                     </FormControl>
                     <FormMessage />
@@ -414,7 +380,7 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
                           {...field}
                           value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : field.value}
                           onChange={(e) => field.onChange(new Date(e.target.value))}
-                          data-testid="input-edit-start-date"
+                          data-testid="input-start-date"
                         />
                       </FormControl>
                       <FormMessage />
@@ -434,7 +400,7 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
                           {...field}
                           value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : field.value}
                           onChange={(e) => field.onChange(new Date(e.target.value))}
-                          data-testid="input-edit-due-date"
+                          data-testid="input-due-date"
                         />
                       </FormControl>
                       <FormMessage />
@@ -456,10 +422,10 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
                 name="status"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Status</FormLabel>
+                    <FormLabel>Initial Status</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger data-testid="select-edit-status">
+                        <SelectTrigger data-testid="select-status">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
@@ -483,16 +449,16 @@ export function EditTacticModal({ isOpen, onClose, tactic }: EditTacticModalProp
                 type="button" 
                 variant="outline" 
                 onClick={handleClose}
-                data-testid="button-cancel-edit"
+                data-testid="button-cancel"
               >
                 Cancel
               </Button>
               <Button 
                 type="submit" 
-                disabled={updateTacticMutation.isPending || selectedLeaders.length === 0}
-                data-testid="button-save-tactic"
+                disabled={createProjectMutation.isPending || selectedLeaders.length === 0}
+                data-testid="button-create-project"
               >
-                {updateTacticMutation.isPending ? "Saving..." : "Save Changes"}
+                {createProjectMutation.isPending ? "Creating..." : "Create Project"}
               </Button>
             </div>
           </form>
