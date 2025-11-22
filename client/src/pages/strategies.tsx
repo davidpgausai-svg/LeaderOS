@@ -2,13 +2,19 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRole } from "@/hooks/use-role";
 import { Sidebar } from "@/components/layout/sidebar";
-import { StrategyCard } from "@/components/cards/strategy-card";
 import { CreateStrategyModal } from "@/components/modals/create-strategy-modal";
 import { EditStrategyModal } from "@/components/modals/edit-strategy-modal";
 import { ViewStrategyModal } from "@/components/modals/view-strategy-modal";
 import { CreateTacticModal } from "@/components/modals/create-tactic-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -33,7 +39,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -55,6 +61,7 @@ export default function Strategies() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [expandedContinuum, setExpandedContinuum] = useState<Record<string, boolean>>({});
+  const [collapsedStrategies, setCollapsedStrategies] = useState<Set<string>>(new Set());
 
   const { data: strategies, isLoading: strategiesLoading } = useQuery({
     queryKey: ["/api/strategies"],
@@ -172,6 +179,16 @@ export default function Strategies() {
     deleteStrategyMutation.mutate(strategyId);
   };
 
+  const toggleStrategyCollapse = (strategyId: string) => {
+    const newCollapsed = new Set(collapsedStrategies);
+    if (newCollapsed.has(strategyId)) {
+      newCollapsed.delete(strategyId);
+    } else {
+      newCollapsed.add(strategyId);
+    }
+    setCollapsedStrategies(newCollapsed);
+  };
+
   if (strategiesLoading) {
     return (
       <div className="min-h-screen flex">
@@ -256,98 +273,48 @@ export default function Strategies() {
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filteredStrategies.map((strategy: any) => (
-                <div key={strategy.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6" style={{ borderTop: `4px solid ${strategy.colorCode}` }}>
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-2">
+            <div className="space-y-6">
+              {filteredStrategies.map((strategy: any) => {
+                const isCollapsed = collapsedStrategies.has(strategy.id);
+                
+                return (
+                <Card key={strategy.id} className="overflow-hidden">
+                  <CardHeader 
+                    className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                    onClick={() => toggleStrategyCollapse(strategy.id)}
+                    style={{ borderLeft: `4px solid ${strategy.colorCode}` }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        {isCollapsed ? (
+                          <ChevronRight className="w-5 h-5 text-gray-400" />
+                        ) : (
+                          <ChevronDown className="w-5 h-5 text-gray-400" />
+                        )}
                         <div 
-                          className="w-3 h-3 rounded-full"
+                          className="w-4 h-4 rounded-full"
                           style={{ backgroundColor: strategy.colorCode }}
                         />
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {strategy.title}
-                        </h3>
+                        <div>
+                          <CardTitle className="text-lg font-semibold">
+                            {strategy.title}
+                          </CardTitle>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                            {strategy.tactics.length} project{strategy.tactics.length !== 1 ? 's' : ''}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-gray-600 text-sm mb-4">
-                        {strategy.description}
-                      </p>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="outline" style={{ color: strategy.colorCode }}>
+                          {strategy.status}
+                        </Badge>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      {/* Status Badge */}
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        strategy.status === 'Active' 
-                          ? 'bg-blue-100 text-blue-700' 
-                          : strategy.status === 'Completed'
-                          ? 'bg-green-100 text-green-700'
-                          : strategy.status === 'Archived'
-                          ? 'bg-gray-100 text-gray-700'
-                          : 'bg-yellow-100 text-yellow-700'
-                      }`} data-testid={`status-badge-${strategy.id}`}>
-                        {strategy.status}
-                      </span>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" data-testid={`button-strategy-menu-${strategy.id}`}>
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => handleViewStrategy(strategy)}
-                            data-testid={`button-view-strategy-${strategy.id}`}
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            View Details
-                          </DropdownMenuItem>
-                          {canEditAllStrategies() && (
-                            <>
-                              <DropdownMenuItem
-                                onClick={() => handleEditStrategy(strategy)}
-                                data-testid={`button-edit-strategy-${strategy.id}`}
-                              >
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit Strategy
-                              </DropdownMenuItem>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <DropdownMenuItem
-                                    className="text-red-600 focus:text-red-600"
-                                    onSelect={(e) => e.preventDefault()}
-                                    data-testid={`button-delete-strategy-${strategy.id}`}
-                                  >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete Strategy
-                                  </DropdownMenuItem>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Delete Strategy</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Are you sure you want to delete "{strategy.title}"? This action cannot be undone and will also delete all associated projects.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => handleDeleteStrategy(strategy.id)}
-                                      className="bg-red-600 hover:bg-red-700"
-                                      data-testid={`button-confirm-delete-strategy-${strategy.id}`}
-                                    >
-                                      Delete
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
+                  </CardHeader>
 
-                  <div className="space-y-3">
+                  {!isCollapsed && (
+                    <CardContent className="p-6">
+                      <div className="space-y-4 mb-6">
                     <div className="flex items-center text-sm text-gray-500">
                       <span className="font-medium">Start:</span>
                       <span className="ml-2">
@@ -490,8 +457,11 @@ export default function Strategies() {
                       </AlertDialog>
                     )}
                   </div>
-                </div>
-              ))}
+                    </CardContent>
+                  )}
+                </Card>
+              );
+              })}
             </div>
           )}
         </div>
