@@ -7,7 +7,7 @@ StrategicFlow is a comprehensive strategic planning platform designed for organi
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
-Access Control: Two-layer settings system: 1) Administrator layer for managing user roles, permissions, and strategy assignments, 2) User layer for personal preferences. Three-role system with strategy-based access: Administrators have full modification power over the app and see all strategies; Co-Leads can edit projects and actions for assigned strategies only; View users have read-only access to assigned strategies. All roles have report writing capability. Strategy assignments are managed by administrators through the Settings page.
+Access Control: Two-layer settings system: 1) Administrator layer for managing user roles, permissions, and strategy assignments, 2) User layer for personal preferences. Four-role system with strategy-based access: Administrators have full modification power over the app and see all strategies; Co-Leads can edit projects and actions for assigned strategies only; View users have read-only access to assigned strategies; SME (Subject Matter Expert) users are for tracking only and cannot log in to the system. Administrators, Co-Leads, and View users have report writing capability. Strategy assignments are managed by administrators through the Settings page.
 
 ## System Architecture
 
@@ -21,7 +21,7 @@ The backend is a REST API built with Express.js and TypeScript. It utilizes an a
 The application employs Drizzle ORM for type-safe PostgreSQL interactions. Drizzle migrations manage schema versioning, and initial data seeding occurs on the first run.
 
 ### Authentication and Authorization
-A role-based access control system integrates Replit OpenID Connect for authentication. Roles include Administrator, Co-Lead, and View, with permissions enforced at the API level based on user roles and strategy assignments. Administrators manage user roles and strategy assignments, ensuring data isolation.
+A role-based access control system integrates Replit OpenID Connect for authentication. Roles include Administrator, Co-Lead, View, and SME (Subject Matter Expert), with permissions enforced at the API level based on user roles and strategy assignments. SME users are explicitly blocked from logging in as they exist solely for tracking and assignment purposes. Administrators manage user roles and strategy assignments, ensuring data isolation.
 
 ### Key Data Models
 Core entities include Users, User Strategy Assignments (linking users to strategies), Strategies (high-level objectives with a Change Continuum Framework and customizable colors), Tactics (Projects with custom communication URL field and documentation URLs), Outcomes (Actions with two-tier filtering), Meeting Notes (report-out notes with dynamic project/action selection and PDF export), and Activities (audit trail).
@@ -42,7 +42,7 @@ Each project includes an optional custom communication URL field that can be man
 All Strategy and Project cards offer view-only access via dedicated buttons, displaying comprehensive details in read-only modals for all users, regardless of edit permissions.
 
 ### Notification System
-A real-time notification system alerts users to action completions, project progress, strategy status changes, and due date warnings/overdue alerts. Notifications appear in a dedicated panel with an unread count, read/unread toggling, and deletion options. A background job handles due date alerts.
+A real-time notification system alerts users to action completions, project progress, strategy status changes, and due date warnings/overdue alerts. Notifications appear in a dedicated panel with an unread count, read/unread toggling, and deletion options. A background job handles due date alerts. SME users are excluded from all notifications as they cannot log in to the system.
 
 ### Meeting Notes (Report-Out Meetings)
 A comprehensive system for creating and managing report-out meeting notes with dynamic content selection. Users can create notes tied to a specific strategy, then dynamically select which projects and actions to include (not all). Features include: hierarchical cascading selectors (Strategy → Projects → Actions), rich text notes field, meeting date tracking, PDF export for email distribution, and proper authorization (users can only create notes for assigned strategies and must be the creator or an administrator to edit/delete). Notes are stored in the database with selected projects and actions as JSON arrays. Accessible via the "Meeting Notes" link in the sidebar.
