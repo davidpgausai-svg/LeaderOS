@@ -32,7 +32,7 @@ export async function createNotification(
   title: string,
   message: string,
   relatedEntityId?: string,
-  relatedEntityType?: "strategy" | "tactic" | "outcome"
+  relatedEntityType?: "strategy" | "project" | "action"
 ) {
   const notification: InsertNotification = {
     userId,
@@ -54,7 +54,7 @@ export async function notifyUsers(
   title: string,
   message: string,
   relatedEntityId?: string,
-  relatedEntityType?: "strategy" | "tactic" | "outcome"
+  relatedEntityType?: "strategy" | "project" | "action"
 ) {
   // Filter out SME users - they cannot log in and should not receive notifications
   const allUsers = await storage.getAllUsers();
@@ -74,7 +74,7 @@ export async function notifyUsers(
 export async function notifyActionCompleted(
   actionId: string,
   actionTitle: string,
-  tacticId: string,
+  projectId: string,
   assignedUserIds: string[]
 ) {
   await notifyUsers(
@@ -83,7 +83,7 @@ export async function notifyActionCompleted(
     "Action Completed",
     `Action "${actionTitle}" has been marked as completed`,
     actionId,
-    "outcome"
+    "action"
   );
 }
 
@@ -98,13 +98,13 @@ export async function notifyActionAchieved(
     "Action Achieved",
     `Action "${actionTitle}" has been marked as achieved`,
     actionId,
-    "outcome"
+    "action"
   );
 }
 
 export async function notifyProjectProgress(
-  tacticId: string,
-  tacticTitle: string,
+  projectId: string,
+  projectTitle: string,
   progress: number,
   assignedUserIds: string[]
 ) {
@@ -131,9 +131,9 @@ export async function notifyProjectProgress(
     assignedUserIds,
     type,
     `Project ${milestone} Complete`,
-    `Project "${tacticTitle}" has reached ${milestone} completion`,
-    tacticId,
-    "tactic"
+    `Project "${projectTitle}" has reached ${milestone} completion`,
+    projectId,
+    "project"
   );
 }
 
@@ -180,7 +180,7 @@ export async function notifyActionDueSoon(
     "Action Due Soon",
     message,
     actionId,
-    "outcome"
+    "action"
   );
 }
 
@@ -209,14 +209,14 @@ export async function notifyActionOverdue(
     "Action Overdue",
     message,
     actionId,
-    "outcome"
+    "action"
   );
 }
 
 export async function notifyUserAssignedToProject(
   userId: string,
-  tacticId: string,
-  tacticTitle: string
+  projectId: string,
+  projectTitle: string
 ) {
   // Don't notify SME users - they cannot log in
   const user = await storage.getUser(userId);
@@ -228,9 +228,9 @@ export async function notifyUserAssignedToProject(
     userId,
     NotificationTypes.USER_ASSIGNED_TO_PROJECT,
     "Assigned to Project",
-    `You have been assigned to project "${tacticTitle}"`,
-    tacticId,
-    "tactic"
+    `You have been assigned to project "${projectTitle}"`,
+    projectId,
+    "project"
   );
 }
 
@@ -252,8 +252,8 @@ export async function notifyStrategyStatusChanged(
 }
 
 export async function notifyProjectStatusChanged(
-  tacticId: string,
-  tacticTitle: string,
+  projectId: string,
+  projectTitle: string,
   oldStatus: string,
   newStatus: string,
   assignedUserIds: string[]
@@ -262,9 +262,9 @@ export async function notifyProjectStatusChanged(
     assignedUserIds,
     NotificationTypes.PROJECT_STATUS_CHANGED,
     "Project Status Updated",
-    `Project "${tacticTitle}" status changed from ${oldStatus} to ${newStatus}`,
-    tacticId,
-    "tactic"
+    `Project "${projectTitle}" status changed from ${oldStatus} to ${newStatus}`,
+    projectId,
+    "project"
   );
 }
 

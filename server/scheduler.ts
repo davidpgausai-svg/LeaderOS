@@ -14,62 +14,62 @@ const notifiedActions = new Map<string, Set<number>>();
  */
 export async function checkDueDateNotifications() {
   try {
-    const outcomes = await storage.getAllOutcomes();
-    const tactics = await storage.getAllTactics();
+    const actions = await storage.getAllActions();
+    const projects = await storage.getAllProjects();
     const now = new Date();
 
-    for (const outcome of outcomes) {
+    for (const action of actions) {
       // Skip archived actions or actions without due dates
-      if (outcome.isArchived === "true" || !outcome.dueDate) {
+      if (action.isArchived === "true" || !action.dueDate) {
         continue;
       }
 
       // Skip completed or achieved actions
-      if (outcome.status === "completed" || outcome.status === "achieved") {
+      if (action.status === "completed" || action.status === "achieved") {
         continue;
       }
 
-      const dueDate = new Date(outcome.dueDate);
+      const dueDate = new Date(action.dueDate);
       const daysUntilDue = differenceInDays(dueDate, now);
 
-      // Get the tactic to find assigned users
-      const tactic = outcome.tacticId ? await storage.getTactic(outcome.tacticId) : null;
-      if (!tactic) continue;
+      // Get the project to find assigned users
+      const project = action.projectId ? await storage.getProject(action.projectId) : null;
+      if (!project) continue;
 
-      const assignedUserIds = JSON.parse(tactic.accountableLeaders);
+      const assignedUserIds = JSON.parse(project.accountableLeaders);
 
       // Initialize notification tracking for this action
-      if (!notifiedActions.has(outcome.id)) {
-        notifiedActions.set(outcome.id, new Set());
+      if (!notifiedActions.has(action.id)) {
+        notifiedActions.set(action.id, new Set());
       }
-      const notified = notifiedActions.get(outcome.id)!;
+      const notified = notifiedActions.get(action.id)!;
 
       // Check for upcoming due dates (14, 7, 1 day before)
       if (daysUntilDue === 14 && !notified.has(14)) {
-        await notifyActionDueSoon(outcome.id, outcome.title, 14, assignedUserIds);
+        await notifyActionDueSoon(action.id, action.title, 14, assignedUserIds);
         notified.add(14);
-        logger.info(`Sent 14-day due notification for action: ${outcome.title}`);
+        logger.info(`Sent 14-day due notification for action: ${action.title}`);
       } else if (daysUntilDue === 7 && !notified.has(7)) {
-        await notifyActionDueSoon(outcome.id, outcome.title, 7, assignedUserIds);
+        await notifyActionDueSoon(action.id, action.title, 7, assignedUserIds);
         notified.add(7);
-        logger.info(`Sent 7-day due notification for action: ${outcome.title}`);
+        logger.info(`Sent 7-day due notification for action: ${action.title}`);
       } else if (daysUntilDue === 1 && !notified.has(1)) {
-        await notifyActionDueSoon(outcome.id, outcome.title, 1, assignedUserIds);
+        await notifyActionDueSoon(action.id, action.title, 1, assignedUserIds);
         notified.add(1);
-        logger.info(`Sent 1-day due notification for action: ${outcome.title}`);
+        logger.info(`Sent 1-day due notification for action: ${action.title}`);
       }
 
       // Check for overdue (1, 7 days past due)
       const daysPastDue = Math.abs(daysUntilDue);
       if (daysUntilDue < 0) {
         if (daysPastDue === 1 && !notified.has(-1)) {
-          await notifyActionOverdue(outcome.id, outcome.title, 1, assignedUserIds);
+          await notifyActionOverdue(action.id, action.title, 1, assignedUserIds);
           notified.add(-1);
-          logger.info(`Sent 1-day overdue notification for action: ${outcome.title}`);
+          logger.info(`Sent 1-day overdue notification for action: ${action.title}`);
         } else if (daysPastDue === 7 && !notified.has(-7)) {
-          await notifyActionOverdue(outcome.id, outcome.title, 7, assignedUserIds);
+          await notifyActionOverdue(action.id, action.title, 7, assignedUserIds);
           notified.add(-7);
-          logger.info(`Sent 7-day overdue notification for action: ${outcome.title}`);
+          logger.info(`Sent 7-day overdue notification for action: ${action.title}`);
         }
       }
     }

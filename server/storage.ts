@@ -1,4 +1,4 @@
-import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Tactic, type InsertTactic, type Activity, type InsertActivity, type Outcome, type InsertOutcome, type Notification, type InsertNotification, type OutcomeDocument, type InsertOutcomeDocument, type OutcomeChecklistItem, type InsertOutcomeChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, users, strategies, tactics, activities, outcomes, notifications, outcomeDocuments, outcomeChecklistItems, userStrategyAssignments, meetingNotes } from "@shared/schema";
+import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Project, type InsertProject, type Activity, type InsertActivity, type Action, type InsertAction, type Notification, type InsertNotification, type ActionDocument, type InsertActionDocument, type ActionChecklistItem, type InsertActionChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, users, strategies, projects, activities, actions, notifications, actionDocuments, actionChecklistItems, userStrategyAssignments, meetingNotes } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, asc, and } from "drizzle-orm";
@@ -20,14 +20,14 @@ export interface IStorage {
   updateStrategy(id: string, updates: Partial<Strategy>): Promise<Strategy | undefined>;
   deleteStrategy(id: string): Promise<boolean>;
 
-  // Tactic methods
-  getTactic(id: string): Promise<Tactic | undefined>;
-  getAllTactics(): Promise<Tactic[]>;
-  getTacticsByStrategy(strategyId: string): Promise<Tactic[]>;
-  getTacticsByAssignee(assigneeId: string): Promise<Tactic[]>;
-  createTactic(tactic: InsertTactic): Promise<Tactic>;
-  updateTactic(id: string, updates: Partial<Tactic>): Promise<Tactic | undefined>;
-  deleteTactic(id: string): Promise<boolean>;
+  // Project methods
+  getProject(id: string): Promise<Project | undefined>;
+  getAllProjects(): Promise<Project[]>;
+  getProjectsByStrategy(strategyId: string): Promise<Project[]>;
+  getProjectsByAssignee(assigneeId: string): Promise<Project[]>;
+  createProject(project: InsertProject): Promise<Project>;
+  updateProject(id: string, updates: Partial<Project>): Promise<Project | undefined>;
+  deleteProject(id: string): Promise<boolean>;
 
   // Activity methods
   getActivity(id: string): Promise<Activity | undefined>;
@@ -35,17 +35,17 @@ export interface IStorage {
   getActivitiesByUser(userId: string): Promise<Activity[]>;
   createActivity(activity: InsertActivity): Promise<Activity>;
 
-  // Outcome methods
-  getOutcome(id: string): Promise<Outcome | undefined>;
-  getAllOutcomes(): Promise<Outcome[]>;
-  getOutcomesByStrategy(strategyId: string): Promise<Outcome[]>;
-  getOutcomesByTactic(tacticId: string): Promise<Outcome[]>;
-  createOutcome(outcome: InsertOutcome): Promise<Outcome>;
-  updateOutcome(id: string, updates: Partial<Outcome>): Promise<Outcome | undefined>;
-  deleteOutcome(id: string): Promise<boolean>;
+  // Action methods
+  getAction(id: string): Promise<Action | undefined>;
+  getAllActions(): Promise<Action[]>;
+  getActionsByStrategy(strategyId: string): Promise<Action[]>;
+  getActionsByProject(projectId: string): Promise<Action[]>;
+  createAction(action: InsertAction): Promise<Action>;
+  updateAction(id: string, updates: Partial<Action>): Promise<Action | undefined>;
+  deleteAction(id: string): Promise<boolean>;
 
   // Progress recalculation methods
-  recalculateTacticProgress(tacticId: string): Promise<void>;
+  recalculateProjectProgress(projectId: string): Promise<void>;
   recalculateStrategyProgress(strategyId: string): Promise<void>;
 
   // Notification methods
@@ -56,17 +56,17 @@ export interface IStorage {
   markAllNotificationsAsRead(userId: string): Promise<void>;
   deleteNotification(id: string): Promise<boolean>;
 
-  // Outcome Document methods
-  getOutcomeDocuments(outcomeId: string): Promise<OutcomeDocument[]>;
-  createOutcomeDocument(document: InsertOutcomeDocument): Promise<OutcomeDocument>;
-  updateOutcomeDocument(id: string, updates: Partial<OutcomeDocument>): Promise<OutcomeDocument | undefined>;
-  deleteOutcomeDocument(id: string): Promise<boolean>;
+  // Action Document methods
+  getActionDocuments(actionId: string): Promise<ActionDocument[]>;
+  createActionDocument(document: InsertActionDocument): Promise<ActionDocument>;
+  updateActionDocument(id: string, updates: Partial<ActionDocument>): Promise<ActionDocument | undefined>;
+  deleteActionDocument(id: string): Promise<boolean>;
 
-  // Outcome Checklist Item methods
-  getOutcomeChecklistItems(outcomeId: string): Promise<OutcomeChecklistItem[]>;
-  createOutcomeChecklistItem(item: InsertOutcomeChecklistItem): Promise<OutcomeChecklistItem>;
-  updateOutcomeChecklistItem(id: string, updates: Partial<OutcomeChecklistItem>): Promise<OutcomeChecklistItem | undefined>;
-  deleteOutcomeChecklistItem(id: string): Promise<boolean>;
+  // Action Checklist Item methods
+  getActionChecklistItems(actionId: string): Promise<ActionChecklistItem[]>;
+  createActionChecklistItem(item: InsertActionChecklistItem): Promise<ActionChecklistItem>;
+  updateActionChecklistItem(id: string, updates: Partial<ActionChecklistItem>): Promise<ActionChecklistItem | undefined>;
+  deleteActionChecklistItem(id: string): Promise<boolean>;
 
   // User Strategy Assignment methods
   getUserStrategyAssignments(userId: string): Promise<UserStrategyAssignment[]>;
@@ -86,9 +86,9 @@ export interface IStorage {
 export class MemStorage implements IStorage {
   private users: Map<string, User> = new Map();
   private strategies: Map<string, Strategy> = new Map();
-  private tactics: Map<string, Tactic> = new Map();
+  private projects: Map<string, Project> = new Map();
   private activities: Map<string, Activity> = new Map();
-  private outcomes: Map<string, Outcome> = new Map();
+  private actions: Map<string, Action> = new Map();
   private userStrategyAssignmentsMap: Map<string, UserStrategyAssignment> = new Map();
 
   constructor() {
@@ -190,8 +190,8 @@ export class MemStorage implements IStorage {
     this.strategies.set(strategy1.id, strategy1);
     this.strategies.set(strategy2.id, strategy2);
 
-    // Create sample tactics
-    const tactic1: Tactic = {
+    // Create sample projects
+    const project1: Project = {
       id: randomUUID(),
       title: "Market Research Analysis",
       description: "Conduct comprehensive market research for target regions",
@@ -211,7 +211,7 @@ export class MemStorage implements IStorage {
       createdAt: new Date()
     };
 
-    const tactic2: Tactic = {
+    const project2: Project = {
       id: randomUUID(),
       title: "Regional Partnership Development",
       description: "Establish partnerships with local businesses in target markets",
@@ -231,8 +231,8 @@ export class MemStorage implements IStorage {
       createdAt: new Date()
     };
 
-    this.tactics.set(tactic1.id, tactic1);
-    this.tactics.set(tactic2.id, tactic2);
+    this.projects.set(project1.id, project1);
+    this.projects.set(project2.id, project2);
   }
 
   // User methods
@@ -337,16 +337,16 @@ export class MemStorage implements IStorage {
   }
 
   async deleteStrategy(id: string): Promise<boolean> {
-    // First delete all related tactics
-    const relatedTactics = Array.from(this.tactics.values()).filter(tactic => tactic.strategyId === id);
-    for (const tactic of relatedTactics) {
-      this.tactics.delete(tactic.id);
+    // First delete all related projects
+    const relatedProjects = Array.from(this.projects.values()).filter(project => project.strategyId === id);
+    for (const project of relatedProjects) {
+      this.projects.delete(project.id);
     }
     
-    // Delete all related outcomes
-    const relatedOutcomes = Array.from(this.outcomes.values()).filter(outcome => outcome.strategyId === id);
-    for (const outcome of relatedOutcomes) {
-      this.outcomes.delete(outcome.id);
+    // Delete all related actions
+    const relatedActions = Array.from(this.actions.values()).filter(action => action.strategyId === id);
+    for (const action of relatedActions) {
+      this.actions.delete(action.id);
     }
     
     // Delete all related activities
@@ -362,7 +362,7 @@ export class MemStorage implements IStorage {
       // Create deletion activity
       await this.createActivity({
         type: "strategy_deleted",
-        description: `Deleted strategy and ${relatedTactics.length} tactics, ${relatedOutcomes.length} outcomes`,
+        description: `Deleted strategy and ${relatedProjects.length} projects, ${relatedActions.length} actions`,
         userId: "system",
         strategyId: null
       });
@@ -371,81 +371,81 @@ export class MemStorage implements IStorage {
     return deleted;
   }
 
-  // Tactic methods
-  async getTactic(id: string): Promise<Tactic | undefined> {
-    return this.tactics.get(id);
+  // Project methods
+  async getProject(id: string): Promise<Project | undefined> {
+    return this.projects.get(id);
   }
 
-  async getAllTactics(): Promise<Tactic[]> {
-    return Array.from(this.tactics.values());
+  async getAllProjects(): Promise<Project[]> {
+    return Array.from(this.projects.values());
   }
 
-  async getTacticsByStrategy(strategyId: string): Promise<Tactic[]> {
-    return Array.from(this.tactics.values()).filter(tactic => tactic.strategyId === strategyId);
+  async getProjectsByStrategy(strategyId: string): Promise<Project[]> {
+    return Array.from(this.projects.values()).filter(project => project.strategyId === strategyId);
   }
 
-  async getTacticsByAssignee(assigneeId: string): Promise<Tactic[]> {
-    return Array.from(this.tactics.values()).filter(tactic => {
+  async getProjectsByAssignee(assigneeId: string): Promise<Project[]> {
+    return Array.from(this.projects.values()).filter(project => {
       try {
-        const leaders = JSON.parse(tactic.accountableLeaders);
+        const leaders = JSON.parse(project.accountableLeaders);
         return Array.isArray(leaders) && leaders.includes(assigneeId);
       } catch {
-        return tactic.accountableLeaders === assigneeId;
+        return project.accountableLeaders === assigneeId;
       }
     });
   }
 
-  async createTactic(insertTactic: InsertTactic): Promise<Tactic> {
+  async createProject(insertProject: InsertProject): Promise<Project> {
     const id = randomUUID();
-    const tactic: Tactic = { 
-      ...insertTactic, 
+    const project: Project = { 
+      ...insertProject, 
       id,
-      status: insertTactic.status || 'NYS',
+      status: insertProject.status || 'NYS',
       progress: 0,
-      isArchived: insertTactic.isArchived || 'false',
-      kpiTracking: insertTactic.kpiTracking || null,
-      resourcesRequired: insertTactic.resourcesRequired || null,
-      documentFolderUrl: insertTactic.documentFolderUrl || null,
-      communicationUrl: insertTactic.communicationUrl || null,
+      isArchived: insertProject.isArchived || 'false',
+      kpiTracking: insertProject.kpiTracking || null,
+      resourcesRequired: insertProject.resourcesRequired || null,
+      documentFolderUrl: insertProject.documentFolderUrl || null,
+      communicationUrl: insertProject.communicationUrl || null,
       createdAt: new Date()
     };
-    this.tactics.set(id, tactic);
+    this.projects.set(id, project);
 
     // Create activity
     await this.createActivity({
-      type: "tactic_created",
-      description: `Created tactic "${tactic.title}"`,
-      userId: tactic.createdBy,
-      strategyId: tactic.strategyId,
-      tacticId: id
+      type: "project_created",
+      description: `Created project "${project.title}"`,
+      userId: project.createdBy,
+      strategyId: project.strategyId,
+      projectId: id
     });
 
-    return tactic;
+    return project;
   }
 
-  async updateTactic(id: string, updates: Partial<Tactic>): Promise<Tactic | undefined> {
-    const existing = this.tactics.get(id);
+  async updateProject(id: string, updates: Partial<Project>): Promise<Project | undefined> {
+    const existing = this.projects.get(id);
     if (!existing) return undefined;
     
     const updated = { ...existing, ...updates };
-    this.tactics.set(id, updated);
+    this.projects.set(id, updated);
 
     // Create activity for status changes
     if (updates.status === 'completed' && existing.status !== 'completed') {
       await this.createActivity({
-        type: "tactic_completed",
-        description: `Completed tactic "${updated.title}"`,
+        type: "project_completed",
+        description: `Completed project "${updated.title}"`,
         userId: updated.createdBy,
         strategyId: updated.strategyId,
-        tacticId: id
+        projectId: id
       });
     }
 
     return updated;
   }
 
-  async deleteTactic(id: string): Promise<boolean> {
-    return this.tactics.delete(id);
+  async deleteProject(id: string): Promise<boolean> {
+    return this.projects.delete(id);
   }
 
   // Activity methods
@@ -471,99 +471,99 @@ export class MemStorage implements IStorage {
       ...insertActivity, 
       id,
       strategyId: insertActivity.strategyId || null,
-      tacticId: insertActivity.tacticId || null,
+      projectId: insertActivity.projectId || null,
       createdAt: new Date()
     };
     this.activities.set(id, activity);
     return activity;
   }
 
-  // Outcome methods
-  async getOutcome(id: string): Promise<Outcome | undefined> {
-    return this.outcomes.get(id);
+  // Action methods
+  async getAction(id: string): Promise<Action | undefined> {
+    return this.actions.get(id);
   }
 
-  async getAllOutcomes(): Promise<Outcome[]> {
-    return Array.from(this.outcomes.values());
+  async getAllActions(): Promise<Action[]> {
+    return Array.from(this.actions.values());
   }
 
-  async getOutcomesByStrategy(strategyId: string): Promise<Outcome[]> {
-    return Array.from(this.outcomes.values()).filter(outcome => outcome.strategyId === strategyId);
+  async getActionsByStrategy(strategyId: string): Promise<Action[]> {
+    return Array.from(this.actions.values()).filter(action => action.strategyId === strategyId);
   }
 
-  async getOutcomesByTactic(tacticId: string): Promise<Outcome[]> {
-    return Array.from(this.outcomes.values()).filter(outcome => outcome.tacticId === tacticId);
+  async getActionsByProject(projectId: string): Promise<Action[]> {
+    return Array.from(this.actions.values()).filter(action => action.projectId === projectId);
   }
 
-  async createOutcome(insertOutcome: InsertOutcome): Promise<Outcome> {
+  async createAction(insertAction: InsertAction): Promise<Action> {
     const id = randomUUID();
-    const outcome: Outcome = { 
-      ...insertOutcome, 
+    const action: Action = { 
+      ...insertAction, 
       id,
-      status: insertOutcome.status || 'in_progress',
-      isArchived: insertOutcome.isArchived || 'false',
-      dueDate: insertOutcome.dueDate || null,
-      tacticId: insertOutcome.tacticId || null,
-      targetValue: insertOutcome.targetValue || null,
-      currentValue: insertOutcome.currentValue || null,
-      measurementUnit: insertOutcome.measurementUnit || null,
+      status: insertAction.status || 'in_progress',
+      isArchived: insertAction.isArchived || 'false',
+      dueDate: insertAction.dueDate || null,
+      projectId: insertAction.projectId || null,
+      targetValue: insertAction.targetValue || null,
+      currentValue: insertAction.currentValue || null,
+      measurementUnit: insertAction.measurementUnit || null,
       createdAt: new Date()
     };
-    this.outcomes.set(id, outcome);
-    return outcome;
+    this.actions.set(id, action);
+    return action;
   }
 
-  async updateOutcome(id: string, updates: Partial<Outcome>): Promise<Outcome | undefined> {
-    const existing = this.outcomes.get(id);
+  async updateAction(id: string, updates: Partial<Action>): Promise<Action | undefined> {
+    const existing = this.actions.get(id);
     if (!existing) return undefined;
     
     const updated = { ...existing, ...updates };
-    this.outcomes.set(id, updated);
+    this.actions.set(id, updated);
     return updated;
   }
 
-  async deleteOutcome(id: string): Promise<boolean> {
-    return this.outcomes.delete(id);
+  async deleteAction(id: string): Promise<boolean> {
+    return this.actions.delete(id);
   }
 
   // Progress recalculation methods
-  async recalculateTacticProgress(tacticId: string): Promise<void> {
-    const tactic = this.tactics.get(tacticId);
-    if (!tactic) return;
+  async recalculateProjectProgress(projectId: string): Promise<void> {
+    const project = this.projects.get(projectId);
+    if (!project) return;
 
-    // Get all non-archived outcomes for this tactic
-    const tacticOutcomes = Array.from(this.outcomes.values()).filter(
-      outcome => outcome.tacticId === tacticId && outcome.isArchived !== 'true'
+    // Get all non-archived actions for this project
+    const projectActions = Array.from(this.actions.values()).filter(
+      action => action.projectId === projectId && action.isArchived !== 'true'
     );
 
-    if (tacticOutcomes.length === 0) {
-      // No outcomes, set progress to 0
-      tactic.progress = 0;
+    if (projectActions.length === 0) {
+      // No actions, set progress to 0
+      project.progress = 0;
     } else {
-      // Count completed outcomes (status === 'achieved')
-      const completedCount = tacticOutcomes.filter(outcome => outcome.status === 'achieved').length;
-      tactic.progress = Math.floor((completedCount / tacticOutcomes.length) * 100);
+      // Count completed actions (status === 'achieved')
+      const completedCount = projectActions.filter(action => action.status === 'achieved').length;
+      project.progress = Math.floor((completedCount / projectActions.length) * 100);
     }
 
-    this.tactics.set(tacticId, tactic);
+    this.projects.set(projectId, project);
   }
 
   async recalculateStrategyProgress(strategyId: string): Promise<void> {
     const strategy = this.strategies.get(strategyId);
     if (!strategy) return;
 
-    // Get all non-archived tactics for this strategy
-    const strategyTactics = Array.from(this.tactics.values()).filter(
-      tactic => tactic.strategyId === strategyId && tactic.isArchived !== 'true'
+    // Get all non-archived projects for this strategy
+    const strategyProjects = Array.from(this.projects.values()).filter(
+      project => project.strategyId === strategyId && project.isArchived !== 'true'
     );
 
-    if (strategyTactics.length === 0) {
-      // No tactics, set progress to 0
+    if (strategyProjects.length === 0) {
+      // No projects, set progress to 0
       strategy.progress = 0;
     } else {
-      // Calculate average of tactic progress percentages
-      const totalProgress = strategyTactics.reduce((sum, tactic) => sum + tactic.progress, 0);
-      strategy.progress = Math.floor(totalProgress / strategyTactics.length);
+      // Calculate average of project progress percentages
+      const totalProgress = strategyProjects.reduce((sum, project) => sum + project.progress, 0);
+      strategy.progress = Math.floor(totalProgress / strategyProjects.length);
     }
 
     this.strategies.set(strategyId, strategy);
@@ -594,37 +594,37 @@ export class MemStorage implements IStorage {
     return false;
   }
 
-  // Outcome Document methods (stub - not used in production)
-  async getOutcomeDocuments(outcomeId: string): Promise<OutcomeDocument[]> {
+  // Action Document methods (stub - not used in production)
+  async getActionDocuments(actionId: string): Promise<ActionDocument[]> {
     return [];
   }
 
-  async createOutcomeDocument(document: InsertOutcomeDocument): Promise<OutcomeDocument> {
-    throw new Error("MemStorage outcome document methods not implemented");
+  async createActionDocument(document: InsertActionDocument): Promise<ActionDocument> {
+    throw new Error("MemStorage action document methods not implemented");
   }
 
-  async updateOutcomeDocument(id: string, updates: Partial<OutcomeDocument>): Promise<OutcomeDocument | undefined> {
+  async updateActionDocument(id: string, updates: Partial<ActionDocument>): Promise<ActionDocument | undefined> {
     return undefined;
   }
 
-  async deleteOutcomeDocument(id: string): Promise<boolean> {
+  async deleteActionDocument(id: string): Promise<boolean> {
     return false;
   }
 
-  // Outcome Checklist Item methods (stub - not used in production)
-  async getOutcomeChecklistItems(outcomeId: string): Promise<OutcomeChecklistItem[]> {
+  // Action Checklist Item methods (stub - not used in production)
+  async getActionChecklistItems(actionId: string): Promise<ActionChecklistItem[]> {
     return [];
   }
 
-  async createOutcomeChecklistItem(item: InsertOutcomeChecklistItem): Promise<OutcomeChecklistItem> {
+  async createActionChecklistItem(item: InsertActionChecklistItem): Promise<ActionChecklistItem> {
     throw new Error("MemStorage checklist methods not implemented");
   }
 
-  async updateOutcomeChecklistItem(id: string, updates: Partial<OutcomeChecklistItem>): Promise<OutcomeChecklistItem | undefined> {
+  async updateActionChecklistItem(id: string, updates: Partial<ActionChecklistItem>): Promise<ActionChecklistItem | undefined> {
     return undefined;
   }
 
-  async deleteOutcomeChecklistItem(id: string): Promise<boolean> {
+  async deleteActionChecklistItem(id: string): Promise<boolean> {
     return false;
   }
 
@@ -798,14 +798,14 @@ export class DatabaseStorage implements IStorage {
 
   async deleteStrategy(id: string): Promise<boolean> {
     // First get counts for activity logging
-    const relatedTactics = await db.select().from(tactics).where(eq(tactics.strategyId, id));
-    const relatedOutcomes = await db.select().from(outcomes).where(eq(outcomes.strategyId, id));
+    const relatedProjects = await db.select().from(projects).where(eq(projects.strategyId, id));
+    const relatedActions = await db.select().from(actions).where(eq(actions.strategyId, id));
     
-    // Delete all related tactics (cascade)
-    await db.delete(tactics).where(eq(tactics.strategyId, id));
+    // Delete all related projects (cascade)
+    await db.delete(projects).where(eq(projects.strategyId, id));
     
-    // Delete all related outcomes (cascade)
-    await db.delete(outcomes).where(eq(outcomes.strategyId, id));
+    // Delete all related actions (cascade)
+    await db.delete(actions).where(eq(actions.strategyId, id));
     
     // Delete all related activities (cascade)
     await db.delete(activities).where(eq(activities.strategyId, id));
@@ -818,7 +818,7 @@ export class DatabaseStorage implements IStorage {
       // Create deletion activity
       await this.createActivity({
         type: "strategy_deleted",
-        description: `Deleted strategy and ${relatedTactics.length} tactics, ${relatedOutcomes.length} outcomes`,
+        description: `Deleted strategy and ${relatedProjects.length} projects, ${relatedActions.length} actions`,
         userId: "system",
         strategyId: null
       });
@@ -827,51 +827,51 @@ export class DatabaseStorage implements IStorage {
     return deleted;
   }
 
-  // Tactic methods
-  async getTactic(id: string): Promise<Tactic | undefined> {
-    const [tactic] = await db.select().from(tactics).where(eq(tactics.id, id));
-    return tactic || undefined;
+  // Project methods
+  async getProject(id: string): Promise<Project | undefined> {
+    const [project] = await db.select().from(projects).where(eq(projects.id, id));
+    return project || undefined;
   }
 
-  async getAllTactics(): Promise<Tactic[]> {
-    return await db.select().from(tactics);
+  async getAllProjects(): Promise<Project[]> {
+    return await db.select().from(projects);
   }
 
-  async getTacticsByStrategy(strategyId: string): Promise<Tactic[]> {
-    return await db.select().from(tactics).where(eq(tactics.strategyId, strategyId));
+  async getProjectsByStrategy(strategyId: string): Promise<Project[]> {
+    return await db.select().from(projects).where(eq(projects.strategyId, strategyId));
   }
 
-  async getTacticsByAssignee(assigneeId: string): Promise<Tactic[]> {
-    const allTactics = await db.select().from(tactics);
-    return allTactics.filter(tactic => {
+  async getProjectsByAssignee(assigneeId: string): Promise<Project[]> {
+    const allProjects = await db.select().from(projects);
+    return allProjects.filter(project => {
       try {
-        const leaders = JSON.parse(tactic.accountableLeaders);
+        const leaders = JSON.parse(project.accountableLeaders);
         return Array.isArray(leaders) && leaders.includes(assigneeId);
       } catch {
-        return tactic.accountableLeaders === assigneeId;
+        return project.accountableLeaders === assigneeId;
       }
     });
   }
 
-  async createTactic(insertTactic: InsertTactic): Promise<Tactic> {
-    const [tactic] = await db
-      .insert(tactics)
-      .values(insertTactic)
+  async createProject(insertProject: InsertProject): Promise<Project> {
+    const [project] = await db
+      .insert(projects)
+      .values(insertProject)
       .returning();
 
     // Create activity
     await this.createActivity({
-      type: "tactic_created",
-      description: `Created tactic "${tactic.title}"`,
-      userId: tactic.createdBy,
-      strategyId: tactic.strategyId,
-      tacticId: tactic.id
+      type: "project_created",
+      description: `Created project "${project.title}"`,
+      userId: project.createdBy,
+      strategyId: project.strategyId,
+      projectId: project.id
     });
 
-    return tactic;
+    return project;
   }
 
-  async updateTactic(id: string, updates: Partial<Tactic>): Promise<Tactic | undefined> {
+  async updateProject(id: string, updates: Partial<Project>): Promise<Project | undefined> {
     // Convert date strings to Date objects
     const processedUpdates = { ...updates };
     if (processedUpdates.startDate && typeof processedUpdates.startDate === 'string') {
@@ -882,15 +882,15 @@ export class DatabaseStorage implements IStorage {
     }
 
     const [updated] = await db
-      .update(tactics)
+      .update(projects)
       .set(processedUpdates)
-      .where(eq(tactics.id, id))
+      .where(eq(projects.id, id))
       .returning();
     return updated || undefined;
   }
 
-  async deleteTactic(id: string): Promise<boolean> {
-    const result = await db.delete(tactics).where(eq(tactics.id, id));
+  async deleteProject(id: string): Promise<boolean> {
+    const result = await db.delete(projects).where(eq(projects.id, id));
     return (result.rowCount ?? 0) > 0;
   }
 
@@ -916,84 +916,84 @@ export class DatabaseStorage implements IStorage {
     return activity;
   }
 
-  // Outcome methods
-  async getOutcome(id: string): Promise<Outcome | undefined> {
-    const [outcome] = await db.select().from(outcomes).where(eq(outcomes.id, id));
-    return outcome || undefined;
+  // Action methods
+  async getAction(id: string): Promise<Action | undefined> {
+    const [action] = await db.select().from(actions).where(eq(actions.id, id));
+    return action || undefined;
   }
 
-  async getAllOutcomes(): Promise<Outcome[]> {
-    return await db.select().from(outcomes);
+  async getAllActions(): Promise<Action[]> {
+    return await db.select().from(actions);
   }
 
-  async getOutcomesByStrategy(strategyId: string): Promise<Outcome[]> {
-    return await db.select().from(outcomes).where(eq(outcomes.strategyId, strategyId));
+  async getActionsByStrategy(strategyId: string): Promise<Action[]> {
+    return await db.select().from(actions).where(eq(actions.strategyId, strategyId));
   }
 
-  async getOutcomesByTactic(tacticId: string): Promise<Outcome[]> {
-    return await db.select().from(outcomes).where(eq(outcomes.tacticId, tacticId));
+  async getActionsByProject(projectId: string): Promise<Action[]> {
+    return await db.select().from(actions).where(eq(actions.projectId, projectId));
   }
 
-  async createOutcome(insertOutcome: InsertOutcome): Promise<Outcome> {
-    const [outcome] = await db
-      .insert(outcomes)
-      .values(insertOutcome)
+  async createAction(insertAction: InsertAction): Promise<Action> {
+    const [action] = await db
+      .insert(actions)
+      .values(insertAction)
       .returning();
-    return outcome;
+    return action;
   }
 
-  async updateOutcome(id: string, updates: Partial<Outcome>): Promise<Outcome | undefined> {
-    const [outcome] = await db
-      .update(outcomes)
+  async updateAction(id: string, updates: Partial<Action>): Promise<Action | undefined> {
+    const [action] = await db
+      .update(actions)
       .set(updates)
-      .where(eq(outcomes.id, id))
+      .where(eq(actions.id, id))
       .returning();
-    return outcome || undefined;
+    return action || undefined;
   }
 
-  async deleteOutcome(id: string): Promise<boolean> {
-    const result = await db.delete(outcomes).where(eq(outcomes.id, id));
+  async deleteAction(id: string): Promise<boolean> {
+    const result = await db.delete(actions).where(eq(actions.id, id));
     return (result.rowCount ?? 0) > 0;
   }
 
   // Progress recalculation methods
-  async recalculateTacticProgress(tacticId: string): Promise<void> {
-    // Get all non-archived outcomes for this tactic
-    const tacticOutcomes = await db
+  async recalculateProjectProgress(projectId: string): Promise<void> {
+    // Get all non-archived actions for this project
+    const projectActions = await db
       .select()
-      .from(outcomes)
-      .where(eq(outcomes.tacticId, tacticId));
+      .from(actions)
+      .where(eq(actions.projectId, projectId));
 
-    const nonArchivedOutcomes = tacticOutcomes.filter(outcome => outcome.isArchived !== 'true');
+    const nonArchivedActions = projectActions.filter(action => action.isArchived !== 'true');
 
     let progress = 0;
-    if (nonArchivedOutcomes.length > 0) {
-      // Count completed outcomes (status === 'achieved')
-      const completedCount = nonArchivedOutcomes.filter(outcome => outcome.status === 'achieved').length;
-      progress = Math.floor((completedCount / nonArchivedOutcomes.length) * 100);
+    if (nonArchivedActions.length > 0) {
+      // Count completed actions (status === 'achieved')
+      const completedCount = nonArchivedActions.filter(action => action.status === 'achieved').length;
+      progress = Math.floor((completedCount / nonArchivedActions.length) * 100);
     }
 
-    // Update tactic progress
+    // Update project progress
     await db
-      .update(tactics)
+      .update(projects)
       .set({ progress })
-      .where(eq(tactics.id, tacticId));
+      .where(eq(projects.id, projectId));
   }
 
   async recalculateStrategyProgress(strategyId: string): Promise<void> {
-    // Get all non-archived tactics for this strategy
-    const strategyTactics = await db
+    // Get all non-archived projects for this strategy
+    const strategyProjects = await db
       .select()
-      .from(tactics)
-      .where(eq(tactics.strategyId, strategyId));
+      .from(projects)
+      .where(eq(projects.strategyId, strategyId));
 
-    const nonArchivedTactics = strategyTactics.filter(tactic => tactic.isArchived !== 'true');
+    const nonArchivedProjects = strategyProjects.filter(project => project.isArchived !== 'true');
 
     let progress = 0;
-    if (nonArchivedTactics.length > 0) {
-      // Calculate average of tactic progress percentages
-      const totalProgress = nonArchivedTactics.reduce((sum, tactic) => sum + tactic.progress, 0);
-      progress = Math.floor(totalProgress / nonArchivedTactics.length);
+    if (nonArchivedProjects.length > 0) {
+      // Calculate average of project progress percentages
+      const totalProgress = nonArchivedProjects.reduce((sum, project) => sum + project.progress, 0);
+      progress = Math.floor(totalProgress / nonArchivedProjects.length);
     }
 
     // Update strategy progress
@@ -1053,63 +1053,63 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount ? result.rowCount > 0 : false;
   }
 
-  // Outcome Document methods
-  async getOutcomeDocuments(outcomeId: string): Promise<OutcomeDocument[]> {
+  // Action Document methods
+  async getActionDocuments(actionId: string): Promise<ActionDocument[]> {
     return await db
       .select()
-      .from(outcomeDocuments)
-      .where(eq(outcomeDocuments.outcomeId, outcomeId))
-      .orderBy(asc(outcomeDocuments.createdAt));
+      .from(actionDocuments)
+      .where(eq(actionDocuments.actionId, actionId))
+      .orderBy(asc(actionDocuments.createdAt));
   }
 
-  async createOutcomeDocument(document: InsertOutcomeDocument): Promise<OutcomeDocument> {
-    const [created] = await db.insert(outcomeDocuments).values(document).returning();
+  async createActionDocument(document: InsertActionDocument): Promise<ActionDocument> {
+    const [created] = await db.insert(actionDocuments).values(document).returning();
     return created;
   }
 
-  async updateOutcomeDocument(id: string, updates: Partial<OutcomeDocument>): Promise<OutcomeDocument | undefined> {
+  async updateActionDocument(id: string, updates: Partial<ActionDocument>): Promise<ActionDocument | undefined> {
     const [updated] = await db
-      .update(outcomeDocuments)
+      .update(actionDocuments)
       .set(updates)
-      .where(eq(outcomeDocuments.id, id))
+      .where(eq(actionDocuments.id, id))
       .returning();
     return updated || undefined;
   }
 
-  async deleteOutcomeDocument(id: string): Promise<boolean> {
+  async deleteActionDocument(id: string): Promise<boolean> {
     const result = await db
-      .delete(outcomeDocuments)
-      .where(eq(outcomeDocuments.id, id));
+      .delete(actionDocuments)
+      .where(eq(actionDocuments.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
   }
 
-  // Outcome Checklist Item methods
-  async getOutcomeChecklistItems(outcomeId: string): Promise<OutcomeChecklistItem[]> {
+  // Action Checklist Item methods
+  async getActionChecklistItems(actionId: string): Promise<ActionChecklistItem[]> {
     return await db
       .select()
-      .from(outcomeChecklistItems)
-      .where(eq(outcomeChecklistItems.outcomeId, outcomeId))
-      .orderBy(asc(outcomeChecklistItems.orderIndex));
+      .from(actionChecklistItems)
+      .where(eq(actionChecklistItems.actionId, actionId))
+      .orderBy(asc(actionChecklistItems.orderIndex));
   }
 
-  async createOutcomeChecklistItem(item: InsertOutcomeChecklistItem): Promise<OutcomeChecklistItem> {
-    const [created] = await db.insert(outcomeChecklistItems).values(item).returning();
+  async createActionChecklistItem(item: InsertActionChecklistItem): Promise<ActionChecklistItem> {
+    const [created] = await db.insert(actionChecklistItems).values(item).returning();
     return created;
   }
 
-  async updateOutcomeChecklistItem(id: string, updates: Partial<OutcomeChecklistItem>): Promise<OutcomeChecklistItem | undefined> {
+  async updateActionChecklistItem(id: string, updates: Partial<ActionChecklistItem>): Promise<ActionChecklistItem | undefined> {
     const [updated] = await db
-      .update(outcomeChecklistItems)
+      .update(actionChecklistItems)
       .set(updates)
-      .where(eq(outcomeChecklistItems.id, id))
+      .where(eq(actionChecklistItems.id, id))
       .returning();
     return updated || undefined;
   }
 
-  async deleteOutcomeChecklistItem(id: string): Promise<boolean> {
+  async deleteActionChecklistItem(id: string): Promise<boolean> {
     const result = await db
-      .delete(outcomeChecklistItems)
-      .where(eq(outcomeChecklistItems.id, id));
+      .delete(actionChecklistItems)
+      .where(eq(actionChecklistItems.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
   }
 
@@ -1296,8 +1296,8 @@ export class DatabaseStorage implements IStorage {
       createdBy: coLeadUser1.id
     });
 
-    // Create sample tactics for development
-    await this.createTactic({
+    // Create sample projects for development
+    await this.createProject({
       title: "Market Research Analysis",
       description: "Conduct comprehensive market research for target regions",
       strategyId: strategy1.id,

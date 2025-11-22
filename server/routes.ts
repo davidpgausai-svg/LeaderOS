@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertStrategySchema, insertTacticSchema, insertOutcomeSchema, insertOutcomeDocumentSchema, insertOutcomeChecklistItemSchema, insertMeetingNoteSchema } from "@shared/schema";
+import { insertStrategySchema, insertProjectSchema, insertActionSchema, insertActionDocumentSchema, insertActionChecklistItemSchema, insertMeetingNoteSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 import { logger } from "./logger";
@@ -606,18 +606,18 @@ Respond ONLY with a valid JSON object in this exact format:
         status: 'Archived',
       });
 
-      // Cascade archive to all tactics
-      const tactics = await storage.getAllTactics();
-      const strategyTactics = tactics.filter((t: any) => t.strategyId === req.params.id);
-      for (const tactic of strategyTactics) {
-        await storage.updateTactic(tactic.id, { ...tactic, isArchived: 'true' });
+      // Cascade archive to all projects
+      const projects = await storage.getAllProjects();
+      const strategyProjects = projects.filter((p: any) => p.strategyId === req.params.id);
+      for (const project of strategyProjects) {
+        await storage.updateProject(project.id, { ...project, isArchived: 'true' });
       }
 
-      // Cascade archive to all outcomes
-      const outcomes = await storage.getAllOutcomes();
-      const strategyOutcomes = outcomes.filter((o: any) => o.strategyId === req.params.id);
-      for (const outcome of strategyOutcomes) {
-        await storage.updateOutcome(outcome.id, { ...outcome, isArchived: 'true' });
+      // Cascade archive to all actions
+      const actions = await storage.getAllActions();
+      const strategyActions = actions.filter((a: any) => a.strategyId === req.params.id);
+      for (const action of strategyActions) {
+        await storage.updateAction(action.id, { ...action, isArchived: 'true' });
       }
 
       res.json({ message: "Strategy and related items archived successfully" });
@@ -627,8 +627,8 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  // Tactic routes
-  app.get("/api/tactics", isAuthenticated, async (req: any, res) => {
+  // Project routes
+  app.get("/api/projects", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -638,42 +638,42 @@ Respond ONLY with a valid JSON object in this exact format:
       }
 
       const { strategyId, assignedTo } = req.query;
-      let tactics;
+      let projects;
       
       if (strategyId) {
-        tactics = await storage.getTacticsByStrategy(strategyId as string);
+        projects = await storage.getProjectsByStrategy(strategyId as string);
       } else if (assignedTo) {
-        tactics = await storage.getTacticsByAssignee(assignedTo as string);
+        projects = await storage.getProjectsByAssignee(assignedTo as string);
       } else {
-        tactics = await storage.getAllTactics();
+        projects = await storage.getAllProjects();
       }
       
       // Filter by assigned strategies for non-administrators
       if (user.role !== 'administrator') {
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
-        tactics = tactics.filter((t: any) => assignedStrategyIds.includes(t.strategyId));
+        projects = projects.filter((p: any) => assignedStrategyIds.includes(p.strategyId));
       }
       
-      res.json(tactics);
+      res.json(projects);
     } catch (error) {
-      logger.error("Failed to fetch tactics", error);
-      res.status(500).json({ message: "Failed to fetch tactics" });
+      logger.error("Failed to fetch projects", error);
+      res.status(500).json({ message: "Failed to fetch projects" });
     }
   });
 
-  app.get("/api/tactics/:id", async (req, res) => {
+  app.get("/api/projects/:id", async (req, res) => {
     try {
-      const tactic = await storage.getTactic(req.params.id);
-      if (!tactic) {
-        return res.status(404).json({ message: "Tactic not found" });
+      const project = await storage.getProject(req.params.id);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
       }
-      res.json(tactic);
+      res.json(project);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch tactic" });
+      res.status(500).json({ message: "Failed to fetch project" });
     }
   });
 
-  app.post("/api/tactics", isAuthenticated, async (req: any, res) => {
+  app.post("/api/projects", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -682,7 +682,7 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(404).json({ message: "User not found" });
       }
       
-      const validatedData = insertTacticSchema.parse(req.body);
+      const validatedData = insertProjectSchema.parse(req.body);
       
       // Check if user has access to the strategy (administrators see all, others need assignment)
       if (user.role !== 'administrator') {
@@ -692,7 +692,7 @@ Respond ONLY with a valid JSON object in this exact format:
         }
       }
       
-      // View role cannot create tactics
+      // View role cannot create projects
       if (user.role === 'view') {
         return res.status(403).json({ message: "Forbidden: View users cannot create projects" });
       }
@@ -703,22 +703,22 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(400).json({ message: "Start date must be before or equal to due date" });
       }
       
-      const tactic = await storage.createTactic(validatedData);
+      const project = await storage.createProject(validatedData);
 
-      // Recalculate parent strategy progress when a tactic is created
-      await storage.recalculateStrategyProgress(tactic.strategyId);
+      // Recalculate parent strategy progress when a project is created
+      await storage.recalculateStrategyProgress(project.strategyId);
 
-      res.status(201).json(tactic);
+      res.status(201).json(project);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
-      logger.error("Failed to create tactic", error);
-      res.status(500).json({ message: "Failed to create tactic" });
+      logger.error("Failed to create project", error);
+      res.status(500).json({ message: "Failed to create project" });
     }
   });
 
-  app.patch("/api/tactics/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/projects/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -727,69 +727,69 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(404).json({ message: "User not found" });
       }
       
-      // View role cannot update tactics
+      // View role cannot update projects
       if (user.role === 'view') {
         return res.status(403).json({ message: "Forbidden: View users cannot update projects" });
       }
       
-      // Get the old tactic to compare changes
-      const oldTactic = await storage.getTactic(req.params.id);
-      if (!oldTactic) {
-        return res.status(404).json({ message: "Tactic not found" });
+      // Get the old project to compare changes
+      const oldProject = await storage.getProject(req.params.id);
+      if (!oldProject) {
+        return res.status(404).json({ message: "Project not found" });
       }
       
       // Check if user has access to the strategy (administrators see all, others need assignment)
       if (user.role !== 'administrator') {
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
-        if (!assignedStrategyIds.includes(oldTactic.strategyId)) {
+        if (!assignedStrategyIds.includes(oldProject.strategyId)) {
           return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
         }
       }
       
-      const tactic = await storage.updateTactic(req.params.id, req.body);
-      if (!tactic) {
-        return res.status(404).json({ message: "Tactic not found" });
+      const project = await storage.updateProject(req.params.id, req.body);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
       }
 
       // Send notifications for progress milestones and status changes
-      if (oldTactic) {
-        const assignedUserIds = JSON.parse(tactic.accountableLeaders);
+      if (oldProject) {
+        const assignedUserIds = JSON.parse(project.accountableLeaders);
         
         // Notify for status changes
-        if (oldTactic.status !== tactic.status) {
-          await notifyProjectStatusChanged(tactic.id, tactic.title, oldTactic.status, tactic.status, assignedUserIds);
+        if (oldProject.status !== project.status) {
+          await notifyProjectStatusChanged(project.id, project.title, oldProject.status, project.status, assignedUserIds);
         }
         
         // Notify for progress milestones (25%, 50%, 75%, 100%)
-        const oldProgress = oldTactic.progress;
-        const newProgress = tactic.progress;
+        const oldProgress = oldProject.progress;
+        const newProgress = project.progress;
         
         // Check if we crossed a milestone threshold
         const milestones = [25, 50, 75, 100];
         for (const milestone of milestones) {
           if (oldProgress < milestone && newProgress >= milestone) {
-            await notifyProjectProgress(tactic.id, tactic.title, milestone, assignedUserIds);
+            await notifyProjectProgress(project.id, project.title, milestone, assignedUserIds);
             break; // Only notify for the first milestone crossed
           }
         }
       }
 
-      // Recalculate parent strategy progress when a tactic is updated (non-blocking)
+      // Recalculate parent strategy progress when a project is updated (non-blocking)
       try {
-        await storage.recalculateStrategyProgress(tactic.strategyId);
+        await storage.recalculateStrategyProgress(project.strategyId);
       } catch (progressError) {
-        logger.error("Failed to recalculate strategy progress after tactic update", progressError);
+        logger.error("Failed to recalculate strategy progress after project update", progressError);
         // Don't fail the request if progress calculation fails
       }
 
-      res.json(tactic);
+      res.json(project);
     } catch (error) {
-      logger.error("Tactic update failed", error);
-      res.status(500).json({ message: "Failed to update tactic" });
+      logger.error("Project update failed", error);
+      res.status(500).json({ message: "Failed to update project" });
     }
   });
 
-  app.delete("/api/tactics/:id", isAuthenticated, async (req: any, res) => {
+  app.delete("/api/projects/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -798,37 +798,37 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(404).json({ message: "User not found" });
       }
       
-      // View role cannot delete tactics
+      // View role cannot delete projects
       if (user.role === 'view') {
         return res.status(403).json({ message: "Forbidden: View users cannot delete projects" });
       }
       
-      // Get tactic details before deleting to know which strategy to recalculate
-      const tactic = await storage.getTactic(req.params.id);
-      if (!tactic) {
-        return res.status(404).json({ message: "Tactic not found" });
+      // Get project details before deleting to know which strategy to recalculate
+      const project = await storage.getProject(req.params.id);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
       }
       
       // Check if user has access to the strategy (administrators see all, others need assignment)
       if (user.role !== 'administrator') {
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
-        if (!assignedStrategyIds.includes(tactic.strategyId)) {
+        if (!assignedStrategyIds.includes(project.strategyId)) {
           return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
         }
       }
 
-      const deleted = await storage.deleteTactic(req.params.id);
+      const deleted = await storage.deleteProject(req.params.id);
       if (!deleted) {
-        return res.status(404).json({ message: "Tactic not found" });
+        return res.status(404).json({ message: "Project not found" });
       }
 
-      // Recalculate parent strategy progress when a tactic is deleted
-      await storage.recalculateStrategyProgress(tactic.strategyId);
+      // Recalculate parent strategy progress when a project is deleted
+      await storage.recalculateStrategyProgress(project.strategyId);
 
       res.status(204).send();
     } catch (error) {
-      logger.error("Failed to delete tactic", error);
-      res.status(500).json({ message: "Failed to delete tactic" });
+      logger.error("Failed to delete project", error);
+      res.status(500).json({ message: "Failed to delete project" });
     }
   });
 
@@ -864,8 +864,8 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  // Outcomes routes
-  app.get("/api/outcomes", isAuthenticated, async (req: any, res) => {
+  // Actions routes
+  app.get("/api/actions", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -874,22 +874,22 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(401).json({ message: "User not found" });
       }
 
-      let outcomes = await storage.getAllOutcomes();
+      let actions = await storage.getAllActions();
       
       // Filter by assigned strategies for non-administrators
       if (user.role !== 'administrator') {
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
-        outcomes = outcomes.filter((o: any) => assignedStrategyIds.includes(o.strategyId));
+        actions = actions.filter((a: any) => assignedStrategyIds.includes(a.strategyId));
       }
       
-      res.json(outcomes);
+      res.json(actions);
     } catch (error) {
-      logger.error("Failed to fetch outcomes", error);
-      res.status(500).json({ message: "Failed to fetch outcomes" });
+      logger.error("Failed to fetch actions", error);
+      res.status(500).json({ message: "Failed to fetch actions" });
     }
   });
 
-  app.post("/api/outcomes", isAuthenticated, async (req: any, res) => {
+  app.post("/api/actions", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -898,12 +898,12 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(404).json({ message: "User not found" });
       }
       
-      // View role cannot create outcomes
+      // View role cannot create actions
       if (user.role === 'view') {
         return res.status(403).json({ message: "Forbidden: View users cannot create actions" });
       }
       
-      const validatedData = insertOutcomeSchema.parse(req.body);
+      const validatedData = insertActionSchema.parse(req.body);
       
       // Check if user has access to the strategy (administrators see all, others need assignment)
       if (user.role !== 'administrator') {
@@ -913,33 +913,33 @@ Respond ONLY with a valid JSON object in this exact format:
         }
       }
       
-      const outcome = await storage.createOutcome(validatedData);
+      const action = await storage.createAction(validatedData);
       
       await storage.createActivity({
-        type: "outcome_created",
-        description: `Created outcome: ${outcome.title}`,
-        userId: outcome.createdBy,
-        strategyId: outcome.strategyId,
-        tacticId: outcome.tacticId,
+        type: "action_created",
+        description: `Created action: ${action.title}`,
+        userId: action.createdBy,
+        strategyId: action.strategyId,
+        projectId: action.projectId,
       });
 
-      // Recalculate progress: outcome -> tactic -> strategy
-      if (outcome.tacticId) {
-        await storage.recalculateTacticProgress(outcome.tacticId);
-        await storage.recalculateStrategyProgress(outcome.strategyId);
+      // Recalculate progress: action -> project -> strategy
+      if (action.projectId) {
+        await storage.recalculateProjectProgress(action.projectId);
+        await storage.recalculateStrategyProgress(action.strategyId);
       }
       
-      res.status(201).json(outcome);
+      res.status(201).json(action);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
-      logger.error("Outcome creation failed", error);
-      res.status(500).json({ message: "Unable to create outcome. Please verify all required fields are filled." });
+      logger.error("Action creation failed", error);
+      res.status(500).json({ message: "Unable to create action. Please verify all required fields are filled." });
     }
   });
 
-  app.patch("/api/outcomes/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/actions/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -948,78 +948,78 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(404).json({ message: "User not found" });
       }
       
-      // View role cannot update outcomes
+      // View role cannot update actions
       if (user.role === 'view') {
         return res.status(403).json({ message: "Forbidden: View users cannot update actions" });
       }
       
-      // Get the old outcome to compare status changes
-      const oldOutcome = await storage.getOutcome(req.params.id);
-      if (!oldOutcome) {
-        return res.status(404).json({ message: "Outcome not found" });
+      // Get the old action to compare status changes
+      const oldAction = await storage.getAction(req.params.id);
+      if (!oldAction) {
+        return res.status(404).json({ message: "Action not found" });
       }
       
       // Check if user has access to the strategy (administrators see all, others need assignment)
       if (user.role !== 'administrator') {
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
-        if (!assignedStrategyIds.includes(oldOutcome.strategyId)) {
+        if (!assignedStrategyIds.includes(oldAction.strategyId)) {
           return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
         }
       }
       
-      const validatedData = insertOutcomeSchema.parse(req.body);
-      const outcome = await storage.updateOutcome(req.params.id, validatedData);
-      if (!outcome) {
-        return res.status(404).json({ message: "Outcome not found" });
+      const validatedData = insertActionSchema.parse(req.body);
+      const action = await storage.updateAction(req.params.id, validatedData);
+      if (!action) {
+        return res.status(404).json({ message: "Action not found" });
       }
       
       await storage.createActivity({
-        type: "outcome_updated", 
-        description: `Updated outcome: ${outcome.title}`,
-        userId: outcome.createdBy,
-        strategyId: outcome.strategyId,
-        tacticId: outcome.tacticId,
+        type: "action_updated", 
+        description: `Updated action: ${action.title}`,
+        userId: action.createdBy,
+        strategyId: action.strategyId,
+        projectId: action.projectId,
       });
 
       // Send notifications for status changes
-      if (oldOutcome && oldOutcome.status !== "achieved" && outcome.status === "achieved") {
+      if (oldAction && oldAction.status !== "achieved" && action.status === "achieved") {
         let assignedUserIds: string[] = [];
         
         // If action is linked to a project, notify project's assigned users
-        if (outcome.tacticId) {
-          const tactic = await storage.getTactic(outcome.tacticId);
-          if (tactic) {
-            assignedUserIds = JSON.parse(tactic.accountableLeaders);
+        if (action.projectId) {
+          const project = await storage.getProject(action.projectId);
+          if (project) {
+            assignedUserIds = JSON.parse(project.accountableLeaders);
           }
         }
         
         // If no project users, notify the creator of the action
         if (assignedUserIds.length === 0) {
-          assignedUserIds = [outcome.createdBy];
+          assignedUserIds = [action.createdBy];
         }
         
         // Send the notification
-        await notifyActionAchieved(outcome.id, outcome.title, assignedUserIds);
+        await notifyActionAchieved(action.id, action.title, assignedUserIds);
       }
 
-      // Recalculate progress: outcome -> tactic -> strategy
-      if (outcome.tacticId) {
-        await storage.recalculateTacticProgress(outcome.tacticId);
-        await storage.recalculateStrategyProgress(outcome.strategyId);
+      // Recalculate progress: action -> project -> strategy
+      if (action.projectId) {
+        await storage.recalculateProjectProgress(action.projectId);
+        await storage.recalculateStrategyProgress(action.strategyId);
       }
       
-      res.json(outcome);
+      res.json(action);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        logger.error("Outcome validation error", error.errors);
+        logger.error("Action validation error", error.errors);
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
-      logger.error("Outcome update failed", error);
-      res.status(500).json({ message: "Unable to update outcome. Please check your inputs and try again." });
+      logger.error("Action update failed", error);
+      res.status(500).json({ message: "Unable to update action. Please check your inputs and try again." });
     }
   });
 
-  app.delete("/api/outcomes/:id", isAuthenticated, async (req: any, res) => {
+  app.delete("/api/actions/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -1028,55 +1028,55 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(404).json({ message: "User not found" });
       }
       
-      // View role cannot delete outcomes
+      // View role cannot delete actions
       if (user.role === 'view') {
         return res.status(403).json({ message: "Forbidden: View users cannot delete actions" });
       }
       
-      // Get outcome details before deleting to know which tactic/strategy to recalculate
-      const outcome = await storage.getOutcome(req.params.id);
-      if (!outcome) {
-        return res.status(404).json({ message: "Outcome not found" });
+      // Get action details before deleting to know which project/strategy to recalculate
+      const action = await storage.getAction(req.params.id);
+      if (!action) {
+        return res.status(404).json({ message: "Action not found" });
       }
       
       // Check if user has access to the strategy (administrators see all, others need assignment)
       if (user.role !== 'administrator') {
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
-        if (!assignedStrategyIds.includes(outcome.strategyId)) {
+        if (!assignedStrategyIds.includes(action.strategyId)) {
           return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
         }
       }
 
-      const deleted = await storage.deleteOutcome(req.params.id);
+      const deleted = await storage.deleteAction(req.params.id);
       if (!deleted) {
-        return res.status(404).json({ message: "Outcome not found" });
+        return res.status(404).json({ message: "Action not found" });
       }
 
-      // Recalculate progress: outcome -> tactic -> strategy
-      if (outcome.tacticId) {
-        await storage.recalculateTacticProgress(outcome.tacticId);
-        await storage.recalculateStrategyProgress(outcome.strategyId);
+      // Recalculate progress: action -> project -> strategy
+      if (action.projectId) {
+        await storage.recalculateProjectProgress(action.projectId);
+        await storage.recalculateStrategyProgress(action.strategyId);
       }
 
       res.status(204).send();
     } catch (error) {
-      logger.error("Failed to delete outcome", error);
-      res.status(500).json({ message: "Failed to delete outcome" });
+      logger.error("Failed to delete action", error);
+      res.status(500).json({ message: "Failed to delete action" });
     }
   });
 
-  // Outcome Document routes
-  app.get("/api/outcomes/:outcomeId/documents", async (req, res) => {
+  // Action Document routes
+  app.get("/api/actions/:actionId/documents", async (req, res) => {
     try {
-      const documents = await storage.getOutcomeDocuments(req.params.outcomeId);
+      const documents = await storage.getActionDocuments(req.params.actionId);
       res.json(documents);
     } catch (error) {
-      logger.error("Failed to fetch outcome documents", error);
+      logger.error("Failed to fetch action documents", error);
       res.status(500).json({ message: "Failed to fetch documents" });
     }
   });
 
-  app.post("/api/outcomes/:outcomeId/documents", isAuthenticated, async (req: any, res) => {
+  app.post("/api/actions/:actionId/documents", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -1089,34 +1089,34 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(403).json({ message: "Forbidden: View users cannot create documents" });
       }
       
-      const outcome = await storage.getOutcome(req.params.outcomeId);
-      if (!outcome) {
-        return res.status(404).json({ message: "Outcome not found" });
+      const action = await storage.getAction(req.params.actionId);
+      if (!action) {
+        return res.status(404).json({ message: "Action not found" });
       }
       
       if (user.role !== 'administrator') {
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
-        if (!assignedStrategyIds.includes(outcome.strategyId)) {
+        if (!assignedStrategyIds.includes(action.strategyId)) {
           return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
         }
       }
       
-      const validatedData = insertOutcomeDocumentSchema.parse({
+      const validatedData = insertActionDocumentSchema.parse({
         ...req.body,
-        outcomeId: req.params.outcomeId,
+        actionId: req.params.actionId,
       });
-      const document = await storage.createOutcomeDocument(validatedData);
+      const document = await storage.createActionDocument(validatedData);
       res.status(201).json(document);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
-      logger.error("Failed to create outcome document", error);
+      logger.error("Failed to create action document", error);
       res.status(500).json({ message: "Failed to create document" });
     }
   });
 
-  app.patch("/api/outcomes/:outcomeId/documents/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/actions/:actionId/documents/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -1129,20 +1129,20 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(403).json({ message: "Forbidden: View users cannot update documents" });
       }
       
-      const outcome = await storage.getOutcome(req.params.outcomeId);
-      if (!outcome) {
-        return res.status(404).json({ message: "Outcome not found" });
+      const action = await storage.getAction(req.params.actionId);
+      if (!action) {
+        return res.status(404).json({ message: "Action not found" });
       }
       
       if (user.role !== 'administrator') {
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
-        if (!assignedStrategyIds.includes(outcome.strategyId)) {
+        if (!assignedStrategyIds.includes(action.strategyId)) {
           return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
         }
       }
       
-      const validatedData = insertOutcomeDocumentSchema.partial().parse(req.body);
-      const document = await storage.updateOutcomeDocument(req.params.id, validatedData);
+      const validatedData = insertActionDocumentSchema.partial().parse(req.body);
+      const document = await storage.updateActionDocument(req.params.id, validatedData);
       if (!document) {
         return res.status(404).json({ message: "Document not found" });
       }
@@ -1151,12 +1151,12 @@ Respond ONLY with a valid JSON object in this exact format:
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
-      logger.error("Failed to update outcome document", error);
+      logger.error("Failed to update action document", error);
       res.status(500).json({ message: "Failed to update document" });
     }
   });
 
-  app.delete("/api/outcomes/:outcomeId/documents/:id", isAuthenticated, async (req: any, res) => {
+  app.delete("/api/actions/:actionId/documents/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -1169,33 +1169,33 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(403).json({ message: "Forbidden: View users cannot delete documents" });
       }
       
-      const outcome = await storage.getOutcome(req.params.outcomeId);
-      if (!outcome) {
-        return res.status(404).json({ message: "Outcome not found" });
+      const action = await storage.getAction(req.params.actionId);
+      if (!action) {
+        return res.status(404).json({ message: "Action not found" });
       }
       
       if (user.role !== 'administrator') {
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
-        if (!assignedStrategyIds.includes(outcome.strategyId)) {
+        if (!assignedStrategyIds.includes(action.strategyId)) {
           return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
         }
       }
       
-      const deleted = await storage.deleteOutcomeDocument(req.params.id);
+      const deleted = await storage.deleteActionDocument(req.params.id);
       if (!deleted) {
         return res.status(404).json({ message: "Document not found" });
       }
       res.status(204).send();
     } catch (error) {
-      logger.error("Failed to delete outcome document", error);
+      logger.error("Failed to delete action document", error);
       res.status(500).json({ message: "Failed to delete document" });
     }
   });
 
-  // Outcome Checklist Item routes
-  app.get("/api/outcomes/:outcomeId/checklist", async (req, res) => {
+  // Action Checklist Item routes
+  app.get("/api/actions/:actionId/checklist", async (req, res) => {
     try {
-      const items = await storage.getOutcomeChecklistItems(req.params.outcomeId);
+      const items = await storage.getActionChecklistItems(req.params.actionId);
       res.json(items);
     } catch (error) {
       logger.error("Failed to fetch checklist items", error);
@@ -1203,7 +1203,7 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.post("/api/outcomes/:outcomeId/checklist", isAuthenticated, async (req: any, res) => {
+  app.post("/api/actions/:actionId/checklist", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -1216,23 +1216,23 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(403).json({ message: "Forbidden: View users cannot create checklist items" });
       }
       
-      const outcome = await storage.getOutcome(req.params.outcomeId);
-      if (!outcome) {
-        return res.status(404).json({ message: "Outcome not found" });
+      const action = await storage.getAction(req.params.actionId);
+      if (!action) {
+        return res.status(404).json({ message: "Action not found" });
       }
       
       if (user.role !== 'administrator') {
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
-        if (!assignedStrategyIds.includes(outcome.strategyId)) {
+        if (!assignedStrategyIds.includes(action.strategyId)) {
           return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
         }
       }
       
-      const validatedData = insertOutcomeChecklistItemSchema.parse({
+      const validatedData = insertActionChecklistItemSchema.parse({
         ...req.body,
-        outcomeId: req.params.outcomeId,
+        actionId: req.params.actionId,
       });
-      const item = await storage.createOutcomeChecklistItem(validatedData);
+      const item = await storage.createActionChecklistItem(validatedData);
       res.status(201).json(item);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -1243,7 +1243,7 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.patch("/api/outcomes/:outcomeId/checklist/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/actions/:actionId/checklist/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -1256,14 +1256,14 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(403).json({ message: "Forbidden: View users cannot update checklist items" });
       }
       
-      const outcome = await storage.getOutcome(req.params.outcomeId);
-      if (!outcome) {
-        return res.status(404).json({ message: "Outcome not found" });
+      const action = await storage.getAction(req.params.actionId);
+      if (!action) {
+        return res.status(404).json({ message: "Action not found" });
       }
       
       if (user.role !== 'administrator') {
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
-        if (!assignedStrategyIds.includes(outcome.strategyId)) {
+        if (!assignedStrategyIds.includes(action.strategyId)) {
           return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
         }
       }
@@ -1274,8 +1274,8 @@ Respond ONLY with a valid JSON object in this exact format:
         ...(req.body.isCompleted !== undefined && { isCompleted: String(req.body.isCompleted) })
       };
       
-      const validatedData = insertOutcomeChecklistItemSchema.partial().parse(bodyData);
-      const item = await storage.updateOutcomeChecklistItem(req.params.id, validatedData);
+      const validatedData = insertActionChecklistItemSchema.partial().parse(bodyData);
+      const item = await storage.updateActionChecklistItem(req.params.id, validatedData);
       if (!item) {
         return res.status(404).json({ message: "Checklist item not found" });
       }
@@ -1289,7 +1289,7 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.delete("/api/outcomes/:outcomeId/checklist/:id", isAuthenticated, async (req: any, res) => {
+  app.delete("/api/actions/:actionId/checklist/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -1302,19 +1302,19 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(403).json({ message: "Forbidden: View users cannot delete checklist items" });
       }
       
-      const outcome = await storage.getOutcome(req.params.outcomeId);
-      if (!outcome) {
-        return res.status(404).json({ message: "Outcome not found" });
+      const action = await storage.getAction(req.params.actionId);
+      if (!action) {
+        return res.status(404).json({ message: "Action not found" });
       }
       
       if (user.role !== 'administrator') {
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
-        if (!assignedStrategyIds.includes(outcome.strategyId)) {
+        if (!assignedStrategyIds.includes(action.strategyId)) {
           return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
         }
       }
       
-      const deleted = await storage.deleteOutcomeChecklistItem(req.params.id);
+      const deleted = await storage.deleteActionChecklistItem(req.params.id);
       if (!deleted) {
         return res.status(404).json({ message: "Checklist item not found" });
       }
@@ -1709,7 +1709,7 @@ Respond ONLY with a valid JSON object in this exact format:
       // Fetch projects data and verify they belong to the selected strategy
       const projects = [];
       for (const projectId of parsedProjectIds) {
-        const project = await storage.getTactic(projectId);
+        const project = await storage.getProject(projectId);
         
         // Security check: reject if project doesn't exist
         if (!project) {
@@ -1727,7 +1727,7 @@ Respond ONLY with a valid JSON object in this exact format:
       // Fetch actions data and verify they belong to selected projects
       const actions = [];
       for (const actionId of parsedActionIds) {
-        const action = await storage.getOutcome(actionId);
+        const action = await storage.getAction(actionId);
         
         // Security check: reject if action doesn't exist
         if (!action) {
@@ -1735,12 +1735,12 @@ Respond ONLY with a valid JSON object in this exact format:
         }
         
         // Security check: reject actions without a project assignment
-        if (!action.tacticId) {
+        if (!action.projectId) {
           return res.status(403).json({ message: "Access denied - action must be assigned to a project" });
         }
         
         // Security check: verify action belongs to one of the selected projects
-        if (!parsedProjectIds.includes(action.tacticId)) {
+        if (!parsedProjectIds.includes(action.projectId)) {
           return res.status(403).json({ message: "Access denied - action does not belong to selected projects" });
         }
         
