@@ -103,7 +103,9 @@ function UserStrategyRow({ user, strategies, onRoleChange, onStrategyToggle }: U
                 ? 'Full modification power over the app'
                 : user.role === 'co_lead' 
                   ? 'Can edit tactics and actions for assigned strategies'
-                  : 'View-only access to assigned strategies'
+                  : user.role === 'sme'
+                    ? 'Subject Matter Expert - Tracking only, cannot log in'
+                    : 'View-only access to assigned strategies'
               }
             </p>
           </div>
@@ -114,9 +116,11 @@ function UserStrategyRow({ user, strategies, onRoleChange, onStrategyToggle }: U
               ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
               : user.role === 'co_lead' 
                 ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' 
-                : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                : user.role === 'sme'
+                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
+                  : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
           }>
-            {user.role === 'administrator' ? 'Administrator' : user.role === 'co_lead' ? 'Co-Lead' : 'View'}
+            {user.role === 'administrator' ? 'Administrator' : user.role === 'co_lead' ? 'Co-Lead' : user.role === 'sme' ? 'SME' : 'View'}
           </Badge>
           <Select 
             value={user.role} 
@@ -129,12 +133,13 @@ function UserStrategyRow({ user, strategies, onRoleChange, onStrategyToggle }: U
               <SelectItem value="administrator">Administrator</SelectItem>
               <SelectItem value="co_lead">Co-Lead</SelectItem>
               <SelectItem value="view">View</SelectItem>
+              <SelectItem value="sme">SME (No Login)</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
       
-      {user.role !== 'administrator' && (
+      {user.role !== 'administrator' && user.role !== 'sme' && (
         <div className="mt-4 pt-4 border-t dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
