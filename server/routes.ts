@@ -1933,8 +1933,9 @@ ${strategyProjects.map((p: any) => {
         }
 
         try {
+          // Use Gemini 2.5 Flash - free tier model (10 RPM, 250K TPM, 250 RPD)
           const model = gemini.getGenerativeModel({ 
-            model: "gemini-1.5-flash-latest",
+            model: "gemini-2.5-flash",
             systemInstruction: systemPrompt,
           });
           
