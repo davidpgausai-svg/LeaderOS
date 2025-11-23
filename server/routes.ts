@@ -1939,10 +1939,16 @@ ${strategyProjects.map((p: any) => {
           });
           
           // Build conversation history for Gemini
-          const chatHistory = recentChats.map((chat: any) => ({
+          // Gemini requires history to start with a user message, so filter if needed
+          let chatHistory = recentChats.map((chat: any) => ({
             role: chat.role === 'assistant' ? 'model' : 'user',
             parts: [{ text: chat.message }]
           }));
+          
+          // Remove leading assistant messages (Gemini requires user message first)
+          while (chatHistory.length > 0 && chatHistory[0].role === 'model') {
+            chatHistory.shift();
+          }
           
           const chat = model.startChat({
             history: chatHistory,
