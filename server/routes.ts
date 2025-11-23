@@ -1993,30 +1993,70 @@ Respond ONLY with a valid JSON object in this exact format:
         actions.push(action);
       }
 
-      // Build prompt for OpenAI
-      const prompt = `You are an executive assistant preparing a concise status report for a strategic planning meeting. Generate a professional 1-sentence status update for each item below. Focus on progress, status, and key highlights.
-
-STRATEGY:
+      // Build dynamic prompt with conditional sections
+      let promptSections = [];
+      
+      // Strategy section (always included)
+      promptSections.push(`STRATEGY:
 - Title: ${strategy.title}
 - Description: ${strategy.description || 'N/A'}
 - Status: ${strategy.status}
-- Progress: ${strategy.progress}%
+- Progress: ${strategy.progress}%`);
 
-PROJECTS (${projects.length} selected):
-${projects.map((p, i) => `${i + 1}. ${p.title} - Status: ${p.status}, Progress: ${p.progress}%, Description: ${p.description || 'N/A'}`).join('\n')}
+      // Projects section (conditional)
+      if (projects.length > 0) {
+        promptSections.push(`PROJECTS (${projects.length} selected):
+${projects.map((p, i) => `${i + 1}. ${p.title} - Status: ${p.status}, Progress: ${p.progress}%, Description: ${p.description || 'N/A'}`).join('\n')}`);
+      }
 
-ACTIONS (${actions.length} selected):
-${actions.map((a, i) => `${i + 1}. ${a.title} - Status: ${a.status}, Description: ${a.description || 'N/A'}`).join('\n')}
+      // Actions section (conditional)
+      if (actions.length > 0) {
+        promptSections.push(`ACTIONS (${actions.length} selected):
+${actions.map((a, i) => `${i + 1}. ${a.title} - Status: ${a.status}, Description: ${a.description || 'N/A'}`).join('\n')}`);
+      }
 
-Please provide output in this exact format:
-STRATEGY STATUS:
-[1-sentence status for the strategy]
+      const dataContext = promptSections.join('\n\n');
 
-PROJECT UPDATES:
-${projects.map((p, i) => `${i + 1}. ${p.title}: [1-sentence update]`).join('\n')}
+      // Build output format template
+      let outputTemplate = `STRATEGY STATUS:
+[Write a comprehensive status sentence that includes: current status (${strategy.status}), progress percentage (${strategy.progress}%), key accomplishments, and what's happening next]
 
-ACTION ITEMS:
-${actions.map((a, i) => `${i + 1}. ${a.title}: [1-sentence update]`).join('\n')}`;
+`;
+
+      if (projects.length > 0) {
+        outputTemplate += `PROJECT UPDATES:
+${projects.map((p, i) => `${i + 1}. ${p.title}: [Write a detailed update including: current status (${p.status}), progress (${p.progress}%), recent accomplishments, any blockers, and immediate next steps]`).join('\n')}
+
+`;
+      } else {
+        outputTemplate += `PROJECT UPDATES:
+None selected for this report.
+
+`;
+      }
+
+      if (actions.length > 0) {
+        outputTemplate += `ACTION ITEMS:
+${actions.map((a, i) => `${i + 1}. ${a.title}: [Write a status update including: current state (${a.status}), what's been completed, any obstacles, and next action required]`).join('\n')}`;
+      } else {
+        outputTemplate += `ACTION ITEMS:
+None selected for this report.`;
+      }
+
+      const prompt = `You are an executive assistant preparing a detailed status report for a strategic planning meeting. 
+
+INSTRUCTIONS:
+- Write professional, information-rich updates (not just brief summaries)
+- Include progress metrics, recent accomplishments, current blockers, and next steps
+- Each update should be 1-2 sentences with substantive detail
+- Use the exact format provided below
+- Do NOT add extra sections or commentary
+
+DATA CONTEXT:
+${dataContext}
+
+REQUIRED OUTPUT FORMAT:
+${outputTemplate}`;
 
       // Call OpenAI - the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
       const response = await openai.chat.completions.create({
@@ -2024,7 +2064,7 @@ ${actions.map((a, i) => `${i + 1}. ${a.title}: [1-sentence update]`).join('\n')}
         messages: [
           {
             role: "system",
-            content: "You are an executive assistant who writes concise, professional status reports. Each status should be exactly one sentence that captures progress, current status, and key highlights."
+            content: "You are an executive assistant who writes detailed, professional status reports for strategic planning meetings. Your reports include specific progress metrics, accomplishments, blockers, and next steps. You write in a clear, professional tone with substantive information rather than generic summaries. You follow the exact output format provided without adding extra sections."
           },
           {
             role: "user",
