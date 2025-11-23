@@ -1906,7 +1906,8 @@ ${strategyProjects.map((p: any) => {
 
 **Response Guidelines:**
 - Be concise and professional
-- Use bullet points for clarity
+- Use simple bullet points (single dash or asterisk) without bold/italic markdown formatting
+- Do NOT use ** or __ for bold/emphasis - use plain text only
 - Reference specific strategies/projects when relevant
 - Suggest navigation actions when appropriate (e.g., "You can view this on the Timeline page")
 - For copy writing, provide 2-3 options
