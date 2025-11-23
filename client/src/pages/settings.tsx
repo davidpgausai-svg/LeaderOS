@@ -390,6 +390,7 @@ export default function Settings() {
       lastName: formData.get('lastName') as string,
       email: currentUser.email, // Keep existing email
       role: currentUser.role, // Keep existing role
+      timezone: formData.get('timezone') as string,
     };
     updateUserMutation.mutate(profileData);
   };
@@ -677,6 +678,35 @@ export default function Settings() {
                         Role changes must be made by an administrator
                       </p>
                     </div>
+
+                    {currentRole === 'administrator' && (
+                      <div className="space-y-2">
+                        <Label htmlFor="timezone" className="flex items-center space-x-2">
+                          <Globe className="w-4 h-4" />
+                          <span>Timezone</span>
+                        </Label>
+                        <Select 
+                          name="timezone" 
+                          defaultValue={currentUser?.timezone || 'America/Chicago'}
+                        >
+                          <SelectTrigger data-testid="select-timezone">
+                            <SelectValue placeholder="Select timezone" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="America/New_York">Eastern Time (EST/EDT)</SelectItem>
+                            <SelectItem value="America/Chicago">Central Time (CST/CDT)</SelectItem>
+                            <SelectItem value="America/Denver">Mountain Time (MST/MDT)</SelectItem>
+                            <SelectItem value="America/Phoenix">Mountain Time - Arizona (MST)</SelectItem>
+                            <SelectItem value="America/Los_Angeles">Pacific Time (PST/PDT)</SelectItem>
+                            <SelectItem value="America/Anchorage">Alaska Time (AKST/AKDT)</SelectItem>
+                            <SelectItem value="Pacific/Honolulu">Hawaii-Aleutian Time (HST)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-sm text-gray-500">
+                          Used to determine "today" on the Timeline
+                        </p>
+                      </div>
+                    )}
 
                     <Button 
                       type="submit" 

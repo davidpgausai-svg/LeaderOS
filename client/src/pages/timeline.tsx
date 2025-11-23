@@ -1,10 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { Sidebar } from "@/components/layout/sidebar";
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import { format, min, max, differenceInDays, eachMonthOfInterval } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 import type { Strategy, Project, Action } from "@shared/schema";
 
 export default function Timeline() {
+  const timelineContainerRef = useRef<HTMLDivElement>(null);
+  
   const { data: strategies, isLoading: strategiesLoading } = useQuery<Strategy[]>({
     queryKey: ["/api/strategies"],
   });
@@ -15,6 +18,10 @@ export default function Timeline() {
 
   const { data: actions, isLoading: actionsLoading } = useQuery<Action[]>({
     queryKey: ["/api/actions"],
+  });
+
+  const { data: currentUser } = useQuery({
+    queryKey: ["/api/auth/user"],
   });
 
   const timelineData = useMemo(() => {
@@ -85,6 +92,43 @@ export default function Timeline() {
     return Math.min(Math.max((daysSinceStart / timelineData.totalDays) * 100, 0), 100);
   };
 
+  // Calculate today's position based on user's timezone
+  const todayInfo = useMemo(() => {
+    const userTimezone = (currentUser as any)?.timezone || 'America/Chicago';
+    const now = new Date();
+    const todayInTimezone = toZonedTime(now, userTimezone);
+    
+    if (!timelineData.minDate || !timelineData.maxDate) {
+      return { position: 50, isOutsideRange: false, isBeforeStart: false, isAfterEnd: false, date: todayInTimezone };
+    }
+
+    const isBeforeStart = todayInTimezone < timelineData.minDate;
+    const isAfterEnd = todayInTimezone > timelineData.maxDate;
+    const isOutsideRange = isBeforeStart || isAfterEnd;
+    
+    let position = 50;
+    if (isBeforeStart) {
+      position = 0;
+    } else if (isAfterEnd) {
+      position = 100;
+    } else {
+      position = getPositionPercentage(todayInTimezone);
+    }
+    
+    return { position, isOutsideRange, isBeforeStart, isAfterEnd, date: todayInTimezone };
+  }, [currentUser, timelineData]);
+
+  // Auto-scroll to center on today when timeline loads
+  useEffect(() => {
+    if (timelineContainerRef.current && !todayInfo.isOutsideRange && timelineData.frameworks.length > 0) {
+      const container = timelineContainerRef.current;
+      const scrollWidth = container.scrollWidth;
+      const clientWidth = container.clientWidth;
+      const scrollPosition = (scrollWidth * todayInfo.position / 100) - (clientWidth / 2);
+      container.scrollLeft = Math.max(0, scrollPosition);
+    }
+  }, [todayInfo.position, todayInfo.isOutsideRange, timelineData.frameworks.length]);
+
   if (strategiesLoading || projectsLoading || actionsLoading) {
     return (
       <div className="min-h-screen flex">
@@ -141,8 +185,8 @@ export default function Timeline() {
               </div>
 
               {/* Timeline Grid with synchronized horizontal scroll */}
-              <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg overflow-x-auto" style={{ overflowY: 'visible' }}>
-                <div className="inline-block min-w-full">
+              <div ref={timelineContainerRef} className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg overflow-x-auto" style={{ overflowY: 'visible' }}>
+                <div className="inline-block min-w-full relative">
                   {/* Month Headers */}
                   <div className="flex border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
                     <div className="w-48 flex-shrink-0 px-4 py-3 border-r border-gray-200 dark:border-gray-800 sticky left-0 bg-gray-50 dark:bg-gray-900 z-10">
@@ -162,6 +206,51 @@ export default function Timeline() {
                           </div>
                         ))}
                       </div>
+
+                      {/* Today Line */}
+                      {!todayInfo.isOutsideRange && (
+                        <div
+                          className="absolute top-0 bottom-0 z-5 pointer-events-none"
+                          style={{
+                            left: `${todayInfo.position}%`,
+                            transform: 'translateX(-50%)',
+                          }}
+                        >
+                          <div className="relative h-full">
+                            {/* Vertical Line */}
+                            <div 
+                              className="absolute top-0 bottom-0 w-px bg-red-500 dark:bg-orange-400"
+                              style={{ left: '50%', transform: 'translateX(-50%)' }}
+                            />
+                            {/* Date Label */}
+                            <div 
+                              className="absolute -top-1 left-1/2 transform -translate-x-1/2 -translate-y-full mb-1 px-2 py-0.5 bg-red-500 dark:bg-orange-400 text-white text-xs font-medium rounded whitespace-nowrap"
+                            >
+                              {format(todayInfo.date, 'MMM dd, yyyy')}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Edge Case: Today is outside range */}
+                      {todayInfo.isOutsideRange && (
+                        <div
+                          className="absolute top-0 z-5 pointer-events-none"
+                          style={{
+                            left: todayInfo.isBeforeStart ? '0' : '100%',
+                          }}
+                        >
+                          <div className="relative">
+                            <div 
+                              className={`px-2 py-1 bg-amber-100 dark:bg-amber-900 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 text-xs font-medium rounded whitespace-nowrap ${
+                                todayInfo.isBeforeStart ? '' : '-translate-x-full'
+                              }`}
+                            >
+                              Today ({format(todayInfo.date, 'MMM dd, yyyy')}) is {todayInfo.isBeforeStart ? 'before' : 'beyond'} this timeline
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
