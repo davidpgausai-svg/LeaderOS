@@ -337,8 +337,9 @@ Respond ONLY with a valid JSON object in this exact format:
   "benefitsRealizationPlan": "plain text string here..."
 }`;
 
+      // Use GPT-5 for reasoning-based Change Continuum generation
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-5",
         messages: [
           {
             role: "system",
@@ -350,7 +351,8 @@ Respond ONLY with a valid JSON object in this exact format:
           }
         ],
         temperature: 0.7,
-        response_format: { type: "json_object" }
+        response_format: { type: "json_object" },
+        max_completion_tokens: 8192,
       });
 
       const content = completion.choices[0].message.content;
