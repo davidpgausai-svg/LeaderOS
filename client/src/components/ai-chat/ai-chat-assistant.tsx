@@ -122,7 +122,7 @@ export function AiChatAssistant() {
           <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
             <div className="flex items-center space-x-2">
               <MessageSquare className="h-5 w-5 text-primary" />
-              <h3 className="font-semibold text-gray-900 dark:text-white">StrategicFlow Assistant</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-white">Strategic AI Assistant</h3>
             </div>
             <div className="flex items-center space-x-1">
               <Button
@@ -155,7 +155,7 @@ export function AiChatAssistant() {
               <div className="flex flex-col items-center justify-center h-full text-center px-4">
                 <MessageSquare className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-3" />
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                  Hi {user?.firstName || 'there'}! I'm your StrategicFlow Assistant.
+                  Hi {user?.firstName || 'there'}! I'm your Strategic AI Assistant.
                 </p>
                 <p className="text-xs text-gray-400 dark:text-gray-500">
                   Ask me about navigation, status updates, or help writing copy.

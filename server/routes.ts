@@ -1843,7 +1843,7 @@ ${actions.map((a, i) => `${i + 1}. ${a.title}: [1-sentence update]`).join('\n')}
       const recentChats = await storage.getRecentChatHistory(userId, 5);
       
       // Build system prompt
-      const systemPrompt = `You are StrategicFlow Assistant, a helpful AI agent embedded in the StrategicFlow strategic planning platform.
+      const systemPrompt = `You are Strategic AI Assistant, a helpful AI agent embedded in the StrategicFlow strategic planning platform.
 
 **About StrategicFlow:**
 StrategicFlow helps organizations manage strategic initiatives through a three-tier hierarchy:
