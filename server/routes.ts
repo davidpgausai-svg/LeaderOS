@@ -1906,13 +1906,13 @@ StrategicFlow helps organizations manage strategic initiatives through a three-t
         content: message
       });
 
-      // Call OpenAI - using gpt-5-chat-latest for conversational responses without reasoning overhead
+      // Call OpenAI - using gpt-4o for reliable conversational responses
       let assistantMessage: string;
       try {
         const response = await openai.chat.completions.create({
-          model: "gpt-5-chat-latest",
+          model: "gpt-4o",
           messages,
-          max_completion_tokens: 500,
+          max_tokens: 500,
         });
         
         assistantMessage = response.choices[0]?.message?.content || "I'm sorry, I couldn't generate a response. Please try again.";
