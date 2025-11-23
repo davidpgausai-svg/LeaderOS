@@ -268,7 +268,7 @@ export default function Timeline() {
                             {/* Date Label - only show on first row */}
                             {frameworkIndex === 0 && (
                               <div 
-                                className="absolute -top-12 left-1/2 transform -translate-x-1/2 px-2 py-0.5 bg-red-500 dark:bg-orange-400 text-white text-xs font-medium rounded whitespace-nowrap"
+                                className="absolute -top-20 left-1/2 transform -translate-x-1/2 px-2 py-0.5 bg-red-500 dark:bg-orange-400 text-white text-xs font-medium rounded whitespace-nowrap"
                               >
                                 {format(todayInfo.date, 'MMM dd, yyyy')}
                               </div>
