@@ -6,6 +6,7 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 import { logger } from "./logger";
 import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { notifyActionCompleted, notifyActionAchieved, notifyProjectProgress, notifyProjectStatusChanged, notifyStrategyStatusChanged, notifyReadinessRatingChanged, notifyRiskExposureChanged } from "./notifications";
 
 // Validation helpers
@@ -26,6 +27,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
     apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
   });
+
+  // Initialize Google Gemini client (if API key is provided)
+  let gemini: GoogleGenerativeAI | null = null;
+  if (process.env.GOOGLE_GEMINI_API_KEY) {
+    gemini = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY);
+  }
+
+  // Determine which AI model to use for chat assistant
+  const CHAT_AI_PROVIDER = process.env.CHAT_AI_PROVIDER || 'openai'; // 'openai' or 'gemini'
 
   // Initialize database with seed data only in development
   if (process.env.NODE_ENV !== 'production' && storage && 'seedData' in storage) {
@@ -1910,43 +1920,72 @@ ${strategyProjects.map((p: any) => {
 - Reports: Generate status reports
 - Settings: User management and preferences (Admin only)`;
 
-      // Build conversation history for OpenAI
-      const messages: any[] = [
-        { role: "system", content: systemPrompt }
-      ];
-
-      // Add recent chat history
-      recentChats.forEach((chat: any) => {
-        messages.push({
-          role: chat.role,
-          content: chat.message
-        });
-      });
-
-      // Add current user message
-      messages.push({
-        role: "user",
-        content: message
-      });
-
-      // Call OpenAI - using gpt-4o for reliable conversational responses
+      // Call AI provider based on configuration
       let assistantMessage: string;
-      try {
-        const response = await openai.chat.completions.create({
-          model: "gpt-4o",
-          messages,
-          max_tokens: 500,
-        });
-        
-        assistantMessage = response.choices[0]?.message?.content || "I'm sorry, I couldn't generate a response. Please try again.";
-      } catch (openaiError: any) {
-        logger.error("OpenAI API error:", openaiError);
-        logger.error("Error details:", {
-          message: openaiError.message,
-          status: openaiError.status,
-          type: openaiError.type,
-        });
-        throw openaiError;
+      
+      if (CHAT_AI_PROVIDER === 'gemini' && gemini) {
+        // Use Google Gemini (free tier)
+        try {
+          const model = gemini.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+          
+          // Build conversation history for Gemini
+          const chatHistory = recentChats.map((chat: any) => ({
+            role: chat.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: chat.message }]
+          }));
+          
+          const chat = model.startChat({
+            history: chatHistory,
+            systemInstruction: systemPrompt,
+          });
+          
+          const result = await chat.sendMessage(message);
+          assistantMessage = result.response.text() || "I'm sorry, I couldn't generate a response. Please try again.";
+          
+          logger.info("Gemini chat response generated successfully");
+        } catch (geminiError: any) {
+          logger.error("Gemini API error:", geminiError);
+          throw geminiError;
+        }
+      } else {
+        // Use OpenAI (default, billed to Replit credits)
+        try {
+          const messages: any[] = [
+            { role: "system", content: systemPrompt }
+          ];
+
+          // Add recent chat history
+          recentChats.forEach((chat: any) => {
+            messages.push({
+              role: chat.role,
+              content: chat.message
+            });
+          });
+
+          // Add current user message
+          messages.push({
+            role: "user",
+            content: message
+          });
+
+          const response = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages,
+            max_tokens: 500,
+          });
+          
+          assistantMessage = response.choices[0]?.message?.content || "I'm sorry, I couldn't generate a response. Please try again.";
+          
+          logger.info("OpenAI chat response generated successfully");
+        } catch (openaiError: any) {
+          logger.error("OpenAI API error:", openaiError);
+          logger.error("Error details:", {
+            message: openaiError.message,
+            status: openaiError.status,
+            type: openaiError.type,
+          });
+          throw openaiError;
+        }
       }
 
       // Save both user message and assistant response to chat history
