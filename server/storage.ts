@@ -1,7 +1,7 @@
-import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Project, type InsertProject, type Activity, type InsertActivity, type Action, type InsertAction, type Notification, type InsertNotification, type ActionDocument, type InsertActionDocument, type ActionChecklistItem, type InsertActionChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, users, strategies, projects, activities, actions, notifications, actionDocuments, actionChecklistItems, userStrategyAssignments, meetingNotes } from "@shared/schema";
+import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Project, type InsertProject, type Activity, type InsertActivity, type Action, type InsertAction, type Notification, type InsertNotification, type ActionDocument, type InsertActionDocument, type ActionChecklistItem, type InsertActionChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, type AiChatConversation, type InsertAiChatConversation, users, strategies, projects, activities, actions, notifications, actionDocuments, actionChecklistItems, userStrategyAssignments, meetingNotes, aiChatConversations } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, asc, and } from "drizzle-orm";
+import { eq, asc, and, desc } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -81,6 +81,11 @@ export interface IStorage {
   createMeetingNote(note: InsertMeetingNote): Promise<MeetingNote>;
   updateMeetingNote(id: string, updates: Partial<MeetingNote>): Promise<MeetingNote | undefined>;
   deleteMeetingNote(id: string): Promise<boolean>;
+
+  // AI Chat methods
+  saveChatMessage(message: InsertAiChatConversation): Promise<AiChatConversation>;
+  getRecentChatHistory(userId: string, limit: number): Promise<AiChatConversation[]>;
+  clearChatHistory(userId: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -1337,6 +1342,28 @@ export class DatabaseStorage implements IStorage {
     ]);
 
     console.log('Development data seeded successfully');
+  }
+
+  // AI Chat methods
+  async saveChatMessage(message: InsertAiChatConversation): Promise<AiChatConversation> {
+    const [chat] = await db.insert(aiChatConversations).values(message).returning();
+    return chat;
+  }
+
+  async getRecentChatHistory(userId: string, limit: number): Promise<AiChatConversation[]> {
+    return await db
+      .select()
+      .from(aiChatConversations)
+      .where(eq(aiChatConversations.userId, userId))
+      .orderBy(desc(aiChatConversations.createdAt))
+      .limit(limit)
+      .then(chats => chats.reverse()); // Reverse to get chronological order
+  }
+
+  async clearChatHistory(userId: string): Promise<void> {
+    await db
+      .delete(aiChatConversations)
+      .where(eq(aiChatConversations.userId, userId));
   }
 }
 

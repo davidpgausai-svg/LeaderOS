@@ -1802,6 +1802,179 @@ ${actions.map((a, i) => `${i + 1}. ${a.title}: [1-sentence update]`).join('\n')}
     }
   });
 
+  // AI Chat Assistant endpoint
+  app.post("/api/ai/chat", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      const { message, context } = req.body;
+
+      if (!message || typeof message !== 'string') {
+        return res.status(400).json({ message: "Message is required" });
+      }
+
+      // Gather context for the AI
+      const userContext = {
+        role: user.role,
+        currentPage: context?.currentPage || 'unknown',
+        firstName: user.firstName,
+        lastName: user.lastName,
+      };
+
+      // Get user's assigned strategies for context
+      let assignedStrategies = [];
+      if (user.role !== 'administrator') {
+        const strategyIds = await storage.getUserAssignedStrategyIds(userId);
+        const strategies = await storage.getAllStrategies();
+        assignedStrategies = strategies.filter((s: any) => strategyIds.includes(s.id));
+      } else {
+        assignedStrategies = await storage.getAllStrategies();
+      }
+
+      // Get recent chat history for context (last 5 messages)
+      const recentChats = await storage.getRecentChatHistory(userId, 5);
+      
+      // Build system prompt
+      const systemPrompt = `You are StrategicFlow Assistant, a helpful AI agent embedded in the StrategicFlow strategic planning platform.
+
+**About StrategicFlow:**
+StrategicFlow helps organizations manage strategic initiatives through a three-tier hierarchy:
+1. Strategies - High-level organizational objectives with Change Continuum Framework fields
+2. Projects - Specific initiatives that support strategies
+3. Actions - Concrete tasks with owners, due dates, and progress tracking
+
+**User Roles:**
+- Administrator: Full access to all strategies, can manage users and settings
+- Co-Lead: Can edit projects and actions for assigned strategies only
+- View: Read-only access to assigned strategies
+- SME: Subject Matter Expert, tracking only, cannot log in
+
+**Current User:**
+- Name: ${user.firstName || ''} ${user.lastName || ''}
+- Role: ${user.role}
+- Current Page: ${userContext.currentPage}
+- Assigned Strategies: ${assignedStrategies.map((s: any) => s.title).join(', ') || 'None'}
+
+**Your Capabilities:**
+1. Navigation Help: Guide users to specific pages (Strategies, Projects, Actions, Timeline, Meeting Notes, Reports, Settings)
+2. Status Updates: Provide summaries of strategy/project/action progress
+3. Copy Writing: Help draft descriptions, goals, and documentation
+4. General Assistance: Answer questions about features and workflows
+
+**Response Guidelines:**
+- Be concise and professional
+- Use bullet points for clarity
+- Reference specific strategies/projects when relevant
+- Suggest navigation actions when appropriate (e.g., "You can view this on the Timeline page")
+- For copy writing, provide 2-3 options
+- Stay within the context of StrategicFlow features
+
+**Available Pages:**
+- Dashboard: Overview with key metrics
+- Strategies: Manage high-level strategies
+- Projects: View and edit projects
+- Actions: Track individual tasks
+- Timeline: Visual timeline of all initiatives
+- Meeting Notes: Create report-out meeting notes
+- Reports: Generate status reports
+- Settings: User management and preferences (Admin only)`;
+
+      // Build conversation history for OpenAI
+      const messages: any[] = [
+        { role: "system", content: systemPrompt }
+      ];
+
+      // Add recent chat history
+      recentChats.forEach((chat: any) => {
+        messages.push({
+          role: chat.role,
+          content: chat.message
+        });
+      });
+
+      // Add current user message
+      messages.push({
+        role: "user",
+        content: message
+      });
+
+      // Call OpenAI
+      const response = await openai.chat.completions.create({
+        model: "gpt-5",
+        messages,
+        max_completion_tokens: 1000,
+      });
+
+      const assistantMessage = response.choices[0]?.message?.content || "I'm sorry, I couldn't generate a response. Please try again.";
+
+      // Save both user message and assistant response to chat history
+      await storage.saveChatMessage({
+        userId,
+        message,
+        role: 'user',
+        context
+      });
+
+      await storage.saveChatMessage({
+        userId,
+        message: assistantMessage,
+        role: 'assistant',
+        context
+      });
+
+      res.json({ 
+        message: assistantMessage,
+        context: userContext 
+      });
+    } catch (error) {
+      logger.error("Failed to process AI chat", error);
+      res.status(500).json({ message: "Failed to process chat message" });
+    }
+  });
+
+  // Get chat history
+  app.get("/api/ai/chat/history", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const limit = parseInt(req.query.limit as string) || 50;
+      const history = await storage.getRecentChatHistory(userId, limit);
+      
+      res.json(history);
+    } catch (error) {
+      logger.error("Failed to fetch chat history", error);
+      res.status(500).json({ message: "Failed to fetch chat history" });
+    }
+  });
+
+  // Clear chat history
+  app.delete("/api/ai/chat/history", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      await storage.clearChatHistory(userId);
+      
+      res.status(204).send();
+    } catch (error) {
+      logger.error("Failed to clear chat history", error);
+      res.status(500).json({ message: "Failed to clear chat history" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
