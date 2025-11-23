@@ -1831,13 +1831,25 @@ ${actions.map((a, i) => `${i + 1}. ${a.title}: [1-sentence update]`).join('\n')}
 
       // Get user's assigned strategies for context
       let assignedStrategies = [];
+      let assignedStrategyIds: string[] = [];
       if (user.role !== 'administrator') {
-        const strategyIds = await storage.getUserAssignedStrategyIds(userId);
+        assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
         const strategies = await storage.getAllStrategies();
-        assignedStrategies = strategies.filter((s: any) => strategyIds.includes(s.id));
+        assignedStrategies = strategies.filter((s: any) => assignedStrategyIds.includes(s.id));
       } else {
-        assignedStrategies = await storage.getAllStrategies();
+        const strategies = await storage.getAllStrategies();
+        assignedStrategies = strategies;
+        assignedStrategyIds = strategies.map((s: any) => s.id);
       }
+
+      // Get projects and actions for assigned strategies to provide real status updates
+      const allProjects = await storage.getAllProjects();
+      const allActions = await storage.getAllActions();
+      
+      const relevantProjects = allProjects.filter((p: any) => assignedStrategyIds.includes(p.strategyId));
+      const relevantActions = allActions.filter((a: any) => 
+        relevantProjects.some((p: any) => p.id === a.projectId)
+      );
 
       // Get recent chat history for context (last 5 messages)
       const recentChats = await storage.getRecentChatHistory(userId, 5);
@@ -1861,11 +1873,22 @@ StrategicFlow helps organizations manage strategic initiatives through a three-t
 - Name: ${user.firstName || ''} ${user.lastName || ''}
 - Role: ${user.role}
 - Current Page: ${userContext.currentPage}
-- Assigned Strategies: ${assignedStrategies.map((s: any) => s.title).join(', ') || 'None'}
+
+**User's Live Data:**
+${assignedStrategies.length > 0 ? assignedStrategies.map((s: any) => {
+  const strategyProjects = relevantProjects.filter((p: any) => p.strategyId === s.id);
+  return `
+STRATEGY: "${s.title}" (${s.status}, ${s.progress}% complete)
+  Projects (${strategyProjects.length}):
+${strategyProjects.map((p: any) => {
+  const projectActions = relevantActions.filter((a: any) => a.projectId === p.id);
+  return `    - "${p.title}" (${p.status}, ${p.progress}% complete, ${projectActions.length} actions)`;
+}).join('\n') || '    (No projects)'}`;
+}).join('\n') : 'No assigned strategies'}
 
 **Your Capabilities:**
-1. Navigation Help: Guide users to specific pages (Strategies, Projects, Actions, Timeline, Meeting Notes, Reports, Settings)
-2. Status Updates: Provide summaries of strategy/project/action progress
+1. Navigation Help: Guide users to specific pages
+2. Status Updates: Provide REAL summaries using the live data above - be specific with numbers and percentages
 3. Copy Writing: Help draft descriptions, goals, and documentation
 4. General Assistance: Answer questions about features and workflows
 
