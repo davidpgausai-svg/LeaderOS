@@ -192,11 +192,11 @@ export default function Timeline() {
                     <div className="w-48 flex-shrink-0 px-4 py-3 border-r border-gray-200 dark:border-gray-800 sticky left-0 bg-gray-50 dark:bg-gray-900 z-10">
                       <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Strategy</span>
                     </div>
-                    <div className="flex-shrink-0 relative" style={{ width: `${timelineData.months.length * 100}px` }}>
-                      {/* Today Date Pill - positioned above months */}
+                    <div className="flex-shrink-0 relative pt-7" style={{ width: `${timelineData.months.length * 100}px` }}>
+                      {/* Today Date Pill - positioned inside header with padding */}
                       {!todayInfo.isOutsideRange && (
                         <div 
-                          className="absolute -top-6 pointer-events-none z-20"
+                          className="absolute top-1 pointer-events-none z-20"
                           style={{
                             left: `${todayInfo.position}%`,
                             transform: 'translateX(-50%)',
