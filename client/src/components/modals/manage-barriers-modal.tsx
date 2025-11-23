@@ -145,6 +145,7 @@ export function ManageBarriersModal({ isOpen, onClose, projectId }: ManageBarrie
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/barriers", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/barriers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       toast({
         title: "Success",
@@ -170,6 +171,7 @@ export function ManageBarriersModal({ isOpen, onClose, projectId }: ManageBarrie
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/barriers", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/barriers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       toast({
         title: "Success",
@@ -196,6 +198,7 @@ export function ManageBarriersModal({ isOpen, onClose, projectId }: ManageBarrie
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/barriers", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/barriers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       toast({
         title: "Success",

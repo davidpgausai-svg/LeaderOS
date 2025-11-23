@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { CreateProjectModal } from "@/components/modals/create-project-modal";
 import { EditProjectModal } from "@/components/modals/edit-project-modal";
 import { ViewProjectModal } from "@/components/modals/view-project-modal";
+import { ManageBarriersModal } from "@/components/modals/manage-barriers-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -63,7 +64,9 @@ import {
   Edit,
   Eye,
   ExternalLink,
-  MessageSquarePlus
+  MessageSquarePlus,
+  AlertTriangle,
+  ShieldCheck
 } from "lucide-react";
 
 type Strategy = {
@@ -96,6 +99,7 @@ type Project = {
   accountableLeaders: string; // JSON array of user IDs
   resourcesRequired?: string;
   documentFolderUrl?: string | null;
+  communicationUrl?: string | null;
   startDate: string;
   dueDate: string;
   status: string; // C, OT, OH, B, NYS
@@ -106,6 +110,21 @@ type Project = {
   strategy?: Strategy;
 };
 
+type Barrier = {
+  id: string;
+  projectId: string;
+  title: string;
+  description: string;
+  severity: 'high' | 'medium' | 'low';
+  status: 'active' | 'mitigated' | 'resolved' | 'closed';
+  ownerId?: string | null;
+  targetResolutionDate?: string | null;
+  resolutionNotes?: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export default function Projects() {
   const { currentRole, currentUser, canCreateProjects, canEditProjects } = useRole();
   const { toast } = useToast();
@@ -113,8 +132,10 @@ export default function Projects() {
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
   const [isEditProjectOpen, setIsEditProjectOpen] = useState(false);
   const [isViewProjectOpen, setIsViewProjectOpen] = useState(false);
+  const [isManageBarriersOpen, setIsManageBarriersOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [viewingProject, setViewingProject] = useState<Project | null>(null);
+  const [barriersProjectId, setBarriersProjectId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [strategyFilter, setStrategyFilter] = useState("all");
@@ -130,6 +151,16 @@ export default function Projects() {
 
   const { data: users } = useQuery({
     queryKey: ["/api/users"],
+  });
+
+  // Fetch all barriers globally
+  const { data: allBarriers } = useQuery<Barrier[]>({
+    queryKey: ["/api/barriers"],
+    queryFn: async () => {
+      const response = await fetch("/api/barriers");
+      if (!response.ok) throw new Error("Failed to fetch barriers");
+      return response.json();
+    },
   });
 
   // Initialize all strategies as collapsed by default when strategies data loads
@@ -239,6 +270,43 @@ export default function Projects() {
       'NYS': { label: 'Not Yet Started', color: 'bg-gray-500', textColor: 'text-gray-700' },
     };
     return statusMap[status as keyof typeof statusMap] || statusMap['NYS'];
+  };
+
+  const getProjectBarriers = (projectId: string): Barrier[] => {
+    return (allBarriers || []).filter(b => b.projectId === projectId);
+  };
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case "high":
+        return "bg-red-500";
+      case "medium":
+        return "bg-yellow-500";
+      case "low":
+        return "bg-green-500";
+      default:
+        return "bg-gray-500";
+    }
+  };
+
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case "active":
+        return "destructive";
+      case "mitigated":
+        return "default";
+      case "resolved":
+        return "secondary";
+      case "closed":
+        return "outline";
+      default:
+        return "default";
+    }
+  };
+
+  const handleManageBarriers = (projectId: string) => {
+    setBarriersProjectId(projectId);
+    setIsManageBarriersOpen(true);
   };
 
   // Filter projects
@@ -679,6 +747,90 @@ export default function Projects() {
                                     )}
                                   </div>
 
+                                  {/* Barriers Section */}
+                                  {(() => {
+                                    const projectBarriers = getProjectBarriers(project.id);
+                                    const activeBarriers = projectBarriers.filter(b => b.status === 'active' || b.status === 'mitigated');
+                                    const displayBarriers = activeBarriers.slice(0, 2);
+                                    const remainingCount = activeBarriers.length - 2;
+                                    
+                                    if (activeBarriers.length > 0) {
+                                      return (
+                                        <div className="mt-4 p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-lg">
+                                          <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center space-x-2">
+                                              <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                                              <span className="text-sm font-semibold text-red-900 dark:text-red-200">
+                                                Active Barriers ({activeBarriers.length})
+                                              </span>
+                                            </div>
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={() => handleManageBarriers(project.id)}
+                                              data-testid={`button-manage-barriers-${project.id}`}
+                                              className="text-red-700 dark:text-red-300 border-red-300 dark:border-red-700 hover:bg-red-100 dark:hover:bg-red-900/30"
+                                            >
+                                              Manage
+                                            </Button>
+                                          </div>
+                                          <div className="space-y-2">
+                                            {displayBarriers.map((barrier) => (
+                                              <div key={barrier.id} className="flex items-start gap-2" data-testid={`barrier-item-${barrier.id}`}>
+                                                <div className={`w-2 h-2 rounded-full mt-1.5 ${getSeverityColor(barrier.severity)}`} />
+                                                <div className="flex-1 min-w-0">
+                                                  <div className="flex items-center gap-2">
+                                                    <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                                      {barrier.title}
+                                                    </span>
+                                                    <Badge variant={getStatusBadgeVariant(barrier.status) as any} className="text-xs capitalize">
+                                                      {barrier.status}
+                                                    </Badge>
+                                                  </div>
+                                                  <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">
+                                                    {barrier.description}
+                                                  </p>
+                                                </div>
+                                              </div>
+                                            ))}
+                                            {remainingCount > 0 && (
+                                              <button
+                                                onClick={() => handleManageBarriers(project.id)}
+                                                className="text-xs text-red-700 dark:text-red-300 hover:underline font-medium"
+                                                data-testid={`button-show-more-barriers-${project.id}`}
+                                              >
+                                                +{remainingCount} more barrier{remainingCount !== 1 ? 's' : ''}
+                                              </button>
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
+                                    } else if (canEditProject(project)) {
+                                      return (
+                                        <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg">
+                                          <div className="flex items-center justify-between">
+                                            <div className="flex items-center space-x-2">
+                                              <ShieldCheck className="w-4 h-4 text-green-600 dark:text-green-400" />
+                                              <span className="text-sm text-gray-700 dark:text-gray-300">
+                                                No active barriers
+                                              </span>
+                                            </div>
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={() => handleManageBarriers(project.id)}
+                                              data-testid={`button-add-barrier-${project.id}`}
+                                              className="text-xs"
+                                            >
+                                              + Add Barrier
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      );
+                                    }
+                                    return null;
+                                  })()}
+
                                   {/* Action Controls */}
                                   {canEditProject(project) && (
                                     <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
@@ -733,6 +885,16 @@ export default function Projects() {
         onClose={closeViewModal}
         project={viewingProject}
       />
+      {barriersProjectId && (
+        <ManageBarriersModal
+          isOpen={isManageBarriersOpen}
+          onClose={() => {
+            setIsManageBarriersOpen(false);
+            setBarriersProjectId(null);
+          }}
+          projectId={barriersProjectId}
+        />
+      )}
     </div>
   );
 }
