@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import {
   Select,
   SelectContent,
@@ -124,6 +124,18 @@ type Barrier = {
   createdAt: string;
   updatedAt: string;
 };
+
+function formatDateWithoutTimezone(dateString: string): string {
+  try {
+    const date = new Date(dateString);
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    return `${month}/${day}/${year}`;
+  } catch (error) {
+    return dateString;
+  }
+}
 
 export default function Projects() {
   const { currentRole, currentUser, canCreateProjects, canEditProjects } = useRole();
@@ -711,8 +723,8 @@ export default function Projects() {
                                         </span>
                                       </div>
                                       <div className="text-sm text-gray-600 dark:text-gray-400">
-                                        <div>Start: {new Date(project.startDate).toLocaleDateString()}</div>
-                                        <div>Due: {new Date(project.dueDate).toLocaleDateString()}</div>
+                                        <div>Start: {formatDateWithoutTimezone(project.startDate)}</div>
+                                        <div>Due: {formatDateWithoutTimezone(project.dueDate)}</div>
                                       </div>
                                     </div>
 
