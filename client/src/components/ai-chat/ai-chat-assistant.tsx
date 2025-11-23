@@ -151,7 +151,7 @@ export function AiChatAssistant() {
               <div className="flex items-center justify-center h-full">
                 <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
               </div>
-            ) : chatHistory.length === 0 ? (
+            ) : chatHistory.length === 0 && !sendMessageMutation.isPending ? (
               <div className="flex flex-col items-center justify-center h-full text-center px-4">
                 <MessageSquare className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-3" />
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
