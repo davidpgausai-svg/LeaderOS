@@ -1,7 +1,7 @@
 import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Project, type InsertProject, type Activity, type InsertActivity, type Action, type InsertAction, type Notification, type InsertNotification, type ActionDocument, type InsertActionDocument, type ActionChecklistItem, type InsertActionChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, type AiChatConversation, type InsertAiChatConversation, type Barrier, type InsertBarrier, users, strategies, projects, activities, actions, notifications, actionDocuments, actionChecklistItems, userStrategyAssignments, meetingNotes, aiChatConversations, barriers } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, asc, and, desc } from "drizzle-orm";
+import { eq, asc, and, desc, ne } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -1169,10 +1169,20 @@ export class DatabaseStorage implements IStorage {
 
   // User Strategy Assignment methods
   async getUserStrategyAssignments(userId: string): Promise<UserStrategyAssignment[]> {
-    return await db
-      .select()
+    const results = await db
+      .select({
+        assignment: userStrategyAssignments
+      })
       .from(userStrategyAssignments)
-      .where(eq(userStrategyAssignments.userId, userId));
+      .innerJoin(strategies, eq(userStrategyAssignments.strategyId, strategies.id))
+      .where(
+        and(
+          eq(userStrategyAssignments.userId, userId),
+          ne(strategies.status, 'Archived')
+        )
+      );
+    
+    return results.map(r => r.assignment);
   }
 
   async getStrategyAssignments(strategyId: string): Promise<UserStrategyAssignment[]> {
