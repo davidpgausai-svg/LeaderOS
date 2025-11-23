@@ -249,10 +249,12 @@ export default function Timeline() {
                         {monthHeaders.map((header, idx) => (
                           <div
                             key={idx}
-                            className="absolute px-2 py-3 text-center border-r border-gray-200 dark:border-gray-800 last:border-r-0 overflow-hidden"
+                            className="absolute px-2 py-3 text-center border-r border-gray-200 dark:border-gray-800 last:border-r-0 overflow-hidden flex items-center justify-center"
                             style={{ 
                               left: `${header.leftPosition}px`,
                               width: `${header.width}px`,
+                              top: 0,
+                              bottom: 0,
                             }}
                           >
                             <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
