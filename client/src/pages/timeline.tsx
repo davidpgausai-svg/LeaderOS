@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Sidebar } from "@/components/layout/sidebar";
 import { useMemo, useRef, useEffect } from "react";
-import { format, min, max, differenceInDays, eachMonthOfInterval } from "date-fns";
+import { format, min, max, differenceInDays, eachMonthOfInterval, startOfMonth, endOfMonth, addDays } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import type { Strategy, Project, Action } from "@shared/schema";
 
@@ -51,7 +51,8 @@ export default function Timeline() {
 
     const minDate = allDates.length > 0 ? min(allDates) : new Date();
     const maxDate = allDates.length > 0 ? max(allDates) : new Date();
-    const totalDays = differenceInDays(maxDate, minDate) || 1;
+    // Use inclusive day count: add 1 to include both start and end days
+    const totalDays = differenceInDays(maxDate, minDate) + 1;
 
     // Generate month markers
     const months = eachMonthOfInterval({ start: minDate, end: maxDate });
@@ -87,10 +88,46 @@ export default function Timeline() {
     return { frameworks, minDate, maxDate, totalDays, months };
   }, [strategies, projects, actions]);
 
+  // Use pixels-per-day for consistent positioning
+  const PIXELS_PER_DAY = 10;
+  // totalDays is already inclusive, so use it directly
+  const totalPixelWidth = timelineData.totalDays * PIXELS_PER_DAY;
+
+  const getPositionPixels = (date: Date) => {
+    const daysSinceStart = differenceInDays(date, timelineData.minDate);
+    return daysSinceStart * PIXELS_PER_DAY;
+  };
+
   const getPositionPercentage = (date: Date) => {
     const daysSinceStart = differenceInDays(date, timelineData.minDate);
     return Math.min(Math.max((daysSinceStart / timelineData.totalDays) * 100, 0), 100);
   };
+
+  // Calculate month header positions and widths in pixels based on actual days
+  const monthHeaders = useMemo(() => {
+    return timelineData.months.map((month, index) => {
+      const monthStart = startOfMonth(month);
+      // Use the start of next month as the end boundary
+      const monthEnd = index < timelineData.months.length - 1 
+        ? startOfMonth(timelineData.months[index + 1])
+        : addDays(endOfMonth(month), 1); // For last month, add 1 day to include the full month
+      
+      // Clamp the month to the timeline range (inclusive)
+      const clampedStart = monthStart < timelineData.minDate ? timelineData.minDate : monthStart;
+      const clampedEnd = monthEnd > addDays(timelineData.maxDate, 1) ? addDays(timelineData.maxDate, 1) : monthEnd;
+      
+      // Calculate position and width in pixels
+      const leftPosition = getPositionPixels(clampedStart);
+      const rightPosition = getPositionPixels(clampedEnd);
+      const width = rightPosition - leftPosition;
+      
+      return {
+        date: month,
+        leftPosition,
+        width,
+      };
+    });
+  }, [timelineData]);
 
   // Calculate today's position based on user's timezone
   const todayInfo = useMemo(() => {
@@ -192,13 +229,13 @@ export default function Timeline() {
                     <div className="w-48 flex-shrink-0 px-4 py-3 border-r border-gray-200 dark:border-gray-800 sticky left-0 bg-gray-50 dark:bg-gray-900 z-10">
                       <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Strategy</span>
                     </div>
-                    <div className="flex-shrink-0 relative pt-7" style={{ width: `${timelineData.months.length * 100}px` }}>
+                    <div className="flex-shrink-0 relative pt-7" style={{ width: `${totalPixelWidth}px` }}>
                       {/* Today Date Pill - positioned inside header with padding */}
                       {!todayInfo.isOutsideRange && (
                         <div 
                           className="absolute top-1 pointer-events-none z-20"
                           style={{
-                            left: `${todayInfo.position}%`,
+                            left: `${getPositionPixels(todayInfo.date)}px`,
                             transform: 'translateX(-50%)',
                           }}
                         >
@@ -208,15 +245,18 @@ export default function Timeline() {
                         </div>
                       )}
                       
-                      <div className="flex h-full">
-                        {timelineData.months.map((month, idx) => (
+                      <div className="relative h-full w-full">
+                        {monthHeaders.map((header, idx) => (
                           <div
                             key={idx}
-                            className="flex-shrink-0 px-2 py-3 text-center border-r border-gray-200 dark:border-gray-800 last:border-r-0"
-                            style={{ width: '100px' }}
+                            className="absolute px-2 py-3 text-center border-r border-gray-200 dark:border-gray-800 last:border-r-0 overflow-hidden"
+                            style={{ 
+                              left: `${header.leftPosition}px`,
+                              width: `${header.width}px`,
+                            }}
                           >
                             <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                              {format(month, 'MMM yyyy')}
+                              {format(header.date, 'MMM yyyy')}
                             </span>
                           </div>
                         ))}
@@ -270,13 +310,13 @@ export default function Timeline() {
                       </div>
 
                       {/* Timeline Bar */}
-                      <div className={`flex-shrink-0 relative py-6 px-4 min-h-[120px] overflow-visible ${framework.status === 'Archived' ? 'opacity-50' : ''}`} style={{ width: `${timelineData.months.length * 100}px` }}>
+                      <div className={`flex-shrink-0 relative py-6 px-4 min-h-[120px] overflow-visible ${framework.status === 'Archived' ? 'opacity-50' : ''}`} style={{ width: `${totalPixelWidth}px` }}>
                         {/* Today Line - drawn per row */}
                         {!todayInfo.isOutsideRange && (
                           <div
                             className="absolute top-0 bottom-0 w-px bg-red-500 dark:bg-orange-400 pointer-events-none"
                             style={{
-                              left: `${todayInfo.position}%`,
+                              left: `${getPositionPixels(todayInfo.date)}px`,
                               zIndex: 1,
                             }}
                           />
@@ -286,8 +326,8 @@ export default function Timeline() {
                         <div
                           className="absolute top-1/2 h-8 rounded-lg transform -translate-y-1/2 flex items-center justify-center shadow-sm"
                           style={{
-                            left: `${startPos}%`,
-                            width: `${width}%`,
+                            left: `${getPositionPixels(framework.startDate)}px`,
+                            width: `${getPositionPixels(framework.targetDate) - getPositionPixels(framework.startDate) + PIXELS_PER_DAY}px`,
                             backgroundColor: framework.colorCode,
                             opacity: framework.status === 'Archived' ? 0.1 : 0.2,
                           }}
@@ -296,7 +336,7 @@ export default function Timeline() {
                         {/* Start and End Markers */}
                         <div
                           className="absolute top-1/2 transform -translate-y-1/2"
-                          style={{ left: `${startPos}%` }}
+                          style={{ left: `${getPositionPixels(framework.startDate)}px` }}
                         >
                           <div className="relative">
                             <div
@@ -313,7 +353,7 @@ export default function Timeline() {
 
                         <div
                           className="absolute top-1/2 transform -translate-y-1/2"
-                          style={{ left: `${endPos}%` }}
+                          style={{ left: `${getPositionPixels(framework.targetDate)}px` }}
                         >
                           <div className="relative">
                             <div
@@ -330,13 +370,13 @@ export default function Timeline() {
 
                         {/* Project Milestones (Large Markers) */}
                         {framework.milestones.map((milestone) => {
-                          const milestonePos = getPositionPercentage(milestone.date);
+                          const milestonePixels = getPositionPixels(milestone.date);
                           
                           return (
                             <div
                               key={milestone.id}
                               className="absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2 group"
-                              style={{ left: `${milestonePos}%` }}
+                              style={{ left: `${milestonePixels}px` }}
                             >
                               {/* Milestone Dot */}
                               <div
@@ -387,13 +427,13 @@ export default function Timeline() {
 
                         {/* Action Markers (Smaller Line Markers) */}
                         {framework.actionMarkers.map((action) => {
-                          const actionPos = getPositionPercentage(action.date);
+                          const actionPixels = getPositionPixels(action.date);
                           
                           return (
                             <div
                               key={action.id}
                               className="absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2 group"
-                              style={{ left: `${actionPos}%` }}
+                              style={{ left: `${actionPixels}px` }}
                             >
                               {/* Action Line Marker */}
                               <div
