@@ -350,7 +350,6 @@ Respond ONLY with a valid JSON object in this exact format:
             content: prompt
           }
         ],
-        temperature: 0.7,
         response_format: { type: "json_object" },
         max_completion_tokens: 8192,
       });
