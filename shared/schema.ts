@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, jsonb, index, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, jsonb, index, unique, serial } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -277,3 +277,21 @@ export type InsertUserStrategyAssignment = z.infer<typeof insertUserStrategyAssi
 export type UserStrategyAssignment = typeof userStrategyAssignments.$inferSelect;
 export type InsertMeetingNote = z.infer<typeof insertMeetingNoteSchema>;
 export type MeetingNote = typeof meetingNotes.$inferSelect;
+
+// AI Chat Conversations - Stores chat history with the AI assistant
+export const aiChatConversations = pgTable("ai_chat_conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  message: text("message").notNull(),
+  role: text("role").notNull(), // 'user' or 'assistant'
+  context: jsonb("context"), // Page, role, strategies, etc.
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+export const insertAiChatConversationSchema = createInsertSchema(aiChatConversations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertAiChatConversation = z.infer<typeof insertAiChatConversationSchema>;
+export type AiChatConversation = typeof aiChatConversations.$inferSelect;
