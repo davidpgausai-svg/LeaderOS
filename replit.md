@@ -47,6 +47,9 @@ A real-time notification system alerts users to action completions, project prog
 ### Meeting Notes (Report-Out Meetings)
 A comprehensive system for creating and managing report-out meeting notes with dynamic content selection. Users can create notes tied to a specific strategy, then dynamically select which projects and actions to include (not all). Features include: hierarchical cascading selectors (Strategy → Projects → Actions), rich text notes field, meeting date tracking, PDF export for email distribution, and proper authorization (users can only create notes for assigned strategies and must be the creator or an administrator to edit/delete). Notes are stored in the database with selected projects and actions as JSON arrays. Accessible via the "Meeting Notes" link in the sidebar.
 
+### AI Chat Assistant
+A floating chat assistant named "Strategic AI Assistant" accessible from all pages via a button in the bottom-right corner. Provides contextual help including navigation guidance, real-time status updates with live data from strategies/projects/actions, and copy writing assistance. The assistant has access to the user's assigned strategies, projects, and action counts with progress percentages, enabling data-driven responses. Chat history is persisted per user in the database. Supports two AI providers: OpenAI (GPT-4o via Replit AI Integrations, billed to credits) and Google Gemini (user's own free API key). Provider selection is controlled via the CHAT_AI_PROVIDER environment variable ('openai' or 'gemini'). Currently configured to use Gemini for cost-free operation within Google's free tier limits (15 requests/min, 1,500/day).
+
 ### Development Environment
 The project uses Vite for fast development and optimized builds, Tailwind CSS for styling, and TypeScript for static type checking.
 
@@ -81,3 +84,7 @@ The project uses Vite for fast development and optimized builds, Tailwind CSS fo
 
 ### Document Generation
 - `react-to-print` - PDF export functionality for meeting notes
+
+### AI Services
+- `openai` - GPT-4o via Replit AI Integrations for Change Continuum generation and optional chat
+- `@google/generative-ai` - Gemini 2.0 Flash for cost-free chat assistant (user's API key)

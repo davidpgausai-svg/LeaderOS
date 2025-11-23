@@ -1923,10 +1923,18 @@ ${strategyProjects.map((p: any) => {
       // Call AI provider based on configuration
       let assistantMessage: string;
       
-      if (CHAT_AI_PROVIDER === 'gemini' && gemini) {
+      if (CHAT_AI_PROVIDER === 'gemini') {
         // Use Google Gemini (free tier)
+        if (!gemini) {
+          logger.error("Gemini provider selected but GOOGLE_GEMINI_API_KEY not configured");
+          return res.status(500).json({ message: "AI chat is not properly configured. Please contact your administrator." });
+        }
+
         try {
-          const model = gemini.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+          const model = gemini.getGenerativeModel({ 
+            model: "gemini-2.0-flash-exp",
+            systemInstruction: systemPrompt,
+          });
           
           // Build conversation history for Gemini
           const chatHistory = recentChats.map((chat: any) => ({
@@ -1936,18 +1944,23 @@ ${strategyProjects.map((p: any) => {
           
           const chat = model.startChat({
             history: chatHistory,
-            systemInstruction: systemPrompt,
           });
           
           const result = await chat.sendMessage(message);
-          assistantMessage = result.response.text() || "I'm sorry, I couldn't generate a response. Please try again.";
+          const responseText = result.response.text();
+          assistantMessage = responseText || "I'm sorry, I couldn't generate a response. Please try again.";
           
           logger.info("Gemini chat response generated successfully");
         } catch (geminiError: any) {
           logger.error("Gemini API error:", geminiError);
-          throw geminiError;
+          logger.error("Gemini error details:", {
+            message: geminiError.message,
+            stack: geminiError.stack,
+          });
+          // Fallback to generic error message
+          assistantMessage = "I'm sorry, I encountered an error processing your request. Please try again.";
         }
-      } else {
+      } else if (CHAT_AI_PROVIDER === 'openai') {
         // Use OpenAI (default, billed to Replit credits)
         try {
           const messages: any[] = [
@@ -1984,8 +1997,12 @@ ${strategyProjects.map((p: any) => {
             status: openaiError.status,
             type: openaiError.type,
           });
-          throw openaiError;
+          // Fallback to generic error message
+          assistantMessage = "I'm sorry, I encountered an error processing your request. Please try again.";
         }
+      } else {
+        logger.error(`Unknown CHAT_AI_PROVIDER: ${CHAT_AI_PROVIDER}`);
+        return res.status(500).json({ message: "AI chat provider is not properly configured. Please contact your administrator." });
       }
 
       // Save both user message and assistant response to chat history
