@@ -1907,13 +1907,23 @@ StrategicFlow helps organizations manage strategic initiatives through a three-t
       });
 
       // Call OpenAI
-      const response = await openai.chat.completions.create({
-        model: "gpt-5",
-        messages,
-        max_completion_tokens: 1000,
-      });
-
-      const assistantMessage = response.choices[0]?.message?.content || "I'm sorry, I couldn't generate a response. Please try again.";
+      let assistantMessage: string;
+      try {
+        const response = await openai.chat.completions.create({
+          model: "gpt-5",
+          messages,
+          max_completion_tokens: 1000,
+        });
+        assistantMessage = response.choices[0]?.message?.content || "I'm sorry, I couldn't generate a response. Please try again.";
+      } catch (openaiError: any) {
+        logger.error("OpenAI API error:", openaiError);
+        logger.error("Error details:", {
+          message: openaiError.message,
+          status: openaiError.status,
+          type: openaiError.type,
+        });
+        throw openaiError;
+      }
 
       // Save both user message and assistant response to chat history
       await storage.saveChatMessage({
