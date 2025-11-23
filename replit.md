@@ -24,7 +24,7 @@ The application employs Drizzle ORM for type-safe PostgreSQL interactions. Drizz
 A role-based access control system integrates Replit OpenID Connect for authentication. Roles include Administrator, Co-Lead, View, and SME (Subject Matter Expert), with permissions enforced at the API level based on user roles and strategy assignments. SME users are explicitly blocked from logging in as they exist solely for tracking and assignment purposes. Administrators manage user roles and strategy assignments, ensuring data isolation.
 
 ### Key Data Models
-Core entities include Users, User Strategy Assignments (linking users to strategies), Strategies (high-level objectives with a Change Continuum Framework and customizable colors), Projects (with custom communication URL field and documentation URLs), Actions (with two-tier filtering), Meeting Notes (report-out notes with dynamic project/action selection and PDF export), and Activities (audit trail). The database tables are: users, user_strategy_assignments, strategies, projects, actions, action_documents, action_checklist_items, meeting_notes, activities, notifications, and sessions.
+Core entities include Users, User Strategy Assignments (linking users to strategies), Strategies (high-level objectives with a Change Continuum Framework and customizable colors), Projects (with custom communication URL field and documentation URLs), Actions (with two-tier filtering), Barriers (project-level risk tracking with severity and status lifecycle), Meeting Notes (report-out notes with dynamic project/action selection and PDF export), and Activities (audit trail). The database tables are: users, user_strategy_assignments, strategies, projects, actions, action_documents, action_checklist_items, barriers, meeting_notes, activities, notifications, and sessions.
 
 ### Progress Calculation
 A backend-driven system automatically calculates progress for actions, projects, and strategies with cascading rollups. Progress is read-only in the UI and recalculated server-side upon data changes, excluding archived items.
@@ -37,6 +37,9 @@ Each strategy incorporates 9 mandatory fields for change management: Case for Ch
 
 ### Project Communication URLs
 Each project includes an optional custom communication URL field that can be managed via the project's three-dot menu. This allows linking to communication materials, templates, or documentation specific to each project.
+
+### Barriers System
+A comprehensive risk and obstacle tracking system at the project level. Each barrier tracks description, severity (High, Medium, Low), status lifecycle (Active → Mitigated → Resolved → Closed), owner assignment, creation/resolution dates, and resolution notes. Barriers are managed via a dedicated modal accessible from project cards (three-dot menu). Project cards display up to 2 active barriers with severity indicators and status badges, showing "+X more" for overflow. All barrier operations (create, status updates, delete) are logged to the activity audit trail. Role-based access control enforces permissions: Administrators and Co-Leads can manage barriers; View users see barriers read-only; SME users are excluded. The AI Chat Assistant integrates barriers data to provide executive-level insights on risks and obstacles. API supports both project-scoped and global barrier queries with role-based filtering (administrators see all, others see only barriers in assigned strategies).
 
 ### View-Only Access
 All Strategy and Project cards offer view-only access via dedicated buttons, displaying comprehensive details in read-only modals for all users, regardless of edit permissions.
