@@ -1178,7 +1178,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(userStrategyAssignments.userId, userId),
-          ne(strategies.status, 'Archived')
+          ne(strategies.status, 'archived')
         )
       );
     
