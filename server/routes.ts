@@ -856,26 +856,46 @@ Respond ONLY with a valid JSON object in this exact format:
 
       const { projectId } = req.query;
       
-      if (!projectId) {
-        return res.status(400).json({ message: "projectId query parameter is required" });
-      }
-      
-      // Get the project to check strategy access
-      const project = await storage.getProject(projectId as string);
-      if (!project) {
-        return res.status(404).json({ message: "Project not found" });
-      }
-      
-      // Check if user has access to the strategy (administrators see all, others need assignment)
-      if (user.role !== 'administrator') {
-        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
-        if (!assignedStrategyIds.includes(project.strategyId)) {
-          return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
+      // If projectId is provided, return barriers for that project
+      if (projectId) {
+        // Get the project to check strategy access
+        const project = await storage.getProject(projectId as string);
+        if (!project) {
+          return res.status(404).json({ message: "Project not found" });
         }
+        
+        // Check if user has access to the strategy (administrators see all, others need assignment)
+        if (user.role !== 'administrator') {
+          const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+          if (!assignedStrategyIds.includes(project.strategyId)) {
+            return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
+          }
+        }
+        
+        const barriers = await storage.getBarriersByProject(projectId as string);
+        return res.json(barriers);
       }
       
-      const barriers = await storage.getBarriersByProject(projectId as string);
-      res.json(barriers);
+      // If no projectId, return all barriers for user's assigned strategies
+      const allBarriers = await storage.getAllBarriers();
+      
+      if (user.role === 'administrator') {
+        // Administrators see all barriers
+        return res.json(allBarriers);
+      }
+      
+      // Filter barriers to only those in user's assigned strategies
+      const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+      const allProjects = await storage.getAllProjects();
+      const accessibleProjectIds = allProjects
+        .filter((p: any) => assignedStrategyIds.includes(p.strategyId))
+        .map((p: any) => p.id);
+      
+      const accessibleBarriers = allBarriers.filter((b: any) => 
+        accessibleProjectIds.includes(b.projectId)
+      );
+      
+      res.json(accessibleBarriers);
     } catch (error) {
       logger.error("Failed to fetch barriers", error);
       res.status(500).json({ message: "Failed to fetch barriers" });
@@ -1037,6 +1057,15 @@ Respond ONLY with a valid JSON object in this exact format:
       if (!deleted) {
         return res.status(404).json({ message: "Barrier not found" });
       }
+
+      // Create activity for barrier deletion
+      await storage.createActivity({
+        type: 'barrier_deleted',
+        description: `Barrier "${existingBarrier.title}" (${existingBarrier.severity} severity) deleted from project "${project.title}"`,
+        userId: user.id,
+        strategyId: project.strategyId,
+        projectId: project.id,
+      });
 
       res.status(204).send();
     } catch (error) {
@@ -2055,13 +2084,17 @@ ${actions.map((a, i) => `${i + 1}. ${a.title}: [1-sentence update]`).join('\n')}
         assignedStrategyIds = strategies.map((s: any) => s.id);
       }
 
-      // Get projects and actions for assigned strategies to provide real status updates
+      // Get projects, actions, and barriers for assigned strategies to provide real status updates
       const allProjects = await storage.getAllProjects();
       const allActions = await storage.getAllActions();
+      const allBarriers = await storage.getAllBarriers();
       
       const relevantProjects = allProjects.filter((p: any) => assignedStrategyIds.includes(p.strategyId));
       const relevantActions = allActions.filter((a: any) => 
         relevantProjects.some((p: any) => p.id === a.projectId)
+      );
+      const relevantBarriers = allBarriers.filter((b: any) =>
+        relevantProjects.some((p: any) => p.id === b.projectId)
       );
 
       // Get recent chat history for context (last 5 messages)
@@ -2083,7 +2116,11 @@ STRATEGY: "${s.title}" (${s.status}, ${s.progress}% complete)
   Projects (${strategyProjects.length}):
 ${strategyProjects.map((p: any) => {
   const projectActions = relevantActions.filter((a: any) => a.projectId === p.id);
-  return `    - "${p.title}" (${p.status}, ${p.progress}% complete, ${projectActions.length} actions)`;
+  const projectBarriers = relevantBarriers.filter((b: any) => b.projectId === p.id);
+  const activeBarriers = projectBarriers.filter((b: any) => b.status === 'active' || b.status === 'mitigated');
+  const highSevBarriers = activeBarriers.filter((b: any) => b.severity === 'high');
+  const barrierSummary = activeBarriers.length > 0 ? `, ${activeBarriers.length} active barrier${activeBarriers.length !== 1 ? 's' : ''}${highSevBarriers.length > 0 ? ` (${highSevBarriers.length} high severity)` : ''}` : '';
+  return `    - "${p.title}" (${p.status}, ${p.progress}% complete, ${projectActions.length} actions${barrierSummary})`;
 }).join('\n') || '    (No projects)'}`;
 }).join('\n') : 'No assigned strategies'}
 
@@ -2104,10 +2141,13 @@ Deliverables at this level must emphasize direction, prioritization, and long-ra
 At the Project tier, your role is to:
 - Quickly diagnose true project health using a clean Red/Yellow/Green construct
 - Pull forward the key signals: progress, risks, blockers, resourcing, and timeline integrity
+- Monitor active barriers (especially high-severity barriers) that could impact project delivery
 - Flag tensions between project execution and strategic objectives
 - Identify which projects are accelerating strategic progress—and which require intervention
 
 Outputs must be brief, decisive, and tailored for executive consumption.
+
+BARRIERS: Projects may have associated barriers tracking risks and obstacles. Active barriers indicate current challenges; high-severity active barriers signal critical risks requiring immediate attention. Resolved or closed barriers indicate successfully mitigated risks.
 
 3. ACTION LEVEL — EXECUTION, ACCOUNTABILITY, MOMENTUM
 

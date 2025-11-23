@@ -89,6 +89,7 @@ export interface IStorage {
 
   // Barrier methods
   getBarrier(id: string): Promise<Barrier | undefined>;
+  getAllBarriers(): Promise<Barrier[]>;
   getBarriersByProject(projectId: string): Promise<Barrier[]>;
   createBarrier(barrier: InsertBarrier): Promise<Barrier>;
   updateBarrier(id: string, updates: Partial<Barrier>): Promise<Barrier | undefined>;
@@ -714,6 +715,10 @@ export class MemStorage implements IStorage {
   // Barrier methods (stub - not used in production)
   async getBarrier(id: string): Promise<Barrier | undefined> {
     return undefined;
+  }
+
+  async getAllBarriers(): Promise<Barrier[]> {
+    return [];
   }
 
   async getBarriersByProject(projectId: string): Promise<Barrier[]> {
@@ -1415,6 +1420,13 @@ export class DatabaseStorage implements IStorage {
       .where(eq(barriers.id, id))
       .limit(1);
     return barrier[0];
+  }
+
+  async getAllBarriers(): Promise<Barrier[]> {
+    return await db
+      .select()
+      .from(barriers)
+      .orderBy(desc(barriers.createdAt));
   }
 
   async getBarriersByProject(projectId: string): Promise<Barrier[]> {
