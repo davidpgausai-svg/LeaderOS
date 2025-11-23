@@ -1,4 +1,4 @@
-import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Project, type InsertProject, type Activity, type InsertActivity, type Action, type InsertAction, type Notification, type InsertNotification, type ActionDocument, type InsertActionDocument, type ActionChecklistItem, type InsertActionChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, type AiChatConversation, type InsertAiChatConversation, users, strategies, projects, activities, actions, notifications, actionDocuments, actionChecklistItems, userStrategyAssignments, meetingNotes, aiChatConversations } from "@shared/schema";
+import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Project, type InsertProject, type Activity, type InsertActivity, type Action, type InsertAction, type Notification, type InsertNotification, type ActionDocument, type InsertActionDocument, type ActionChecklistItem, type InsertActionChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, type AiChatConversation, type InsertAiChatConversation, type Barrier, type InsertBarrier, users, strategies, projects, activities, actions, notifications, actionDocuments, actionChecklistItems, userStrategyAssignments, meetingNotes, aiChatConversations, barriers } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, asc, and, desc } from "drizzle-orm";
@@ -86,6 +86,13 @@ export interface IStorage {
   saveChatMessage(message: InsertAiChatConversation): Promise<AiChatConversation>;
   getRecentChatHistory(userId: string, limit: number): Promise<AiChatConversation[]>;
   clearChatHistory(userId: string): Promise<void>;
+
+  // Barrier methods
+  getBarrier(id: string): Promise<Barrier | undefined>;
+  getBarriersByProject(projectId: string): Promise<Barrier[]>;
+  createBarrier(barrier: InsertBarrier): Promise<Barrier>;
+  updateBarrier(id: string, updates: Partial<Barrier>): Promise<Barrier | undefined>;
+  deleteBarrier(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -702,6 +709,27 @@ export class MemStorage implements IStorage {
 
   async clearChatHistory(userId: string): Promise<void> {
     // No-op for MemStorage
+  }
+
+  // Barrier methods (stub - not used in production)
+  async getBarrier(id: string): Promise<Barrier | undefined> {
+    return undefined;
+  }
+
+  async getBarriersByProject(projectId: string): Promise<Barrier[]> {
+    return [];
+  }
+
+  async createBarrier(barrier: InsertBarrier): Promise<Barrier> {
+    throw new Error("MemStorage barrier methods not implemented");
+  }
+
+  async updateBarrier(id: string, updates: Partial<Barrier>): Promise<Barrier | undefined> {
+    return undefined;
+  }
+
+  async deleteBarrier(id: string): Promise<boolean> {
+    return false;
   }
 }
 
@@ -1377,6 +1405,49 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(aiChatConversations)
       .where(eq(aiChatConversations.userId, userId));
+  }
+
+  // Barrier methods
+  async getBarrier(id: string): Promise<Barrier | undefined> {
+    const barrier = await db
+      .select()
+      .from(barriers)
+      .where(eq(barriers.id, id))
+      .limit(1);
+    return barrier[0];
+  }
+
+  async getBarriersByProject(projectId: string): Promise<Barrier[]> {
+    return await db
+      .select()
+      .from(barriers)
+      .where(eq(barriers.projectId, projectId))
+      .orderBy(desc(barriers.createdAt));
+  }
+
+  async createBarrier(barrier: InsertBarrier): Promise<Barrier> {
+    const [createdBarrier] = await db
+      .insert(barriers)
+      .values(barrier)
+      .returning();
+    return createdBarrier;
+  }
+
+  async updateBarrier(id: string, updates: Partial<Barrier>): Promise<Barrier | undefined> {
+    const [updatedBarrier] = await db
+      .update(barriers)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(barriers.id, id))
+      .returning();
+    return updatedBarrier;
+  }
+
+  async deleteBarrier(id: string): Promise<boolean> {
+    const result = await db
+      .delete(barriers)
+      .where(eq(barriers.id, id))
+      .returning();
+    return result.length > 0;
   }
 }
 

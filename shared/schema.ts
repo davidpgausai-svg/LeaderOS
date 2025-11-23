@@ -84,6 +84,24 @@ export const projects = pgTable("projects", {
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
+// Barriers - Risk and obstacle tracking at the project level
+export const barriers = pgTable("barriers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull(), // Project this barrier belongs to
+  title: text("title").notNull(), // Short summary of the barrier
+  description: text("description").notNull(), // Detailed description of the barrier
+  severity: text("severity").notNull().default('medium'), // 'low', 'medium', 'high'
+  status: text("status").notNull().default('active'), // 'active', 'mitigated', 'resolved', 'closed'
+  ownerId: varchar("owner_id"), // User responsible for resolving this barrier
+  identifiedDate: timestamp("identified_date").default(sql`now()`), // When the barrier was identified
+  targetResolutionDate: timestamp("target_resolution_date"), // When it should be resolved by
+  resolutionDate: timestamp("resolution_date"), // When it was actually resolved
+  resolutionNotes: text("resolution_notes"), // How the barrier was resolved
+  createdBy: varchar("created_by").notNull(),
+  createdAt: timestamp("created_at").default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+});
+
 export const activities = pgTable("activities", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   type: text("type").notNull(), // 'strategy_created', 'project_completed', 'project_overdue', etc.
@@ -256,6 +274,16 @@ export const insertMeetingNoteSchema = createInsertSchema(meetingNotes).omit({
   }),
 });
 
+export const insertBarrierSchema = createInsertSchema(barriers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  identifiedDate: true,
+  resolutionDate: true,
+}).extend({
+  targetResolutionDate: z.coerce.date().optional().nullable(),
+});
+
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -277,6 +305,8 @@ export type InsertUserStrategyAssignment = z.infer<typeof insertUserStrategyAssi
 export type UserStrategyAssignment = typeof userStrategyAssignments.$inferSelect;
 export type InsertMeetingNote = z.infer<typeof insertMeetingNoteSchema>;
 export type MeetingNote = typeof meetingNotes.$inferSelect;
+export type InsertBarrier = z.infer<typeof insertBarrierSchema>;
+export type Barrier = typeof barriers.$inferSelect;
 
 // AI Chat Conversations - Stores chat history with the AI assistant
 export const aiChatConversations = pgTable("ai_chat_conversations", {

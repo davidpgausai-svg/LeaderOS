@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertStrategySchema, insertProjectSchema, insertActionSchema, insertActionDocumentSchema, insertActionChecklistItemSchema, insertMeetingNoteSchema } from "@shared/schema";
+import { insertStrategySchema, insertProjectSchema, insertActionSchema, insertActionDocumentSchema, insertActionChecklistItemSchema, insertMeetingNoteSchema, insertBarrierSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 import { logger } from "./logger";
@@ -841,6 +841,207 @@ Respond ONLY with a valid JSON object in this exact format:
     } catch (error) {
       logger.error("Failed to delete project", error);
       res.status(500).json({ message: "Failed to delete project" });
+    }
+  });
+
+  // Barrier routes
+  app.get("/api/barriers", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      const { projectId } = req.query;
+      
+      if (!projectId) {
+        return res.status(400).json({ message: "projectId query parameter is required" });
+      }
+      
+      // Get the project to check strategy access
+      const project = await storage.getProject(projectId as string);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Check if user has access to the strategy (administrators see all, others need assignment)
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        if (!assignedStrategyIds.includes(project.strategyId)) {
+          return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
+        }
+      }
+      
+      const barriers = await storage.getBarriersByProject(projectId as string);
+      res.json(barriers);
+    } catch (error) {
+      logger.error("Failed to fetch barriers", error);
+      res.status(500).json({ message: "Failed to fetch barriers" });
+    }
+  });
+
+  app.post("/api/barriers", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // View role cannot create barriers
+      if (user.role === 'view') {
+        return res.status(403).json({ message: "Forbidden: View users cannot create barriers" });
+      }
+      
+      const validatedData = insertBarrierSchema.parse(req.body);
+      
+      // Override createdBy with authenticated user (security: prevent spoofing)
+      const barrierData = {
+        ...validatedData,
+        createdBy: user.id,
+      };
+      
+      // Get the project to check strategy access
+      const project = await storage.getProject(barrierData.projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Check if user has access to the strategy (administrators see all, others need assignment)
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        if (!assignedStrategyIds.includes(project.strategyId)) {
+          return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
+        }
+      }
+      
+      const barrier = await storage.createBarrier(barrierData);
+      
+      // Create activity for barrier creation
+      await storage.createActivity({
+        type: 'barrier_created',
+        description: `Barrier "${barrier.title}" (${barrier.severity} severity) created for project "${project.title}"`,
+        userId: user.id,
+        strategyId: project.strategyId,
+        projectId: project.id,
+      });
+
+      res.status(201).json(barrier);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      logger.error("Failed to create barrier", error);
+      res.status(500).json({ message: "Failed to create barrier" });
+    }
+  });
+
+  app.patch("/api/barriers/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // View role cannot update barriers
+      if (user.role === 'view') {
+        return res.status(403).json({ message: "Forbidden: View users cannot update barriers" });
+      }
+      
+      // Get the existing barrier
+      const existingBarrier = await storage.getBarrier(req.params.id);
+      if (!existingBarrier) {
+        return res.status(404).json({ message: "Barrier not found" });
+      }
+      
+      // Get the project to check strategy access
+      const project = await storage.getProject(existingBarrier.projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Check if user has access to the strategy (administrators see all, others need assignment)
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        if (!assignedStrategyIds.includes(project.strategyId)) {
+          return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
+        }
+      }
+      
+      // Prevent changing projectId and createdBy (security: prevent ownership transfer)
+      const { projectId: _, createdBy: __, ...updateData } = req.body;
+      
+      const barrier = await storage.updateBarrier(req.params.id, updateData);
+      if (!barrier) {
+        return res.status(404).json({ message: "Barrier not found" });
+      }
+      
+      // Create activity for barrier status changes
+      if (req.body.status && existingBarrier.status !== req.body.status) {
+        await storage.createActivity({
+          type: 'barrier_status_changed',
+          description: `Barrier "${barrier.title}" status changed from ${existingBarrier.status} to ${barrier.status}`,
+          userId: user.id,
+          strategyId: project.strategyId,
+          projectId: project.id,
+        });
+      }
+
+      res.json(barrier);
+    } catch (error) {
+      logger.error("Failed to update barrier", error);
+      res.status(500).json({ message: "Failed to update barrier" });
+    }
+  });
+
+  app.delete("/api/barriers/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // View role cannot delete barriers
+      if (user.role === 'view') {
+        return res.status(403).json({ message: "Forbidden: View users cannot delete barriers" });
+      }
+      
+      // Get the existing barrier
+      const existingBarrier = await storage.getBarrier(req.params.id);
+      if (!existingBarrier) {
+        return res.status(404).json({ message: "Barrier not found" });
+      }
+      
+      // Get the project to check strategy access
+      const project = await storage.getProject(existingBarrier.projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Check if user has access to the strategy (administrators see all, others need assignment)
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        if (!assignedStrategyIds.includes(project.strategyId)) {
+          return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
+        }
+      }
+
+      const deleted = await storage.deleteBarrier(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Barrier not found" });
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      logger.error("Failed to delete barrier", error);
+      res.status(500).json({ message: "Failed to delete barrier" });
     }
   });
 
