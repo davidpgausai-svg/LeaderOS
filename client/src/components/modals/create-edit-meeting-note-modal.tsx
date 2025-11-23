@@ -49,16 +49,16 @@ type Strategy = {
   colorCode: string;
 };
 
-type Tactic = {
+type Project = {
   id: string;
   title: string;
   strategyId: string;
 };
 
-type Outcome = {
+type Action = {
   id: string;
   title: string;
-  tacticId: string | null;
+  projectId: string | null;
 };
 
 export function CreateEditMeetingNoteModal({ isOpen, onClose, note }: CreateEditMeetingNoteModalProps) {
@@ -72,12 +72,12 @@ export function CreateEditMeetingNoteModal({ isOpen, onClose, note }: CreateEdit
     queryKey: ["/api/strategies"],
   });
 
-  const { data: tactics } = useQuery({
-    queryKey: ["/api/tactics"],
+  const { data: projects } = useQuery({
+    queryKey: ["/api/projects"],
   });
 
-  const { data: outcomes } = useQuery({
-    queryKey: ["/api/outcomes"],
+  const { data: actions } = useQuery({
+    queryKey: ["/api/actions"],
   });
 
   const form = useForm<InsertMeetingNote>({
@@ -219,9 +219,9 @@ export function CreateEditMeetingNoteModal({ isOpen, onClose, note }: CreateEdit
     } else {
       newProjects = selectedProjectIds.filter(id => id !== projectId);
       // Remove actions that belong to this project
-      const actionsToRemove = (outcomes as Outcome[])
-        ?.filter(outcome => outcome.tacticId === projectId)
-        .map(outcome => outcome.id) || [];
+      const actionsToRemove = (actions as Action[])
+        ?.filter(action => action.projectId === projectId)
+        .map(action => action.id) || [];
       const newActions = selectedActionIds.filter(id => !actionsToRemove.includes(id));
       setSelectedActionIds(newActions);
       form.setValue("selectedActionIds", JSON.stringify(newActions));
@@ -263,14 +263,14 @@ export function CreateEditMeetingNoteModal({ isOpen, onClose, note }: CreateEdit
     onClose();
   };
 
-  // Filter tactics by selected strategy
-  const filteredTactics = (tactics as Tactic[])?.filter(
-    tactic => tactic.strategyId === selectedStrategyId
+  // Filter projects by selected strategy
+  const filteredProjects = (projects as Project[])?.filter(
+    project => project.strategyId === selectedStrategyId
   ) || [];
 
-  // Filter outcomes by selected projects
-  const filteredOutcomes = (outcomes as Outcome[])?.filter(
-    outcome => outcome.tacticId && selectedProjectIds.includes(outcome.tacticId)
+  // Filter actions by selected projects
+  const filteredActions = (actions as Action[])?.filter(
+    action => action.projectId && selectedProjectIds.includes(action.projectId)
   ) || [];
 
   const handleGenerateAIReport = () => {
@@ -406,27 +406,27 @@ export function CreateEditMeetingNoteModal({ isOpen, onClose, note }: CreateEdit
                   <h3 className="text-lg font-medium">Selected Projects</h3>
                 </div>
                 
-                {filteredTactics.length === 0 ? (
+                {filteredProjects.length === 0 ? (
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     No projects available for this strategy
                   </p>
                 ) : (
                   <div className="border rounded-md p-4 max-h-60 overflow-y-auto space-y-3">
-                    {filteredTactics.map((tactic) => (
-                      <div key={tactic.id} className="flex items-start space-x-2">
+                    {filteredProjects.map((project) => (
+                      <div key={project.id} className="flex items-start space-x-2">
                         <Checkbox
-                          id={`project-${tactic.id}`}
-                          checked={selectedProjectIds.includes(tactic.id)}
+                          id={`project-${project.id}`}
+                          checked={selectedProjectIds.includes(project.id)}
                           onCheckedChange={(checked) =>
-                            handleProjectChange(tactic.id, checked as boolean)
+                            handleProjectChange(project.id, checked as boolean)
                           }
-                          data-testid={`checkbox-project-${tactic.id}`}
+                          data-testid={`checkbox-project-${project.id}`}
                         />
                         <label
-                          htmlFor={`project-${tactic.id}`}
+                          htmlFor={`project-${project.id}`}
                           className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                         >
-                          {tactic.title}
+                          {project.title}
                         </label>
                       </div>
                     ))}
@@ -443,27 +443,27 @@ export function CreateEditMeetingNoteModal({ isOpen, onClose, note }: CreateEdit
                   <h3 className="text-lg font-medium">Selected Actions</h3>
                 </div>
                 
-                {filteredOutcomes.length === 0 ? (
+                {filteredActions.length === 0 ? (
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     No actions available for selected projects
                   </p>
                 ) : (
                   <div className="border rounded-md p-4 max-h-60 overflow-y-auto space-y-3">
-                    {filteredOutcomes.map((outcome) => (
-                      <div key={outcome.id} className="flex items-start space-x-2">
+                    {filteredActions.map((action) => (
+                      <div key={action.id} className="flex items-start space-x-2">
                         <Checkbox
-                          id={`action-${outcome.id}`}
-                          checked={selectedActionIds.includes(outcome.id)}
+                          id={`action-${action.id}`}
+                          checked={selectedActionIds.includes(action.id)}
                           onCheckedChange={(checked) =>
-                            handleActionChange(outcome.id, checked as boolean)
+                            handleActionChange(action.id, checked as boolean)
                           }
-                          data-testid={`checkbox-action-${outcome.id}`}
+                          data-testid={`checkbox-action-${action.id}`}
                         />
                         <label
-                          htmlFor={`action-${outcome.id}`}
+                          htmlFor={`action-${action.id}`}
                           className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                         >
-                          {outcome.title}
+                          {action.title}
                         </label>
                       </div>
                     ))}
