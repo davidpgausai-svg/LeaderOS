@@ -852,6 +852,9 @@ export class DatabaseStorage implements IStorage {
     const relatedProjects = await db.select().from(projects).where(eq(projects.strategyId, id));
     const relatedActions = await db.select().from(actions).where(eq(actions.strategyId, id));
     
+    // Delete all user strategy assignments for this strategy
+    await db.delete(userStrategyAssignments).where(eq(userStrategyAssignments.strategyId, id));
+    
     // Delete all related projects (cascade)
     await db.delete(projects).where(eq(projects.strategyId, id));
     
