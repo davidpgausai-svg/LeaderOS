@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { UserInitializer } from "@/components/user-initializer";
 import { useAuth } from "@/hooks/useAuth";
+import { AiChatAssistant } from "@/components/ai-chat/ai-chat-assistant";
 import Dashboard from "@/pages/dashboard";
 import Strategies from "@/pages/strategies";
 import Projects from "@/pages/projects";
@@ -33,17 +34,20 @@ function Router() {
   }
 
   return (
-    <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/strategies" component={Strategies} />
-      <Route path="/projects" component={Projects} />
-      <Route path="/timeline" component={Timeline} />
-      <Route path="/actions" component={Actions} />
-      <Route path="/meeting-notes" component={MeetingNotes} />
-      <Route path="/reports" component={Reports} />
-      <Route path="/settings" component={Settings} />
-      <Route component={NotFound} />
-    </Switch>
+    <>
+      <Switch>
+        <Route path="/" component={Dashboard} />
+        <Route path="/strategies" component={Strategies} />
+        <Route path="/projects" component={Projects} />
+        <Route path="/timeline" component={Timeline} />
+        <Route path="/actions" component={Actions} />
+        <Route path="/meeting-notes" component={MeetingNotes} />
+        <Route path="/reports" component={Reports} />
+        <Route path="/settings" component={Settings} />
+        <Route component={NotFound} />
+      </Switch>
+      <AiChatAssistant />
+    </>
   );
 }
 

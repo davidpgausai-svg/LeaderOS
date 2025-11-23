@@ -690,6 +690,19 @@ export class MemStorage implements IStorage {
   async deleteMeetingNote(id: string): Promise<boolean> {
     return false;
   }
+
+  // AI Chat methods (stub - not used in production)
+  async saveChatMessage(message: InsertAiChatConversation): Promise<AiChatConversation> {
+    throw new Error("MemStorage AI chat methods not implemented");
+  }
+
+  async getRecentChatHistory(userId: string, limit: number): Promise<AiChatConversation[]> {
+    return [];
+  }
+
+  async clearChatHistory(userId: string): Promise<void> {
+    // No-op for MemStorage
+  }
 }
 
 // DatabaseStorage implementation
