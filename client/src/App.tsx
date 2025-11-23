@@ -23,22 +23,25 @@ function Router() {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
 
+  // If not authenticated, redirect all routes to landing page
+  if (!isAuthenticated) {
+    return (
+      <Switch>
+        <Route component={Landing} />
+      </Switch>
+    );
+  }
+
   return (
     <Switch>
-      {!isAuthenticated ? (
-        <Route path="/" component={Landing} />
-      ) : (
-        <>
-          <Route path="/" component={Dashboard} />
-          <Route path="/strategies" component={Strategies} />
-          <Route path="/projects" component={Projects} />
-          <Route path="/timeline" component={Timeline} />
-          <Route path="/actions" component={Actions} />
-          <Route path="/meeting-notes" component={MeetingNotes} />
-          <Route path="/reports" component={Reports} />
-          <Route path="/settings" component={Settings} />
-        </>
-      )}
+      <Route path="/" component={Dashboard} />
+      <Route path="/strategies" component={Strategies} />
+      <Route path="/projects" component={Projects} />
+      <Route path="/timeline" component={Timeline} />
+      <Route path="/actions" component={Actions} />
+      <Route path="/meeting-notes" component={MeetingNotes} />
+      <Route path="/reports" component={Reports} />
+      <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
   );
