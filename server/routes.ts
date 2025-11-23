@@ -1914,6 +1914,15 @@ StrategicFlow helps organizations manage strategic initiatives through a three-t
           messages,
           max_completion_tokens: 1000,
         });
+        
+        // Log full response for debugging
+        logger.info("OpenAI response structure:", {
+          choices: response.choices?.length,
+          hasContent: !!response.choices[0]?.message?.content,
+          finishReason: response.choices[0]?.finish_reason,
+          messageKeys: Object.keys(response.choices[0]?.message || {}),
+        });
+        
         assistantMessage = response.choices[0]?.message?.content || "I'm sorry, I couldn't generate a response. Please try again.";
       } catch (openaiError: any) {
         logger.error("OpenAI API error:", openaiError);
