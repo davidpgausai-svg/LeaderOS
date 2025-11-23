@@ -185,10 +185,26 @@ export default function Timeline() {
               </div>
 
               {/* Timeline Grid with synchronized horizontal scroll */}
-              <div ref={timelineContainerRef} className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg overflow-x-auto" style={{ overflowY: 'visible' }}>
-                <div className="inline-block min-w-full">
-                  {/* Month Headers */}
-                  <div className="flex border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+              <div className="relative">
+                {/* Today Date Pill - positioned above the grid */}
+                {!todayInfo.isOutsideRange && (
+                  <div 
+                    className="absolute -top-8 pointer-events-none z-20"
+                    style={{
+                      left: `calc(192px + ${todayInfo.position * (timelineData.months.length * 100 / 100)}px)`,
+                      transform: 'translateX(-50%)',
+                    }}
+                  >
+                    <div className="px-2 py-0.5 bg-red-500 dark:bg-orange-400 text-white text-xs font-medium rounded whitespace-nowrap">
+                      {format(todayInfo.date, 'MMM dd, yyyy')}
+                    </div>
+                  </div>
+                )}
+
+                <div ref={timelineContainerRef} className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg overflow-x-auto" style={{ overflowY: 'visible' }}>
+                  <div className="inline-block min-w-full">
+                    {/* Month Headers */}
+                    <div className="flex border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
                     <div className="w-48 flex-shrink-0 px-4 py-3 border-r border-gray-200 dark:border-gray-800 sticky left-0 bg-gray-50 dark:bg-gray-900 z-10">
                       <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Strategy</span>
                     </div>
@@ -264,16 +280,7 @@ export default function Timeline() {
                               left: `${todayInfo.position}%`,
                               zIndex: 1,
                             }}
-                          >
-                            {/* Date Label - only show on first row */}
-                            {frameworkIndex === 0 && (
-                              <div 
-                                className="absolute -top-20 left-1/2 transform -translate-x-1/2 px-2 py-0.5 bg-red-500 dark:bg-orange-400 text-white text-xs font-medium rounded whitespace-nowrap"
-                              >
-                                {format(todayInfo.date, 'MMM dd, yyyy')}
-                              </div>
-                            )}
-                          </div>
+                          />
                         )}
 
                         {/* Framework Duration Bar */}
@@ -436,6 +443,7 @@ export default function Timeline() {
                     </div>
                   );
                 })}
+                  </div>
                 </div>
               </div>
 
