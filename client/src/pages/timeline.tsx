@@ -191,7 +191,7 @@ export default function Timeline() {
                   <div 
                     className="absolute -top-8 pointer-events-none z-20"
                     style={{
-                      left: `calc(192px + ${todayInfo.position * (timelineData.months.length * 100 / 100)}px)`,
+                      left: `calc(192px + ${(todayInfo.position / 100) * (timelineData.months.length * 100)}px)`,
                       transform: 'translateX(-50%)',
                     }}
                   >
