@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, jsonb, index, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -33,7 +33,9 @@ export const userStrategyAssignments = pgTable("user_strategy_assignments", {
   strategyId: varchar("strategy_id").notNull(), // Strategy they can access
   assignedBy: varchar("assigned_by").notNull(), // Administrator who made the assignment
   assignedAt: timestamp("assigned_at").default(sql`now()`),
-});
+}, (table) => ({
+  uniqueUserStrategy: unique().on(table.userId, table.strategyId),
+}));
 
 export const strategies = pgTable("strategies", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

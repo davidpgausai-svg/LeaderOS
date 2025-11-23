@@ -74,7 +74,9 @@ function UserStrategyRow({ user, strategies, currentUserId, onRoleChange, onStra
 
   const assignedStrategyIds = React.useMemo(() => {
     if (user.role === 'administrator') return [];
-    return (userAssignments as any[] || []).map((a: any) => a.strategyId);
+    // Deduplicate strategy IDs to prevent counting duplicates
+    const strategyIds = (userAssignments as any[] || []).map((a: any) => a.strategyId);
+    return Array.from(new Set(strategyIds));
   }, [userAssignments, user.role]);
 
   const assignedCount = user.role === 'administrator' 
