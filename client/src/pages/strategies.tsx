@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRole } from "@/hooks/use-role";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -39,7 +39,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ArrowRight } from "lucide-react";
+import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ArrowRight, Target } from "lucide-react";
 import { useLocation } from "wouter";
 import {
   Collapsible,
@@ -61,7 +61,7 @@ export default function Strategies() {
   const [selectedStrategyId, setSelectedStrategyId] = useState<string>();
   const [selectedStrategy, setSelectedStrategy] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [strategyFilter, setStrategyFilter] = useState("all");
   const [expandedContinuum, setExpandedContinuum] = useState<Record<string, boolean>>({});
   const [collapsedStrategies, setCollapsedStrategies] = useState<Set<string>>(new Set());
 
@@ -73,18 +73,22 @@ export default function Strategies() {
     queryKey: ["/api/projects"],
   });
 
-  // Check URL for strategyId param to auto-expand
+  // Check URL for strategyId param to auto-filter to that strategy
   const urlStrategyId = new URLSearchParams(window.location.search).get('strategyId');
+  const lastAppliedUrlParam = useRef<string | null>(null);
   
   useEffect(() => {
-    if (strategies) {
-      const allStrategyIds = new Set((strategies as any[]).map((s: any) => s.id));
+    if (strategies && urlStrategyId && urlStrategyId !== lastAppliedUrlParam.current) {
+      const validStrategyIds = new Set((strategies as any[]).map((s: any) => s.id));
       
-      if (urlStrategyId && allStrategyIds.has(urlStrategyId)) {
-        allStrategyIds.delete(urlStrategyId);
+      if (validStrategyIds.has(urlStrategyId)) {
+        // Set the strategy filter to show only the target strategy
+        setStrategyFilter(urlStrategyId);
+        // Expand all strategies when filtered (since there's only one showing)
+        setCollapsedStrategies(new Set());
+        // Track that we've applied this URL param
+        lastAppliedUrlParam.current = urlStrategyId;
       }
-      
-      setCollapsedStrategies(allStrategyIds);
     }
   }, [strategies, urlStrategyId]);
 
@@ -105,12 +109,13 @@ export default function Strategies() {
       const matchesSearch = strategy.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            strategy.description.toLowerCase().includes(searchTerm.toLowerCase());
       
-      // Default filter hides archived items unless explicitly selected
-      const matchesStatus = statusFilter === "all" 
-        ? strategy.status !== 'Archived' 
-        : strategy.status === statusFilter;
+      // Filter by strategy dropdown
+      const matchesStrategyFilter = strategyFilter === "all" || strategy.id === strategyFilter;
       
-      return matchesSearch && matchesStatus;
+      // Default filter hides archived items
+      const isNotArchived = strategy.status !== 'Archived';
+      
+      return matchesSearch && matchesStrategyFilter && isNotArchived;
     })
     .sort((a: any, b: any) => (a.displayOrder || 0) - (b.displayOrder || 0));
 
@@ -260,15 +265,18 @@ export default function Strategies() {
                 data-testid="input-search-strategies"
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48" data-testid="select-status-filter">
-                <SelectValue />
+            <Select value={strategyFilter} onValueChange={setStrategyFilter}>
+              <SelectTrigger className="w-48" data-testid="select-strategy-filter">
+                <Target className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Filter by strategy" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Strategies</SelectItem>
-                <SelectItem value="Active">Active</SelectItem>
-                <SelectItem value="Completed">Completed</SelectItem>
-                <SelectItem value="Archived">Archived</SelectItem>
+                {(strategies as any[])?.filter(s => s.status !== 'Archived').map((strategy: any) => (
+                  <SelectItem key={strategy.id} value={strategy.id}>
+                    {strategy.title}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -283,11 +291,11 @@ export default function Strategies() {
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">No strategies found</h3>
               <p className="text-gray-500 mb-4">
-                {searchTerm || statusFilter !== "all"
+                {searchTerm || strategyFilter !== "all"
                   ? "Try adjusting your search or filters"
                   : "Get started by creating your first strategy"}
               </p>
-              {canCreateStrategies() && !searchTerm && statusFilter === "all" && (
+              {canCreateStrategies() && !searchTerm && strategyFilter === "all" && (
                 <Button onClick={() => setIsCreateStrategyOpen(true)} data-testid="button-create-first-strategy">
                   <Plus className="mr-2 h-4 w-4" />
                   Create Strategy

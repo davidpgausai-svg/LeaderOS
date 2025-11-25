@@ -106,7 +106,6 @@ export default function Actions() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
   const [strategyFilter, setStrategyFilter] = useState("all");
   const [collapsedStrategies, setCollapsedStrategies] = useState<Set<string>>(new Set());
   const [projectFilterByStrategy, setProjectFilterByStrategy] = useState<Record<string, string>>({});
@@ -298,7 +297,7 @@ export default function Actions() {
     const matchesSearch = action.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          action.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          action.strategy?.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || action.status === statusFilter;
+    const matchesStatus = true;
     const matchesStrategy = strategyFilter === "all" || action.strategyId === strategyFilter;
     
     // Filter out archived actions and actions from archived strategies
@@ -512,20 +511,6 @@ export default function Actions() {
               </div>
             </div>
             
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48" data-testid="select-status-filter">
-                <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="achieved">Achieved</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="at_risk">At Risk</SelectItem>
-                <SelectItem value="not_started">Not Started</SelectItem>
-              </SelectContent>
-            </Select>
-
             <Select value={strategyFilter} onValueChange={setStrategyFilter}>
               <SelectTrigger className="w-48" data-testid="select-strategy-filter">
                 <Target className="w-4 h-4 mr-2" />
@@ -550,12 +535,12 @@ export default function Actions() {
               <BarChart3 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No strategies found</h3>
               <p className="text-gray-600 dark:text-gray-400 mb-6">
-                {searchTerm || statusFilter !== "all" || strategyFilter !== "all" 
+                {searchTerm || strategyFilter !== "all" 
                   ? "Try adjusting your filters to see more strategies."
                   : "Get started by creating your first action."
                 }
               </p>
-              {canCreateProjects() && !searchTerm && statusFilter === "all" && strategyFilter === "all" && (
+              {canCreateProjects() && !searchTerm && strategyFilter === "all" && (
                 <Button onClick={() => setIsCreateActionOpen(true)}>
                   <Plus className="w-4 h-4 mr-2" />
                   Create Your First Action

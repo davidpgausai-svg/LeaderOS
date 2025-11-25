@@ -58,7 +58,6 @@ import {
   TrendingUp, 
   MoreVertical, 
   Trash2,
-  Filter,
   ChevronDown,
   ChevronRight,
   Edit,
@@ -153,7 +152,6 @@ export default function Projects() {
   const [viewingProject, setViewingProject] = useState<Project | null>(null);
   const [barriersProjectId, setBarriersProjectId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
   const [strategyFilter, setStrategyFilter] = useState("all");
   const [collapsedStrategies, setCollapsedStrategies] = useState<Set<string>>(new Set());
 
@@ -349,7 +347,7 @@ export default function Projects() {
     const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          project.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          project.strategy?.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || project.status === statusFilter;
+    const matchesStatus = true;
     const matchesStrategy = strategyFilter === "all" || project.strategyId === strategyFilter;
     
     // Filter out archived projects and projects from archived strategies
@@ -482,21 +480,6 @@ export default function Projects() {
               </div>
             </div>
             
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48" data-testid="select-status-filter">
-                <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="C">Completed</SelectItem>
-                <SelectItem value="OT">On Track</SelectItem>
-                <SelectItem value="OH">On Hold</SelectItem>
-                <SelectItem value="B">Behind</SelectItem>
-                <SelectItem value="NYS">Not Yet Started</SelectItem>
-              </SelectContent>
-            </Select>
-
             <Select value={strategyFilter} onValueChange={setStrategyFilter}>
               <SelectTrigger className="w-48" data-testid="select-strategy-filter">
                 <Target className="w-4 h-4 mr-2" />
@@ -521,12 +504,12 @@ export default function Projects() {
               <Target className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No strategies found</h3>
               <p className="text-gray-600 dark:text-gray-400 mb-6">
-                {searchTerm || statusFilter !== "all" || strategyFilter !== "all" 
+                {searchTerm || strategyFilter !== "all" 
                   ? "Try adjusting your filters to see more strategies."
                   : "Get started by creating your first project."
                 }
               </p>
-              {canCreateProjects() && !searchTerm && statusFilter === "all" && strategyFilter === "all" && (
+              {canCreateProjects() && !searchTerm && strategyFilter === "all" && (
                 <Button onClick={() => setIsCreateProjectOpen(true)}>
                   <Plus className="w-4 h-4 mr-2" />
                   Create Your First Project
