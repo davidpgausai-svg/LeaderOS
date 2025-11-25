@@ -399,11 +399,98 @@ export default function Documentation() {
                       like timezone settings.
                     </p>
 
-                    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mt-4">
-                      <p className="text-sm text-gray-600 dark:text-gray-400 italic">
-                        📝 Add your custom content here: Document user roles (Administrator, Co-Lead, View, SME),
-                        strategy assignments, timezone settings, and permission levels.
-                      </p>
+                    <div className="mt-4">
+                      <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                        <iframe 
+                          className="absolute top-0 left-0 w-full h-full rounded-lg"
+                          src="https://www.youtube.com/embed/whfqDz9hrOs?si=VU7vPSmRhA3eAkaF" 
+                          title="Settings Tutorial"
+                          frameBorder="0" 
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                          referrerPolicy="strict-origin-when-cross-origin" 
+                          allowFullScreen
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-8 space-y-6">
+                      <div>
+                        <h4 className="text-lg font-semibold mb-2">Settings Overview</h4>
+                        <p className="text-gray-700 dark:text-gray-300">
+                          The Settings module serves as the centralized command center for personal configuration, role management, strategic ordering, and security oversight. This enables users and administrators to align the platform with organizational governance standards and operational workflows.
+                        </p>
+                      </div>
+
+                      <div>
+                        <h4 className="text-lg font-semibold mb-2">User Settings</h4>
+                        <div className="space-y-3 ml-4">
+                          <div>
+                            <h5 className="font-medium">Profile</h5>
+                            <p className="text-gray-700 dark:text-gray-300 text-sm">
+                              Update your personal information, role attributes, and identifiers to ensure consistency across Strategies, Projects, and Actions.
+                            </p>
+                          </div>
+                          <div>
+                            <h5 className="font-medium">Notifications</h5>
+                            <p className="text-gray-700 dark:text-gray-300 text-sm">
+                              Configure your alert preferences to remain proactively informed on key milestones, approvals, dependencies, and project activity.
+                            </p>
+                          </div>
+                          <div>
+                            <h5 className="font-medium">Appearance</h5>
+                            <p className="text-gray-700 dark:text-gray-300 text-sm">
+                              Customize display mode, layout preferences, and visual settings to create a streamlined, user-centric workspace.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="text-lg font-semibold mb-2">Administrator Settings</h4>
+                        <p className="text-gray-700 dark:text-gray-300 mb-3">
+                          Administrators gain access to an elevated Administrator Settings module designed for enterprise-level governance, user provisioning, and access control.
+                        </p>
+                        
+                        <div className="space-y-3 ml-4">
+                          <div>
+                            <h5 className="font-medium">User Roles & Permissions</h5>
+                            <p className="text-gray-700 dark:text-gray-300 text-sm mb-2">
+                              Administrators can add users and assign them one of four access levels:
+                            </p>
+                            <ul className="list-disc list-inside text-sm text-gray-700 dark:text-gray-300 space-y-1 ml-2">
+                              <li><strong>Administrator</strong> – Full system governance, including user provisioning, access control, and strategy creation.</li>
+                              <li><strong>Co-Administrator</strong> – Shares the same platform authorities as Administrators, including the ability to create and manage Strategies.</li>
+                              <li><strong>Co-Lead</strong> – Authorized to create and manage Projects and Actions, supporting execution while remaining aligned with established Strategies.</li>
+                              <li><strong>Subject Matter Expert (SME)</strong> – Does not receive application access. This role exists for tagging and attribution purposes only, enabling teams to identify who is contributing expertise to specific Strategies or Projects without granting system permissions.</li>
+                            </ul>
+                            <p className="text-gray-700 dark:text-gray-300 text-sm mt-2">
+                              Administrators may also assign which Strategies each user can access to ensure appropriate alignment, accountability, and role clarity across the portfolio.
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <h5 className="font-medium">Framework Order</h5>
+                            <p className="text-gray-700 dark:text-gray-300 text-sm">
+                              The Framework Order section allows administrators to define the Strategy Priority Order. Adjusting this hierarchy directly impacts how strategies are ranked and displayed throughout the application, ensuring the interface reflects organizational priorities, leadership focus, and enterprise-level sequencing.
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <h5 className="font-medium">Security & Data Governance</h5>
+                            <p className="text-gray-700 dark:text-gray-300 text-sm mb-2">
+                              The application continuously monitors platform activity to uphold robust security standards and responsible data management practices. This includes oversight of:
+                            </p>
+                            <ul className="list-disc list-inside text-sm text-gray-700 dark:text-gray-300 space-y-1 ml-2">
+                              <li>Role-based authentication and access controls</li>
+                              <li>Data exports and movement of strategic assets</li>
+                              <li>Administrative actions and activity logs</li>
+                            </ul>
+                            <p className="text-gray-700 dark:text-gray-300 text-sm mt-2">
+                              These controls ensure the system remains compliant, secure, and audit-ready while protecting the integrity of your strategic portfolio.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </CardContent>

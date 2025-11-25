@@ -1,0 +1,50 @@
+Settings Overview
+
+The Settings module serves as the centralized command center for personal configuration, role management, strategic ordering, and security oversight. This enables users and administrators to align the platform with organizational governance standards and operational workflows.
+
+User Settings
+Profile
+
+Update your personal information, role attributes, and identifiers to ensure consistency across Strategies, Projects, and Actions.
+
+Notifications
+
+Configure your alert preferences to remain proactively informed on key milestones, approvals, dependencies, and project activity.
+
+Appearance
+
+Customize display mode, layout preferences, and visual settings to create a streamlined, user-centric workspace.
+
+Administrator Settings
+
+Administrators gain access to an elevated Administrator Settings module designed for enterprise-level governance, user provisioning, and access control.
+
+User Roles & Permissions
+
+Administrators can add users and assign them one of four access levels:
+
+Administrator – Full system governance, including user provisioning, access control, and strategy creation.
+
+Co-Administrator – Shares the same platform authorities as Administrators, including the ability to create and manage Strategies.
+
+Co-Lead – Authorized to create and manage Projects and Actions, supporting execution while remaining aligned with established Strategies.
+
+Subject Matter Expert (SME) – Does not receive application access. This role exists for tagging and attribution purposes only, enabling teams to identify who is contributing expertise to specific Strategies or Projects without granting system permissions.
+
+Administrators may also assign which Strategies each user can access to ensure appropriate alignment, accountability, and role clarity across the portfolio.
+
+Framework Order
+
+The Framework Order section allows administrators to define the Strategy Priority Order. Adjusting this hierarchy directly impacts how strategies are ranked and displayed throughout the application, ensuring the interface reflects organizational priorities, leadership focus, and enterprise-level sequencing.
+
+Security & Data Governance
+
+The application continuously monitors platform activity to uphold robust security standards and responsible data management practices. This includes oversight of:
+
+Role-based authentication and access controls
+
+Data exports and movement of strategic assets
+
+Administrative actions and activity logs
+
+These controls ensure the system remains compliant, secure, and audit-ready while protecting the integrity of your strategic portfolio.
