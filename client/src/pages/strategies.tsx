@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRole } from "@/hooks/use-role";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -53,7 +53,7 @@ export default function Strategies() {
   const { canCreateStrategies, canEditAllStrategies } = useRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [isCreateStrategyOpen, setIsCreateStrategyOpen] = useState(false);
   const [isEditStrategyOpen, setIsEditStrategyOpen] = useState(false);
   const [isViewStrategyOpen, setIsViewStrategyOpen] = useState(false);
@@ -74,7 +74,10 @@ export default function Strategies() {
   });
 
   // Check URL for strategyId param to auto-filter to that strategy
-  const urlStrategyId = new URLSearchParams(window.location.search).get('strategyId');
+  const urlStrategyId = useMemo(() => 
+    new URLSearchParams(location.split('?')[1] ?? '').get('strategyId'),
+    [location]
+  );
   const lastAppliedUrlParam = useRef<string | null>(null);
   
   useEffect(() => {
