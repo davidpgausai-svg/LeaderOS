@@ -95,10 +95,9 @@ export default function Documentation() {
                       to learn about all features.
                     </p>
 
-                    <div className="mt-4 rounded-lg overflow-hidden">
+                    <div className="mt-4 rounded-lg overflow-hidden" style={{ paddingBottom: '56.25%', position: 'relative', height: 0 }}>
                       <iframe
-                        width="100%"
-                        height="500"
+                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
                         src="https://www.youtube.com/embed/Uz2lcXfsHRk?si=bPGnoiwdglqgTVn4"
                         title="YouTube video player"
                         frameBorder="0"
