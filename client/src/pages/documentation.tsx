@@ -323,11 +323,18 @@ export default function Documentation() {
                       then export to PDF for distribution.
                     </p>
 
-                    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mt-4">
-                      <p className="text-sm text-gray-600 dark:text-gray-400 italic">
-                        📝 Add your custom content here: Document how to create meeting notes, select specific
-                        projects/actions to include, add notes, and export to PDF.
-                      </p>
+                    <div className="mt-4">
+                      <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                        <iframe 
+                          className="absolute top-0 left-0 w-full h-full rounded-lg"
+                          src="https://www.youtube.com/embed/r9s2m2VpaDU?si=rdGgt6xDE22gJwav" 
+                          title="Meeting Notes Tutorial"
+                          frameBorder="0" 
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                          referrerPolicy="strict-origin-when-cross-origin" 
+                          allowFullScreen
+                        />
+                      </div>
                     </div>
                   </div>
                 </CardContent>
