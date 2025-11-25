@@ -135,18 +135,19 @@ export default function Actions() {
     queryKey: ["/api/users"],
   });
 
-  // Check URL for strategyId param to auto-expand that strategy
+  // Check URL for strategyId param to auto-filter to that strategy
   const urlStrategyId = new URLSearchParams(window.location.search).get('strategyId');
   
   useEffect(() => {
     if (strategies) {
-      const allStrategyIds = new Set((strategies as Strategy[]).map(s => s.id));
+      const validStrategyIds = new Set((strategies as Strategy[]).map(s => s.id));
       
-      if (urlStrategyId && allStrategyIds.has(urlStrategyId)) {
-        allStrategyIds.delete(urlStrategyId);
+      if (urlStrategyId && validStrategyIds.has(urlStrategyId)) {
+        // Set the strategy filter to show only the target strategy
+        setStrategyFilter(urlStrategyId);
+        // Expand all strategies when filtered (since there's only one showing)
+        setCollapsedStrategies(new Set());
       }
-      
-      setCollapsedStrategies(allStrategyIds);
     }
   }, [strategies, urlStrategyId]);
 
