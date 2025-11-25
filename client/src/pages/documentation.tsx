@@ -171,11 +171,18 @@ export default function Documentation() {
                       and track progress on your strategic initiatives.
                     </p>
 
-                    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mt-4">
-                      <p className="text-sm text-gray-600 dark:text-gray-400 italic">
-                        📝 Add your custom content here: Document how to create strategies, assign owners,
-                        set target dates, and use the Change Continuum Framework fields.
-                      </p>
+                    <div className="mt-4">
+                      <div className="aspect-video w-full max-w-2xl">
+                        <iframe
+                          className="w-full h-full rounded-lg"
+                          src="https://www.youtube.com/embed/V58aAb34Gz0?si=_IBbkvmd5x1dKSwC"
+                          title="Strategies Guide Video"
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                          referrerPolicy="strict-origin-when-cross-origin"
+                          allowFullScreen
+                        ></iframe>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
