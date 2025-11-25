@@ -47,7 +47,7 @@ type Project = {
   status: string;
   startDate: string;
   dueDate: string;
-  assignedTo: string;
+  accountableLeaders: string; // JSON array of user IDs
 };
 
 type Action = {
@@ -719,7 +719,16 @@ function TimelineRiskReport({ strategies, projects, actions, getRiskLevel, getRi
 // Ownership Report Component
 function OwnershipReport({ projects, actions, users, strategies, safeDate }: any) {
   const userPerformance = users.map((user: any) => {
-    const userProjects = projects.filter((t: any) => t.assignedTo === user.id);
+    // Parse accountableLeaders JSON and filter projects assigned to this user
+    const userProjects = projects.filter((t: any) => {
+      try {
+        const leaders = JSON.parse(t.accountableLeaders || '[]');
+        return leaders.includes(user.id);
+      } catch {
+        return false;
+      }
+    });
+    
     const completedProjects = userProjects.filter((t: any) => t.progress >= 100).length;
     const inProgressProjects = userProjects.filter((t: any) => t.progress > 0 && t.progress < 100).length;
     const overdueProjects = userProjects.filter((t: any) => {
