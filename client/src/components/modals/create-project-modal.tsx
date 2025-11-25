@@ -371,41 +371,57 @@ export function CreateProjectModal({ isOpen, onClose, strategyId }: CreateProjec
                 <FormField
                   control={form.control}
                   name="startDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Start Date *</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="date"
-                          {...field}
-                          value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : field.value}
-                          onChange={(e) => field.onChange(new Date(e.target.value))}
-                          data-testid="input-start-date"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  render={({ field }) => {
+                    const dateValue = field.value instanceof Date && !isNaN(field.value.getTime()) 
+                      ? field.value.toISOString().split('T')[0] 
+                      : (typeof field.value === 'string' ? field.value : '');
+                    
+                    return (
+                      <FormItem>
+                        <FormLabel>Start Date *</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            value={dateValue}
+                            onChange={(e) => {
+                              const date = new Date(e.target.value);
+                              field.onChange(isNaN(date.getTime()) ? e.target.value : date);
+                            }}
+                            data-testid="input-start-date"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
                 />
 
                 <FormField
                   control={form.control}
                   name="dueDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Due Date *</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="date"
-                          {...field}
-                          value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : field.value}
-                          onChange={(e) => field.onChange(new Date(e.target.value))}
-                          data-testid="input-due-date"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  render={({ field }) => {
+                    const dateValue = field.value instanceof Date && !isNaN(field.value.getTime()) 
+                      ? field.value.toISOString().split('T')[0] 
+                      : (typeof field.value === 'string' ? field.value : '');
+                    
+                    return (
+                      <FormItem>
+                        <FormLabel>Due Date *</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            value={dateValue}
+                            onChange={(e) => {
+                              const date = new Date(e.target.value);
+                              field.onChange(isNaN(date.getTime()) ? e.target.value : date);
+                            }}
+                            data-testid="input-due-date"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
                 />
               </div>
             </div>
