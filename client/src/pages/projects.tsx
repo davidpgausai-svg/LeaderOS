@@ -380,8 +380,10 @@ export default function Projects() {
   }, {} as Record<string, Project[]>);
 
   // Get all active strategies sorted by displayOrder (with fallback to title for stable sorting)
+  // Filter by strategyFilter to show only the selected strategy card when filtered
   const sortedStrategies = ((strategies as Strategy[]) || [])
     .filter(s => s.status !== 'Archived')
+    .filter(s => strategyFilter === "all" || s.id === strategyFilter)
     .sort((a, b) => {
       const orderA = a.displayOrder ?? Number.MAX_SAFE_INTEGER;
       const orderB = b.displayOrder ?? Number.MAX_SAFE_INTEGER;
