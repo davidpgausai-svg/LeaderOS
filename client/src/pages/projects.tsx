@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRole } from "@/hooks/use-role";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -181,16 +181,19 @@ export default function Projects() {
 
   // Check URL for strategyId param to auto-filter to that strategy
   const urlStrategyId = new URLSearchParams(window.location.search).get('strategyId');
+  const lastAppliedUrlParam = useRef<string | null>(null);
   
   useEffect(() => {
-    if (strategies) {
+    if (strategies && urlStrategyId && urlStrategyId !== lastAppliedUrlParam.current) {
       const validStrategyIds = new Set((strategies as Strategy[]).map(s => s.id));
       
-      if (urlStrategyId && validStrategyIds.has(urlStrategyId)) {
+      if (validStrategyIds.has(urlStrategyId)) {
         // Set the strategy filter to show only the target strategy
         setStrategyFilter(urlStrategyId);
         // Expand all strategies when filtered (since there's only one showing)
         setCollapsedStrategies(new Set());
+        // Track that we've applied this URL param
+        lastAppliedUrlParam.current = urlStrategyId;
       }
     }
   }, [strategies, urlStrategyId]);
