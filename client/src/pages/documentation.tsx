@@ -361,11 +361,18 @@ export default function Documentation() {
                       to track organizational performance.
                     </p>
 
-                    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mt-4">
-                      <p className="text-sm text-gray-600 dark:text-gray-400 italic">
-                        📝 Add your custom content here: Explain the three report tabs (Strategy Health, Timeline Risk,
-                        Ownership), how risk levels are calculated, and how to export reports.
-                      </p>
+                    <div className="mt-4">
+                      <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                        <iframe 
+                          className="absolute top-0 left-0 w-full h-full rounded-lg"
+                          src="https://www.youtube.com/embed/whfqDz9hrOs?si=V0pXwxF-u-PEPCnC" 
+                          title="Reports Tutorial"
+                          frameBorder="0" 
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                          referrerPolicy="strict-origin-when-cross-origin" 
+                          allowFullScreen
+                        />
+                      </div>
                     </div>
                   </div>
                 </CardContent>
