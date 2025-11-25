@@ -247,11 +247,18 @@ export default function Documentation() {
                       set targets, update status, and track completion.
                     </p>
 
-                    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mt-4">
-                      <p className="text-sm text-gray-600 dark:text-gray-400 italic">
-                        📝 Add your custom content here: Document action statuses (in progress, achieved, blocked),
-                        target values, measurement units, and quick status updates.
-                      </p>
+                    <div className="mt-4">
+                      <div className="aspect-video w-full max-w-2xl">
+                        <iframe
+                          className="w-full h-full rounded-lg"
+                          src="https://www.youtube.com/embed/p0OSu3rhiK0?si=Jzb-y06wdUSvO6Eg"
+                          title="Actions Guide Video"
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                          referrerPolicy="strict-origin-when-cross-origin"
+                          allowFullScreen
+                        ></iframe>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
