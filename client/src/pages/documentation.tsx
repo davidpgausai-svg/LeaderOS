@@ -94,10 +94,12 @@ export default function Documentation() {
                       Use the tabs above to navigate to specific sections, or browse through each section sequentially
                       to learn about all features.
                     </p>
+                  </div>
 
-                    <div className="mt-4 rounded-lg overflow-hidden" style={{ paddingBottom: '56.25%', position: 'relative', height: 0 }}>
+                  <div className="w-full max-w-4xl mx-auto">
+                    <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
                       <iframe
-                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                        className="absolute top-0 left-0 w-full h-full rounded-lg"
                         src="https://www.youtube.com/embed/Uz2lcXfsHRk?si=bPGnoiwdglqgTVn4"
                         title="YouTube video player"
                         frameBorder="0"
