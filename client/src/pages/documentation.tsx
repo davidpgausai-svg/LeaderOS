@@ -95,29 +95,14 @@ export default function Documentation() {
                       to learn about all features.
                     </p>
 
-                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-4">
-                      <div className="flex items-start">
-                        <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-3 mt-0.5" />
-                        <div>
-                          <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">Educational Content Area</h4>
-                          <p className="text-sm text-blue-800 dark:text-blue-200">
-                            Add your educational materials, how-to guides, and best practices here.
-                            You can include text, links to videos, images, and step-by-step instructions.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4 mt-4">
-                      <div className="flex items-start">
-                        <Video className="w-5 h-5 text-purple-600 dark:text-purple-400 mr-3 mt-0.5" />
-                        <div>
-                          <h4 className="font-semibold text-purple-900 dark:text-purple-100 mb-1">Video Tutorials Placeholder</h4>
-                          <p className="text-sm text-purple-800 dark:text-purple-200">
-                            Embed video tutorials here using YouTube or Vimeo embed codes to help users learn visually.
-                          </p>
-                        </div>
-                      </div>
+                    <div className="mt-4 rounded-lg overflow-hidden">
+                      <iframe
+                        style={{ width: '100%', height: '500px', border: 'none' }}
+                        src="https://www.canva.com/design/DAG5qUBx5pc/WHjTeHjS3Hyp34uEj8O8Rw/watch?utm_content=DAG5qUBx5pc&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h4e0992992d"
+                        allowFullScreen
+                        loading="lazy"
+                        title="Getting Started Video"
+                      ></iframe>
                     </div>
                   </div>
                 </CardContent>
