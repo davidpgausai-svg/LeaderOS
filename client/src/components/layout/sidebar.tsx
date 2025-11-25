@@ -20,6 +20,7 @@ import {
   ChevronLeft,
   ChevronRight,
   PenLine,
+  BookOpen,
 } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 
@@ -117,6 +118,41 @@ export function Sidebar() {
         <div className={`${isCollapsed ? 'flex justify-center' : ''}`}>
           <NotificationBell isCollapsed={isCollapsed} />
         </div>
+        
+        {/* Documentation Link */}
+        <Link href="/documentation">
+          {isCollapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div
+                  className={`flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    location === "/documentation"
+                      ? "text-white bg-primary"
+                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  }`}
+                  data-testid="link-documentation"
+                >
+                  <BookOpen className="h-4 w-4" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                Documentation
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <div
+              className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                location === "/documentation"
+                  ? "text-white bg-primary"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+              }`}
+              data-testid="link-documentation"
+            >
+              <BookOpen className="mr-3 h-4 w-4" />
+              Documentation
+            </div>
+          )}
+        </Link>
       </nav>
       
       {/* User Profile */}
