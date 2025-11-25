@@ -104,7 +104,7 @@ export default function Reports() {
   };
 
   // Helper function to determine risk level
-  const getRiskLevel = (item: any, type: 'strategy' | 'project' | 'action'): 'on-track' | 'at-risk' | 'critical' | 'blocked' => {
+  const getRiskLevel = (item: any, type: 'strategy' | 'project' | 'action', strategyProjects?: any[]): 'on-track' | 'at-risk' | 'critical' | 'blocked' => {
     const today = new Date();
     
     if (type === 'action') {
@@ -118,10 +118,25 @@ export default function Reports() {
       return 'on-track';
     }
 
-    if (type === 'project' || type === 'strategy') {
+    if (type === 'strategy') {
+      // Strategy risk is based on its projects' risk levels
+      if (!strategyProjects || strategyProjects.length === 0) return 'on-track';
+      
+      const projectRisks = strategyProjects.map(p => getRiskLevel(p, 'project'));
+      
+      // If any project is critical, strategy is critical
+      if (projectRisks.includes('critical')) return 'critical';
+      // If any project is at-risk, strategy is at-risk
+      if (projectRisks.includes('at-risk')) return 'at-risk';
+      // If any project is blocked, strategy is at-risk (not critical)
+      if (projectRisks.includes('blocked')) return 'at-risk';
+      
+      return 'on-track';
+    }
+
+    if (type === 'project') {
       const progress = item.progress || 0;
-      const dueDateString = type === 'project' ? item.dueDate : item.targetDate;
-      const dueDate = safeDate(dueDateString);
+      const dueDate = safeDate(item.dueDate);
       
       if (!dueDate) return 'on-track';
       if (progress >= 100) return 'on-track';
@@ -132,7 +147,14 @@ export default function Reports() {
       
       const totalDays = differenceInDays(dueDate, startDate);
       const elapsed = differenceInDays(today, startDate);
-      const expectedProgress = totalDays > 0 ? (elapsed / totalDays) * 100 : 0;
+      
+      // Don't penalize early-stage projects
+      if (elapsed <= 0 || totalDays <= 0) return 'on-track';
+      
+      const expectedProgress = (elapsed / totalDays) * 100;
+      
+      // Only flag as at-risk if we're past 10% of timeline
+      if (expectedProgress < 10) return 'on-track';
       
       if (progress < expectedProgress - 20) return 'critical';
       if (progress < expectedProgress - 10) return 'at-risk';
@@ -167,7 +189,11 @@ export default function Reports() {
   // Calculate metrics
   const totalStrategies = strategies.length;
   const activeStrategies = strategies.filter(s => s.status === 'active').length;
-  const atRiskStrategies = strategies.filter(s => getRiskLevel(s, 'strategy') === 'at-risk' || getRiskLevel(s, 'strategy') === 'critical').length;
+  const atRiskStrategies = strategies.filter(s => {
+    const strategyProjects = projects.filter((t: any) => t.strategyId === s.id);
+    const risk = getRiskLevel(s, 'strategy', strategyProjects);
+    return risk === 'at-risk' || risk === 'critical';
+  }).length;
 
   const totalProjects = projects.length;
   const overdueProjects = projects.filter(t => {
@@ -428,7 +454,7 @@ function StrategyHealthReport({ strategies, projects, actions, getRiskLevel, get
       <CardContent className="space-y-4">
         {strategies.map((strategy: any) => {
           const strategyProjects = projects.filter((t: any) => t.strategyId === strategy.id);
-          const strategyRisk = getRiskLevel(strategy, 'strategy');
+          const strategyRisk = getRiskLevel(strategy, 'strategy', strategyProjects);
           const isOpen = openStrategies.has(strategy.id);
 
           return (
