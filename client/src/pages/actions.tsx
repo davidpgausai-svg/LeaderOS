@@ -386,8 +386,25 @@ export default function Actions() {
   };
 
   const updateActionStatusMutation = useMutation({
-    mutationFn: async ({ actionId, status }: { actionId: string; status: string }) => {
-      return await apiRequest("PATCH", `/api/actions/${actionId}`, { status });
+    mutationFn: async ({ action, status }: { action: Action; status: string }) => {
+      // Build payload matching insertActionSchema - omit optional fields when empty
+      const updateData: any = {
+        title: action.title,
+        description: action.description,
+        strategyId: action.strategyId,
+        status: status,
+        isArchived: action.isArchived, // Keep as string 'true' or 'false'
+        createdBy: action.createdBy,
+      };
+      
+      // Only include optional fields when they have non-empty values
+      if (action.projectId && action.projectId.trim()) updateData.projectId = action.projectId;
+      if (action.targetValue && action.targetValue.trim()) updateData.targetValue = action.targetValue;
+      if (action.currentValue && action.currentValue.trim()) updateData.currentValue = action.currentValue;
+      if (action.measurementUnit && action.measurementUnit.trim()) updateData.measurementUnit = action.measurementUnit;
+      if (action.dueDate) updateData.dueDate = action.dueDate;
+      
+      return await apiRequest("PATCH", `/api/actions/${action.id}`, updateData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
@@ -405,8 +422,8 @@ export default function Actions() {
     },
   });
 
-  const handleStatusChange = (actionId: string, newStatus: string) => {
-    updateActionStatusMutation.mutate({ actionId, status: newStatus });
+  const handleStatusChange = (action: Action, newStatus: string) => {
+    updateActionStatusMutation.mutate({ action, status: newStatus });
   };
 
   const getProjectsForStrategy = (strategyId: string) => {
@@ -658,7 +675,7 @@ export default function Actions() {
                                                 {/* Quick Status Dropdown */}
                                                 <Select 
                                                   value={action.status} 
-                                                  onValueChange={(value) => handleStatusChange(action.id, value)}
+                                                  onValueChange={(value) => handleStatusChange(action, value)}
                                                 >
                                                   <SelectTrigger className={`w-36 h-7 ${statusInfo.color} text-white border-0`} data-testid={`select-status-${action.id}`}>
                                                     <SelectValue>{statusInfo.label}</SelectValue>
