@@ -39,7 +39,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp } from "lucide-react";
+import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ArrowRight } from "lucide-react";
+import { useLocation } from "wouter";
 import {
   Collapsible,
   CollapsibleContent,
@@ -52,6 +53,7 @@ export default function Strategies() {
   const { canCreateStrategies, canEditAllStrategies } = useRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   const [isCreateStrategyOpen, setIsCreateStrategyOpen] = useState(false);
   const [isEditStrategyOpen, setIsEditStrategyOpen] = useState(false);
   const [isViewStrategyOpen, setIsViewStrategyOpen] = useState(false);
@@ -71,13 +73,25 @@ export default function Strategies() {
     queryKey: ["/api/projects"],
   });
 
-  // Initialize all strategies as collapsed on first load
+  // Check URL for strategyId param to auto-expand
+  const urlStrategyId = new URLSearchParams(window.location.search).get('strategyId');
+  
   useEffect(() => {
-    if (strategies && collapsedStrategies.size === 0) {
+    if (strategies) {
       const allStrategyIds = new Set((strategies as any[]).map((s: any) => s.id));
+      
+      if (urlStrategyId && allStrategyIds.has(urlStrategyId)) {
+        allStrategyIds.delete(urlStrategyId);
+      }
+      
       setCollapsedStrategies(allStrategyIds);
     }
-  }, [strategies]);
+  }, [strategies, urlStrategyId]);
+
+  const navigateToProjects = (strategyId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setLocation(`/projects?strategyId=${strategyId}`);
+  };
 
   // Enhance strategies with projects
   const strategiesWithProjects = (strategies as any[])?.map((strategy: any) => ({
@@ -316,6 +330,16 @@ export default function Strategies() {
                         <Badge variant="outline" style={{ color: strategy.colorCode }}>
                           {strategy.status}
                         </Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => navigateToProjects(strategy.id, e)}
+                          className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                          title="Go to Projects"
+                          data-testid={`button-nav-projects-${strategy.id}`}
+                        >
+                          <ArrowRight className="h-4 w-4" />
+                        </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                             <Button variant="ghost" size="sm" data-testid={`button-strategy-menu-${strategy.id}`}>

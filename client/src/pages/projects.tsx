@@ -66,8 +66,11 @@ import {
   ExternalLink,
   MessageSquarePlus,
   AlertTriangle,
-  ShieldCheck
+  ShieldCheck,
+  ArrowLeft,
+  ArrowRight
 } from "lucide-react";
+import { useLocation } from "wouter";
 
 type Strategy = {
   id: string;
@@ -141,6 +144,7 @@ export default function Projects() {
   const { currentRole, currentUser, canCreateProjects, canEditProjects } = useRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
   const [isEditProjectOpen, setIsEditProjectOpen] = useState(false);
   const [isViewProjectOpen, setIsViewProjectOpen] = useState(false);
@@ -175,15 +179,30 @@ export default function Projects() {
     },
   });
 
-  // Initialize all strategies as collapsed by default when strategies data loads
-  const [hasInitializedCollapsed, setHasInitializedCollapsed] = useState(false);
+  // Check URL for strategyId param to auto-expand that strategy
+  const urlStrategyId = new URLSearchParams(window.location.search).get('strategyId');
   
   useEffect(() => {
-    if (strategies && !hasInitializedCollapsed) {
-      setCollapsedStrategies(new Set((strategies as Strategy[]).map(s => s.id)));
-      setHasInitializedCollapsed(true);
+    if (strategies) {
+      const allStrategyIds = new Set((strategies as Strategy[]).map(s => s.id));
+      
+      if (urlStrategyId && allStrategyIds.has(urlStrategyId)) {
+        allStrategyIds.delete(urlStrategyId);
+      }
+      
+      setCollapsedStrategies(allStrategyIds);
     }
-  }, [strategies, hasInitializedCollapsed]);
+  }, [strategies, urlStrategyId]);
+
+  const navigateToStrategies = (strategyId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setLocation(`/strategies?strategyId=${strategyId}`);
+  };
+
+  const navigateToActions = (strategyId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setLocation(`/actions?strategyId=${strategyId}`);
+  };
 
   const updateProjectMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
@@ -553,6 +572,26 @@ export default function Projects() {
                           <Badge variant="outline" style={{ color: strategy.colorCode }}>
                             {strategy.status}
                           </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => navigateToStrategies(strategyId, e)}
+                            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                            title="Go to Strategies"
+                            data-testid={`button-nav-strategies-${strategyId}`}
+                          >
+                            <ArrowLeft className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => navigateToActions(strategyId, e)}
+                            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                            title="Go to Actions"
+                            data-testid={`button-nav-actions-${strategyId}`}
+                          >
+                            <ArrowRight className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
                     </CardHeader>
