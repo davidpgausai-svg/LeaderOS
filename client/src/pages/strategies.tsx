@@ -74,8 +74,10 @@ export default function Strategies() {
   });
 
   // Check URL for strategyId param to auto-filter to that strategy
+  // Note: wouter's location only includes pathname, so we use window.location.search for query params
+  // The location dependency ensures this re-runs when navigating between pages
   const urlStrategyId = useMemo(() => 
-    new URLSearchParams(location.split('?')[1] ?? '').get('strategyId'),
+    new URLSearchParams(window.location.search).get('strategyId'),
     [location]
   );
   const lastAppliedUrlParam = useRef<string | null>(null);
