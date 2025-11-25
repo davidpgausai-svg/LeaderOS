@@ -95,6 +95,28 @@ export default function Strategies() {
     }
   }, [strategies, urlStrategyId]);
 
+  // Handler for manual filter dropdown changes
+  const handleStrategyFilterChange = (value: string) => {
+    setStrategyFilter(value);
+    // Reset the URL param guard when user manually changes filter
+    // This allows navigation arrows to re-apply the same strategy filter
+    if (value === "all") {
+      lastAppliedUrlParam.current = null;
+    }
+  };
+
+  // Auto-collapse all strategies when "All Strategies" filter is active
+  useEffect(() => {
+    if (strategies && strategyFilter === "all") {
+      // Collapse all strategy cards
+      const allStrategyIds = new Set((strategies as any[]).map((s: any) => s.id));
+      setCollapsedStrategies(allStrategyIds);
+    } else if (strategyFilter !== "all") {
+      // Expand when a specific strategy is selected
+      setCollapsedStrategies(new Set());
+    }
+  }, [strategies, strategyFilter]);
+
   const navigateToProjects = (strategyId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setLocation(`/projects?strategyId=${strategyId}`);
@@ -268,7 +290,7 @@ export default function Strategies() {
                 data-testid="input-search-strategies"
               />
             </div>
-            <Select value={strategyFilter} onValueChange={setStrategyFilter}>
+            <Select value={strategyFilter} onValueChange={handleStrategyFilterChange}>
               <SelectTrigger className="w-48" data-testid="select-strategy-filter">
                 <Target className="w-4 h-4 mr-2" />
                 <SelectValue placeholder="Filter by strategy" />
