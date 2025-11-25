@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -68,6 +69,15 @@ type Project = {
   title: string;
   strategyId: string;
   createdAt: string;
+  accountableLeaders: string; // JSON array of user IDs
+};
+
+type User = {
+  id: string;
+  name: string;
+  firstName?: string;
+  lastName?: string;
+  role: string;
 };
 
 type Action = {
@@ -111,6 +121,10 @@ export default function Actions() {
 
   const { data: projects } = useQuery({
     queryKey: ["/api/projects"],
+  });
+
+  const { data: users } = useQuery({
+    queryKey: ["/api/users"],
   });
 
   // Initialize all strategies as collapsed by default when strategies data loads
@@ -327,7 +341,7 @@ export default function Actions() {
 
   // Group actions by project for visual hierarchy
   const groupActionsByProject = (actions: Action[]) => {
-    const groups: { projectId: string | null; projectTitle: string; actions: Action[] }[] = [];
+    const groups: { projectId: string | null; projectTitle: string; project: Project | null; actions: Action[] }[] = [];
     const projectMap = new Map<string | null, Action[]>();
     
     // Group actions
@@ -339,14 +353,21 @@ export default function Actions() {
       projectMap.get(key)!.push(action);
     });
     
-    // Convert to array with project titles
+    // Convert to array with project titles and full project data
     projectMap.forEach((projectActions, projectId) => {
+      let fullProject: Project | null = null;
       const projectTitle = projectId 
-        ? projectActions[0].project?.title || "Unknown Project"
+        ? (() => {
+            const foundProject = (projects as Project[])?.find(p => p.id === projectId);
+            fullProject = foundProject || null;
+            return foundProject?.title || "Unknown Project";
+          })()
         : "Not Linked to Project";
+      
       groups.push({
         projectId,
         projectTitle,
+        project: fullProject,
         actions: projectActions.sort((a, b) => 
           new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         )
@@ -394,6 +415,17 @@ export default function Actions() {
     return [...strategyProjects].sort((a, b) => 
       new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     );
+  };
+
+  // Helper function to get accountable leaders for a project
+  const getAccountableLeaders = (project: Project | null): User[] => {
+    if (!project) return [];
+    try {
+      const leaderIds = JSON.parse(project.accountableLeaders || "[]");
+      return (users as User[])?.filter((user) => leaderIds.includes(user.id)) || [];
+    } catch {
+      return [];
+    }
   };
 
   if (actionsLoading) {
@@ -576,14 +608,36 @@ export default function Actions() {
                               No actions established
                             </p>
                           ) : (
-                            groupActionsByProject(filteredActions).map((group) => (
-                              <div key={group.projectId || 'unlinked'} className="space-y-3">
-                                {/* Project Header with indentation */}
-                                <div className="ml-4">
-                                  <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                                    {group.projectTitle}
-                                  </h4>
-                                </div>
+                            groupActionsByProject(filteredActions).map((group) => {
+                              const accountableLeaders = getAccountableLeaders(group.project);
+                              
+                              return (
+                                <div key={group.projectId || 'unlinked'} className="space-y-3">
+                                  {/* Project Header with indentation */}
+                                  <div className="ml-4 flex items-center space-x-3">
+                                    <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                                      {group.projectTitle}
+                                    </h4>
+                                    
+                                    {/* Accountable Leaders */}
+                                    {group.project && (
+                                      <div className="flex items-center space-x-2">
+                                        {accountableLeaders.length > 0 ? (
+                                          accountableLeaders.map((leader) => (
+                                            <Avatar key={leader.id} className="w-6 h-6">
+                                              <AvatarFallback className="bg-purple-500 text-white text-xs">
+                                                {leader.firstName?.[0]}{leader.lastName?.[0]}
+                                              </AvatarFallback>
+                                            </Avatar>
+                                          ))
+                                        ) : (
+                                          <span className="text-xs text-gray-500 dark:text-gray-400 italic">
+                                            Assign a leader at the project level.
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
                                 
                                 {/* Actions under this project with further indentation */}
                                 <div className="ml-8 space-y-4">
@@ -745,7 +799,8 @@ export default function Actions() {
                                   })}
                                 </div>
                               </div>
-                            ))
+                            );
+                            })
                           )}
                         </div>
                       </CardContent>
