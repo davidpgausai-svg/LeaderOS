@@ -26,6 +26,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
   FileText,
   Calendar,
   Plus,
@@ -331,6 +338,95 @@ export default function MeetingNotes() {
         note={editingNote}
       />
       
+      {/* View Meeting Note Modal */}
+      <Dialog open={isViewOpen} onOpenChange={(open) => {
+        setIsViewOpen(open);
+        if (!open) setViewingNote(null);
+      }}>
+        <DialogContent className="max-w-3xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              {viewingNote?.title}
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[70vh]">
+            {viewingNote && (
+              <div className="space-y-6 p-1">
+                <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    {format(new Date(viewingNote.meetingDate), "MMMM d, yyyy")}
+                  </div>
+                  {viewingNote.strategy && (
+                    <Badge 
+                      variant="outline"
+                      style={{ 
+                        borderColor: viewingNote.strategy.colorCode,
+                        color: viewingNote.strategy.colorCode 
+                      }}
+                    >
+                      {viewingNote.strategy.title}
+                    </Badge>
+                  )}
+                </div>
+
+                {viewingNote.selectedProjectIds && (() => {
+                  try {
+                    const projectIds = JSON.parse(viewingNote.selectedProjectIds) as string[];
+                    if (projectIds.length === 0) return null;
+                    return (
+                      <div>
+                        <h4 className="font-semibold mb-2 text-gray-900 dark:text-white">Selected Projects</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {projectIds.map((projectId: string) => {
+                            const project = (projects as Project[])?.find(p => p.id === projectId);
+                            return project ? (
+                              <Badge key={projectId} variant="secondary">
+                                {project.title}
+                              </Badge>
+                            ) : null;
+                          })}
+                        </div>
+                      </div>
+                    );
+                  } catch { return null; }
+                })()}
+
+                {viewingNote.selectedActionIds && (() => {
+                  try {
+                    const actionIds = JSON.parse(viewingNote.selectedActionIds) as string[];
+                    if (actionIds.length === 0) return null;
+                    return (
+                      <div>
+                        <h4 className="font-semibold mb-2 text-gray-900 dark:text-white">Selected Actions</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {actionIds.map((actionId: string) => {
+                            const action = (actions as Action[])?.find(a => a.id === actionId);
+                            return action ? (
+                              <Badge key={actionId} variant="outline">
+                                {action.title}
+                              </Badge>
+                            ) : null;
+                          })}
+                        </div>
+                      </div>
+                    );
+                  } catch { return null; }
+                })()}
+
+                <div>
+                  <h4 className="font-semibold mb-2 text-gray-900 dark:text-white">Notes</h4>
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 whitespace-pre-wrap text-gray-700 dark:text-gray-300">
+                    {viewingNote.notes || "No notes added."}
+                  </div>
+                </div>
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
       {/* Hidden print view */}
       {printNote && (
         <div ref={printRef} className="hidden print:block">
