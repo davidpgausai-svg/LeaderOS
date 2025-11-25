@@ -10,7 +10,7 @@ app.use((req, res, next) => {
   // Content Security Policy
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://ep-lucky-haze-adzxnn4p.c-2.us-east-1.aws.neon.tech wss://ep-lucky-haze-adzxnn4p.c-2.us-east-1.aws.neon.tech;"
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://ep-lucky-haze-adzxnn4p.c-2.us-east-1.aws.neon.tech wss://ep-lucky-haze-adzxnn4p.c-2.us-east-1.aws.neon.tech; frame-src https://www.youtube.com;"
   );
   
   // Prevent clickjacking
