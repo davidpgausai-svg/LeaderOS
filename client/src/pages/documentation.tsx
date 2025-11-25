@@ -209,11 +209,18 @@ export default function Documentation() {
                       assign accountable leaders, and track progress.
                     </p>
 
-                    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mt-4">
-                      <p className="text-sm text-gray-600 dark:text-gray-400 italic">
-                        📝 Add your custom content here: Explain project creation, accountable leaders, barriers,
-                        communication URLs, and how projects roll up to strategies.
-                      </p>
+                    <div className="mt-4">
+                      <div className="aspect-video w-full max-w-2xl">
+                        <iframe
+                          className="w-full h-full rounded-lg"
+                          src="https://www.youtube.com/embed/qQyGC-Fk9fw?si=9PDl6m1_Pb9KUfjK"
+                          title="Projects Guide Video"
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                          referrerPolicy="strict-origin-when-cross-origin"
+                          allowFullScreen
+                        ></iframe>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
