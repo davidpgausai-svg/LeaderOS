@@ -95,14 +95,17 @@ export default function Documentation() {
                       to learn about all features.
                     </p>
 
-                    <div className="mt-4 rounded-lg overflow-hidden">
-                      <iframe
-                        style={{ width: '100%', height: '500px', border: 'none' }}
-                        src="https://www.canva.com/design/DAG5qUBx5pc/WHjTeHjS3Hyp34uEj8O8Rw/watch?utm_content=DAG5qUBx5pc&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h4e0992992d"
-                        allowFullScreen
-                        loading="lazy"
-                        title="Getting Started Video"
-                      ></iframe>
+                    <div className="mt-4">
+                      <a
+                        href="https://www.canva.com/design/DAG5qUBx5pc/WHjTeHjS3Hyp34uEj8O8Rw/watch?utm_content=DAG5qUBx5pc&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h4e0992992d"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-white font-medium rounded-lg hover:opacity-90 transition-opacity"
+                        data-testid="link-canva-video"
+                      >
+                        <Video className="w-5 h-5" />
+                        Watch Getting Started Video
+                      </a>
                     </div>
                   </div>
                 </CardContent>
