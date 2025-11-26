@@ -4,6 +4,8 @@ This guide explains how to set up and maintain your StrategicFlow instance.
 
 ---
 
+IF YOU MAKE A MAJOR DATABASE CHANGE TO THE APP, YOU MUST RUN the command: 'npx drizzle-kit generate' in the SHELL
+
 ## ⚠️ CRITICAL: Each Instance Needs Its Own Database
 
 **This is the most important step.** When you fork or import this project from GitHub, your instance may inherit the MASTER's database connection. This means:
@@ -19,7 +21,10 @@ This guide explains how to set up and maintain your StrategicFlow instance.
 ## First-Time Setup (New Instances)
 
 ### Step 1: Provision Your Own Database (REQUIRED)
-
+*David's instructions are to REMIX THE MASTER ExecPlan app. Go into the remixed app
+and in the remixed app go to secrets. In secrets delete the database URL secret. 
+Then go to the database tab and manually create a database. Then exit. 
+Next go the preview tab and login. The databases migrate and everything works as expected.
 1. In your Replit instance, click the **Tools** icon in the sidebar
 2. Select **Database** (or search for "PostgreSQL")
 3. Click **Create Database** to provision a new PostgreSQL database
