@@ -15,6 +15,13 @@
       "when": 1764124909090,
       "tag": "0001_eager_prowler",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1764125543897,
+      "tag": "0002_stiff_kinsey_walden",
+      "breakpoints": true
     }
   ]
 }
