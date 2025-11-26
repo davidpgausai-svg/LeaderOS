@@ -100,130 +100,130 @@ export function FrameworkCard({
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Goal Section */}
-        <div className="space-y-2">
+        <div className="space-y-1">
           <div className="flex items-center space-x-2">
             <Target className="w-4 h-4" style={{ color: colorCode }} />
             <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">GOAL</span>
           </div>
-          <Collapsible
-            open={expandedGoal}
-            onOpenChange={setExpandedGoal}
-          >
-            <CollapsibleTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="w-full flex items-center justify-between text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-2"
-                data-testid="button-toggle-goal"
-              >
-                <span className="text-xs font-semibold">READ GOAL</span>
-                {expandedGoal ? (
-                  <ChevronUp className="h-3 w-3" />
-                ) : (
-                  <ChevronDown className="h-3 w-3" />
-                )}
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="mt-2">
-              <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                <p className="text-sm text-gray-900 dark:text-white font-medium leading-relaxed">
-                  {goal}
-                </p>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </div>
-
-        {/* Goal Description Section */}
-        <div className="space-y-2">
-          <Collapsible
-            open={expandedDescription}
-            onOpenChange={setExpandedDescription}
-          >
-            <CollapsibleTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="w-full flex items-center justify-between text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-2"
-                data-testid="button-toggle-description"
-              >
-                <span className="text-xs font-semibold">GOAL DESCRIPTION</span>
-                {expandedDescription ? (
-                  <ChevronUp className="h-3 w-3" />
-                ) : (
-                  <ChevronDown className="h-3 w-3" />
-                )}
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="mt-2">
-              <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                  {description}
-                </p>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </div>
-
-        {/* Change Continuum Section */}
-        <Collapsible
-          open={expandedContinuum}
-          onOpenChange={setExpandedContinuum}
-        >
-          <CollapsibleTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="w-full flex items-center justify-between text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-2"
-              data-testid="button-toggle-continuum"
+          
+          {/* Collapsible dropdowns with indentation and reduced spacing */}
+          <div className="pl-6 space-y-1">
+            <Collapsible
+              open={expandedGoal}
+              onOpenChange={setExpandedGoal}
             >
-              <span className="text-xs font-semibold">CHANGE CONTINUUM</span>
-              {expandedContinuum ? (
-                <ChevronUp className="h-3 w-3" />
-              ) : (
-                <ChevronDown className="h-3 w-3" />
-              )}
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="mt-2 space-y-2">
-            <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
-              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Case for Change</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">{caseForChange || "To be defined"}</div>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
-              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Vision Statement</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">{visionStatement || "To be defined"}</div>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
-              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Success Metrics</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">{successMetrics || "To be defined"}</div>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
-              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Stakeholder Map</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">{stakeholderMap || "To be defined"}</div>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
-              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Readiness Rating (RAG)</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">{readinessRating || "To be defined"}</div>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
-              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Risk Exposure Rating</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">{riskExposureRating || "To be defined"}</div>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
-              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Change Champion Assignment</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">{changeChampionAssignment || "To be defined"}</div>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
-              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Reinforcement Plan</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">{reinforcementPlan || "To be defined"}</div>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
-              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Benefits Realization Plan</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">{benefitsRealizationPlan || "To be defined"}</div>
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
+              <CollapsibleTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="w-full flex items-center justify-between text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-2 py-1 h-auto"
+                  data-testid="button-toggle-goal"
+                >
+                  <span className="text-xs font-semibold">READ GOAL</span>
+                  {expandedGoal ? (
+                    <ChevronUp className="h-3 w-3" />
+                  ) : (
+                    <ChevronDown className="h-3 w-3" />
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-1">
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                  <p className="text-sm text-gray-900 dark:text-white font-medium leading-relaxed">
+                    {goal}
+                  </p>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+
+            <Collapsible
+              open={expandedDescription}
+              onOpenChange={setExpandedDescription}
+            >
+              <CollapsibleTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="w-full flex items-center justify-between text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-2 py-1 h-auto"
+                  data-testid="button-toggle-description"
+                >
+                  <span className="text-xs font-semibold">GOAL DESCRIPTION</span>
+                  {expandedDescription ? (
+                    <ChevronUp className="h-3 w-3" />
+                  ) : (
+                    <ChevronDown className="h-3 w-3" />
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-1">
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                    {description}
+                  </p>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+
+            <Collapsible
+              open={expandedContinuum}
+              onOpenChange={setExpandedContinuum}
+            >
+              <CollapsibleTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="w-full flex items-center justify-between text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-2 py-1 h-auto"
+                  data-testid="button-toggle-continuum"
+                >
+                  <span className="text-xs font-semibold">CHANGE CONTINUUM</span>
+                  {expandedContinuum ? (
+                    <ChevronUp className="h-3 w-3" />
+                  ) : (
+                    <ChevronDown className="h-3 w-3" />
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-1 space-y-2">
+                <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
+                  <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Case for Change</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">{caseForChange || "To be defined"}</div>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
+                  <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Vision Statement</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">{visionStatement || "To be defined"}</div>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
+                  <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Success Metrics</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">{successMetrics || "To be defined"}</div>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
+                  <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Stakeholder Map</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">{stakeholderMap || "To be defined"}</div>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
+                  <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Readiness Rating (RAG)</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">{readinessRating || "To be defined"}</div>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
+                  <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Risk Exposure Rating</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">{riskExposureRating || "To be defined"}</div>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
+                  <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Change Champion Assignment</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">{changeChampionAssignment || "To be defined"}</div>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
+                  <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Reinforcement Plan</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">{reinforcementPlan || "To be defined"}</div>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
+                  <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Benefits Realization Plan</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">{benefitsRealizationPlan || "To be defined"}</div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+        </div>
 
         {/* Projects Section */}
         <div className="space-y-3">
