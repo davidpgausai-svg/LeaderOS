@@ -77,12 +77,16 @@ export default function Timeline() {
           endDate: new Date(project.dueDate),
           status: project.status,
         })),
-        actionMarkers: strategyActions.map(action => ({
-          id: action.id,
-          title: action.title,
-          date: new Date(action.dueDate!),
-          status: action.status,
-        })),
+        actionMarkers: strategyActions.map(action => {
+          const parentProject = strategyProjects.find(p => p.id === action.projectId);
+          return {
+            id: action.id,
+            title: action.title,
+            date: new Date(action.dueDate!),
+            status: action.status,
+            projectName: parentProject?.title || 'Unknown Project',
+          };
+        }),
       };
     });
 
@@ -392,12 +396,12 @@ export default function Timeline() {
                                 />
                                 
                                 {/* Action Tooltip */}
-                                <div className={`absolute ${frameworkIndex === 0 ? 'top-10' : 'bottom-10'} left-1/2 transform -translate-x-1/2 hidden group-hover:block z-[100] w-48`}>
+                                <div className={`absolute ${frameworkIndex === 0 ? 'top-10' : 'bottom-10'} left-1/2 transform -translate-x-1/2 hidden group-hover:block z-[100] w-56`}>
                                   <div
                                     className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border-2 p-3"
                                     style={{ borderColor: framework.colorCode }}
                                   >
-                                    <div className="flex items-center space-x-1 mb-1">
+                                    <div className="flex items-center flex-wrap gap-1 mb-2">
                                       <span className="px-2 py-0.5 rounded text-xs font-medium bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300">
                                         Action
                                       </span>
@@ -412,6 +416,13 @@ export default function Timeline() {
                                       >
                                         {action.status}
                                       </span>
+                                    </div>
+                                    {/* Project Name Pill */}
+                                    <div 
+                                      className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white mb-2 max-w-full"
+                                      style={{ backgroundColor: framework.colorCode }}
+                                    >
+                                      <span className="truncate">{action.projectName}</span>
                                     </div>
                                     <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
                                       {action.title}
