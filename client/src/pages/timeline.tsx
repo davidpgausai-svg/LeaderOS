@@ -313,7 +313,7 @@ export default function Timeline() {
                       </div>
 
                       {/* Timeline Bar */}
-                      <div className={`flex-shrink-0 relative py-6 px-4 overflow-visible ${framework.status === 'Archived' ? 'opacity-50' : ''}`} style={{ width: `${totalPixelWidth}px`, minHeight: `${Math.max(120, 60 + (framework.milestones.length * 24))}px` }}>
+                      <div className={`flex-shrink-0 relative px-4 overflow-visible ${framework.status === 'Archived' ? 'opacity-50' : ''}`} style={{ width: `${totalPixelWidth}px` }}>
                         {/* Today Line - drawn per row */}
                         {!todayInfo.isOutsideRange && (
                           <div
@@ -325,173 +325,178 @@ export default function Timeline() {
                           />
                         )}
 
-                        {/* Framework Duration Bar */}
-                        <div
-                          className="absolute top-1/2 h-8 rounded-lg transform -translate-y-1/2 flex items-center justify-center shadow-sm"
-                          style={{
-                            left: `${getPositionPixels(framework.startDate)}px`,
-                            width: `${getPositionPixels(framework.targetDate) - getPositionPixels(framework.startDate) + PIXELS_PER_DAY}px`,
-                            backgroundColor: framework.colorCode,
-                            opacity: framework.status === 'Archived' ? 0.1 : 0.2,
-                          }}
-                        />
+                        {/* Strategy Section: Duration Bar + Start/End Markers + Action Lines */}
+                        <div className="relative h-16 py-2">
+                          {/* Framework Duration Bar */}
+                          <div
+                            className="absolute top-1/2 h-8 rounded-lg transform -translate-y-1/2 flex items-center justify-center shadow-sm"
+                            style={{
+                              left: `${getPositionPixels(framework.startDate)}px`,
+                              width: `${getPositionPixels(framework.targetDate) - getPositionPixels(framework.startDate) + PIXELS_PER_DAY}px`,
+                              backgroundColor: framework.colorCode,
+                              opacity: framework.status === 'Archived' ? 0.1 : 0.2,
+                            }}
+                          />
 
-                        {/* Start and End Markers */}
-                        <div
-                          className="absolute top-1/2 transform -translate-y-1/2"
-                          style={{ left: `${getPositionPixels(framework.startDate)}px` }}
-                        >
-                          <div className="relative">
-                            <div
-                              className="w-3 h-3 rounded-full border-2 border-white dark:border-gray-900 shadow"
-                              style={{ backgroundColor: framework.colorCode }}
-                            />
-                            <div className="absolute top-5 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
-                              <span className="text-xs text-gray-600 dark:text-gray-400">
-                                {format(framework.startDate, 'MMM dd')}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div
-                          className="absolute top-1/2 transform -translate-y-1/2"
-                          style={{ left: `${getPositionPixels(framework.targetDate)}px` }}
-                        >
-                          <div className="relative">
-                            <div
-                              className="w-3 h-3 rounded-full border-2 border-white dark:border-gray-900 shadow"
-                              style={{ backgroundColor: framework.colorCode }}
-                            />
-                            <div className="absolute top-5 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
-                              <span className="text-xs text-gray-600 dark:text-gray-400">
-                                {format(framework.targetDate, 'MMM dd')}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Project Pills (Horizontal Bars) */}
-                        {framework.milestones.map((milestone, milestoneIndex) => {
-                          const startPixels = getPositionPixels(milestone.startDate);
-                          const endPixels = getPositionPixels(milestone.endDate);
-                          const leftPx = Math.min(startPixels, endPixels);
-                          const pillWidth = Math.max(Math.abs(endPixels - startPixels) + PIXELS_PER_DAY, 40);
-                          
-                          return (
-                            <div
-                              key={milestone.id}
-                              className="absolute group"
-                              data-testid={`pill-project-${milestone.id}`}
-                              style={{ 
-                                left: `${leftPx}px`,
-                                top: `${24 + (milestoneIndex * 22)}px`,
-                                width: `${pillWidth}px`,
-                              }}
-                            >
-                              {/* Project Pill Bar */}
+                          {/* Start Marker */}
+                          <div
+                            className="absolute top-1/2 transform -translate-y-1/2"
+                            style={{ left: `${getPositionPixels(framework.startDate)}px` }}
+                          >
+                            <div className="relative">
                               <div
-                                className="h-6 rounded-full cursor-pointer hover:scale-[1.02] transition-transform shadow-md border-2 border-white/40 dark:border-gray-700/60 flex items-center overflow-hidden"
-                                style={{
-                                  backgroundColor: framework.colorCode,
-                                }}
-                              >
-                                <span className="text-[10px] font-semibold text-white truncate px-3 drop-shadow-sm">
-                                  {milestone.title}
+                                className="w-3 h-3 rounded-full border-2 border-white dark:border-gray-900 shadow"
+                                style={{ backgroundColor: framework.colorCode }}
+                              />
+                              <div className="absolute top-5 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+                                <span className="text-xs text-gray-600 dark:text-gray-400">
+                                  {format(framework.startDate, 'MMM dd')}
                                 </span>
                               </div>
-                              
-                              {/* Tooltip on Hover */}
-                              <div className={`absolute ${frameworkIndex === 0 ? 'top-7' : 'bottom-7'} left-1/2 transform -translate-x-1/2 hidden group-hover:block z-50 w-52`}>
-                                <div
-                                  className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border-2 p-3"
-                                  style={{ borderColor: framework.colorCode }}
-                                >
-                                  <div className="flex items-center space-x-1 mb-1">
-                                    <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
-                                      Project
-                                    </span>
-                                    <span
-                                      className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                        milestone.status === 'C'
-                                          ? 'bg-green-100 text-green-700'
-                                          : milestone.status === 'OT'
-                                          ? 'bg-yellow-100 text-yellow-700'
-                                          : milestone.status === 'OH'
-                                          ? 'bg-red-100 text-red-700'
-                                          : milestone.status === 'B'
-                                          ? 'bg-orange-100 text-orange-700'
-                                          : 'bg-gray-100 text-gray-700'
-                                      }`}
-                                    >
-                                      {milestone.status}
-                                    </span>
-                                  </div>
-                                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-                                    {milestone.title}
-                                  </h4>
-                                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                                    {format(milestone.startDate, 'MMM dd')} - {format(milestone.endDate, 'MMM dd, yyyy')}
-                                  </p>
-                                </div>
-                              </div>
                             </div>
-                          );
-                        })}
+                          </div>
 
-                        {/* Action Markers (Smaller Line Markers) */}
-                        {framework.actionMarkers.map((action) => {
-                          const actionPixels = getPositionPixels(action.date);
-                          
-                          return (
-                            <div
-                              key={action.id}
-                              className="absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2 group"
-                              style={{ left: `${actionPixels}px` }}
-                            >
-                              {/* Action Line Marker */}
+                          {/* End Marker */}
+                          <div
+                            className="absolute top-1/2 transform -translate-y-1/2"
+                            style={{ left: `${getPositionPixels(framework.targetDate)}px` }}
+                          >
+                            <div className="relative">
                               <div
-                                className="w-0.5 h-6 cursor-pointer hover:h-8 transition-all shadow-sm"
-                                style={{
-                                  backgroundColor: framework.colorCode,
-                                }}
+                                className="w-3 h-3 rounded-full border-2 border-white dark:border-gray-900 shadow"
+                                style={{ backgroundColor: framework.colorCode }}
                               />
-                              
-                              {/* Tooltip on Hover */}
-                              <div className={`absolute ${frameworkIndex === 0 ? 'top-10' : 'bottom-10'} left-1/2 transform -translate-x-1/2 hidden group-hover:block z-50 w-48`}>
-                                <div
-                                  className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border-2 p-3"
-                                  style={{ borderColor: framework.colorCode }}
-                                >
-                                  <div className="flex items-center space-x-1 mb-1">
-                                    <span className="px-2 py-0.5 rounded text-xs font-medium bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300">
-                                      Action
-                                    </span>
-                                    <span
-                                      className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                        action.status === 'achieved'
-                                          ? 'bg-green-100 text-green-700'
-                                          : action.status === 'in_progress'
-                                          ? 'bg-blue-100 text-blue-700'
-                                          : action.status === 'at_risk'
-                                          ? 'bg-red-100 text-red-700'
-                                          : 'bg-gray-100 text-gray-700'
-                                      }`}
-                                    >
-                                      {action.status === 'in_progress' ? 'In Progress' : action.status === 'achieved' ? 'Achieved' : action.status === 'at_risk' ? 'At Risk' : 'Not Started'}
-                                    </span>
-                                  </div>
-                                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-                                    {action.title}
-                                  </h4>
-                                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                                    Due: {format(action.date, 'MMM dd, yyyy')}
-                                  </p>
-                                </div>
+                              <div className="absolute top-5 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+                                <span className="text-xs text-gray-600 dark:text-gray-400">
+                                  {format(framework.targetDate, 'MMM dd')}
+                                </span>
                               </div>
                             </div>
-                          );
-                        })}
+                          </div>
+
+                          {/* Action Markers (Vertical Lines) */}
+                          {framework.actionMarkers.map((action) => {
+                            const actionPixels = getPositionPixels(action.date);
+                            
+                            return (
+                              <div
+                                key={action.id}
+                                className="absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2 group"
+                                style={{ left: `${actionPixels}px` }}
+                              >
+                                <div
+                                  className="w-0.5 h-6 cursor-pointer hover:h-8 transition-all shadow-sm"
+                                  style={{
+                                    backgroundColor: framework.colorCode,
+                                  }}
+                                />
+                                
+                                {/* Action Tooltip */}
+                                <div className={`absolute ${frameworkIndex === 0 ? 'top-10' : 'bottom-10'} left-1/2 transform -translate-x-1/2 hidden group-hover:block z-50 w-48`}>
+                                  <div
+                                    className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border-2 p-3"
+                                    style={{ borderColor: framework.colorCode }}
+                                  >
+                                    <div className="flex items-center space-x-1 mb-1">
+                                      <span className="px-2 py-0.5 rounded text-xs font-medium bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300">
+                                        Action
+                                      </span>
+                                      <span
+                                        className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                          action.status === 'achieved'
+                                            ? 'bg-green-100 text-green-700'
+                                            : action.status === 'in_progress'
+                                            ? 'bg-blue-100 text-blue-700'
+                                            : 'bg-gray-100 text-gray-700'
+                                        }`}
+                                      >
+                                        {action.status}
+                                      </span>
+                                    </div>
+                                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                                      {action.title}
+                                    </h4>
+                                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                                      Due: {format(action.date, 'MMM dd, yyyy')}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Projects Section: Pills stacked below strategy bar */}
+                        {framework.milestones.length > 0 && (
+                          <div className="relative pb-2" style={{ minHeight: `${framework.milestones.length * 28 + 8}px` }}>
+                            {framework.milestones.map((milestone, milestoneIndex) => {
+                              const startPixels = getPositionPixels(milestone.startDate);
+                              const endPixels = getPositionPixels(milestone.endDate);
+                              const leftPx = Math.min(startPixels, endPixels);
+                              const pillWidth = Math.max(Math.abs(endPixels - startPixels) + PIXELS_PER_DAY, 40);
+                              
+                              return (
+                                <div
+                                  key={milestone.id}
+                                  className="absolute group"
+                                  data-testid={`pill-project-${milestone.id}`}
+                                  style={{ 
+                                    left: `${leftPx}px`,
+                                    top: `${milestoneIndex * 28}px`,
+                                    width: `${pillWidth}px`,
+                                  }}
+                                >
+                                  {/* Project Pill Bar */}
+                                  <div
+                                    className="h-6 rounded-full cursor-pointer hover:scale-[1.02] transition-transform shadow-md border-2 border-white/40 dark:border-gray-700/60 flex items-center overflow-hidden"
+                                    style={{
+                                      backgroundColor: framework.colorCode,
+                                    }}
+                                  >
+                                    <span className="text-[10px] font-semibold text-white truncate px-3 drop-shadow-sm">
+                                      {milestone.title}
+                                    </span>
+                                  </div>
+                                  
+                                  {/* Tooltip on Hover */}
+                                  <div className="absolute top-7 left-1/2 transform -translate-x-1/2 hidden group-hover:block z-50 w-52">
+                                    <div
+                                      className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border-2 p-3"
+                                      style={{ borderColor: framework.colorCode }}
+                                    >
+                                      <div className="flex items-center space-x-1 mb-1">
+                                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
+                                          Project
+                                        </span>
+                                        <span
+                                          className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                            milestone.status === 'C'
+                                              ? 'bg-green-100 text-green-700'
+                                              : milestone.status === 'OT'
+                                              ? 'bg-yellow-100 text-yellow-700'
+                                              : milestone.status === 'OH'
+                                              ? 'bg-red-100 text-red-700'
+                                              : milestone.status === 'B'
+                                              ? 'bg-orange-100 text-orange-700'
+                                              : 'bg-gray-100 text-gray-700'
+                                          }`}
+                                        >
+                                          {milestone.status}
+                                        </span>
+                                      </div>
+                                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                                        {milestone.title}
+                                      </h4>
+                                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                                        {format(milestone.startDate, 'MMM dd')} - {format(milestone.endDate, 'MMM dd, yyyy')}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
