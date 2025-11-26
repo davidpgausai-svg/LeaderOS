@@ -18,7 +18,15 @@ The frontend uses React 18 with TypeScript, Wouter for routing, Zustand for stat
 The backend is a REST API built with Express.js and TypeScript. It utilizes an abstracted storage interface, Zod for schema validation, and centralized error handling.
 
 ### Data Storage
-The application employs Drizzle ORM for type-safe PostgreSQL interactions. Drizzle migrations manage schema versioning, and initial data seeding occurs on the first run.
+The application employs Drizzle ORM for type-safe PostgreSQL interactions. Drizzle migrations manage schema versioning with automatic migration on startup.
+
+### Multi-Instance Migration System
+The application supports deployment across multiple Replit instances, each with its own database. Key features:
+- **Automatic migrations on startup** - `server/migrate.ts` runs Drizzle migrations before the server starts
+- **Advisory locking** - PostgreSQL advisory lock (key: 12345) prevents concurrent migration conflicts
+- **Migration journal seeding** - `scripts/seed-migration-journal.ts` helps existing instances adopt the migration system
+- **Instance operator guide** - `INSTANCE_OPERATOR_GUIDE.md` documents the git pull → restart workflow
+- **Schema changes workflow**: Modify `shared/schema.ts` → Run `npx drizzle-kit generate` → Commit migrations → Instances auto-apply on restart
 
 ### Authentication and Authorization
 A role-based access control system integrates Replit OpenID Connect for authentication. Roles include Administrator, Co-Lead, View, and SME (Subject Matter Expert), with permissions enforced at the API level based on user roles and strategy assignments. SME users are explicitly blocked from logging in as they exist solely for tracking and assignment purposes. Administrators manage user roles and strategy assignments, ensuring data isolation.
