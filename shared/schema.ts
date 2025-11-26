@@ -326,3 +326,10 @@ export const insertAiChatConversationSchema = createInsertSchema(aiChatConversat
 
 export type InsertAiChatConversation = z.infer<typeof insertAiChatConversationSchema>;
 export type AiChatConversation = typeof aiChatConversations.$inferSelect;
+
+// Test table for migration testing - can be removed after testing
+export const testTable = pgTable("test_migration", {
+  id: serial("id").primaryKey(),
+  name: text("name"),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
