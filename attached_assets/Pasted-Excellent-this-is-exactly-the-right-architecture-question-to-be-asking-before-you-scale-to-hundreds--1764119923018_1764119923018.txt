@@ -1,0 +1,397 @@
+Excellent—this is exactly the right architecture question to be asking before you scale to hundreds of instances.
+
+I’ll walk you through **Option B: one DB per instance, automated schema updates**, step by step, using a concrete stack:
+
+> **Assumed stack for this walkthrough**
+>
+> * Node + TypeScript
+> * Postgres (Replit Postgres / Neon / Supabase / etc.)
+> * **Prisma ORM** for migrations & schema management
+
+If you’re on a different ORM, the principles are identical; you’d just swap Prisma commands for your tool of choice.
+
+---
+
+## 0. Big-picture architecture
+
+You have:
+
+* **MASTER Replit app** → DB_Master
+* **Instance-1 Replit app** → DB_1
+* **Instance-2 Replit app** → DB_2
+* …
+* **Instance-N Replit app** → DB_N
+
+You want:
+
+1. **Each instance keeps its own database** (data isolation).
+2. When you **add/change tables in MASTER**, you want each instance to **self-upgrade** its schema after a `git pull`, without you logging into each DB.
+
+The way to do this is:
+
+* All schema changes are expressed as **migrations stored in Git**.
+* Each app instance, when it starts (or when you run a script), runs **“pending migrations”** against *its own* DB.
+* Prisma tracks which migrations are already applied in a **_prisma_migrations** table.
+
+So instead of you manually saying “create this table in 200 databases,” your **code and migrations** do it for you.
+
+---
+
+## 1. Set up Prisma in your MASTER app
+
+If Prisma is not already configured, do this **in the MASTER Replit instance** (which you treat as your “golden source”):
+
+### 1.1 Install Prisma & the client
+
+```bash
+npm install prisma @prisma/client
+npx prisma init
+```
+
+This will create:
+
+* **`prisma/schema.prisma`** – your DB schema file
+* **`.env`** – with a `DATABASE_URL` entry
+
+Update `.env` in MASTER to point to **DB_Master**:
+
+```env
+DATABASE_URL="postgresql://user:password@host:port/db_name?schema=public"
+```
+
+(Use Replit Secrets instead of committing real credentials; `.env` should be in `.gitignore`.)
+
+---
+
+## 2. Model your schema in Prisma
+
+In `prisma/schema.prisma`, define your tables as Prisma models. For example:
+
+```prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Strategy {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  projects    Project[]
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  strategyId  String
+  name        String
+  description String?
+  status      String   @default("planned")
+
+  strategy    Strategy @relation(fields: [strategyId], references: [id])
+  actions     Action[]
+}
+
+model Action {
+  id         String   @id @default(cuid())
+  projectId  String
+  name       String
+  status     String   @default("not_started")
+
+  project    Project  @relation(fields: [projectId], references: [id])
+}
+```
+
+This is your **source-of-truth schema**.
+
+---
+
+## 3. Create your first migration in MASTER
+
+In MASTER, run:
+
+```bash
+npx prisma migrate dev --name init
+```
+
+What this does:
+
+* Compares `schema.prisma` to the actual DB.
+* Creates a **migration folder** under `prisma/migrations/2025xxxxxx_init`.
+* Applies that SQL to **DB_Master**.
+* Creates a `_prisma_migrations` table in DB_Master to track applied migrations.
+
+Commit the new files:
+
+```bash
+git add prisma/migrations prisma/schema.prisma package.json package-lock.json
+git commit -m "Set up Prisma and initial schema"
+git push origin main
+```
+
+Now your **GitHub repo contains both:**
+
+* The current schema definition (`schema.prisma`)
+* The exact SQL migration steps (`prisma/migrations/...`)
+
+This is critical: these migration files are what every other instance will use to “catch up.”
+
+---
+
+## 4. Standardize a migration script
+
+In `package.json`, add migration and start scripts:
+
+```json
+{
+  "scripts": {
+    "dev": "npm run db:migrate && node index.js",
+    "db:migrate": "prisma migrate deploy"
+  }
+}
+```
+
+Key distinction:
+
+* `prisma migrate dev` → used on **MASTER** while *developing* new schema (generates new migrations).
+* `prisma migrate deploy` → used on **instances** (and production) to **apply existing migrations** safely.
+
+In MASTER, you will **almost always use `migrate dev`** to create migrations.
+In each instance, you will **only ever use `migrate deploy`** to apply them.
+
+---
+
+## 5. Configure each instance with its own DB
+
+For each duplicated Replit instance:
+
+1. Ensure it has its **own database** (Replit Postgres, Neon branch, or unique database name).
+2. In that instance, set `DATABASE_URL` in Replit Secrets pointing to that instance’s DB.
+3. Make sure `.env` references the secret (or load the env var however you prefer).
+
+At this point, **each repl has:**
+
+* Same codebase / migrations (after `git pull`).
+* Different `DATABASE_URL` → different physical DB.
+
+---
+
+## 6. How an instance auto-upgrades its schema
+
+Now you introduce the key behavior:
+
+> On startup, each instance runs `npm run db:migrate`.
+
+Because `db:migrate` calls `prisma migrate deploy`, Prisma will:
+
+1. Connect to that instance’s DB via `DATABASE_URL`.
+2. Look at the `_prisma_migrations` table in **that specific DB**.
+3. Compare it with migration folders in `prisma/migrations`.
+4. Apply any **missing** migrations in order.
+
+So, when you:
+
+* Add a new migration in MASTER
+* Push to GitHub
+* Instances run `npm run db:migrate` after a `git pull`
+
+Each DB gets the new tables/columns automatically.
+
+You can wire this in different ways:
+
+### Option 1 – via `npm run dev`
+
+Your `dev` command:
+
+```json
+"dev": "npm run db:migrate && node index.js"
+```
+
+So starting the app (e.g., Replit’s run button) triggers:
+
+1. `npm run db:migrate` → apply schema updates
+2. `node index.js` → start server
+
+### Option 2 – explicit one-time command
+
+You can also instruct yourself:
+
+* After `git pull`, run:
+
+  ```bash
+  npm run db:migrate
+  ```
+* Then run your normal start command.
+
+Operationally, Option 1 is more “fire-and-forget.”
+
+---
+
+## 7. Lifecycle when you add a new table in MASTER
+
+Now let’s walk through the **exact flow** you asked about:
+
+> “If I add a database table in my master do I have to manually add those tables in hundreds of my unique instances?”
+
+With this setup, the answer becomes **no**, as long as you follow this discipline.
+
+### Step 1 – In MASTER: modify Prisma schema
+
+Add a new model in `schema.prisma`, for example an `AuditLog` table:
+
+```prisma
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  entityType String
+  entityId   String
+  action     String
+  payload    Json?
+  createdAt  DateTime @default(now())
+}
+```
+
+### Step 2 – In MASTER: create a migration
+
+Run:
+
+```bash
+npx prisma migrate dev --name add_audit_log
+```
+
+Prisma will:
+
+* Generate a new migration folder:
+
+  * `prisma/migrations/2025xxxxxx_add_audit_log/` with SQL like:
+
+    ```sql
+    CREATE TABLE "AuditLog" (
+      "id" TEXT NOT NULL,
+      "userId" TEXT NOT NULL,
+      "entityType" TEXT NOT NULL,
+      "entityId" TEXT NOT NULL,
+      "action" TEXT NOT NULL,
+      "payload" JSONB,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "AuditLog_pkey" PRIMARY KEY ("id")
+    );
+    ```
+* Apply it **only** to DB_Master.
+* Record it in DB_Master’s `_prisma_migrations` table.
+
+Commit and push:
+
+```bash
+git add prisma/schema.prisma prisma/migrations
+git commit -m "Add AuditLog model and migration"
+git push origin main
+```
+
+Now GitHub holds the **canonical version** of that schema change.
+
+### Step 3 – In each instance: pull and migrate
+
+In each instance (manually or via your process):
+
+```bash
+git pull origin main
+npm run db:migrate
+```
+
+Then:
+
+* Prisma sees: “DB_1 is missing migration `2025xxxxxx_add_audit_log`.”
+* It applies the migration SQL to **DB_1**, creating the `AuditLog` table.
+* Same for DB_2, DB_3, … DB_N when they run the same command.
+
+No manual table creation.
+No unique SQL per instance.
+Just: “code + migrations + `npm run db:migrate`.”
+
+---
+
+## 8. Handling drift and safety
+
+A few best practices to keep this robust as you scale:
+
+1. **Never edit migration SQL after it’s applied in MASTER.**
+
+   * If you need to change the schema, create a new migration.
+2. **Do not run `prisma migrate dev` in instances.**
+
+   * Only in MASTER. Instances should use `migrate deploy` only.
+3. **Back up DBs periodically** (or use the provider’s backup features).
+
+   * You’ll sleep better with snapshots before major schema changes.
+4. **Use feature flags at the app level**
+
+   * If a new table backs a new feature, you may want to keep the feature behind a flag until all instances have migrated.
+
+---
+
+## 9. Replit-specific behaviors and tips
+
+Within Replit:
+
+* **Secrets**: Store `DATABASE_URL` in the Secrets panel (per instance).
+
+* **Run button**: Configure it to use your migration-aware script, for example:
+
+  ```bash
+  npm run dev
+  ```
+
+* **Duplication workflow**:
+
+  1. Duplicate MASTER repl → new repl + new DB.
+  2. Update that repl’s `DATABASE_URL` secret to point to the *new* DB.
+  3. Hit Run (or `npm run dev`), which:
+
+     * Runs `db:migrate` → initializes the schema in that DB.
+     * Starts the app.
+
+For **existing** instances, you’ll simply:
+
+* `git pull`
+* `npm run db:migrate`
+* Start / restart app.
+
+---
+
+## 10. Summary – what you’ve just designed
+
+You’ve effectively built yourself a **mini migration platform**:
+
+* **One DB per instance** for tenant isolation.
+* **One codebase + shared migration history** in GitHub.
+* **Automated schema convergence** via `prisma migrate deploy` on each instance.
+
+So now the operational answer to your original concern is:
+
+> When I add a table in MASTER, do I have to manually add it in hundreds of instances?
+
+With this architecture:
+
+> **No.**
+> You: define the table once in `schema.prisma`, run `migrate dev` in MASTER, commit & push.
+> Each instance: pulls and runs `npm run db:migrate`, and Prisma creates the table in its DB.
+
+---
+
+If you’d like, next step I can:
+
+* Draft a **“Schema Change Playbook”** you could keep in Notion/Confluence for your own use:
+
+  * “Step 1: Edit schema”
+  * “Step 2: Run migration”
+  * “Step 3: Push & notify”
+  * “Step 4: Instance runbook (pull + migrate)”
+
+So you can operationalize this as a standard procedure for Executive Planner and any future products.
