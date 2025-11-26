@@ -63,9 +63,11 @@ async function upsertUser(
   // Always allow the default administrator
   const isDefaultAdmin = userEmail === "dpgaus@outlook.com";
   
-  // Check if user is in the allowed users list
+  // Check if user is in the allowed users list (case-insensitive email matching)
   const allUsers = await storage.getAllUsers();
-  const allowedUser = allUsers.find((u: any) => u.email === userEmail);
+  const allowedUser = allUsers.find((u: any) => 
+    u.email?.toLowerCase() === userEmail?.toLowerCase()
+  );
   
   if (!allowedUser && !isDefaultAdmin) {
     const error = new Error("ACCESS_DENIED");
