@@ -41,7 +41,7 @@ export default function Timeline() {
       allDates.push(new Date(s.startDate), new Date(s.targetDate));
     });
     projects.forEach(t => {
-      allDates.push(new Date(t.dueDate));
+      allDates.push(new Date(t.startDate), new Date(t.dueDate));
     });
     actions.forEach(a => {
       if (a.dueDate) {
@@ -73,7 +73,8 @@ export default function Timeline() {
         milestones: strategyProjects.map(project => ({
           id: project.id,
           title: project.title,
-          date: new Date(project.dueDate),
+          startDate: new Date(project.startDate),
+          endDate: new Date(project.dueDate),
           status: project.status,
         })),
         actionMarkers: strategyActions.map(action => ({
@@ -312,7 +313,7 @@ export default function Timeline() {
                       </div>
 
                       {/* Timeline Bar */}
-                      <div className={`flex-shrink-0 relative py-6 px-4 min-h-[120px] overflow-visible ${framework.status === 'Archived' ? 'opacity-50' : ''}`} style={{ width: `${totalPixelWidth}px` }}>
+                      <div className={`flex-shrink-0 relative py-6 px-4 overflow-visible ${framework.status === 'Archived' ? 'opacity-50' : ''}`} style={{ width: `${totalPixelWidth}px`, minHeight: `${Math.max(120, 60 + (framework.milestones.length * 24))}px` }}>
                         {/* Today Line - drawn per row */}
                         {!todayInfo.isOutsideRange && (
                           <div
@@ -370,27 +371,38 @@ export default function Timeline() {
                           </div>
                         </div>
 
-                        {/* Project Milestones (Large Markers) */}
-                        {framework.milestones.map((milestone) => {
-                          const milestonePixels = getPositionPixels(milestone.date);
+                        {/* Project Pills (Horizontal Bars) */}
+                        {framework.milestones.map((milestone, milestoneIndex) => {
+                          const startPixels = getPositionPixels(milestone.startDate);
+                          const endPixels = getPositionPixels(milestone.endDate);
+                          const leftPx = Math.min(startPixels, endPixels);
+                          const pillWidth = Math.max(Math.abs(endPixels - startPixels) + PIXELS_PER_DAY, 40);
                           
                           return (
                             <div
                               key={milestone.id}
-                              className="absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2 group"
-                              style={{ left: `${milestonePixels}px` }}
+                              className="absolute group"
+                              data-testid={`pill-project-${milestone.id}`}
+                              style={{ 
+                                left: `${leftPx}px`,
+                                top: `${24 + (milestoneIndex * 22)}px`,
+                                width: `${pillWidth}px`,
+                              }}
                             >
-                              {/* Milestone Dot */}
+                              {/* Project Pill Bar */}
                               <div
-                                className="w-4 h-4 rounded-full border-3 border-white dark:border-gray-900 shadow-md cursor-pointer hover:scale-125 transition-transform"
+                                className="h-6 rounded-full cursor-pointer hover:scale-[1.02] transition-transform shadow-md border-2 border-white/40 dark:border-gray-700/60 flex items-center overflow-hidden"
                                 style={{
                                   backgroundColor: framework.colorCode,
-                                  borderWidth: '3px',
                                 }}
-                              />
+                              >
+                                <span className="text-[10px] font-semibold text-white truncate px-3 drop-shadow-sm">
+                                  {milestone.title}
+                                </span>
+                              </div>
                               
                               {/* Tooltip on Hover */}
-                              <div className={`absolute ${frameworkIndex === 0 ? 'top-8' : 'bottom-8'} left-1/2 transform -translate-x-1/2 hidden group-hover:block z-50 w-48`}>
+                              <div className={`absolute ${frameworkIndex === 0 ? 'top-7' : 'bottom-7'} left-1/2 transform -translate-x-1/2 hidden group-hover:block z-50 w-52`}>
                                 <div
                                   className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border-2 p-3"
                                   style={{ borderColor: framework.colorCode }}
@@ -419,7 +431,7 @@ export default function Timeline() {
                                     {milestone.title}
                                   </h4>
                                   <p className="text-xs text-gray-600 dark:text-gray-400">
-                                    Due: {format(milestone.date, 'MMM dd, yyyy')}
+                                    {format(milestone.startDate, 'MMM dd')} - {format(milestone.endDate, 'MMM dd, yyyy')}
                                   </p>
                                 </div>
                               </div>
@@ -520,9 +532,9 @@ export default function Timeline() {
                     <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">Timeline Elements:</p>
                     <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
                       <div>• Small dots = Strategy start/end dates</div>
-                      <div>• Large dots = Projects (hover for details)</div>
+                      <div>• Horizontal pills = Projects (hover for details)</div>
                       <div>• Vertical lines = Actions (hover for details)</div>
-                      <div>• Colored bars = Strategy duration</div>
+                      <div>• Background bar = Strategy duration</div>
                     </div>
                   </div>
                 </div>
