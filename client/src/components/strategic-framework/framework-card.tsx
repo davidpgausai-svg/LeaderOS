@@ -104,7 +104,7 @@ export function FrameworkCard({
             <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">GOAL</span>
           </div>
           <p className="text-sm text-gray-900 dark:text-white font-medium leading-relaxed">
-            {goal}
+            {goal && goal.length > 200 ? `${goal.substring(0, 200)}...` : goal}
           </p>
         </div>
 
