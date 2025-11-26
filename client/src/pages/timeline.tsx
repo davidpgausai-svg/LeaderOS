@@ -439,21 +439,22 @@ export default function Timeline() {
                           );
                         })}
 
-                        {/* Action Markers (Smaller Line Markers) */}
+                        {/* Action Markers (Vertical Line Markers) */}
                         {framework.actionMarkers.map((action) => {
                           const actionPixels = getPositionPixels(action.date);
                           
                           return (
                             <div
                               key={action.id}
-                              className="absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2 group"
+                              className="absolute top-0 bottom-0 transform -translate-x-1/2 group z-20"
                               style={{ left: `${actionPixels}px` }}
                             >
-                              {/* Action Line Marker */}
+                              {/* Action Line Marker - Bold with contrasting style */}
                               <div
-                                className="w-0.5 h-6 cursor-pointer hover:h-8 transition-all shadow-sm"
+                                className="w-1 h-full cursor-pointer hover:w-1.5 transition-all"
                                 style={{
-                                  backgroundColor: framework.colorCode,
+                                  backgroundColor: '#1e293b',
+                                  boxShadow: '0 0 0 1px rgba(255,255,255,0.5), 0 0 4px rgba(0,0,0,0.3)',
                                 }}
                               />
                               
