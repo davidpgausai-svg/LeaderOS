@@ -111,7 +111,7 @@ export function FrameworkCard({
         {/* Description */}
         <div className="space-y-2">
           <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-            {description}
+            {description && description.length > 144 ? `${description.substring(0, 144)}...` : description}
           </p>
         </div>
 
