@@ -381,7 +381,7 @@ export default function Timeline() {
                             return (
                               <div
                                 key={action.id}
-                                className="absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2 group"
+                                className="absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2 group hover:z-[100]"
                                 style={{ left: `${actionPixels}px` }}
                               >
                                 <div
@@ -392,7 +392,7 @@ export default function Timeline() {
                                 />
                                 
                                 {/* Action Tooltip */}
-                                <div className={`absolute ${frameworkIndex === 0 ? 'top-10' : 'bottom-10'} left-1/2 transform -translate-x-1/2 hidden group-hover:block z-50 w-48`}>
+                                <div className={`absolute ${frameworkIndex === 0 ? 'top-10' : 'bottom-10'} left-1/2 transform -translate-x-1/2 hidden group-hover:block z-[100] w-48`}>
                                   <div
                                     className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border-2 p-3"
                                     style={{ borderColor: framework.colorCode }}
