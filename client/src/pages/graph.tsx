@@ -16,7 +16,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { GitBranch, Target, Layers, Zap, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
+import { GitBranch, Target, Layers, Zap, ZoomIn, ZoomOut } from "lucide-react";
 
 type Strategy = {
   id: string;
@@ -404,11 +404,6 @@ export default function Graph() {
     setScale((s) => Math.max(s - 0.2, 0.4));
   };
 
-  const handleResetView = () => {
-    setScale(1);
-    setPanOffset({ x: 0, y: 0 });
-  };
-
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar />
@@ -426,11 +421,11 @@ export default function Graph() {
             </div>
             <div className="flex items-center gap-4">
               <Select value={strategyFilter} onValueChange={setStrategyFilter}>
-                <SelectTrigger className="w-48" data-testid="select-graph-strategy-filter">
-                  <Target className="w-4 h-4 mr-2" />
-                  <SelectValue placeholder="Filter by strategy" />
+                <SelectTrigger className="w-72 min-w-[180px]" data-testid="select-graph-strategy-filter">
+                  <Target className="w-4 h-4 mr-2 flex-shrink-0" />
+                  <SelectValue placeholder="Filter by strategy" className="truncate" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-w-[320px]">
                   <SelectItem value="all">All Strategies</SelectItem>
                   {strategies
                     .filter((s) => s.status !== "Archived")
@@ -438,10 +433,10 @@ export default function Graph() {
                       <SelectItem key={strategy.id} value={strategy.id}>
                         <div className="flex items-center gap-2">
                           <div
-                            className="w-3 h-3 rounded-full"
+                            className="w-3 h-3 rounded-full flex-shrink-0"
                             style={{ backgroundColor: strategy.colorCode }}
                           />
-                          {strategy.title}
+                          <span className="truncate">{strategy.title}</span>
                         </div>
                       </SelectItem>
                     ))}
@@ -465,14 +460,6 @@ export default function Graph() {
                   data-testid="button-zoom-in"
                 >
                   <ZoomIn className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleResetView}
-                  data-testid="button-reset-view"
-                >
-                  <Maximize2 className="w-4 h-4" />
                 </Button>
               </div>
             </div>
