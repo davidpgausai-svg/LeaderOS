@@ -32,7 +32,7 @@ The application supports deployment across multiple Replit instances, each with 
 A role-based access control system integrates Replit OpenID Connect for authentication. Roles include Administrator, Co-Lead, View, and SME (Subject Matter Expert), with permissions enforced at the API level based on user roles and strategy assignments. SME users are explicitly blocked from logging in as they exist solely for tracking and assignment purposes. Administrators manage user roles and strategy assignments, ensuring data isolation.
 
 ### Key Data Models
-Core entities include Users, User Strategy Assignments (linking users to strategies), Strategies (high-level objectives with a Change Continuum Framework and customizable colors), Projects (with custom communication URL field and documentation URLs), Actions (with two-tier filtering), Barriers (project-level risk tracking with severity and status lifecycle), Meeting Notes (report-out notes with dynamic project/action selection and PDF export), and Activities (audit trail). The database tables are: users, user_strategy_assignments, strategies, projects, actions, action_documents, action_checklist_items, barriers, meeting_notes, activities, notifications, and sessions.
+Core entities include Users, User Strategy Assignments (linking users to strategies), Strategies (high-level objectives with a Change Continuum Framework and customizable colors), Projects (with custom communication URL field and documentation URLs), Actions (with two-tier filtering), Barriers (project-level risk tracking with severity and status lifecycle), Dependencies (relationships between projects and actions), Meeting Notes (report-out notes with dynamic project/action selection and PDF export), and Activities (audit trail). The database tables are: users, user_strategy_assignments, strategies, projects, actions, action_documents, action_checklist_items, barriers, dependencies, meeting_notes, activities, notifications, and sessions.
 
 ### Progress Calculation
 A backend-driven system automatically calculates progress for actions, projects, and strategies with cascading rollups. Progress is read-only in the UI and recalculated server-side upon data changes, excluding archived items.
@@ -48,6 +48,18 @@ Each project includes an optional custom communication URL field that can be man
 
 ### Barriers System
 A comprehensive risk and obstacle tracking system at the project level. Each barrier tracks description, severity (High, Medium, Low), status lifecycle (Active → Mitigated → Resolved → Closed), owner assignment, creation/resolution dates, and resolution notes. Barriers are managed via a dedicated modal accessible from project cards (three-dot menu). Project cards display up to 2 active barriers with severity indicators and status badges, showing "+X more" for overflow. All barrier operations (create, status updates, delete) are logged to the activity audit trail. Role-based access control enforces permissions: Administrators and Co-Leads can manage barriers; View users see barriers read-only; SME users are excluded. The AI Chat Assistant integrates barriers data to provide executive-level insights on risks and obstacles. API supports both project-scoped and global barrier queries with role-based filtering (administrators see all, others see only barriers in assigned strategies).
+
+### Dependencies System
+A feature for tracking and visualizing relationships between projects and actions across strategies. Dependencies can represent "blocks" or "depends_on" relationships. Key features include:
+- **DependencyTags component**: Displays on project and action cards, showing dependencies the item has and dependencies that point to it. Administrators and Co-Leads can add/remove dependencies.
+- **Dependency creation**: Users select a target type (project or action), then choose from available items within their assigned strategies.
+- **Graph page**: A dedicated visualization page (`/graph`) showing three columns (Strategies, Projects, Actions) with:
+  - Dashed lines for hierarchy relationships (strategy→project, project→action)
+  - Solid colored lines for explicit dependencies between items
+  - Hover highlighting to emphasize related connections
+  - Strategy filtering and pan/zoom controls for large plans
+- **Activity logging**: Dependency creation and deletion events are recorded in the activity audit trail.
+- **Role-based access**: Administrators and Co-Leads can manage dependencies; View users see dependencies read-only; SME users are excluded.
 
 ### View-Only Access
 All Strategy and Project cards offer view-only access via dedicated buttons, displaying comprehensive details in read-only modals for all users, regardless of edit permissions.
