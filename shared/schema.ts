@@ -325,6 +325,7 @@ export const dependencies = pgTable("dependencies", {
 export const insertDependencySchema = createInsertSchema(dependencies).omit({
   id: true,
   createdAt: true,
+  createdBy: true,
 });
 
 export type InsertDependency = z.infer<typeof insertDependencySchema>;
