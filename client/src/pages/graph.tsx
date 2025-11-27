@@ -415,9 +415,6 @@ export default function Graph() {
                 <GitBranch className="w-6 h-6" />
                 Dependency Graph
               </h1>
-              <p className="text-gray-600 dark:text-gray-400">
-                Visualize relationships between strategies, projects, and actions
-              </p>
             </div>
             <div className="flex items-center gap-4">
               <Select value={strategyFilter} onValueChange={setStrategyFilter}>
