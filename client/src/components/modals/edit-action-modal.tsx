@@ -2,7 +2,23 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertActionSchema, type InsertAction, type Action, type ActionDocument, type ActionChecklistItem } from "@shared/schema";
+import { insertActionSchema, type InsertAction, type ActionDocument, type ActionChecklistItem } from "@shared/schema";
+
+type Action = {
+  id: string;
+  title: string;
+  description: string;
+  strategyId: string;
+  projectId?: string | null;
+  targetValue?: string | null;
+  currentValue?: string | null;
+  measurementUnit?: string | null;
+  status: string;
+  dueDate?: string | Date | null;
+  isArchived: string;
+  createdBy: string;
+  createdAt: string | Date | null;
+};
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {

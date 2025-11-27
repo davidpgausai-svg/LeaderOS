@@ -311,15 +311,19 @@ export default function Projects() {
   };
 
   const canEditProject = (project: Project) => {
-    if (currentRole === 'administrator' || currentRole === 'executive') return true;
+    if (currentRole === 'administrator') return true;
     
-    // Leaders can edit projects where they are accountable
-    try {
-      const leaderIds = JSON.parse(project.accountableLeaders);
-      return leaderIds.includes(currentUser?.id);
-    } catch {
-      return false;
+    // Co-leads can edit projects where they are accountable
+    if (currentRole === 'co_lead') {
+      try {
+        const leaderIds = JSON.parse(project.accountableLeaders);
+        return leaderIds.includes(currentUser?.id);
+      } catch {
+        return false;
+      }
     }
+    
+    return false;
   };
 
   const getStatusDisplay = (status: string) => {
@@ -381,16 +385,8 @@ export default function Projects() {
     // Filter out archived projects and projects from archived strategies
     const isNotArchived = project.isArchived !== 'true' && project.strategy?.status !== 'Archived';
     
-    // Role-based filtering
-    let matchesRole = true;
-    if (currentRole === 'leader') {
-      try {
-        const leaderIds = JSON.parse(project.accountableLeaders);
-        matchesRole = leaderIds.includes(currentUser?.id);
-      } catch {
-        matchesRole = false;
-      }
-    }
+    // Role-based filtering - all roles see projects based on strategy assignments
+    const matchesRole = true;
     
     return matchesSearch && matchesStatus && matchesStrategy && isNotArchived && matchesRole;
   });

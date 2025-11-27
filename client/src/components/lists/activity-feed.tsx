@@ -60,7 +60,7 @@ export function ActivityFeed({ activities }: ActivityFeedProps) {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm text-gray-900">
-              <span className="font-medium">{activity.user?.name || 'Unknown user'}</span>{' '}
+              <span className="font-medium">{activity.user?.firstName && activity.user?.lastName ? `${activity.user.firstName} ${activity.user.lastName}` : activity.user?.email || 'Unknown user'}</span>{' '}
               {activity.description}
             </p>
             <p className="text-xs text-gray-500 mt-1">
