@@ -304,30 +304,41 @@ export default function Graph() {
         hoveredItem?.type === dep.targetType && hoveredItem?.id === dep.targetId;
       const isHighlighted = isSourceHovered || isTargetHovered;
 
-      const startX = sourcePos.x + sourcePos.width;
-      const startY = sourcePos.y + sourcePos.height / 2;
-      const endX = targetPos.x;
-      const endY = targetPos.y + targetPos.height / 2;
-
-      const controlOffset = 60;
-      const midX = (startX + endX) / 2;
-
-      let path: string;
-      if (sourcePos.x < targetPos.x) {
-        path = `M ${startX} ${startY} C ${startX + controlOffset} ${startY}, ${endX - controlOffset} ${endY}, ${endX} ${endY}`;
-      } else {
-        const loopOffset = 30;
-        path = `M ${startX} ${startY} 
-                C ${startX + controlOffset} ${startY}, 
-                  ${startX + controlOffset} ${startY - loopOffset}, 
-                  ${midX} ${(startY + endY) / 2 - loopOffset * 2}
-                S ${endX - controlOffset} ${endY - loopOffset}, 
-                  ${endX} ${endY}`;
-      }
-
       const sourceStrategy = dep.sourceType === "project"
         ? projects.find((p) => p.id === dep.sourceId)?.strategyId
         : actions.find((a) => a.id === dep.sourceId)?.strategyId;
+
+      const sameColumn = Math.abs(sourcePos.x - targetPos.x) < 50;
+      
+      let path: string;
+      
+      if (sameColumn) {
+        const startX = sourcePos.x + sourcePos.width;
+        const startY = sourcePos.y + sourcePos.height / 2;
+        const endX = targetPos.x + targetPos.width;
+        const endY = targetPos.y + targetPos.height / 2;
+        const curveOffset = 40;
+        
+        path = `M ${startX} ${startY} 
+                Q ${startX + curveOffset} ${(startY + endY) / 2}, ${endX} ${endY}`;
+      } else if (sourcePos.x < targetPos.x) {
+        const startX = sourcePos.x + sourcePos.width;
+        const startY = sourcePos.y + sourcePos.height / 2;
+        const endX = targetPos.x;
+        const endY = targetPos.y + targetPos.height / 2;
+        const controlOffset = 50;
+        
+        path = `M ${startX} ${startY} C ${startX + controlOffset} ${startY}, ${endX - controlOffset} ${endY}, ${endX} ${endY}`;
+      } else {
+        const startX = sourcePos.x;
+        const startY = sourcePos.y + sourcePos.height / 2;
+        const endX = targetPos.x + targetPos.width;
+        const endY = targetPos.y + targetPos.height / 2;
+        const curveOffset = 40;
+        
+        path = `M ${startX} ${startY} 
+                Q ${startX - curveOffset} ${(startY + endY) / 2}, ${endX} ${endY}`;
+      }
 
       return (
         <g key={`dep-${dep.id}`}>
@@ -336,7 +347,7 @@ export default function Graph() {
             fill="none"
             stroke={getStrategyColor(sourceStrategy || "")}
             strokeWidth={isHighlighted ? 3 : 2}
-            strokeOpacity={isHighlighted ? 1 : 0.6}
+            strokeOpacity={isHighlighted ? 1 : 0.7}
             markerEnd="url(#arrowhead)"
           />
           {isHighlighted && (
