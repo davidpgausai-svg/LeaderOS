@@ -102,16 +102,30 @@ export default function Graph() {
 
   const filteredProjects = useMemo(() => {
     const strategyIds = new Set(filteredStrategies.map((s) => s.id));
+    const strategyOrder = new Map(filteredStrategies.map((s, i) => [s.id, i]));
     return projects
       .filter((p) => strategyIds.has(p.strategyId))
-      .filter((p) => p.isArchived !== "true");
+      .filter((p) => p.isArchived !== "true")
+      .sort((a, b) => {
+        const orderA = strategyOrder.get(a.strategyId) ?? 999;
+        const orderB = strategyOrder.get(b.strategyId) ?? 999;
+        if (orderA !== orderB) return orderA - orderB;
+        return a.title.localeCompare(b.title);
+      });
   }, [projects, filteredStrategies]);
 
   const filteredActions = useMemo(() => {
     const strategyIds = new Set(filteredStrategies.map((s) => s.id));
+    const strategyOrder = new Map(filteredStrategies.map((s, i) => [s.id, i]));
     return actions
       .filter((a) => strategyIds.has(a.strategyId))
-      .filter((a) => a.isArchived !== "true");
+      .filter((a) => a.isArchived !== "true")
+      .sort((a, b) => {
+        const orderA = strategyOrder.get(a.strategyId) ?? 999;
+        const orderB = strategyOrder.get(b.strategyId) ?? 999;
+        if (orderA !== orderB) return orderA - orderB;
+        return a.title.localeCompare(b.title);
+      });
   }, [actions, filteredStrategies]);
 
   const nodePositions = useMemo(() => {
