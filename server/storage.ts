@@ -1,4 +1,4 @@
-import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Project, type InsertProject, type Activity, type InsertActivity, type Action, type InsertAction, type Notification, type InsertNotification, type ActionDocument, type InsertActionDocument, type ActionChecklistItem, type InsertActionChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, type AiChatConversation, type InsertAiChatConversation, type Barrier, type InsertBarrier, users, strategies, projects, activities, actions, notifications, actionDocuments, actionChecklistItems, userStrategyAssignments, meetingNotes, aiChatConversations, barriers } from "@shared/schema";
+import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Project, type InsertProject, type Activity, type InsertActivity, type Action, type InsertAction, type Notification, type InsertNotification, type ActionDocument, type InsertActionDocument, type ActionChecklistItem, type InsertActionChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, type AiChatConversation, type InsertAiChatConversation, type Barrier, type InsertBarrier, type Dependency, type InsertDependency, users, strategies, projects, activities, actions, notifications, actionDocuments, actionChecklistItems, userStrategyAssignments, meetingNotes, aiChatConversations, barriers, dependencies } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, asc, and, desc, ne } from "drizzle-orm";
@@ -94,6 +94,13 @@ export interface IStorage {
   createBarrier(barrier: InsertBarrier): Promise<Barrier>;
   updateBarrier(id: string, updates: Partial<Barrier>): Promise<Barrier | undefined>;
   deleteBarrier(id: string): Promise<boolean>;
+
+  // Dependency methods
+  getAllDependencies(): Promise<Dependency[]>;
+  getDependenciesBySource(sourceType: string, sourceId: string): Promise<Dependency[]>;
+  getDependenciesByTarget(targetType: string, targetId: string): Promise<Dependency[]>;
+  createDependency(dependency: InsertDependency): Promise<Dependency>;
+  deleteDependency(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -734,6 +741,27 @@ export class MemStorage implements IStorage {
   }
 
   async deleteBarrier(id: string): Promise<boolean> {
+    return false;
+  }
+
+  // Dependency methods (stub - not used in production)
+  async getAllDependencies(): Promise<Dependency[]> {
+    return [];
+  }
+
+  async getDependenciesBySource(sourceType: string, sourceId: string): Promise<Dependency[]> {
+    return [];
+  }
+
+  async getDependenciesByTarget(targetType: string, targetId: string): Promise<Dependency[]> {
+    return [];
+  }
+
+  async createDependency(dependency: InsertDependency): Promise<Dependency> {
+    throw new Error("MemStorage dependency methods not implemented");
+  }
+
+  async deleteDependency(id: string): Promise<boolean> {
     return false;
   }
 }
@@ -1471,6 +1499,56 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .delete(barriers)
       .where(eq(barriers.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  // Dependency methods
+  async getAllDependencies(): Promise<Dependency[]> {
+    return await db
+      .select()
+      .from(dependencies)
+      .orderBy(desc(dependencies.createdAt));
+  }
+
+  async getDependenciesBySource(sourceType: string, sourceId: string): Promise<Dependency[]> {
+    return await db
+      .select()
+      .from(dependencies)
+      .where(
+        and(
+          eq(dependencies.sourceType, sourceType),
+          eq(dependencies.sourceId, sourceId)
+        )
+      )
+      .orderBy(desc(dependencies.createdAt));
+  }
+
+  async getDependenciesByTarget(targetType: string, targetId: string): Promise<Dependency[]> {
+    return await db
+      .select()
+      .from(dependencies)
+      .where(
+        and(
+          eq(dependencies.targetType, targetType),
+          eq(dependencies.targetId, targetId)
+        )
+      )
+      .orderBy(desc(dependencies.createdAt));
+  }
+
+  async createDependency(dependency: InsertDependency): Promise<Dependency> {
+    const [created] = await db
+      .insert(dependencies)
+      .values(dependency)
+      .returning();
+    return created;
+  }
+
+  async deleteDependency(id: string): Promise<boolean> {
+    const result = await db
+      .delete(dependencies)
+      .where(eq(dependencies.id, id))
       .returning();
     return result.length > 0;
   }

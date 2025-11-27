@@ -309,6 +309,27 @@ export type MeetingNote = typeof meetingNotes.$inferSelect;
 export type InsertBarrier = z.infer<typeof insertBarrierSchema>;
 export type Barrier = typeof barriers.$inferSelect;
 
+// Dependencies - Track dependencies between projects and actions
+export const dependencies = pgTable("dependencies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sourceType: text("source_type").notNull(), // 'project' or 'action'
+  sourceId: varchar("source_id").notNull(), // ID of the project or action that has the dependency
+  targetType: text("target_type").notNull(), // 'project' or 'action'
+  targetId: varchar("target_id").notNull(), // ID of the project or action it depends on
+  createdBy: varchar("created_by").notNull(),
+  createdAt: timestamp("created_at").default(sql`now()`),
+}, (table) => ({
+  uniqueDependency: unique().on(table.sourceType, table.sourceId, table.targetType, table.targetId),
+}));
+
+export const insertDependencySchema = createInsertSchema(dependencies).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertDependency = z.infer<typeof insertDependencySchema>;
+export type Dependency = typeof dependencies.$inferSelect;
+
 // AI Chat Conversations - Stores chat history with the AI assistant
 export const aiChatConversations = pgTable("ai_chat_conversations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
