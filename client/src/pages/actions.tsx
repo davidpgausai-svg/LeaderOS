@@ -194,6 +194,8 @@ export default function Actions() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
       toast({
         title: "Success",
         description: "Action deleted successfully",
@@ -454,6 +456,8 @@ export default function Actions() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
       toast({
         title: "Success",
         description: "Action status updated",

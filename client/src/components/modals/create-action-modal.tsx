@@ -92,6 +92,8 @@ export function CreateActionModal({ open, onOpenChange, strategyId, projectId }:
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
       toast({
         title: "Success",
         description: "Action created successfully",
