@@ -586,12 +586,6 @@ export default function Actions() {
                 const currentProjectFilter = projectFilterByStrategy[strategyId] || "all";
                 
                 if (!strategy) return null;
-                
-                // Skip this strategy if it has no actions matching the current filters
-                // (Only when a strategy filter is selected)
-                if (strategyFilter !== "all" && strategyActions.length === 0) {
-                  return null;
-                }
 
                 return (
                   <Card key={strategyId} className="overflow-hidden">
