@@ -49,6 +49,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { DependencyTags } from "@/components/dependencies/dependency-tags";
 import { 
   Plus, 
   Search, 
@@ -897,6 +898,16 @@ export default function Projects() {
                                     }
                                     return null;
                                   })()}
+
+                                  {/* Dependencies Section */}
+                                  <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg">
+                                    <DependencyTags
+                                      sourceType="project"
+                                      sourceId={project.id}
+                                      sourceTitle={project.title}
+                                      strategyId={project.strategyId}
+                                    />
+                                  </div>
 
                                   {/* Action Controls */}
                                   {canEditProject(project) && (

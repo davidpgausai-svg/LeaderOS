@@ -41,6 +41,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { DependencyTags } from "@/components/dependencies/dependency-tags";
 import { 
   Plus, 
   Search, 
@@ -850,6 +851,17 @@ export default function Actions() {
                                                 </p>
                                               </div>
                                             )}
+                                          </div>
+
+                                          {/* Dependencies Section */}
+                                          <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg">
+                                            <DependencyTags
+                                              sourceType="action"
+                                              sourceId={action.id}
+                                              sourceTitle={action.title}
+                                              strategyId={action.strategyId}
+                                              compact
+                                            />
                                           </div>
                                         </CardContent>
                                       </Card>
