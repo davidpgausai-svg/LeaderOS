@@ -60,7 +60,7 @@ interface NodePosition {
 }
 
 const COLUMN_WIDTH = 280;
-const NODE_HEIGHT = 60;
+const NODE_HEIGHT = 75;
 const NODE_PADDING = 12;
 const COLUMN_PADDING = 40;
 const HEADER_HEIGHT = 80;
@@ -169,6 +169,34 @@ export default function Graph() {
     return projects.find((p) => p.id === action.projectId);
   };
 
+  const isInHierarchy = (type: string, id: string, itemStrategyId?: string, itemProjectId?: string | null) => {
+    if (!hoveredItem) return true;
+    
+    if (hoveredItem.type === type && hoveredItem.id === id) return true;
+    
+    if (hoveredItem.type === "strategy") {
+      if (type === "strategy") return hoveredItem.id === id;
+      if (type === "project") return itemStrategyId === hoveredItem.id;
+      if (type === "action") return itemStrategyId === hoveredItem.id;
+    }
+    
+    if (hoveredItem.type === "project") {
+      const hoveredProject = filteredProjects.find(p => p.id === hoveredItem.id);
+      if (type === "strategy") return id === hoveredProject?.strategyId;
+      if (type === "project") return hoveredItem.id === id;
+      if (type === "action") return itemProjectId === hoveredItem.id || itemStrategyId === hoveredProject?.strategyId;
+    }
+    
+    if (hoveredItem.type === "action") {
+      const hoveredAction = filteredActions.find(a => a.id === hoveredItem.id);
+      if (type === "strategy") return id === hoveredAction?.strategyId;
+      if (type === "project") return id === hoveredAction?.projectId;
+      if (type === "action") return hoveredItem.id === id;
+    }
+    
+    return false;
+  };
+
   const isRelatedToHovered = (type: string, id: string) => {
     if (!hoveredItem) return false;
 
@@ -199,6 +227,25 @@ export default function Graph() {
       }
       return false;
     });
+  };
+  
+  const getStatusColor = (status: string) => {
+    const s = status?.toLowerCase();
+    if (s === "achieved" || s === "c" || s === "completed" || s === "done") return "#22C55E";
+    if (s === "in_progress" || s === "ot" || s === "on track") return "#3B82F6";
+    if (s === "behind" || s === "b" || s === "at risk" || s === "blocked") return "#EF4444";
+    return "#9CA3AF";
+  };
+  
+  const getStatusLabel = (status: string) => {
+    const s = status?.toLowerCase();
+    if (s === "achieved" || s === "c" || s === "completed" || s === "done") return "DONE";
+    if (s === "in_progress" || s === "ot") return "ON TRACK";
+    if (s === "behind" || s === "b") return "BEHIND";
+    if (s === "at risk") return "AT RISK";
+    if (s === "blocked") return "BLOCKED";
+    if (s === "not_started" || s === "nys") return "NOT STARTED";
+    return status?.toUpperCase() || "";
   };
 
   const renderHierarchyLines = () => {
@@ -531,6 +578,8 @@ export default function Graph() {
                 if (!pos) return null;
 
                 const isHovered = hoveredItem?.type === "strategy" && hoveredItem?.id === strategy.id;
+                const inHierarchy = isInHierarchy("strategy", strategy.id);
+                const dimmed = hoveredItem && !inHierarchy;
 
                 return (
                   <Tooltip key={strategy.id}>
@@ -538,7 +587,7 @@ export default function Graph() {
                       <g
                         onMouseEnter={() => setHoveredItem({ type: "strategy", id: strategy.id })}
                         onMouseLeave={() => setHoveredItem(null)}
-                        style={{ cursor: "pointer" }}
+                        style={{ cursor: "pointer", opacity: dimmed ? 0.3 : 1 }}
                       >
                         <rect
                           x={pos.x}
@@ -546,10 +595,9 @@ export default function Graph() {
                           width={pos.width}
                           height={pos.height}
                           rx={8}
-                          fill="white"
+                          fill={isHovered ? "#FFFBEB" : "white"}
                           stroke={strategy.colorCode}
                           strokeWidth={isHovered ? 3 : 2}
-                          className="dark:fill-gray-800"
                         />
                         <rect
                           x={pos.x}
@@ -561,16 +609,41 @@ export default function Graph() {
                         />
                         <text
                           x={pos.x + 16}
-                          y={pos.y + 24}
-                          className="text-sm font-medium fill-gray-900 dark:fill-white"
-                          style={{ fontSize: "12px" }}
+                          y={pos.y + 18}
+                          fill="#6B7280"
+                          style={{ fontSize: "9px", fontWeight: 600, letterSpacing: "0.5px" }}
                         >
-                          {strategy.title.length > 25 ? strategy.title.slice(0, 25) + "..." : strategy.title}
+                          STRATEGY
+                        </text>
+                        <rect
+                          x={pos.x + 75}
+                          y={pos.y + 8}
+                          width={getStatusLabel(strategy.status).length * 6 + 12}
+                          height={16}
+                          rx={4}
+                          fill={getStatusColor(strategy.status)}
+                          fillOpacity={0.15}
+                        />
+                        <text
+                          x={pos.x + 81}
+                          y={pos.y + 19}
+                          fill={getStatusColor(strategy.status)}
+                          style={{ fontSize: "8px", fontWeight: 600 }}
+                        >
+                          {getStatusLabel(strategy.status)}
                         </text>
                         <text
                           x={pos.x + 16}
-                          y={pos.y + 44}
-                          className="text-xs fill-gray-500"
+                          y={pos.y + 38}
+                          fill="#111827"
+                          style={{ fontSize: "13px", fontWeight: 600 }}
+                        >
+                          {strategy.title.length > 22 ? strategy.title.slice(0, 22) + "..." : strategy.title}
+                        </text>
+                        <text
+                          x={pos.x + 16}
+                          y={pos.y + 56}
+                          fill="#9CA3AF"
                           style={{ fontSize: "10px" }}
                         >
                           {strategy.progress}% complete
@@ -590,7 +663,8 @@ export default function Graph() {
                 if (!pos) return null;
 
                 const isHovered = hoveredItem?.type === "project" && hoveredItem?.id === project.id;
-                const isRelated = isRelatedToHovered("project", project.id);
+                const inHierarchy = isInHierarchy("project", project.id, project.strategyId);
+                const dimmed = hoveredItem && !inHierarchy;
 
                 return (
                   <Tooltip key={project.id}>
@@ -598,7 +672,7 @@ export default function Graph() {
                       <g
                         onMouseEnter={() => setHoveredItem({ type: "project", id: project.id })}
                         onMouseLeave={() => setHoveredItem(null)}
-                        style={{ cursor: "pointer" }}
+                        style={{ cursor: "pointer", opacity: dimmed ? 0.3 : 1 }}
                       >
                         <rect
                           x={pos.x}
@@ -606,32 +680,56 @@ export default function Graph() {
                           width={pos.width}
                           height={pos.height}
                           rx={8}
-                          fill={isRelated ? "#F0F9FF" : "white"}
+                          fill={isHovered ? "#F0F9FF" : "white"}
                           stroke={isHovered ? getStrategyColor(project.strategyId) : "#D1D5DB"}
-                          strokeWidth={isHovered ? 3 : isRelated ? 2 : 1}
-                          className="dark:fill-gray-800"
+                          strokeWidth={isHovered ? 3 : 1}
                         />
                         <circle
                           cx={pos.x + 12}
-                          cy={pos.y + pos.height / 2}
+                          cy={pos.y + 14}
                           r={4}
                           fill={getStrategyColor(project.strategyId)}
                         />
                         <text
-                          x={pos.x + 24}
-                          y={pos.y + 24}
-                          className="text-sm font-medium fill-gray-900 dark:fill-white"
-                          style={{ fontSize: "12px" }}
+                          x={pos.x + 22}
+                          y={pos.y + 18}
+                          fill="#6B7280"
+                          style={{ fontSize: "9px", fontWeight: 600, letterSpacing: "0.5px" }}
                         >
-                          {project.title.length > 22 ? project.title.slice(0, 22) + "..." : project.title}
+                          PROJECT
+                        </text>
+                        <rect
+                          x={pos.x + 75}
+                          y={pos.y + 8}
+                          width={getStatusLabel(project.status).length * 6 + 12}
+                          height={16}
+                          rx={4}
+                          fill={getStatusColor(project.status)}
+                          fillOpacity={0.15}
+                        />
+                        <text
+                          x={pos.x + 81}
+                          y={pos.y + 19}
+                          fill={getStatusColor(project.status)}
+                          style={{ fontSize: "8px", fontWeight: 600 }}
+                        >
+                          {getStatusLabel(project.status)}
                         </text>
                         <text
-                          x={pos.x + 24}
-                          y={pos.y + 44}
-                          className="text-xs fill-gray-500"
+                          x={pos.x + 12}
+                          y={pos.y + 40}
+                          fill="#111827"
+                          style={{ fontSize: "13px", fontWeight: 600 }}
+                        >
+                          {project.title.length > 20 ? project.title.slice(0, 20) + "..." : project.title}
+                        </text>
+                        <text
+                          x={pos.x + 12}
+                          y={pos.y + 58}
+                          fill="#9CA3AF"
                           style={{ fontSize: "10px" }}
                         >
-                          {project.progress}% • {project.status}
+                          {project.progress}% complete
                         </text>
                       </g>
                     </TooltipTrigger>
@@ -648,7 +746,8 @@ export default function Graph() {
                 if (!pos) return null;
 
                 const isHovered = hoveredItem?.type === "action" && hoveredItem?.id === action.id;
-                const isRelated = isRelatedToHovered("action", action.id);
+                const inHierarchy = isInHierarchy("action", action.id, action.strategyId, action.projectId);
+                const dimmed = hoveredItem && !inHierarchy;
                 const linkedProject = getProjectForAction(action);
 
                 return (
@@ -657,7 +756,7 @@ export default function Graph() {
                       <g
                         onMouseEnter={() => setHoveredItem({ type: "action", id: action.id })}
                         onMouseLeave={() => setHoveredItem(null)}
-                        style={{ cursor: "pointer" }}
+                        style={{ cursor: "pointer", opacity: dimmed ? 0.3 : 1 }}
                       >
                         <rect
                           x={pos.x}
@@ -665,33 +764,57 @@ export default function Graph() {
                           width={pos.width}
                           height={pos.height}
                           rx={8}
-                          fill={isRelated ? "#FFF7ED" : "white"}
+                          fill={isHovered ? "#FFF7ED" : "white"}
                           stroke={isHovered ? getStrategyColor(action.strategyId) : "#E5E7EB"}
-                          strokeWidth={isHovered ? 3 : isRelated ? 2 : 1}
-                          className="dark:fill-gray-800"
+                          strokeWidth={isHovered ? 3 : 1}
                         />
                         <circle
                           cx={pos.x + 12}
-                          cy={pos.y + pos.height / 2}
+                          cy={pos.y + 14}
                           r={4}
                           fill={getStrategyColor(action.strategyId)}
-                          opacity={0.6}
+                          opacity={0.7}
                         />
                         <text
-                          x={pos.x + 24}
-                          y={pos.y + 24}
-                          className="text-sm font-medium fill-gray-900 dark:fill-white"
-                          style={{ fontSize: "12px" }}
+                          x={pos.x + 22}
+                          y={pos.y + 18}
+                          fill="#6B7280"
+                          style={{ fontSize: "9px", fontWeight: 600, letterSpacing: "0.5px" }}
                         >
-                          {action.title.length > 22 ? action.title.slice(0, 22) + "..." : action.title}
+                          ACTION
+                        </text>
+                        <rect
+                          x={pos.x + 70}
+                          y={pos.y + 8}
+                          width={getStatusLabel(action.status).length * 6 + 12}
+                          height={16}
+                          rx={4}
+                          fill={getStatusColor(action.status)}
+                          fillOpacity={0.15}
+                        />
+                        <text
+                          x={pos.x + 76}
+                          y={pos.y + 19}
+                          fill={getStatusColor(action.status)}
+                          style={{ fontSize: "8px", fontWeight: 600 }}
+                        >
+                          {getStatusLabel(action.status)}
                         </text>
                         <text
-                          x={pos.x + 24}
-                          y={pos.y + 44}
-                          className="text-xs fill-gray-500"
+                          x={pos.x + 12}
+                          y={pos.y + 40}
+                          fill="#111827"
+                          style={{ fontSize: "13px", fontWeight: 600 }}
+                        >
+                          {action.title.length > 20 ? action.title.slice(0, 20) + "..." : action.title}
+                        </text>
+                        <text
+                          x={pos.x + 12}
+                          y={pos.y + 58}
+                          fill="#9CA3AF"
                           style={{ fontSize: "10px" }}
                         >
-                          {action.status} {linkedProject ? `• ${linkedProject.title.slice(0, 15)}` : ""}
+                          {linkedProject ? linkedProject.title.slice(0, 20) : "No project"}
                         </text>
                       </g>
                     </TooltipTrigger>
