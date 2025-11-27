@@ -287,8 +287,9 @@ export default function Graph() {
         const endY = projectPos.y + projectPos.height / 2;
         const midX = (startX + endX) / 2;
 
-        const isHovered =
-          hoveredItem?.type === "strategy" && hoveredItem?.id === project.strategyId;
+        const isHighlighted =
+          (activeItem?.type === "strategy" && activeItem?.id === project.strategyId) ||
+          (activeItem?.type === "project" && activeItem?.id === project.id);
 
         lines.push(
           <path
@@ -296,8 +297,8 @@ export default function Graph() {
             d={`M ${startX} ${startY} C ${midX} ${startY}, ${midX} ${endY}, ${endX} ${endY}`}
             fill="none"
             stroke={getStrategyColor(project.strategyId)}
-            strokeWidth={isHovered ? 2 : 1}
-            strokeOpacity={isHovered ? 0.8 : 0.3}
+            strokeWidth={isHighlighted ? 2 : 1}
+            strokeOpacity={isHighlighted ? 0.8 : 0.3}
             strokeDasharray="4,4"
           />
         );
@@ -308,6 +309,7 @@ export default function Graph() {
       if (action.projectId) {
         const projectPos = nodePositions[`project-${action.projectId}`];
         const actionPos = nodePositions[`action-${action.id}`];
+        const linkedProject = filteredProjects.find(p => p.id === action.projectId);
 
         if (projectPos && actionPos) {
           const startX = projectPos.x + projectPos.width;
@@ -316,8 +318,10 @@ export default function Graph() {
           const endY = actionPos.y + actionPos.height / 2;
           const midX = (startX + endX) / 2;
 
-          const isHovered =
-            hoveredItem?.type === "project" && hoveredItem?.id === action.projectId;
+          const isHighlighted =
+            (activeItem?.type === "strategy" && activeItem?.id === action.strategyId) ||
+            (activeItem?.type === "project" && activeItem?.id === action.projectId) ||
+            (activeItem?.type === "action" && activeItem?.id === action.id);
 
           lines.push(
             <path
@@ -325,8 +329,8 @@ export default function Graph() {
               d={`M ${startX} ${startY} C ${midX} ${startY}, ${midX} ${endY}, ${endX} ${endY}`}
               fill="none"
               stroke={getStrategyColor(action.strategyId)}
-              strokeWidth={isHovered ? 2 : 1}
-              strokeOpacity={isHovered ? 0.6 : 0.2}
+              strokeWidth={isHighlighted ? 2 : 1}
+              strokeOpacity={isHighlighted ? 0.6 : 0.2}
               strokeDasharray="4,4"
             />
           );
@@ -342,8 +346,9 @@ export default function Graph() {
           const endY = actionPos.y + actionPos.height / 2;
           const midX = startX + COLUMN_WIDTH;
 
-          const isHovered =
-            hoveredItem?.type === "strategy" && hoveredItem?.id === action.strategyId;
+          const isHighlighted =
+            (activeItem?.type === "strategy" && activeItem?.id === action.strategyId) ||
+            (activeItem?.type === "action" && activeItem?.id === action.id);
 
           lines.push(
             <path
@@ -351,8 +356,8 @@ export default function Graph() {
               d={`M ${startX} ${startY} L ${midX} ${startY} L ${midX} ${endY} L ${endX} ${endY}`}
               fill="none"
               stroke={getStrategyColor(action.strategyId)}
-              strokeWidth={isHovered ? 2 : 1}
-              strokeOpacity={isHovered ? 0.5 : 0.15}
+              strokeWidth={isHighlighted ? 2 : 1}
+              strokeOpacity={isHighlighted ? 0.5 : 0.15}
               strokeDasharray="2,2"
             />
           );
@@ -370,11 +375,25 @@ export default function Graph() {
 
       if (!sourcePos || !targetPos) return null;
 
-      const isSourceHovered =
-        hoveredItem?.type === dep.sourceType && hoveredItem?.id === dep.sourceId;
-      const isTargetHovered =
-        hoveredItem?.type === dep.targetType && hoveredItem?.id === dep.targetId;
-      const isHighlighted = isSourceHovered || isTargetHovered;
+      const sourceItem = dep.sourceType === "project"
+        ? projects.find((p) => p.id === dep.sourceId)
+        : actions.find((a) => a.id === dep.sourceId);
+      const targetItem = dep.targetType === "project"
+        ? projects.find((p) => p.id === dep.targetId)
+        : actions.find((a) => a.id === dep.targetId);
+
+      const isSourceActive =
+        activeItem?.type === dep.sourceType && activeItem?.id === dep.sourceId;
+      const isTargetActive =
+        activeItem?.type === dep.targetType && activeItem?.id === dep.targetId;
+      const isStrategyActive =
+        activeItem?.type === "strategy" && 
+        (sourceItem?.strategyId === activeItem?.id || targetItem?.strategyId === activeItem?.id);
+      const isProjectActive =
+        activeItem?.type === "project" &&
+        ((dep.sourceType === "action" && (sourceItem as any)?.projectId === activeItem?.id) ||
+         (dep.targetType === "action" && (targetItem as any)?.projectId === activeItem?.id));
+      const isHighlighted = isSourceActive || isTargetActive || isStrategyActive || isProjectActive;
 
       const sourceStrategy = dep.sourceType === "project"
         ? projects.find((p) => p.id === dep.sourceId)?.strategyId
