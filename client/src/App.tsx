@@ -14,6 +14,7 @@ import MeetingNotes from "@/pages/meeting-notes";
 import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
 import Timeline from "@/pages/timeline";
+import Graph from "@/pages/graph";
 import Documentation from "@/pages/documentation";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
@@ -41,6 +42,7 @@ function Router() {
         <Route path="/strategies" component={Strategies} />
         <Route path="/projects" component={Projects} />
         <Route path="/timeline" component={Timeline} />
+        <Route path="/graph" component={Graph} />
         <Route path="/actions" component={Actions} />
         <Route path="/meeting-notes" component={MeetingNotes} />
         <Route path="/reports" component={Reports} />

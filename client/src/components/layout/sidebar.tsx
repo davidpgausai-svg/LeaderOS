@@ -21,6 +21,7 @@ import {
   ChevronRight,
   PenLine,
   BookOpen,
+  GitBranch,
 } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 
@@ -30,6 +31,7 @@ const navigation = [
   { name: "Projects", href: "/projects", icon: CheckSquare },
   { name: "Actions", href: "/actions", icon: TrendingUp },
   { name: "Timeline", href: "/timeline", icon: Calendar },
+  { name: "Graph", href: "/graph", icon: GitBranch },
   { name: "Meeting Notes", href: "/meeting-notes", icon: PenLine },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Settings", href: "/settings", icon: Settings },
