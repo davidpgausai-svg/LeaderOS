@@ -71,9 +71,6 @@ export default function Graph() {
   const [hoveredItem, setHoveredItem] = useState<{ type: string; id: string } | null>(null);
   const [strategyFilter, setStrategyFilter] = useState<string>("all");
   const [scale, setScale] = useState(1);
-  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
   const { data: strategies = [] } = useQuery<Strategy[]>({
     queryKey: ["/api/strategies"],
@@ -376,26 +373,6 @@ export default function Graph() {
     }
   };
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button === 0) {
-      setIsDragging(true);
-      setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
-    }
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDragging) {
-      setPanOffset({
-        x: e.clientX - dragStart.x,
-        y: e.clientY - dragStart.y,
-      });
-    }
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
   const handleZoomIn = () => {
     setScale((s) => Math.min(s + 0.2, 2));
   };
@@ -495,19 +472,17 @@ export default function Graph() {
 
         <div
           ref={containerRef}
-          className="flex-1 overflow-hidden cursor-grab active:cursor-grabbing"
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
+          className="flex-1 overflow-auto"
         >
           <svg
             ref={svgRef}
-            width="100%"
-            height="100%"
+            width={COLUMN_WIDTH * 3 + COLUMN_PADDING * 2}
+            height={svgHeight + 50}
             style={{
-              transform: `scale(${scale}) translate(${panOffset.x / scale}px, ${panOffset.y / scale}px)`,
+              transform: `scale(${scale})`,
               transformOrigin: "0 0",
+              minWidth: `${(COLUMN_WIDTH * 3 + COLUMN_PADDING * 2) * scale}px`,
+              minHeight: `${(svgHeight + 50) * scale}px`,
             }}
           >
             <defs>
