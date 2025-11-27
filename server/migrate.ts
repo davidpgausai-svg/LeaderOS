@@ -10,17 +10,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 async function seedMigrationJournalIfNeeded(client: any) {
-  // Check if drizzle migrations table exists
-  const tableCheck = await client.query(`
-    SELECT EXISTS (
-      SELECT FROM information_schema.tables 
-      WHERE table_schema = 'drizzle' 
-      AND table_name = '__drizzle_migrations'
-    );
-  `);
-
-  const journalExists = tableCheck.rows[0].exists;
-
   // Check if any app tables exist (e.g., users table)
   const appTablesCheck = await client.query(`
     SELECT EXISTS (
@@ -32,23 +21,14 @@ async function seedMigrationJournalIfNeeded(client: any) {
 
   const appTablesExist = appTablesCheck.rows[0].exists;
 
-  // If app tables exist but journal doesn't, we need to seed
-  if (appTablesExist && !journalExists) {
-    console.log("[INFO] Detected existing tables without migration journal - auto-seeding...");
+  // If app tables exist, always check for missing migrations in the journal
+  // This handles cases where:
+  // 1. Journal doesn't exist but tables do
+  // 2. Journal is empty but tables exist
+  // 3. Journal has some entries but is missing newer migrations for tables that exist
+  if (appTablesExist) {
+    console.log("[INFO] Checking for missing migration journal entries...");
     await seedJournal(client);
-    return;
-  }
-
-  // If journal exists, check if it's empty but tables exist
-  if (journalExists && appTablesExist) {
-    const journalCount = await client.query(
-      "SELECT COUNT(*) FROM drizzle.__drizzle_migrations"
-    );
-    
-    if (parseInt(journalCount.rows[0].count) === 0) {
-      console.log("[INFO] Migration journal is empty but tables exist - auto-seeding...");
-      await seedJournal(client);
-    }
   }
 }
 
