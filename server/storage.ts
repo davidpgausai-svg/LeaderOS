@@ -1537,7 +1537,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(dependencies.createdAt));
   }
 
-  async createDependency(dependency: InsertDependency): Promise<Dependency> {
+  async createDependency(dependency: InsertDependency & { createdBy: string }): Promise<Dependency> {
     const [created] = await db
       .insert(dependencies)
       .values(dependency)

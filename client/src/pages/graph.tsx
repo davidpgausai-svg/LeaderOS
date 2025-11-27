@@ -221,38 +221,6 @@ export default function Graph() {
       setLockedItem({ type, id });
     }
   };
-
-  const isRelatedToHovered = (type: string, id: string) => {
-    if (!hoveredItem) return false;
-
-    if (hoveredItem.type === type && hoveredItem.id === id) return true;
-
-    const relatedDeps = dependencies.filter((d) => {
-      if (hoveredItem.type === "project") {
-        return (
-          (d.sourceType === "project" && d.sourceId === hoveredItem.id) ||
-          (d.targetType === "project" && d.targetId === hoveredItem.id)
-        );
-      }
-      if (hoveredItem.type === "action") {
-        return (
-          (d.sourceType === "action" && d.sourceId === hoveredItem.id) ||
-          (d.targetType === "action" && d.targetId === hoveredItem.id)
-        );
-      }
-      return false;
-    });
-
-    return relatedDeps.some((d) => {
-      if (type === "project") {
-        return d.sourceId === id || d.targetId === id;
-      }
-      if (type === "action") {
-        return d.sourceId === id || d.targetId === id;
-      }
-      return false;
-    });
-  };
   
   const getStatusColor = (status: string) => {
     const s = status?.toLowerCase();
