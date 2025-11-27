@@ -1,0 +1,382 @@
+import React, { useState, useMemo, useEffect } from 'react';
+import { AlertCircle, CheckCircle, ArrowRight, Layers, Target, CheckSquare, Zap } from 'lucide-react';
+
+// --- Types ---
+type NodeType = 'strategy' | 'project' | 'outcome';
+type Status = 'on-track' | 'at-risk' | 'blocked' | 'completed';
+
+interface Node {
+  id: string;
+  type: NodeType;
+  label: string;
+  status: Status;
+  description?: string;
+}
+
+interface Link {
+  id: string;
+  source: string;
+  target: string;
+  type: 'hierarchy' | 'dependency'; // Hierarchy = parent/child, Dependency = blocker
+}
+
+// --- Mock Data Generation ---
+// Simulating a subset of the 8 Strategies, 17 Projects, 42 Outcomes for visual clarity
+const generateData = () => {
+  const nodes: Node[] = [
+    // Strategies (Layer 1)
+    { id: 's1', type: 'strategy', label: 'Market Expansion', status: 'on-track', description: 'Enter 3 new APAC markets' },
+    { id: 's2', type: 'strategy', label: 'Operational Efficiency', status: 'at-risk', description: 'Reduce overhead by 15%' },
+    { id: 's3', type: 'strategy', label: 'Customer Retention', status: 'on-track', description: 'Improve NPS by 10 points' },
+
+    // Projects (Layer 2)
+    { id: 'p1', type: 'project', label: 'APAC Localization', status: 'on-track', description: 'Translate app to Japanese/Korean' },
+    { id: 'p2', type: 'project', label: 'Server Migration', status: 'blocked', description: 'Move to AWS' },
+    { id: 'p3', type: 'project', label: 'Q3 Marketing Blitz', status: 'at-risk', description: 'Paid social campaigns' },
+    { id: 'p4', type: 'project', label: 'Support AI Bot', status: 'on-track', description: 'Automate L1 tickets' },
+    { id: 'p5', type: 'project', label: 'Loyalty Program', status: 'on-track', description: 'Revamp points system' },
+
+    // Outcomes (Layer 3)
+    { id: 'o1', type: 'outcome', label: 'JP Language Pack', status: 'completed' },
+    { id: 'o2', type: 'outcome', label: 'KR Language Pack', status: 'on-track' },
+    { id: 'o3', type: 'outcome', label: 'Database Backup', status: 'blocked' },
+    { id: 'o4', type: 'outcome', label: 'Security Audit', status: 'at-risk' },
+    { id: 'o5', type: 'outcome', label: 'Ad Creatives', status: 'on-track' },
+    { id: 'o6', type: 'outcome', label: 'Bot Logic Flow', status: 'completed' },
+    { id: 'o7', type: 'outcome', label: 'Bot Integration', status: 'on-track' },
+    { id: 'o8', type: 'outcome', label: 'Points Backend', status: 'on-track' },
+  ];
+
+  const links: Link[] = [
+    // Hierarchical Links (Parent -> Child)
+    { id: 'h1', source: 's1', target: 'p1', type: 'hierarchy' },
+    { id: 'h2', source: 's1', target: 'p3', type: 'hierarchy' },
+    { id: 'h3', source: 's2', target: 'p2', type: 'hierarchy' },
+    { id: 'h4', source: 's2', target: 'p4', type: 'hierarchy' },
+    { id: 'h5', source: 's3', target: 'p5', type: 'hierarchy' },
+
+    { id: 'h6', source: 'p1', target: 'o1', type: 'hierarchy' },
+    { id: 'h7', source: 'p1', target: 'o2', type: 'hierarchy' },
+    { id: 'h8', source: 'p2', target: 'o3', type: 'hierarchy' },
+    { id: 'h9', source: 'p2', target: 'o4', type: 'hierarchy' },
+    { id: 'h10', source: 'p3', target: 'o5', type: 'hierarchy' },
+    { id: 'h11', source: 'p4', target: 'o6', type: 'hierarchy' },
+    { id: 'h12', source: 'p4', target: 'o7', type: 'hierarchy' },
+    { id: 'h13', source: 'p5', target: 'o8', type: 'hierarchy' },
+
+    // THE CRITICAL DEPENDENCIES (The "13" blockers)
+    // Project P2 (Migration) blocks P4 (AI Bot) because bot needs new servers
+    { id: 'd1', source: 'p2', target: 'p4', type: 'dependency' },
+    
+    // Outcome O3 (Backup) blocks Outcome O4 (Audit)
+    { id: 'd2', source: 'o3', target: 'o4', type: 'dependency' },
+
+    // Project P1 blocks Project P3 (Need localization before marketing)
+    { id: 'd3', source: 'p1', target: 'p3', type: 'dependency' },
+  ];
+
+  return { nodes, links };
+};
+
+// --- Components ---
+
+const StatusBadge = ({ status }: { status: Status }) => {
+  const colors = {
+    'on-track': 'bg-green-100 text-green-700 border-green-200',
+    'at-risk': 'bg-amber-100 text-amber-700 border-amber-200',
+    'blocked': 'bg-red-100 text-red-700 border-red-200',
+    'completed': 'bg-blue-100 text-blue-700 border-blue-200',
+  };
+
+  const labels = {
+    'on-track': 'On Track',
+    'at-risk': 'At Risk',
+    'blocked': 'Blocked',
+    'completed': 'Done',
+  };
+
+  return (
+    <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium uppercase tracking-wide ${colors[status]}`}>
+      {labels[status]}
+    </span>
+  );
+};
+
+const NodeCard = ({ 
+  node, 
+  x, 
+  y, 
+  onHover, 
+  isDimmed 
+}: { 
+  node: Node; 
+  x: number; 
+  y: number; 
+  onHover: (id: string | null) => void;
+  isDimmed: boolean;
+}) => {
+  const icons = {
+    strategy: <Target className="w-4 h-4 text-purple-600" />,
+    project: <Layers className="w-4 h-4 text-blue-600" />,
+    outcome: <CheckSquare className="w-4 h-4 text-slate-600" />,
+  };
+
+  return (
+    <div
+      className={`absolute transition-all duration-300 transform
+        ${isDimmed ? 'opacity-20 grayscale' : 'opacity-100 hover:scale-105 hover:shadow-lg'}
+      `}
+      style={{ left: x, top: y, width: 220 }}
+      onMouseEnter={() => onHover(node.id)}
+      onMouseLeave={() => onHover(null)}
+    >
+      <div className={`
+        bg-white border-l-4 rounded-r-lg shadow-sm p-3 border cursor-pointer
+        ${node.status === 'blocked' ? 'border-l-red-500' : 
+          node.status === 'at-risk' ? 'border-l-amber-500' : 
+          node.type === 'strategy' ? 'border-l-purple-500' : 'border-l-blue-500'}
+        border-slate-200
+      `}>
+        <div className="flex justify-between items-start mb-2">
+          <div className="flex items-center gap-2">
+            {icons[node.type]}
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{node.type}</span>
+          </div>
+          <StatusBadge status={node.status} />
+        </div>
+        <div className="font-semibold text-slate-800 text-sm mb-1 leading-tight">{node.label}</div>
+        {node.description && (
+          <div className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{node.description}</div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// SVG Connection Line
+const ConnectionLine = ({ 
+  link, 
+  start, 
+  end, 
+  isDimmed,
+  isHighlighted 
+}: { 
+  link: Link; 
+  start: { x: number; y: number }; 
+  end: { x: number; y: number }; 
+  isDimmed: boolean;
+  isHighlighted: boolean;
+}) => {
+  // Calculate control points for Bezier curve
+  const midX = (start.x + end.x) / 2;
+  
+  // If it's a "Dependency" (Blocker), we curve it more aggressively or differently
+  const isBlocker = link.type === 'dependency';
+  
+  // Standard cubic bezier
+  let path = `M ${start.x} ${start.y} C ${midX} ${start.y}, ${midX} ${end.y}, ${end.x} ${end.y}`;
+
+  // If blocker (same layer usually), loop it differently
+  if (isBlocker) {
+    // Creating a deeper curve for dependencies to differentiate from hierarchy
+    path = `M ${start.x} ${start.y} C ${start.x + 50} ${start.y}, ${end.x - 50} ${end.y}, ${end.x} ${end.y}`;
+  }
+
+  const strokeColor = isBlocker 
+    ? (isHighlighted ? '#ef4444' : '#f87171') // Red for blockers
+    : (isHighlighted ? '#3b82f6' : '#cbd5e1'); // Blue/Grey for hierarchy
+
+  return (
+    <g className={`transition-opacity duration-300 ${isDimmed ? 'opacity-10' : 'opacity-100'}`}>
+      {/* Background thicker line for easier hovering/visibility */}
+      <path d={path} fill="none" stroke="white" strokeWidth="6" />
+      
+      {/* Actual line */}
+      <path 
+        d={path} 
+        fill="none" 
+        stroke={strokeColor} 
+        strokeWidth={isHighlighted || isBlocker ? 2 : 1.5} 
+        strokeDasharray={isBlocker ? "5,5" : "0"}
+        markerEnd={isBlocker ? "url(#arrowhead-red)" : "url(#arrowhead-grey)"}
+        className="transition-colors duration-300"
+      />
+      
+      {/* Label for Dependency */}
+      {isBlocker && (
+        <circle cx={(start.x + end.x)/2} cy={(start.y + end.y)/2} r="8" fill="#fee2e2" stroke="#ef4444" />
+      )}
+      {isBlocker && (
+        <text x={(start.x + end.x)/2} y={(start.y + end.y)/2} dy="3" dx="-3" fontSize="10" fill="#dc2626">!</text>
+      )}
+    </g>
+  );
+};
+
+export default function DependencyGraph() {
+  const [data] = useState(generateData());
+  const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+  const [showOnlyRisks, setShowOnlyRisks] = useState(false);
+
+  // --- Layout Calculation ---
+  // Simple column layout engine
+  const layout = useMemo(() => {
+    const COL_WIDTH = 300;
+    const ROW_HEIGHT = 140;
+    const PADDING_TOP = 50;
+    const PADDING_LEFT = 50;
+
+    const positions: Record<string, { x: number; y: number }> = {};
+    
+    // Group by layer
+    const strategies = data.nodes.filter(n => n.type === 'strategy');
+    const projects = data.nodes.filter(n => n.type === 'project');
+    const outcomes = data.nodes.filter(n => n.type === 'outcome');
+
+    // Assign positions
+    strategies.forEach((n, i) => {
+      positions[n.id] = { x: PADDING_LEFT, y: PADDING_TOP + (i * ROW_HEIGHT) };
+    });
+    
+    projects.forEach((n, i) => {
+      positions[n.id] = { x: PADDING_LEFT + COL_WIDTH, y: PADDING_TOP + (i * (ROW_HEIGHT * 0.7)) };
+    });
+    
+    outcomes.forEach((n, i) => {
+      positions[n.id] = { x: PADDING_LEFT + (COL_WIDTH * 2), y: PADDING_TOP + (i * (ROW_HEIGHT * 0.6)) };
+    });
+
+    return positions;
+  }, [data]);
+
+  // --- Interaction Logic ---
+  // Determine connected nodes for highlighting
+  const connectedIds = useMemo(() => {
+    if (!hoveredNode) return new Set<string>();
+    
+    const connected = new Set<string>();
+    connected.add(hoveredNode);
+
+    // Simple BFS to find downstream/upstream connections
+    const queue = [hoveredNode];
+    const visited = new Set<string>();
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      if (visited.has(current)) continue;
+      visited.add(current);
+      connected.add(current);
+
+      // Find links where current is source or target
+      data.links.forEach(link => {
+        if (link.source === current && !visited.has(link.target)) queue.push(link.target);
+        if (link.target === current && !visited.has(link.source)) queue.push(link.source);
+      });
+    }
+
+    return connected;
+  }, [hoveredNode, data]);
+
+  // Filter nodes if toggle is on
+  const filteredNodes = showOnlyRisks 
+    ? data.nodes.filter(n => n.status === 'blocked' || n.status === 'at-risk')
+    : data.nodes;
+
+  const nodeIds = new Set(filteredNodes.map(n => n.id));
+
+  return (
+    <div className="w-full h-full bg-slate-50 flex flex-col font-sans text-slate-900">
+      {/* Header / Controls */}
+      <div className="bg-white border-b px-6 py-4 shadow-sm z-10 flex justify-between items-center">
+        <div>
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <Layers className="text-indigo-600" />
+            Strategy Dependency Map
+          </h2>
+          <p className="text-sm text-slate-500 mt-1">
+            Visualizing 8 Strategies, 17 Projects, and 42 Outcomes
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 text-sm text-slate-600">
+             <div className="w-3 h-0.5 bg-slate-300"></div> Hierarchy
+             <div className="w-3 h-0.5 border-t border-dashed border-red-400"></div> Dependency
+          </div>
+          <button 
+            onClick={() => setShowOnlyRisks(!showOnlyRisks)}
+            className={`
+              flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors
+              ${showOnlyRisks ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}
+            `}
+          >
+            <AlertCircle className="w-4 h-4" />
+            {showOnlyRisks ? 'Showing Risks Only' : 'Show All Items'}
+          </button>
+        </div>
+      </div>
+
+      {/* Main Canvas */}
+      <div className="flex-1 overflow-auto relative cursor-grab active:cursor-grabbing">
+        <div className="min-w-[1000px] min-h-[800px] p-8 relative">
+          
+          {/* Column Labels */}
+          <div className="absolute top-2 left-12 font-bold text-slate-300 text-sm tracking-[0.2em]">STRATEGIES</div>
+          <div className="absolute top-2 left-[360px] font-bold text-slate-300 text-sm tracking-[0.2em]">PROJECTS</div>
+          <div className="absolute top-2 left-[660px] font-bold text-slate-300 text-sm tracking-[0.2em]">OUTCOMES</div>
+
+          {/* SVG Layer for Links */}
+          <svg className="absolute top-0 left-0 w-full h-full pointer-events-none z-0">
+            <defs>
+              <marker id="arrowhead-grey" markerWidth="10" markerHeight="7" refX="28" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#cbd5e1" />
+              </marker>
+              <marker id="arrowhead-red" markerWidth="10" markerHeight="7" refX="28" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#f87171" />
+              </marker>
+            </defs>
+            {data.links.map(link => {
+              // Only render if both nodes exist (filtering)
+              if (!nodeIds.has(link.source) || !nodeIds.has(link.target)) return null;
+
+              const start = layout[link.source];
+              const end = layout[link.target];
+              const isHighlighted = hoveredNode ? (connectedIds.has(link.source) && connectedIds.has(link.target)) : false;
+              const isDimmed = hoveredNode ? !isHighlighted : false;
+
+              // Offset start/end to be middle of card right side / left side
+              return (
+                <ConnectionLine 
+                  key={link.id} 
+                  link={link}
+                  start={{ x: start.x + 220, y: start.y + 40 }} // +220 is card width, +40 is approx half height
+                  end={{ x: end.x, y: end.y + 40 }} 
+                  isDimmed={isDimmed}
+                  isHighlighted={isHighlighted}
+                />
+              );
+            })}
+          </svg>
+
+          {/* Nodes Layer */}
+          {data.nodes.map(node => {
+            if (!nodeIds.has(node.id)) return null;
+            const pos = layout[node.id];
+            const isDimmed = hoveredNode ? !connectedIds.has(node.id) : false;
+            
+            return (
+              <NodeCard 
+                key={node.id} 
+                node={node} 
+                x={pos.x} 
+                y={pos.y} 
+                onHover={setHoveredNode}
+                isDimmed={isDimmed}
+              />
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
