@@ -124,6 +124,7 @@ export class MemStorage implements IStorage {
       lastName: "Gaus",
       profileImageUrl: null,
       role: "administrator",
+      timezone: null,
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -135,6 +136,7 @@ export class MemStorage implements IStorage {
       lastName: "Wilson",
       profileImageUrl: null,
       role: "co_lead",
+      timezone: null,
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -146,6 +148,7 @@ export class MemStorage implements IStorage {
       lastName: "Johnson",
       profileImageUrl: null,
       role: "co_lead",
+      timezone: null,
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -268,6 +271,7 @@ export class MemStorage implements IStorage {
       lastName: userData.lastName ?? null,
       profileImageUrl: userData.profileImageUrl ?? null,
       role: userData.role ?? 'co_lead',
+      timezone: userData.timezone ?? null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -284,6 +288,7 @@ export class MemStorage implements IStorage {
       lastName: insertUser.lastName ?? null,
       profileImageUrl: insertUser.profileImageUrl ?? null,
       role: insertUser.role ?? 'co_lead',
+      timezone: insertUser.timezone ?? null,
       createdAt: new Date(),
       updatedAt: new Date()
     };

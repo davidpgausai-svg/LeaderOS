@@ -621,9 +621,6 @@ export default function Settings() {
                           {currentUser?.firstName?.[0] || currentUser?.lastName?.[0] || currentUser?.email?.[0]?.toUpperCase() || 'U'}
                         </AvatarFallback>
                       </Avatar>
-                      <Button variant="outline" data-testid="button-change-photo">
-                        Change Photo
-                      </Button>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
