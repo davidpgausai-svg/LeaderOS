@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertStrategySchema, insertProjectSchema, insertActionSchema, insertActionDocumentSchema, insertActionChecklistItemSchema, insertMeetingNoteSchema, insertBarrierSchema } from "@shared/schema";
+import { insertStrategySchema, insertProjectSchema, insertActionSchema, insertActionDocumentSchema, insertActionChecklistItemSchema, insertMeetingNoteSchema, insertBarrierSchema, insertDependencySchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 import { logger } from "./logger";
@@ -1070,6 +1070,230 @@ Respond ONLY with a valid JSON object in this exact format:
     } catch (error) {
       logger.error("Failed to delete barrier", error);
       res.status(500).json({ message: "Failed to delete barrier" });
+    }
+  });
+
+  // Dependency routes
+  app.get("/api/dependencies", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      const { sourceType, sourceId, targetType, targetId } = req.query;
+      
+      let dependencies;
+      
+      if (sourceType && sourceId) {
+        dependencies = await storage.getDependenciesBySource(sourceType as string, sourceId as string);
+      } else if (targetType && targetId) {
+        dependencies = await storage.getDependenciesByTarget(targetType as string, targetId as string);
+      } else {
+        dependencies = await storage.getAllDependencies();
+      }
+      
+      // Filter dependencies based on user access to strategies
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        const allProjects = await storage.getAllProjects();
+        const allActions = await storage.getAllActions();
+        
+        const accessibleProjectIds = allProjects
+          .filter((p: any) => assignedStrategyIds.includes(p.strategyId))
+          .map((p: any) => p.id);
+        
+        const accessibleActionIds = allActions
+          .filter((a: any) => assignedStrategyIds.includes(a.strategyId))
+          .map((a: any) => a.id);
+        
+        dependencies = dependencies.filter((d: any) => {
+          const sourceAccessible = 
+            (d.sourceType === 'project' && accessibleProjectIds.includes(d.sourceId)) ||
+            (d.sourceType === 'action' && accessibleActionIds.includes(d.sourceId));
+          const targetAccessible = 
+            (d.targetType === 'project' && accessibleProjectIds.includes(d.targetId)) ||
+            (d.targetType === 'action' && accessibleActionIds.includes(d.targetId));
+          return sourceAccessible && targetAccessible;
+        });
+      }
+      
+      res.json(dependencies);
+    } catch (error) {
+      logger.error("Failed to fetch dependencies", error);
+      res.status(500).json({ message: "Failed to fetch dependencies" });
+    }
+  });
+
+  app.post("/api/dependencies", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // View role cannot create dependencies
+      if (user.role === 'view') {
+        return res.status(403).json({ message: "Forbidden: View users cannot create dependencies" });
+      }
+      
+      const validatedData = insertDependencySchema.parse(req.body);
+      
+      // Override createdBy with authenticated user
+      const dependencyData = {
+        ...validatedData,
+        createdBy: user.id,
+      };
+      
+      // Verify user has access to both source and target items
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        
+        // Check source access
+        let sourceStrategyId: string | null = null;
+        if (dependencyData.sourceType === 'project') {
+          const sourceProject = await storage.getProject(dependencyData.sourceId);
+          sourceStrategyId = sourceProject?.strategyId || null;
+        } else if (dependencyData.sourceType === 'action') {
+          const sourceAction = await storage.getAction(dependencyData.sourceId);
+          sourceStrategyId = sourceAction?.strategyId || null;
+        }
+        
+        // Check target access
+        let targetStrategyId: string | null = null;
+        if (dependencyData.targetType === 'project') {
+          const targetProject = await storage.getProject(dependencyData.targetId);
+          targetStrategyId = targetProject?.strategyId || null;
+        } else if (dependencyData.targetType === 'action') {
+          const targetAction = await storage.getAction(dependencyData.targetId);
+          targetStrategyId = targetAction?.strategyId || null;
+        }
+        
+        if (!sourceStrategyId || !assignedStrategyIds.includes(sourceStrategyId)) {
+          return res.status(403).json({ message: "Forbidden: You do not have access to the source item's strategy" });
+        }
+        
+        if (!targetStrategyId || !assignedStrategyIds.includes(targetStrategyId)) {
+          return res.status(403).json({ message: "Forbidden: You do not have access to the target item's strategy" });
+        }
+      }
+      
+      const dependency = await storage.createDependency(dependencyData);
+      
+      // Get source and target titles for activity log
+      let sourceTitle = 'Unknown';
+      let targetTitle = 'Unknown';
+      let strategyId: string | null = null;
+      
+      if (dependencyData.sourceType === 'project') {
+        const project = await storage.getProject(dependencyData.sourceId);
+        sourceTitle = project?.title || 'Unknown';
+        strategyId = project?.strategyId || null;
+      } else if (dependencyData.sourceType === 'action') {
+        const action = await storage.getAction(dependencyData.sourceId);
+        sourceTitle = action?.title || 'Unknown';
+        strategyId = action?.strategyId || null;
+      }
+      
+      if (dependencyData.targetType === 'project') {
+        const project = await storage.getProject(dependencyData.targetId);
+        targetTitle = project?.title || 'Unknown';
+      } else if (dependencyData.targetType === 'action') {
+        const action = await storage.getAction(dependencyData.targetId);
+        targetTitle = action?.title || 'Unknown';
+      }
+      
+      await storage.createActivity({
+        type: 'dependency_created',
+        description: `Dependency created: ${dependencyData.sourceType} "${sourceTitle}" depends on ${dependencyData.targetType} "${targetTitle}"`,
+        userId: user.id,
+        strategyId,
+      });
+
+      res.status(201).json(dependency);
+    } catch (error) {
+      logger.error("Failed to create dependency", error);
+      res.status(500).json({ message: "Failed to create dependency" });
+    }
+  });
+
+  app.delete("/api/dependencies/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // View role cannot delete dependencies
+      if (user.role === 'view') {
+        return res.status(403).json({ message: "Forbidden: View users cannot delete dependencies" });
+      }
+      
+      const dependencyId = req.params.id;
+      
+      // Get the dependency to log activity
+      const allDependencies = await storage.getAllDependencies();
+      const existingDependency = allDependencies.find((d: any) => d.id === dependencyId);
+      
+      if (!existingDependency) {
+        return res.status(404).json({ message: "Dependency not found" });
+      }
+      
+      // Verify user has access to the source item's strategy
+      if (user.role !== 'administrator') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        
+        let sourceStrategyId: string | null = null;
+        if (existingDependency.sourceType === 'project') {
+          const sourceProject = await storage.getProject(existingDependency.sourceId);
+          sourceStrategyId = sourceProject?.strategyId || null;
+        } else if (existingDependency.sourceType === 'action') {
+          const sourceAction = await storage.getAction(existingDependency.sourceId);
+          sourceStrategyId = sourceAction?.strategyId || null;
+        }
+        
+        if (!sourceStrategyId || !assignedStrategyIds.includes(sourceStrategyId)) {
+          return res.status(403).json({ message: "Forbidden: You do not have access to this dependency" });
+        }
+      }
+      
+      const success = await storage.deleteDependency(dependencyId);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Dependency not found" });
+      }
+      
+      // Get source title for activity log
+      let sourceTitle = 'Unknown';
+      let strategyId: string | null = null;
+      
+      if (existingDependency.sourceType === 'project') {
+        const project = await storage.getProject(existingDependency.sourceId);
+        sourceTitle = project?.title || 'Unknown';
+        strategyId = project?.strategyId || null;
+      } else if (existingDependency.sourceType === 'action') {
+        const action = await storage.getAction(existingDependency.sourceId);
+        sourceTitle = action?.title || 'Unknown';
+        strategyId = action?.strategyId || null;
+      }
+      
+      await storage.createActivity({
+        type: 'dependency_deleted',
+        description: `Dependency deleted from ${existingDependency.sourceType} "${sourceTitle}"`,
+        userId: user.id,
+        strategyId,
+      });
+
+      res.status(204).send();
+    } catch (error) {
+      logger.error("Failed to delete dependency", error);
+      res.status(500).json({ message: "Failed to delete dependency" });
     }
   });
 
