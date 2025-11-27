@@ -63,7 +63,7 @@ const COLUMN_WIDTH = 280;
 const NODE_HEIGHT = 75;
 const NODE_PADDING = 12;
 const COLUMN_PADDING = 40;
-const HEADER_HEIGHT = 20;
+const HEADER_HEIGHT = 80;
 
 export default function Graph() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -533,23 +533,6 @@ export default function Graph() {
               <div className="w-8 h-0.5 bg-blue-500" />
               <span className="text-gray-600 dark:text-gray-400">Dependency (depends on)</span>
             </div>
-            <div className="flex-1" />
-            <Badge variant="outline" className="gap-1">
-              <Layers className="w-3 h-3" />
-              {filteredStrategies.length} Strategies
-            </Badge>
-            <Badge variant="outline" className="gap-1">
-              <Target className="w-3 h-3" />
-              {filteredProjects.length} Projects
-            </Badge>
-            <Badge variant="outline" className="gap-1">
-              <Zap className="w-3 h-3" />
-              {filteredActions.length} Actions
-            </Badge>
-            <Badge variant="secondary" className="gap-1">
-              <GitBranch className="w-3 h-3" />
-              {dependencies.length} Dependencies
-            </Badge>
           </div>
         </div>
 
@@ -581,6 +564,15 @@ export default function Graph() {
               </marker>
             </defs>
 
+            <text x={COLUMN_PADDING} y={40} className="text-lg font-bold fill-gray-700 dark:fill-gray-300">
+              Strategies
+            </text>
+            <text x={COLUMN_WIDTH + COLUMN_PADDING} y={40} className="text-lg font-bold fill-gray-700 dark:fill-gray-300">
+              Projects
+            </text>
+            <text x={COLUMN_WIDTH * 2 + COLUMN_PADDING} y={40} className="text-lg font-bold fill-gray-700 dark:fill-gray-300">
+              Actions
+            </text>
 
             <line x1={COLUMN_WIDTH} y1={0} x2={COLUMN_WIDTH} y2={svgHeight} stroke="#E5E7EB" strokeWidth="1" />
             <line x1={COLUMN_WIDTH * 2} y1={0} x2={COLUMN_WIDTH * 2} y2={svgHeight} stroke="#E5E7EB" strokeWidth="1" />
