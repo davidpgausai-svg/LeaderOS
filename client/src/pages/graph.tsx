@@ -69,8 +69,11 @@ export default function Graph() {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoveredItem, setHoveredItem] = useState<{ type: string; id: string } | null>(null);
+  const [lockedItem, setLockedItem] = useState<{ type: string; id: string } | null>(null);
   const [strategyFilter, setStrategyFilter] = useState<string>("all");
   const [scale, setScale] = useState(1);
+  
+  const activeItem = lockedItem || hoveredItem;
 
   const { data: strategies = [] } = useQuery<Strategy[]>({
     queryKey: ["/api/strategies"],
@@ -184,31 +187,39 @@ export default function Graph() {
   };
 
   const isInHierarchy = (type: string, id: string, itemStrategyId?: string, itemProjectId?: string | null) => {
-    if (!hoveredItem) return true;
+    if (!activeItem) return true;
     
-    if (hoveredItem.type === type && hoveredItem.id === id) return true;
+    if (activeItem.type === type && activeItem.id === id) return true;
     
-    if (hoveredItem.type === "strategy") {
-      if (type === "strategy") return hoveredItem.id === id;
-      if (type === "project") return itemStrategyId === hoveredItem.id;
-      if (type === "action") return itemStrategyId === hoveredItem.id;
+    if (activeItem.type === "strategy") {
+      if (type === "strategy") return activeItem.id === id;
+      if (type === "project") return itemStrategyId === activeItem.id;
+      if (type === "action") return itemStrategyId === activeItem.id;
     }
     
-    if (hoveredItem.type === "project") {
-      const hoveredProject = filteredProjects.find(p => p.id === hoveredItem.id);
-      if (type === "strategy") return id === hoveredProject?.strategyId;
-      if (type === "project") return hoveredItem.id === id;
-      if (type === "action") return itemProjectId === hoveredItem.id || itemStrategyId === hoveredProject?.strategyId;
+    if (activeItem.type === "project") {
+      const activeProject = filteredProjects.find(p => p.id === activeItem.id);
+      if (type === "strategy") return id === activeProject?.strategyId;
+      if (type === "project") return activeItem.id === id;
+      if (type === "action") return itemProjectId === activeItem.id || itemStrategyId === activeProject?.strategyId;
     }
     
-    if (hoveredItem.type === "action") {
-      const hoveredAction = filteredActions.find(a => a.id === hoveredItem.id);
-      if (type === "strategy") return id === hoveredAction?.strategyId;
-      if (type === "project") return id === hoveredAction?.projectId;
-      if (type === "action") return hoveredItem.id === id;
+    if (activeItem.type === "action") {
+      const activeAction = filteredActions.find(a => a.id === activeItem.id);
+      if (type === "strategy") return id === activeAction?.strategyId;
+      if (type === "project") return id === activeAction?.projectId;
+      if (type === "action") return activeItem.id === id;
     }
     
     return false;
+  };
+  
+  const handleCardClick = (type: string, id: string) => {
+    if (lockedItem?.type === type && lockedItem?.id === id) {
+      setLockedItem(null);
+    } else {
+      setLockedItem({ type, id });
+    }
   };
 
   const isRelatedToHovered = (type: string, id: string) => {
@@ -591,16 +602,18 @@ export default function Graph() {
                 const pos = nodePositions[`strategy-${strategy.id}`];
                 if (!pos) return null;
 
-                const isHovered = hoveredItem?.type === "strategy" && hoveredItem?.id === strategy.id;
+                const isActive = activeItem?.type === "strategy" && activeItem?.id === strategy.id;
+                const isLocked = lockedItem?.type === "strategy" && lockedItem?.id === strategy.id;
                 const inHierarchy = isInHierarchy("strategy", strategy.id);
-                const dimmed = hoveredItem && !inHierarchy;
+                const dimmed = activeItem && !inHierarchy;
 
                 return (
                   <Tooltip key={strategy.id}>
                     <TooltipTrigger asChild>
                       <g
-                        onMouseEnter={() => setHoveredItem({ type: "strategy", id: strategy.id })}
-                        onMouseLeave={() => setHoveredItem(null)}
+                        onMouseEnter={() => !lockedItem && setHoveredItem({ type: "strategy", id: strategy.id })}
+                        onMouseLeave={() => !lockedItem && setHoveredItem(null)}
+                        onClick={() => handleCardClick("strategy", strategy.id)}
                         style={{ cursor: "pointer", opacity: dimmed ? 0.3 : 1 }}
                       >
                         <rect
@@ -609,9 +622,9 @@ export default function Graph() {
                           width={pos.width}
                           height={pos.height}
                           rx={8}
-                          fill={isHovered ? "#FFFBEB" : "white"}
+                          fill={isActive ? "#FFFBEB" : "white"}
                           stroke={strategy.colorCode}
-                          strokeWidth={isHovered ? 3 : 2}
+                          strokeWidth={isActive ? 3 : 2}
                         />
                         <rect
                           x={pos.x}
@@ -621,6 +634,14 @@ export default function Graph() {
                           rx={3}
                           fill={strategy.colorCode}
                         />
+                        {isLocked && (
+                          <circle
+                            cx={pos.x + pos.width - 12}
+                            cy={pos.y + 12}
+                            r={6}
+                            fill={strategy.colorCode}
+                          />
+                        )}
                         <text
                           x={pos.x + 16}
                           y={pos.y + 18}
@@ -667,6 +688,7 @@ export default function Graph() {
                     <TooltipContent>
                       <p className="font-medium">{strategy.title}</p>
                       <p className="text-xs text-gray-400">{strategy.status}</p>
+                      <p className="text-xs text-gray-400">{isLocked ? "Click to unlock" : "Click to lock highlight"}</p>
                     </TooltipContent>
                   </Tooltip>
                 );
@@ -676,16 +698,18 @@ export default function Graph() {
                 const pos = nodePositions[`project-${project.id}`];
                 if (!pos) return null;
 
-                const isHovered = hoveredItem?.type === "project" && hoveredItem?.id === project.id;
+                const isActive = activeItem?.type === "project" && activeItem?.id === project.id;
+                const isLocked = lockedItem?.type === "project" && lockedItem?.id === project.id;
                 const inHierarchy = isInHierarchy("project", project.id, project.strategyId);
-                const dimmed = hoveredItem && !inHierarchy;
+                const dimmed = activeItem && !inHierarchy;
 
                 return (
                   <Tooltip key={project.id}>
                     <TooltipTrigger asChild>
                       <g
-                        onMouseEnter={() => setHoveredItem({ type: "project", id: project.id })}
-                        onMouseLeave={() => setHoveredItem(null)}
+                        onMouseEnter={() => !lockedItem && setHoveredItem({ type: "project", id: project.id })}
+                        onMouseLeave={() => !lockedItem && setHoveredItem(null)}
+                        onClick={() => handleCardClick("project", project.id)}
                         style={{ cursor: "pointer", opacity: dimmed ? 0.3 : 1 }}
                       >
                         <rect
@@ -694,9 +718,9 @@ export default function Graph() {
                           width={pos.width}
                           height={pos.height}
                           rx={8}
-                          fill={isHovered ? "#F0F9FF" : "white"}
-                          stroke={isHovered ? getStrategyColor(project.strategyId) : "#D1D5DB"}
-                          strokeWidth={isHovered ? 3 : 1}
+                          fill={isActive ? "#F0F9FF" : "white"}
+                          stroke={isActive ? getStrategyColor(project.strategyId) : "#D1D5DB"}
+                          strokeWidth={isActive ? 3 : 1}
                         />
                         <circle
                           cx={pos.x + 12}
@@ -704,6 +728,14 @@ export default function Graph() {
                           r={4}
                           fill={getStrategyColor(project.strategyId)}
                         />
+                        {isLocked && (
+                          <circle
+                            cx={pos.x + pos.width - 12}
+                            cy={pos.y + 12}
+                            r={6}
+                            fill={getStrategyColor(project.strategyId)}
+                          />
+                        )}
                         <text
                           x={pos.x + 22}
                           y={pos.y + 18}
@@ -750,6 +782,7 @@ export default function Graph() {
                     <TooltipContent>
                       <p className="font-medium">{project.title}</p>
                       <p className="text-xs text-gray-400">Progress: {project.progress}%</p>
+                      <p className="text-xs text-gray-400">{isLocked ? "Click to unlock" : "Click to lock highlight"}</p>
                     </TooltipContent>
                   </Tooltip>
                 );
@@ -759,17 +792,19 @@ export default function Graph() {
                 const pos = nodePositions[`action-${action.id}`];
                 if (!pos) return null;
 
-                const isHovered = hoveredItem?.type === "action" && hoveredItem?.id === action.id;
+                const isActive = activeItem?.type === "action" && activeItem?.id === action.id;
+                const isLocked = lockedItem?.type === "action" && lockedItem?.id === action.id;
                 const inHierarchy = isInHierarchy("action", action.id, action.strategyId, action.projectId);
-                const dimmed = hoveredItem && !inHierarchy;
+                const dimmed = activeItem && !inHierarchy;
                 const linkedProject = getProjectForAction(action);
 
                 return (
                   <Tooltip key={action.id}>
                     <TooltipTrigger asChild>
                       <g
-                        onMouseEnter={() => setHoveredItem({ type: "action", id: action.id })}
-                        onMouseLeave={() => setHoveredItem(null)}
+                        onMouseEnter={() => !lockedItem && setHoveredItem({ type: "action", id: action.id })}
+                        onMouseLeave={() => !lockedItem && setHoveredItem(null)}
+                        onClick={() => handleCardClick("action", action.id)}
                         style={{ cursor: "pointer", opacity: dimmed ? 0.3 : 1 }}
                       >
                         <rect
@@ -778,10 +813,18 @@ export default function Graph() {
                           width={pos.width}
                           height={pos.height}
                           rx={8}
-                          fill={isHovered ? "#FFF7ED" : "white"}
-                          stroke={isHovered ? getStrategyColor(action.strategyId) : "#E5E7EB"}
-                          strokeWidth={isHovered ? 3 : 1}
+                          fill={isActive ? "#FFF7ED" : "white"}
+                          stroke={isActive ? getStrategyColor(action.strategyId) : "#E5E7EB"}
+                          strokeWidth={isActive ? 3 : 1}
                         />
+                        {isLocked && (
+                          <circle
+                            cx={pos.x + pos.width - 12}
+                            cy={pos.y + 12}
+                            r={6}
+                            fill={getStrategyColor(action.strategyId)}
+                          />
+                        )}
                         <circle
                           cx={pos.x + 12}
                           cy={pos.y + 14}
@@ -838,6 +881,7 @@ export default function Graph() {
                       {linkedProject && (
                         <p className="text-xs text-gray-400">Project: {linkedProject.title}</p>
                       )}
+                      <p className="text-xs text-gray-400">{isLocked ? "Click to unlock" : "Click to lock highlight"}</p>
                     </TooltipContent>
                   </Tooltip>
                 );
