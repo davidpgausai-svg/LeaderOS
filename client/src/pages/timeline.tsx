@@ -440,7 +440,21 @@ export default function Timeline() {
                         {/* Projects Section: Pills stacked below strategy bar */}
                         {framework.milestones.length > 0 && (
                           <div className="relative pb-2" style={{ minHeight: `${framework.milestones.length * 28 + 8}px` }}>
-                            {framework.milestones.map((milestone, milestoneIndex) => {
+                            {/* Sort milestones by proximity to today - closest projects appear at top */}
+                            {[...framework.milestones].sort((a, b) => {
+                              const today = new Date();
+                              // Calculate distance from today for each project
+                              const getDistanceFromToday = (m: typeof a) => {
+                                if (today >= m.startDate && today <= m.endDate) {
+                                  return 0; // Today is within the project range
+                                } else if (today < m.startDate) {
+                                  return differenceInDays(m.startDate, today); // Project is in the future
+                                } else {
+                                  return differenceInDays(today, m.endDate); // Project is in the past
+                                }
+                              };
+                              return getDistanceFromToday(a) - getDistanceFromToday(b);
+                            }).map((milestone, milestoneIndex) => {
                               const startPixels = getPositionPixels(milestone.startDate);
                               const endPixels = getPositionPixels(milestone.endDate);
                               const leftPx = Math.min(startPixels, endPixels);
