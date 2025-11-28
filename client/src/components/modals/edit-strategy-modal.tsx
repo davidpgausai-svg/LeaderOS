@@ -323,7 +323,19 @@ export function EditStrategyModal({ open, onOpenChange, strategy }: EditStrategy
                   name="metrics"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Success Metrics *</FormLabel>
+                      <FormLabel className="flex items-center gap-1.5">
+                        Success Metrics *
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="w-4 h-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent side="right" className="max-w-sm p-3 z-[100]">
+                              <p className="text-sm">A Success Metric is a quantitative, verifiable indicator that measures whether a strategic Objective has been achieved. It translates the organization's intended outcome into clear evidence of progress, enabling leaders to assess performance, validate impact, and course-correct in real time.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </FormLabel>
                       <FormControl>
                         <Input 
                           placeholder="e.g., 25% revenue increase, 3 new markets" 
