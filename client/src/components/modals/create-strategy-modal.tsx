@@ -211,7 +211,7 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
                         <TooltipTrigger asChild>
                           <Info className="w-4 h-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-help" />
                         </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-sm p-3 z-[100]">
+                        <TooltipContent side="right" className="max-w-sm p-3 z-[100]">
                           <p className="text-sm">An Objective is a clear, qualitative, and time-bound strategic outcome that articulates the organization's intended direction of travel. It expresses the meaningful change we aim to create, provides a shared north star for decision-making, and anchors downstream execution across projects and actions.</p>
                         </TooltipContent>
                       </Tooltip>
