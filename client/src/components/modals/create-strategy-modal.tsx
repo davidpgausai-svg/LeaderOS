@@ -23,7 +23,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Sparkles, Loader2, Info } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface CreateStrategyModalProps {
   open: boolean;
@@ -102,7 +108,7 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
     if (!title || !description || !goal) {
       toast({
         title: "Missing Information",
-        description: "Please fill in Title, Description, and Goal before generating",
+        description: "Please fill in Title, Description, and Objective before generating",
         variant: "destructive",
       });
       return;
@@ -198,11 +204,23 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
               name="goal"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Goal</FormLabel>
+                  <FormLabel className="flex items-center gap-1.5">
+                    Objective
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="w-4 h-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-sm p-3">
+                          <p className="text-sm">An Objective is a clear, qualitative, and time-bound strategic outcome that articulates the organization's intended direction of travel. It expresses the meaningful change we aim to create, provides a shared north star for decision-making, and anchors downstream execution across projects and actions.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </FormLabel>
                   <FormControl>
                     <Textarea
                       rows={3}
-                      placeholder="Define the strategic goal and desired outcome"
+                      placeholder="Define the strategic objective and desired outcome"
                       {...field}
                       value={field.value || ""}
                     />

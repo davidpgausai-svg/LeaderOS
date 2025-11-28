@@ -63,7 +63,7 @@ export function ViewStrategyModal({ open, onOpenChange, strategy }: ViewStrategy
             </div>
 
             <InfoField label="Description" value={strategy.description} />
-            {strategy.goal && <InfoField label="Strategic Goal" value={strategy.goal} />}
+            {strategy.goal && <InfoField label="Strategic Objective" value={strategy.goal} />}
           </div>
 
           <Separator />

@@ -99,11 +99,11 @@ export function FrameworkCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Goal Section */}
+        {/* Objective Section */}
         <div className="space-y-1">
           <div className="flex items-center space-x-2">
             <Target className="w-4 h-4" style={{ color: colorCode }} />
-            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">GOAL</span>
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">OBJECTIVE</span>
           </div>
           
           {/* Collapsible dropdowns with indentation and reduced spacing */}
@@ -119,7 +119,7 @@ export function FrameworkCard({
                   className="w-full flex items-center justify-between text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-2 py-1 h-auto"
                   data-testid="button-toggle-goal"
                 >
-                  <span className="text-xs font-semibold">READ GOAL</span>
+                  <span className="text-xs font-semibold">READ OBJECTIVE</span>
                   {expandedGoal ? (
                     <ChevronUp className="h-3 w-3" />
                   ) : (
@@ -147,7 +147,7 @@ export function FrameworkCard({
                   className="w-full flex items-center justify-between text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-2 py-1 h-auto"
                   data-testid="button-toggle-description"
                 >
-                  <span className="text-xs font-semibold">GOAL DESCRIPTION</span>
+                  <span className="text-xs font-semibold">OBJECTIVE DESCRIPTION</span>
                   {expandedDescription ? (
                     <ChevronUp className="h-3 w-3" />
                   ) : (

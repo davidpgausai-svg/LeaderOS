@@ -30,7 +30,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Info } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -193,7 +199,19 @@ export function EditStrategyModal({ open, onOpenChange, strategy }: EditStrategy
                   name="goal"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Strategic Goal</FormLabel>
+                      <FormLabel className="flex items-center gap-1.5">
+                        Objective
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="w-4 h-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-sm p-3">
+                              <p className="text-sm">An Objective is a clear, qualitative, and time-bound strategic outcome that articulates the organization's intended direction of travel. It expresses the meaningful change we aim to create, provides a shared north star for decision-making, and anchors downstream execution across projects and actions.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </FormLabel>
                       <FormControl>
                         <Input placeholder="e.g., Increase revenue by 25%" {...field} value={field.value || ""} data-testid="input-edit-strategy-goal" />
                       </FormControl>
