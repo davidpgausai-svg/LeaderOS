@@ -16,6 +16,10 @@ import Settings from "@/pages/settings";
 import Timeline from "@/pages/timeline";
 import Graph from "@/pages/graph";
 import Documentation from "@/pages/documentation";
+import Templates from "@/pages/templates";
+import SwotTemplate from "@/pages/templates/swot";
+import SmartGoalsTemplate from "@/pages/templates/smart-goals";
+import EisenhowerMatrixTemplate from "@/pages/templates/eisenhower-matrix";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 
@@ -46,6 +50,10 @@ function Router() {
         <Route path="/actions" component={Actions} />
         <Route path="/meeting-notes" component={MeetingNotes} />
         <Route path="/reports" component={Reports} />
+        <Route path="/templates" component={Templates} />
+        <Route path="/templates/swot" component={SwotTemplate} />
+        <Route path="/templates/smart-goals" component={SmartGoalsTemplate} />
+        <Route path="/templates/eisenhower-matrix" component={EisenhowerMatrixTemplate} />
         <Route path="/documentation" component={Documentation} />
         <Route path="/settings" component={Settings} />
         <Route component={NotFound} />
