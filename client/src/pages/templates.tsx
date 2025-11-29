@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Target, ClipboardList, LayoutGrid, Clock, FileText, ChevronRight, FileSpreadsheet } from "lucide-react";
+import { Target, ClipboardList, LayoutGrid, Clock, FileText, ChevronRight, FileSpreadsheet, Radar } from "lucide-react";
 import type { TemplateType } from "@shared/schema";
 
 type TemplateInfo = {
@@ -29,6 +29,16 @@ const templates: TemplateInfo[] = [
     readTime: "10 min",
     path: "/templates/strategy-on-a-page",
     color: "text-indigo-600",
+  },
+  {
+    id: "pestle",
+    title: "PESTLE Analysis",
+    description: "Evaluate Political, Economic, Social, Technological, Legal, and Environmental macro-factors affecting your strategy.",
+    icon: Radar,
+    category: "Strategic Planning",
+    readTime: "15 min",
+    path: "/templates/pestle",
+    color: "text-teal-600",
   },
   {
     id: "swot",
