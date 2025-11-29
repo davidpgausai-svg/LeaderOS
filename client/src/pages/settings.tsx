@@ -52,7 +52,10 @@ import {
   GripVertical,
   Target,
   ChevronDown,
+  FileText,
+  Plus,
 } from "lucide-react";
+import type { TemplateType } from "@shared/schema";
 
 interface UserStrategyRowProps {
   user: any;
@@ -276,6 +279,7 @@ export default function Settings() {
     tactical: true,
     deadlines: true,
   });
+  const [newTemplateTypeName, setNewTemplateTypeName] = useState("");
 
   const { data: users } = useQuery({
     queryKey: ["/api/users"],
@@ -283,6 +287,10 @@ export default function Settings() {
 
   const { data: strategies } = useQuery({
     queryKey: ["/api/strategies"],
+  });
+
+  const { data: templateTypes = [] } = useQuery<TemplateType[]>({
+    queryKey: ["/api/template-types"],
   });
 
   // Initialize framework order when strategies load
@@ -373,6 +381,60 @@ export default function Settings() {
       });
     },
   });
+
+  const createTemplateTypeMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const response = await apiRequest("POST", "/api/template-types", { name });
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Template category created successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/template-types"] });
+      setNewTemplateTypeName("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create template category",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteTemplateTypeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/template-types/${id}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Template category deleted successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/template-types"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete template category",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAddTemplateType = () => {
+    if (!newTemplateTypeName.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a category name",
+        variant: "destructive",
+      });
+      return;
+    }
+    createTemplateTypeMutation.mutate(newTemplateTypeName);
+  };
 
   const handleProfileUpdate = (formData: FormData) => {
     if (!currentUser?.id) {
@@ -1157,6 +1219,90 @@ export default function Settings() {
                           <Button variant="outline" data-testid="button-admin-export-everything">
                             Complete Data Export
                           </Button>
+                        </div>
+                      </div>
+
+                      <div className="p-4 border rounded-lg">
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <h4 className="font-medium flex items-center gap-2">
+                              <FileText className="w-4 h-4" />
+                              Template Categories
+                            </h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                              Manage custom template categories for the Templates page.
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-2 mb-4">
+                          <Input
+                            value={newTemplateTypeName}
+                            onChange={(e) => setNewTemplateTypeName(e.target.value)}
+                            placeholder="New category name..."
+                            className="max-w-xs"
+                            onKeyDown={(e) => e.key === "Enter" && handleAddTemplateType()}
+                            data-testid="input-new-template-type"
+                          />
+                          <Button
+                            onClick={handleAddTemplateType}
+                            disabled={createTemplateTypeMutation.isPending}
+                            data-testid="button-add-template-type"
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            {createTemplateTypeMutation.isPending ? "Adding..." : "Add"}
+                          </Button>
+                        </div>
+
+                        <div className="space-y-2">
+                          {templateTypes.length === 0 ? (
+                            <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
+                              No custom template categories yet. Add one above.
+                            </p>
+                          ) : (
+                            templateTypes.map((templateType: TemplateType) => (
+                              <div
+                                key={templateType.id}
+                                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <FileText className="w-4 h-4 text-gray-400" />
+                                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                    {templateType.name}
+                                  </span>
+                                </div>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950"
+                                      data-testid={`button-delete-template-type-${templateType.id}`}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Delete Template Category</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to delete the "{templateType.name}" category? This action cannot be undone.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => deleteTemplateTypeMutation.mutate(templateType.id)}
+                                        className="bg-red-600 hover:bg-red-700"
+                                      >
+                                        Delete
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
+                            ))
+                          )}
                         </div>
                       </div>
 
