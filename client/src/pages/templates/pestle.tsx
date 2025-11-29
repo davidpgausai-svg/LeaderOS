@@ -298,6 +298,9 @@ export default function PestleTemplate() {
             children.push(new Paragraph({ children: [new TextRun({ text: "Owner: ", bold: true }), new TextRun(factor.owner)] }));
           }
           children.push(new Paragraph({ children: [new TextRun({ text: "Status: ", bold: true }), new TextRun(factor.status)] }));
+          if (factor.notes) {
+            children.push(new Paragraph({ children: [new TextRun({ text: "Notes: ", bold: true }), new TextRun(factor.notes)] }));
+          }
           children.push(new Paragraph({ text: "" }));
         });
       });
@@ -509,6 +512,16 @@ export default function PestleTemplate() {
               onChange={(e) => updateFactor(category, factor.id, "owner", e.target.value)}
               placeholder="Executive or function"
               data-testid={`input-pestle-${category.toLowerCase()}-owner-${factor.id}`}
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <Label className="text-xs">Notes / Sources</Label>
+            <Input
+              value={factor.notes}
+              onChange={(e) => updateFactor(category, factor.id, "notes", e.target.value)}
+              placeholder="Links, references, or additional notes..."
+              data-testid={`input-pestle-${category.toLowerCase()}-notes-${factor.id}`}
             />
           </div>
         </div>

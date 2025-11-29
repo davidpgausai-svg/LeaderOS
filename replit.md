@@ -78,6 +78,7 @@ A collection of strategic planning, project management, and productivity templat
 - **Main Templates Page** (`/templates`): Card grid displaying available templates with category filtering (Strategic Planning, Project Management, Daily Tasks, plus custom categories).
 - **Built-in Templates**:
   - Strategy on a Page (`/templates/strategy-on-a-page`): Comprehensive enterprise framework with Mission, Vision, Strategic Priorities (3-5), Objectives with KPIs, Key Initiatives linked to priorities, and Risks & Mitigations with impact/likelihood assessment
+  - PESTLE Analysis (`/templates/pestle`): External macro-environment scanning framework evaluating Political, Economic, Social, Technological, Legal, and Environmental factors with trend direction, likelihood/impact scoring, strategic implications, and response status tracking
   - SWOT Analysis (`/templates/swot`): 2x2 grid for Strengths, Weaknesses, Opportunities, and Threats analysis
   - SMART Goals (`/templates/smart-goals`): Structured framework for Specific, Measurable, Achievable, Relevant, and Time-bound goal setting
   - Eisenhower Matrix (`/templates/eisenhower-matrix`): 4-quadrant task prioritization (Do First, Schedule, Delegate, Delete)
