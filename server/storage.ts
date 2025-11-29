@@ -1,4 +1,4 @@
-import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Project, type InsertProject, type Activity, type InsertActivity, type Action, type InsertAction, type Notification, type InsertNotification, type ActionDocument, type InsertActionDocument, type ActionChecklistItem, type InsertActionChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, type AiChatConversation, type InsertAiChatConversation, type Barrier, type InsertBarrier, type Dependency, type InsertDependency, users, strategies, projects, activities, actions, notifications, actionDocuments, actionChecklistItems, userStrategyAssignments, meetingNotes, aiChatConversations, barriers, dependencies } from "@shared/schema";
+import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Project, type InsertProject, type Activity, type InsertActivity, type Action, type InsertAction, type Notification, type InsertNotification, type ActionDocument, type InsertActionDocument, type ActionChecklistItem, type InsertActionChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, type AiChatConversation, type InsertAiChatConversation, type Barrier, type InsertBarrier, type Dependency, type InsertDependency, type TemplateType, type InsertTemplateType, users, strategies, projects, activities, actions, notifications, actionDocuments, actionChecklistItems, userStrategyAssignments, meetingNotes, aiChatConversations, barriers, dependencies, templateTypes } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, asc, and, desc, ne } from "drizzle-orm";
@@ -101,6 +101,11 @@ export interface IStorage {
   getDependenciesByTarget(targetType: string, targetId: string): Promise<Dependency[]>;
   createDependency(dependency: InsertDependency): Promise<Dependency>;
   deleteDependency(id: string): Promise<boolean>;
+
+  // Template Type methods
+  getAllTemplateTypes(): Promise<TemplateType[]>;
+  createTemplateType(templateType: InsertTemplateType): Promise<TemplateType>;
+  deleteTemplateType(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -767,6 +772,19 @@ export class MemStorage implements IStorage {
   }
 
   async deleteDependency(id: string): Promise<boolean> {
+    return false;
+  }
+
+  // Template Type methods (stub - not used in production)
+  async getAllTemplateTypes(): Promise<TemplateType[]> {
+    return [];
+  }
+
+  async createTemplateType(templateType: InsertTemplateType): Promise<TemplateType> {
+    throw new Error("MemStorage template type methods not implemented");
+  }
+
+  async deleteTemplateType(id: string): Promise<boolean> {
     return false;
   }
 }
@@ -1554,6 +1572,30 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .delete(dependencies)
       .where(eq(dependencies.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  // Template Type methods
+  async getAllTemplateTypes(): Promise<TemplateType[]> {
+    return await db
+      .select()
+      .from(templateTypes)
+      .orderBy(asc(templateTypes.displayOrder));
+  }
+
+  async createTemplateType(templateType: InsertTemplateType): Promise<TemplateType> {
+    const [created] = await db
+      .insert(templateTypes)
+      .values(templateType)
+      .returning();
+    return created;
+  }
+
+  async deleteTemplateType(id: string): Promise<boolean> {
+    const result = await db
+      .delete(templateTypes)
+      .where(eq(templateTypes.id, id))
       .returning();
     return result.length > 0;
   }

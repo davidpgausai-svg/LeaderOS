@@ -331,6 +331,24 @@ export const insertDependencySchema = createInsertSchema(dependencies).omit({
 export type InsertDependency = z.infer<typeof insertDependencySchema>;
 export type Dependency = typeof dependencies.$inferSelect;
 
+// Template Types - Categories for template organization (admin-managed)
+export const templateTypes = pgTable("template_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(), // e.g., "Strategic Planning", "Project Management", "Daily Tasks"
+  description: text("description"), // Optional description
+  displayOrder: integer("display_order").notNull().default(0),
+  createdBy: varchar("created_by").notNull(),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+export const insertTemplateTypeSchema = createInsertSchema(templateTypes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertTemplateType = z.infer<typeof insertTemplateTypeSchema>;
+export type TemplateType = typeof templateTypes.$inferSelect;
+
 // AI Chat Conversations - Stores chat history with the AI assistant
 export const aiChatConversations = pgTable("ai_chat_conversations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
