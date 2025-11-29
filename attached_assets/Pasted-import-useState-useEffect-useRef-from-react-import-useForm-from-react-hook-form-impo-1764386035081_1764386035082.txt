@@ -1,0 +1,351 @@
+import { useState, useEffect, useRef } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Navbar } from "@/components/navbar";
+import { useToast } from "@/hooks/use-toast";
+import { Download, FileText, Lock, CheckCircle2, ShieldAlert, Sparkles } from "lucide-react";
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
+import { Document, Packer, Paragraph, HeadingLevel } from "docx";
+
+// --- Validation Schema ---
+const formSchema = z.object({
+  email: z.string().email("Invalid email address").refine((email) => {
+    const forbiddenDomains = ["gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "aol.com"];
+    const domain = email.split("@")[1];
+    return !forbiddenDomains.includes(domain);
+  }, "Please use your work email address. Personal email providers are not accepted."),
+});
+
+// --- Default Content ---
+const defaultContent = {
+  strengths: `Enterprise Alignment Engine: Provides an integrated cascade from mission → strategic priorities → projects → actions, driving organizational coherence and cross-functional alignment.
+Decision-Quality Multiplier: Elevates leadership conversations from tactical firefighting to structured, future-oriented decision-making anchored in data and intelligence.
+Operational Transparency: Establishes line-of-sight into initiatives, KPIs, ROI, capacity constraints, and dependencies.
+Culture of Intentionality: Enforces a disciplined cadence—quarterly reviews, governance, and KPI tracking.
+Scalable Frameworks: Enables repeatable annual operating plans and multi-year roadmaps.`,
+  weaknesses: `Fragmentation Risk: Without governance, planning becomes siloed.
+Execution Gap: Organizations struggle to operationalize plans with measurable KPIs.
+Data Quality Dependencies: Strategy is only as strong as the data feeding it.
+Change Saturation: Overly complex frameworks slow adoption.
+Capacity Blindspots: Teams underestimate bandwidth across projects/actions.`,
+  opportunities: `AI-Driven Strategy Orchestration: Automates KPI rollups and forecasting.
+Digital Strategy Platforms: SaaS tools enable standardized governance and network effects.
+Cross-Industry Benchmarking: Unlocks comparative insights across hospitals, universities, govt.
+Leadership Upskilling: Executives seeking structured strategic literacy.
+Regulatory & Market Shifts: Tailwinds for organizations with robust strategic planning systems.`,
+  threats: `Environmental Volatility: Regulatory and market shifts make static plans obsolete.
+Competitive Agility: Faster planning cycles outmaneuver slow legacy processes.
+Enterprise Complexity: Matrixed organizations face governance friction and diffused authority.
+Technology Fragmentation: Disconnected systems hinder unified strategy execution.
+Leadership Turnover: New leaders reset priorities without strong governance.`,
+};
+
+export default function SwotTool() {
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [swotData, setSwotData] = useState(defaultContent);
+  const { toast } = useToast();
+  const swotContainerRef = useRef<HTMLDivElement>(null);
+
+  // Simulate DB
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: "",
+    },
+  });
+
+  // Check local storage on mount (simulating IP check)
+  useEffect(() => {
+    document.title = "SWOT Analysis Tool | Executive Planner";
+    const hasAccess = localStorage.getItem("swot_tool_access");
+    if (hasAccess) {
+      setIsUnlocked(true);
+    }
+    return () => {
+      document.title = "Executive Planner";
+    };
+  }, []);
+
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    // Send to Google Sheets API
+    try {
+      // The Google Script expects JSON in e.postData.contents
+      // We map our fields to the script's expected keys: name, email, message
+      const payload = {
+        name: "SWOT Analysis Tool",
+        email: values.email,
+        message: "Opt-in: Yes",
+        custom1: "Source: Executive Planner Website",
+        custom2: new Date().toISOString()
+      };
+
+      console.log("Sending JSON to Google Sheet:", payload);
+
+      // Use text/plain to avoid CORS preflight (OPTIONS) request
+      // Google Apps Script will still receive the body in e.postData.contents
+      await fetch("https://script.google.com/macros/s/AKfycbxgOqoCSFfvgBMWqGR35P0-u_Xv53ia5zMNHjYPNQs7DqdKwMLQ0IS9-gidn5xXQS2y/exec", {
+        method: "POST",
+        mode: "no-cors",
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8",
+        },
+        body: JSON.stringify(payload),
+      });
+      
+      console.log("Request sent (opaque response due to no-cors)");
+    } catch (error) {
+      console.error("Failed to log to Google Sheets:", error);
+    }
+
+    // Grant access
+    localStorage.setItem("swot_tool_access", "true");
+    setIsUnlocked(true);
+    toast({
+      title: "Access Granted",
+      description: "Welcome to the Strategic SWOT Analysis Tool.",
+    });
+  };
+
+  const handleTextChange = (section: keyof typeof defaultContent, value: string) => {
+    setSwotData((prev) => ({ ...prev, [section]: value }));
+  };
+
+  const exportPDF = async () => {
+    if (!swotContainerRef.current) return;
+    
+    toast({ title: "Generating PDF...", description: "Please wait while we prepare your download." });
+
+    try {
+      const canvas = await html2canvas(swotContainerRef.current, { 
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff"
+      });
+      
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+      
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      
+      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save("Executive-Planner-SWOT.pdf");
+      
+      toast({ title: "Download Complete", className: "bg-green-600 text-white border-none" });
+    } catch (err) {
+      console.error("PDF Export Error:", err);
+      toast({ 
+        title: "Export Failed", 
+        description: err instanceof Error ? err.message : "Could not generate PDF.", 
+        variant: "destructive" 
+      });
+    }
+  };
+
+  const exportDocx = () => {
+    toast({ title: "Generating Word Doc...", description: "Please wait while we prepare your download." });
+    
+    const doc = new Document({
+      sections: [{
+        properties: {},
+        children: [
+          new Paragraph({ text: "SWOT Analysis – Strategic Planning", heading: HeadingLevel.TITLE }),
+          
+          new Paragraph({ text: "Strengths", heading: HeadingLevel.HEADING_2 }),
+          new Paragraph(swotData.strengths),
+          
+          new Paragraph({ text: "Weaknesses", heading: HeadingLevel.HEADING_2 }),
+          new Paragraph(swotData.weaknesses),
+          
+          new Paragraph({ text: "Opportunities", heading: HeadingLevel.HEADING_2 }),
+          new Paragraph(swotData.opportunities),
+          
+          new Paragraph({ text: "Threats", heading: HeadingLevel.HEADING_2 }),
+          new Paragraph(swotData.threats),
+          
+          new Paragraph({ 
+            text: "\nGenerated by Executive Planner", 
+            heading: HeadingLevel.HEADING_3 
+          }),
+        ],
+      }],
+    });
+
+    Packer.toBlob(doc).then((blob) => {
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "Executive-Planner-SWOT.docx";
+      link.click();
+      toast({ title: "Download Complete", className: "bg-green-600 text-white border-none" });
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/30">
+      <Navbar />
+
+      <div className="container mx-auto px-6 pt-24 pb-12">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">SWOT Analysis Tool</h1>
+              <p className="text-muted-foreground">Strategic Planning & Risk Assessment</p>
+            </div>
+            <div className="flex gap-3">
+              <Button 
+                variant="outline" 
+                className="bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200"
+                onClick={() => window.open("https://notebooklm.google.com/notebook/9deb47b8-5712-41ad-b08a-4b4068cd7ccd", "_blank")}
+                disabled={!isUnlocked}
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                SWOT AI
+              </Button>
+              <Button variant="outline" onClick={exportDocx} disabled={!isUnlocked}>
+                <FileText className="w-4 h-4 mr-2" />
+                Word Doc
+              </Button>
+              <Button onClick={exportPDF} disabled={!isUnlocked}>
+                <Download className="w-4 h-4 mr-2" />
+                PDF
+              </Button>
+            </div>
+          </div>
+
+          {/* Main SWOT Grid */}
+          <div 
+            ref={swotContainerRef}
+            className={`grid md:grid-cols-2 gap-6 transition-all duration-500 ${!isUnlocked ? 'blur-md select-none pointer-events-none opacity-50' : ''}`}
+          >
+            <Card className="border-l-4 border-l-green-500 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-green-600 flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5" /> Strengths
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <textarea 
+                  className="w-full h-64 p-3 rounded-md border bg-background/50 resize-none focus:outline-none focus:ring-1 focus:ring-green-500 text-sm leading-relaxed"
+                  value={swotData.strengths}
+                  onChange={(e) => handleTextChange("strengths", e.target.value)}
+                />
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-orange-500 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-orange-600 flex items-center gap-2">
+                  <ShieldAlert className="w-5 h-5" /> Weaknesses
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <textarea 
+                  className="w-full h-64 p-3 rounded-md border bg-background/50 resize-none focus:outline-none focus:ring-1 focus:ring-orange-500 text-sm leading-relaxed"
+                  value={swotData.weaknesses}
+                  onChange={(e) => handleTextChange("weaknesses", e.target.value)}
+                />
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-blue-500 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-blue-600 flex items-center gap-2">
+                  <Download className="w-5 h-5" /> Opportunities
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <textarea 
+                  className="w-full h-64 p-3 rounded-md border bg-background/50 resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm leading-relaxed"
+                  value={swotData.opportunities}
+                  onChange={(e) => handleTextChange("opportunities", e.target.value)}
+                />
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-red-500 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-red-600 flex items-center gap-2">
+                  <ShieldAlert className="w-5 h-5" /> Threats
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <textarea 
+                  className="w-full h-64 p-3 rounded-md border bg-background/50 resize-none focus:outline-none focus:ring-1 focus:ring-red-500 text-sm leading-relaxed"
+                  value={swotData.threats}
+                  onChange={(e) => handleTextChange("threats", e.target.value)}
+                />
+              </CardContent>
+            </Card>
+          </div>
+          
+          {/* Video Section */}
+          <div className="mt-12 flex justify-center">
+            <div className="w-full max-w-4xl rounded-xl overflow-hidden shadow-2xl border border-white/10 bg-black">
+              <div className="aspect-video w-full">
+                <iframe 
+                  width="100%" 
+                  height="100%" 
+                  src="https://www.youtube.com/embed/l6SB0ZmFOhc?si=a-QTvt4JowPl3-SU" 
+                  title="YouTube video player" 
+                  frameBorder="0" 
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                  referrerPolicy="strict-origin-when-cross-origin" 
+                  allowFullScreen
+                ></iframe>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Lead Capture Modal */}
+      {!isUnlocked && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-md shadow-2xl border-t-4 border-t-primary animate-in fade-in zoom-in duration-300">
+            <CardHeader className="text-center space-y-2">
+              <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-2">
+                <Lock className="w-6 h-6 text-primary" />
+              </div>
+              <CardTitle className="text-2xl">Unlock SWOT Analysis Tool</CardTitle>
+              <CardDescription>
+                Enter your work email to access this professional strategic planning tool.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Work Email Address</FormLabel>
+                        <FormControl>
+                          <Input placeholder="name@company.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="w-full text-base py-6">
+                    Unlock Access
+                  </Button>
+                  <p className="text-xs text-center text-muted-foreground pt-2">
+                    By unlocking, you opt-in to receive strategic planning insights.
+                  </p>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}
