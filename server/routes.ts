@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertStrategySchema, insertProjectSchema, insertActionSchema, insertActionDocumentSchema, insertActionChecklistItemSchema, insertMeetingNoteSchema, insertBarrierSchema, insertDependencySchema } from "@shared/schema";
+import { insertStrategySchema, insertProjectSchema, insertActionSchema, insertActionDocumentSchema, insertActionChecklistItemSchema, insertMeetingNoteSchema, insertBarrierSchema, insertDependencySchema, insertTemplateTypeSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 import { logger } from "./logger";
@@ -2590,6 +2590,70 @@ Available navigation: Dashboard, Strategies, Projects, Actions, Timeline, Meetin
     } catch (error) {
       logger.error("Failed to clear chat history", error);
       res.status(500).json({ message: "Failed to clear chat history" });
+    }
+  });
+
+  // Template Type routes
+  app.get("/api/template-types", isAuthenticated, async (req: any, res) => {
+    try {
+      const templateTypes = await storage.getAllTemplateTypes();
+      res.json(templateTypes);
+    } catch (error) {
+      logger.error("Failed to fetch template types", error);
+      res.status(500).json({ message: "Failed to fetch template types" });
+    }
+  });
+
+  app.post("/api/template-types", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      // Check if user is an administrator
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'administrator') {
+        return res.status(403).json({ message: "Only administrators can create template types" });
+      }
+
+      const validatedData = insertTemplateTypeSchema.parse({
+        ...req.body,
+        createdBy: userId
+      });
+
+      const templateType = await storage.createTemplateType(validatedData);
+      res.status(201).json(templateType);
+    } catch (error) {
+      logger.error("Failed to create template type", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid template type data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create template type" });
+    }
+  });
+
+  app.delete("/api/template-types/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      // Check if user is an administrator
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'administrator') {
+        return res.status(403).json({ message: "Only administrators can delete template types" });
+      }
+
+      const success = await storage.deleteTemplateType(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Template type not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      logger.error("Failed to delete template type", error);
+      res.status(500).json({ message: "Failed to delete template type" });
     }
   });
 
