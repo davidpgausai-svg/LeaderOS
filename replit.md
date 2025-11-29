@@ -73,6 +73,16 @@ A comprehensive system for creating and managing report-out meeting notes with d
 ### AI Chat Assistant
 A floating chat assistant named "Strategic AI Assistant" accessible from all pages via a button in the bottom-right corner. Provides contextual help including navigation guidance, real-time status updates with live data from strategies/projects/actions, and copy writing assistance. The assistant has access to the user's assigned strategies, projects, and action counts with progress percentages, enabling data-driven responses. Chat history is persisted per user in the database. Supports two AI providers: OpenAI (GPT-4o via Replit AI Integrations, billed to credits) and Google Gemini (user's own free API key). Provider selection is controlled via the CHAT_AI_PROVIDER environment variable ('openai' or 'gemini'). Currently configured to use Gemini for cost-free operation within Google's free tier limits (15 requests/min, 1,500/day).
 
+### Templates Feature
+A collection of strategic planning, project management, and productivity templates accessible to all logged-in users via the sidebar. Features include:
+- **Main Templates Page** (`/templates`): Card grid displaying available templates with category filtering (Strategic Planning, Project Management, Daily Tasks, plus custom categories).
+- **Built-in Templates**:
+  - SWOT Analysis (`/templates/swot`): 2x2 grid for Strengths, Weaknesses, Opportunities, and Threats analysis
+  - SMART Goals (`/templates/smart-goals`): Structured framework for Specific, Measurable, Achievable, Relevant, and Time-bound goal setting
+  - Eisenhower Matrix (`/templates/eisenhower-matrix`): 4-quadrant task prioritization (Do First, Schedule, Delegate, Delete)
+- **Export Functionality**: All templates support PDF and Word document export using `jspdf`, `html2canvas`, and `docx` libraries.
+- **Administrator Template Types**: Custom template categories can be managed by administrators in Settings > Administrator Settings > Data Management. Categories are stored in the `template_types` database table.
+
 ### Development Environment
 The project uses Vite for fast development and optimized builds, Tailwind CSS for styling, and TypeScript for static type checking.
 
@@ -107,6 +117,9 @@ The project uses Vite for fast development and optimized builds, Tailwind CSS fo
 
 ### Document Generation
 - `react-to-print` - PDF export functionality for meeting notes
+- `jspdf` - PDF generation for templates
+- `html2canvas` - HTML to canvas conversion for PDF export
+- `docx` - Word document generation for templates
 
 ### AI Services
 - `openai` - GPT-4o via Replit AI Integrations for Change Continuum generation and optional chat
