@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Target, ClipboardList, LayoutGrid, Clock, FileText, ChevronRight } from "lucide-react";
+import { Target, ClipboardList, LayoutGrid, Clock, FileText, ChevronRight, FileSpreadsheet } from "lucide-react";
 import type { TemplateType } from "@shared/schema";
 
 type TemplateInfo = {
@@ -20,6 +20,16 @@ type TemplateInfo = {
 };
 
 const templates: TemplateInfo[] = [
+  {
+    id: "strategy-on-a-page",
+    title: "Strategy on a Page",
+    description: "Comprehensive enterprise framework with mission, vision, priorities, objectives, KPIs, initiatives, and risk management.",
+    icon: FileSpreadsheet,
+    category: "Strategic Planning",
+    readTime: "10 min",
+    path: "/templates/strategy-on-a-page",
+    color: "text-indigo-600",
+  },
   {
     id: "swot",
     title: "SWOT Analysis",
