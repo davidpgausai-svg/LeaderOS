@@ -278,11 +278,11 @@ export default function EisenhowerMatrixTemplate() {
               </div>
             </div>
             <div className="flex gap-3">
-              <Button variant="outline" onClick={exportDocx} data-testid="button-export-docx">
+              <Button variant="outline" onClick={exportDocx} data-testid="button-eisenhower-export-docx">
                 <FileText className="w-4 h-4 mr-2" />
                 Word Doc
               </Button>
-              <Button onClick={exportPDF} data-testid="button-export-pdf">
+              <Button onClick={exportPDF} data-testid="button-eisenhower-export-pdf">
                 <Download className="w-4 h-4 mr-2" />
                 PDF
               </Button>

@@ -425,7 +425,8 @@ export default function Settings() {
   });
 
   const handleAddTemplateType = () => {
-    if (!newTemplateTypeName.trim()) {
+    const trimmedName = newTemplateTypeName.trim();
+    if (!trimmedName) {
       toast({
         title: "Error",
         description: "Please enter a category name",
@@ -433,7 +434,20 @@ export default function Settings() {
       });
       return;
     }
-    createTemplateTypeMutation.mutate(newTemplateTypeName);
+    
+    const defaultCategories = ["Strategic Planning", "Project Management", "Daily Tasks"];
+    const existingNames = [...defaultCategories, ...templateTypes.map(t => t.name.toLowerCase())];
+    
+    if (existingNames.includes(trimmedName.toLowerCase())) {
+      toast({
+        title: "Error",
+        description: "A category with this name already exists",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    createTemplateTypeMutation.mutate(trimmedName);
   };
 
   const handleProfileUpdate = (formData: FormData) => {
