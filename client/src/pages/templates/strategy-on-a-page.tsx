@@ -28,7 +28,7 @@ type Priority = {
 type Initiative = {
   id: string;
   name: string;
-  priority: string;
+  priorityId: string;
 };
 
 type Risk = {
@@ -54,7 +54,7 @@ const defaultData: StrategyData = {
   priorities: [
     { id: "1", name: "", objectives: [{ id: "1-1", text: "", kpis: [""] }] }
   ],
-  initiatives: [{ id: "1", name: "", priority: "" }],
+  initiatives: [{ id: "1", name: "", priorityId: "" }],
   risks: [{
     id: "1",
     description: "",
@@ -201,7 +201,7 @@ export default function StrategyOnAPage() {
   const addInitiative = () => {
     setData(prev => ({
       ...prev,
-      initiatives: [...prev.initiatives, { id: Date.now().toString(), name: "", priority: "" }]
+      initiatives: [...prev.initiatives, { id: Date.now().toString(), name: "", priorityId: "" }]
     }));
   };
 
@@ -268,22 +268,22 @@ export default function StrategyOnAPage() {
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
       
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-      
-      let heightLeft = pdfHeight;
-      let position = 0;
+      const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * pageWidth) / canvas.width;
       
-      pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
-      heightLeft -= pageHeight;
+      let yOffset = 0;
+      let pageNumber = 0;
       
-      while (heightLeft > 0) {
-        position = heightLeft - pdfHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
-        heightLeft -= pageHeight;
+      while (yOffset < imgHeight) {
+        if (pageNumber > 0) {
+          pdf.addPage();
+        }
+        
+        pdf.addImage(imgData, "PNG", 0, -yOffset, imgWidth, imgHeight);
+        yOffset += pageHeight;
+        pageNumber++;
       }
       
       pdf.save("Strategy-on-a-Page.pdf");
@@ -341,7 +341,8 @@ export default function StrategyOnAPage() {
 
       children.push(new Paragraph({ text: "Key Initiatives", heading: HeadingLevel.HEADING_1 }));
       data.initiatives.filter(i => i.name.trim()).forEach(initiative => {
-        children.push(new Paragraph(`• ${initiative.name}${initiative.priority ? ` (${initiative.priority})` : ""}`));
+        const linkedPriority = data.priorities.find(p => p.id === initiative.priorityId);
+        children.push(new Paragraph(`• ${initiative.name}${linkedPriority?.name ? ` (${linkedPriority.name})` : ""}`));
       });
       children.push(new Paragraph({ text: "" }));
 
@@ -622,15 +623,17 @@ export default function StrategyOnAPage() {
                       data-testid={`input-soap-initiative-${initiative.id}`}
                     />
                     <Select
-                      value={initiative.priority}
-                      onValueChange={(value) => updateInitiative(initiative.id, "priority", value)}
+                      value={initiative.priorityId}
+                      onValueChange={(value) => updateInitiative(initiative.id, "priorityId", value)}
                     >
                       <SelectTrigger className="w-[180px]" data-testid={`select-soap-initiative-priority-${initiative.id}`}>
-                        <SelectValue placeholder="Link to Priority" />
+                        <SelectValue placeholder="Link to Priority">
+                          {data.priorities.find(p => p.id === initiative.priorityId)?.name || "Link to Priority"}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {data.priorities.filter(p => p.name.trim()).map((p) => (
-                          <SelectItem key={p.id} value={p.name}>
+                          <SelectItem key={p.id} value={p.id}>
                             {p.name}
                           </SelectItem>
                         ))}
