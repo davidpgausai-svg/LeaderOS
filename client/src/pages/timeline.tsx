@@ -190,8 +190,8 @@ export default function Timeline() {
     return { position, isOutsideRange, isBeforeStart, isAfterEnd, date: todayInTimezone };
   }, [currentUser, timelineData]);
 
-  // Auto-scroll to center on today when timeline loads
-  useEffect(() => {
+  // Function to scroll timeline to center on today
+  const scrollToToday = () => {
     if (timelineContainerRef.current && !todayInfo.isOutsideRange && timelineData.frameworks.length > 0) {
       const container = timelineContainerRef.current;
       const scrollWidth = container.scrollWidth;
@@ -199,6 +199,11 @@ export default function Timeline() {
       const scrollPosition = (scrollWidth * todayInfo.position / 100) - (clientWidth / 2);
       container.scrollLeft = Math.max(0, scrollPosition);
     }
+  };
+
+  // Auto-scroll to center on today when timeline loads
+  useEffect(() => {
+    scrollToToday();
   }, [todayInfo.position, todayInfo.isOutsideRange, timelineData.frameworks.length]);
 
   // Calendar data processing
@@ -439,33 +444,39 @@ export default function Timeline() {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              {/* Strategy Filter */}
-              <Select value={selectedStrategyId} onValueChange={setSelectedStrategyId}>
-                <SelectTrigger className="w-[200px]" data-testid="select-strategy-filter">
-                  <SelectValue placeholder="Filter by Strategy" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Strategies</SelectItem>
-                  {strategies?.filter(s => s.status !== "Archived").map(strategy => (
-                    <SelectItem key={strategy.id} value={strategy.id.toString()}>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: strategy.colorCode }}
-                        />
-                        {strategy.title}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* Strategy Filter (Calendar view only) */}
+              {viewMode === "calendar" && (
+                <Select value={selectedStrategyId} onValueChange={setSelectedStrategyId}>
+                  <SelectTrigger className="w-[200px]" data-testid="select-strategy-filter">
+                    <SelectValue placeholder="Filter by Strategy" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Strategies</SelectItem>
+                    {strategies?.filter(s => s.status !== "Archived").map(strategy => (
+                      <SelectItem key={strategy.id} value={strategy.id.toString()}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: strategy.colorCode }}
+                          />
+                          {strategy.title}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               
               {/* View Toggle */}
               <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
                 <Button
                   variant={viewMode === "timeline" ? "default" : "ghost"}
                   size="sm"
-                  onClick={() => setViewMode("timeline")}
+                  onClick={() => {
+                    setViewMode("timeline");
+                    setSelectedStrategyId("all");
+                    setTimeout(() => scrollToToday(), 100);
+                  }}
                   className="gap-2"
                   data-testid="button-view-timeline"
                 >
