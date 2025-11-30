@@ -146,8 +146,18 @@ export default function SmartGoalsTemplate() {
                   <DialogHeader>
                     <DialogTitle>SMART Goals Tutorial</DialogTitle>
                   </DialogHeader>
-                  <div className="aspect-video flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
-                    <p className="text-gray-500 dark:text-gray-400">Tutorial video coming soon</p>
+                  <div className="aspect-video">
+                    <iframe 
+                      width="100%" 
+                      height="100%" 
+                      src="https://www.youtube.com/embed/hj7Kw3fDNaw?si=dSN2pfY_nCX2ncXN" 
+                      title="SMART Goals Tutorial" 
+                      frameBorder="0" 
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                      referrerPolicy="strict-origin-when-cross-origin" 
+                      allowFullScreen
+                      className="rounded-lg"
+                    />
                   </div>
                 </DialogContent>
               </Dialog>
