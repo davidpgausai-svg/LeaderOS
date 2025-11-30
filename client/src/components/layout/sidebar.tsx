@@ -26,11 +26,14 @@ import {
 } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 
-const navigation = [
+const coreNavigation = [
+  { name: "Strategy", href: "/strategies", icon: Target, iconColor: "text-indigo-500" },
+  { name: "Projects", href: "/projects", icon: CheckSquare, iconColor: "text-emerald-500" },
+  { name: "Actions", href: "/actions", icon: TrendingUp, iconColor: "text-amber-500" },
+];
+
+const secondaryNavigation = [
   { name: "Dashboard", href: "/", icon: ChartLine },
-  { name: "Strategy", href: "/strategies", icon: Target },
-  { name: "Projects", href: "/projects", icon: CheckSquare },
-  { name: "Actions", href: "/actions", icon: TrendingUp },
   { name: "Timeline", href: "/timeline", icon: Calendar },
   { name: "Graph", href: "/graph", icon: GitBranch },
   { name: "Meeting Notes", href: "/meeting-notes", icon: PenLine },
@@ -83,7 +86,92 @@ export function Sidebar() {
       
       {/* Navigation Menu */}
       <nav className="flex-1 p-4 space-y-2">
-        {navigation.map((item) => {
+        {/* Dashboard - Top item */}
+        {(() => {
+          const dashboardItem = secondaryNavigation[0];
+          const isActive = location === dashboardItem.href;
+          const Icon = dashboardItem.icon;
+          
+          const linkContent = (
+            <div
+              className={`flex items-center ${isCollapsed ? 'justify-center px-3' : 'px-3'} py-2 text-sm font-medium rounded-md transition-colors ${
+                isActive
+                  ? "text-white bg-primary"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+              }`}
+            >
+              <Icon className={`${isCollapsed ? '' : 'mr-3'} h-4 w-4`} />
+              {!isCollapsed && dashboardItem.name}
+            </div>
+          );
+
+          return (
+            <Link key={dashboardItem.name} href={dashboardItem.href}>
+              {isCollapsed ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    {linkContent}
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    {dashboardItem.name}
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                linkContent
+              )}
+            </Link>
+          );
+        })()}
+
+        {/* Core Navigation - Visual Group */}
+        <div className={`${isCollapsed ? 'py-2 px-1' : 'p-2'} bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-lg border border-slate-200 dark:border-slate-700`}>
+          {!isCollapsed && (
+            <div className="px-2 pb-1.5 mb-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Core
+              </span>
+            </div>
+          )}
+          <div className="space-y-1">
+            {coreNavigation.map((item) => {
+              const isActive = location === item.href;
+              const Icon = item.icon;
+              
+              const linkContent = (
+                <div
+                  className={`flex items-center ${isCollapsed ? 'justify-center px-2' : 'px-2'} py-2 text-sm font-medium rounded-md transition-colors ${
+                    isActive
+                      ? "bg-white dark:bg-slate-700 shadow-md ring-1 ring-slate-200 dark:ring-slate-600"
+                      : "text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm"
+                  }`}
+                >
+                  <Icon className={`${isCollapsed ? '' : 'mr-3'} h-5 w-5 ${item.iconColor}`} />
+                  {!isCollapsed && <span className={`font-semibold ${isActive ? 'text-gray-900 dark:text-white' : ''}`}>{item.name}</span>}
+                </div>
+              );
+
+              return (
+                <Link key={item.name} href={item.href}>
+                  {isCollapsed ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        {linkContent}
+                      </TooltipTrigger>
+                      <TooltipContent side="right">
+                        {item.name}
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    linkContent
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Secondary Navigation */}
+        {secondaryNavigation.slice(1).map((item) => {
           const isActive = location === item.href;
           const Icon = item.icon;
           
