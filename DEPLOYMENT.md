@@ -1,6 +1,33 @@
 # StrategicFlow Deployment Guide
 
-This guide covers deploying StrategicFlow to DigitalOcean App Platform.
+## 1-Click Deployment to DigitalOcean
+
+The fastest way to deploy StrategicFlow is using DigitalOcean's 1-click deployment.
+
+### Deploy Now
+
+[![Deploy to DigitalOcean](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/YOURNAME/strategicflow)
+
+> **Note**: Replace `YOURNAME` with your GitHub username in the button URL above.
+
+### What Happens When You Click
+
+1. **DigitalOcean automatically:**
+   - Clones your repository
+   - Reads the `.do/app.yaml` configuration
+   - Builds the Docker container
+   - Mounts the SQLite volume for persistent data
+   - Provisions HTTPS
+   - Deploys the app
+
+2. **You only need to:**
+   - Set `JWT_SECRET` (required) - a secure random string
+   - Optionally set `INITIAL_REGISTRATION_TOKEN` for predictable registration URLs
+   - Click "Create Resources"
+
+3. **In about 90 seconds**, your app is live!
+
+---
 
 ## Prerequisites
 
@@ -17,52 +44,59 @@ This guide covers deploying StrategicFlow to DigitalOcean App Platform.
 | `NODE_ENV` | No | Set to `production` (default in deployment) |
 | `DATA_DIR` | No | SQLite database directory (default: `/data`) |
 
+---
+
 ## Deployment Options
 
-### Option 1: DigitalOcean App Platform (Recommended)
+### Option 1: 1-Click Deployment (Recommended)
 
-#### Using the App Spec File
-
-1. **Push code to GitHub**
+1. **Push your code to GitHub**
    ```bash
    git add .
    git commit -m "Prepare for deployment"
    git push origin main
    ```
 
-2. **Create App on DigitalOcean**
-   - Go to [DigitalOcean App Platform](https://cloud.digitalocean.com/apps)
-   - Click "Create App"
-   - Select your GitHub repository
-   - DigitalOcean will detect the `.do/app.yaml` file automatically
+2. **Update the deploy URL**
+   
+   Edit the button URL in this file and your README.md:
+   ```
+   https://cloud.digitalocean.com/apps/new?repo=https://github.com/YOURNAME/strategicflow
+   ```
+   Replace `YOURNAME` with your actual GitHub username.
 
-3. **Configure Secrets**
+3. **Update `.do/app.yaml`**
+   
+   Edit the `repo` field to match your GitHub repository:
+   ```yaml
+   github:
+     repo: YOURNAME/strategicflow
+     branch: main
+   ```
+
+4. **Click the Deploy Button**
+   
+   Click the "Deploy to DigitalOcean" button above (or share the link with customers).
+
+5. **Configure Secrets**
    - Set `JWT_SECRET` to a secure random string
    - Update `INITIAL_REGISTRATION_TOKEN` to your desired registration token
-   - This token will be used in your registration URL: `https://your-app.ondigitalocean.app/register/YOUR_TOKEN`
 
-4. **Deploy**
+6. **Deploy**
    - Click "Create Resources"
-   - Wait for the build and deployment to complete
+   - Wait for the build and deployment (~90 seconds)
 
-#### Manual Configuration
+### Option 2: Manual DigitalOcean Setup
 
-If not using the app spec file:
+If you prefer manual configuration:
 
-1. Create a new App from your GitHub repo
-2. Select "Dockerfile" as the build method
-3. Set the HTTP port to `5000`
-4. Add environment variables:
-   - `JWT_SECRET` (secret)
-   - `INITIAL_REGISTRATION_TOKEN` (encrypted or plain)
-   - `NODE_ENV=production`
-   - `DATA_DIR=/data`
-5. Add a volume:
-   - Name: `sqlite-data`
-   - Mount Path: `/data`
-   - Size: 1 GiB (or larger for production)
+1. Go to [DigitalOcean App Platform](https://cloud.digitalocean.com/apps)
+2. Click "Create App"
+3. Select your GitHub repository
+4. DigitalOcean will detect the `.do/app.yaml` file automatically
+5. Configure secrets and deploy
 
-### Option 2: Docker (Self-Hosted)
+### Option 3: Docker (Self-Hosted)
 
 1. **Build the image**
    ```bash
@@ -108,6 +142,8 @@ If not using the app spec file:
    docker-compose up -d
    ```
 
+---
+
 ## Post-Deployment Setup
 
 ### First User Registration
@@ -127,15 +163,17 @@ If not using the app spec file:
    - Click "Rotate Token" to generate a new registration token
    - Share the new registration URL with additional users
 
-### For Automated Deployments
+### For Automated Customer Deployments
 
-If you're automating customer deployments:
+If you're automating deployments for customers:
 
 1. Set a consistent `INITIAL_REGISTRATION_TOKEN` in your deployment template
 2. Your automation emails can include:
-   - Login URL: `https://customer-app.domain.com/`
-   - Registration URL: `https://customer-app.domain.com/register/YOUR_KNOWN_TOKEN`
+   - Login URL: `https://customer-app.ondigitalocean.app/`
+   - Registration URL: `https://customer-app.ondigitalocean.app/register/YOUR_KNOWN_TOKEN`
 3. After first login, customers can rotate their token from Settings > Security
+
+---
 
 ## Troubleshooting
 
@@ -151,6 +189,8 @@ If you're automating customer deployments:
 ### Database errors after restart
 - Ensure the volume is persistent (not ephemeral)
 - On DigitalOcean, verify the volume is attached to the service
+
+---
 
 ## Architecture Summary
 

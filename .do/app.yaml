@@ -4,6 +4,8 @@ services:
   - name: api
     source_dir: /
     github:
+      repo: YOURNAME/strategicflow
+      branch: main
       deploy_on_push: true
     dockerfile_path: Dockerfile
     http_port: 5000
