@@ -22,6 +22,7 @@ import SmartGoalsTemplate from "@/pages/templates/smart-goals";
 import EisenhowerMatrixTemplate from "@/pages/templates/eisenhower-matrix";
 import StrategyOnAPage from "@/pages/templates/strategy-on-a-page";
 import PestleTemplate from "@/pages/templates/pestle";
+import PortersFiveForcesTemplate from "@/pages/templates/porters-five-forces";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 
@@ -55,6 +56,7 @@ function Router() {
         <Route path="/templates" component={Templates} />
         <Route path="/templates/strategy-on-a-page" component={StrategyOnAPage} />
         <Route path="/templates/pestle" component={PestleTemplate} />
+        <Route path="/templates/porters-five-forces" component={PortersFiveForcesTemplate} />
         <Route path="/templates/swot" component={SwotTemplate} />
         <Route path="/templates/smart-goals" component={SmartGoalsTemplate} />
         <Route path="/templates/eisenhower-matrix" component={EisenhowerMatrixTemplate} />

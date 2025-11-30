@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Target, ClipboardList, LayoutGrid, Clock, FileText, ChevronRight, FileSpreadsheet, Radar } from "lucide-react";
+import { Target, ClipboardList, LayoutGrid, Clock, FileText, ChevronRight, FileSpreadsheet, Radar, Swords } from "lucide-react";
 import type { TemplateType } from "@shared/schema";
 
 type TemplateInfo = {
@@ -39,6 +39,16 @@ const templates: TemplateInfo[] = [
     readTime: "15 min",
     path: "/templates/pestle",
     color: "text-teal-600",
+  },
+  {
+    id: "porters-five-forces",
+    title: "Porter's Five Forces",
+    description: "Analyze competitive dynamics through New Entrants, Supplier Power, Buyer Power, Substitutes, and Rivalry to inform strategic positioning.",
+    icon: Swords,
+    category: "Strategic Planning",
+    readTime: "15 min",
+    path: "/templates/porters-five-forces",
+    color: "text-rose-600",
   },
   {
     id: "swot",
