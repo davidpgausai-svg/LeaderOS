@@ -1,0 +1,369 @@
+Below is the **FULL, optimized, step-by-step batch prompt plan** designed specifically for **Replit Agent v3**, based on:
+
+* Everything learned from **Campfire**
+* Your architecture (Node + TypeScript + SQLite + Docker + DigitalOcean App Platform)
+* Your one-time-purchase, self-hosted SaaS model
+* Keeping the system **simple, small, maintainable, and reproducible**
+
+This is the SAME format used internally by senior engineers who orchestrate large assistant-driven builds.
+
+This is **not** one giant prompt.
+This is a **sequenced workflow** of prompts that you give Agent v3 **one step at a time**, with clear breakpoints and checkpoints.
+
+It prevents:
+
+* hallucinations
+* overwritten files
+* misaligned file trees
+* missing imports
+* broken Docker builds
+* incorrect SQLite bootstrapping
+
+If you follow these batch steps, you will build the entire app *faster* than any human engineer could.
+
+---
+
+# 🚀 **STRATEGICFLOW — AGENT v3 BATCH PROMPT PLAN (Campfire-Mode)**
+
+## 📌 **IMPORTANT RULE**
+
+**Do NOT combine steps.
+Give Agent each step separately.
+Wait for it to complete.
+Move to the next step.**
+
+This ensures stable, flawless output.
+
+---
+
+# 🧱 **STEP 1 — PROJECT INITIALIZATION**
+
+Tell Agent:
+
+```
+Initialize a new Node.js + TypeScript project for StrategicFlow.
+
+Requirements:
+- Create package.json
+- Create tsconfig.json
+- Install express, better-sqlite3, bcryptjs, jsonwebtoken
+- Set up npm scripts:
+    "start": "node dist/server.js"
+    "build": "tsc"
+    "dev": "ts-node src/server.ts"
+Do not generate any files yet except configuration.
+```
+
+This sets up the core environment.
+
+---
+
+# 🗂️ **STEP 2 — CREATE PROJECT DIRECTORY STRUCTURE**
+
+Tell Agent:
+
+```
+Generate the full StrategicFlow directory structure:
+
+/
+  .do/
+  src/
+    api/
+    auth/
+    pages/
+    db/
+    utils/
+  public/
+  data/
+  Dockerfile
+  README.md
+
+Do not create code yet. Only create empty folders and placeholder files.
+```
+
+Agent will scaffold your file tree correctly.
+
+---
+
+# 🏗️ **STEP 3 — GENERATE THE SQLITE DATABASE LAYER**
+
+Tell Agent:
+
+```
+Generate /src/db/index.ts following these rules:
+
+- Use better-sqlite3
+- Ensure /data directory exists at runtime
+- Create /data/StrategicFlow.sqlite if missing
+- Execute SQL to create these IF NOT EXISTS tables:
+
+  users(id TEXT PRIMARY KEY,
+        email TEXT UNIQUE,
+        password_hash TEXT,
+        role TEXT,
+        createdAt TEXT)
+
+  strategies(id TEXT PRIMARY KEY,
+             name TEXT,
+             description TEXT,
+             status TEXT,
+             createdAt TEXT)
+
+  projects(id TEXT PRIMARY KEY,
+           strategy_id TEXT,
+           name TEXT,
+           status TEXT,
+           createdAt TEXT)
+
+  actions(id TEXT PRIMARY KEY,
+          project_id TEXT,
+          description TEXT,
+          status TEXT,
+          createdAt TEXT)
+
+  audit_logs(id TEXT PRIMARY KEY,
+             user_id TEXT,
+             action TEXT,
+             detail TEXT,
+             createdAt TEXT)
+
+- Export a single shared DB instance.
+```
+
+This is the heartbeat of your app.
+
+---
+
+# 🔐 **STEP 4 — AUTHENTICATION MODULE (Campfire-style)**
+
+Tell Agent:
+
+```
+Create authentication routes:
+
+Files:
+  /src/auth/register.ts
+  /src/auth/login.ts
+  /src/auth/withAuth.ts
+
+Requirements:
+- register.ts: create user with email + hashed password
+- login.ts: validate user and return JWT
+- withAuth.ts: middleware that verifies JWT and attaches user to req
+- Use bcryptjs and jsonwebtoken
+- No frontend framework. JSON only.
+```
+
+---
+
+# 🧭 **STEP 5 — SERVER ENTRY POINT**
+
+Tell Agent:
+
+```
+Generate /src/server.ts with:
+
+- Express app
+- Import database so it initializes
+- Serve static assets from /public
+- Add GET routes for:
+    /login
+    /register
+    /dashboard
+  using res.sendFile() to serve HTML files in /src/pages/
+- Mount auth routes under /auth
+- Mount API routes under /api
+- Listen on port 3000
+```
+
+Now the app can boot.
+
+---
+
+# 💻 **STEP 6 — HTML PAGES**
+
+Tell Agent:
+
+```
+Generate minimal server-rendered HTML pages:
+
+/src/pages/login.html
+/src/pages/register.html
+/src/pages/dashboard.html
+
+Requirements:
+- Simple forms
+- POST to /auth/register or /auth/login via fetch()
+- On successful login, store JWT in localStorage
+- Dashboard loads only if JWT exists
+```
+
+This matches Campfire's minimal UI approach.
+
+---
+
+# 🔌 **STEP 7 — API ENDPOINTS**
+
+Tell Agent:
+
+```
+Generate API route files:
+
+/src/api/strategies.ts
+/src/api/projects.ts
+/src/api/actions.ts
+
+Endpoints:
+GET /api/strategies
+POST /api/strategies
+GET /api/projects
+POST /api/projects
+GET /api/actions
+POST /api/actions
+
+Rules:
+- GET requires no auth
+- POST must require JWT via withAuth middleware
+- Use better-sqlite3 for DB queries
+```
+
+---
+
+# 📄 **STEP 8 — DOCKERFILE**
+
+Tell Agent:
+
+```
+Generate a minimal Dockerfile using Node 18 Alpine:
+
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm install --production
+COPY . .
+EXPOSE 3000
+CMD ["npm", "start"]
+
+Ensure it builds cleanly.
+```
+
+---
+
+# ☁️ **STEP 9 — DIGITALOCEAN APP PLATFORM SPEC (`.do/app.yaml`)**
+
+Tell Agent:
+
+```
+Generate /.do/app.yaml with:
+
+- One service: api
+- Port 3000
+- Persistent volume at /data (sqlite-data)
+- One env var: JWT_SECRET
+- build_command: npm install && npm run build
+- run_command: npm start
+- GitHub deploy_on_push enabled
+```
+
+This makes deployment one-click.
+
+---
+
+# 🧪 **STEP 10 — LOCAL TESTING**
+
+Tell Agent:
+
+```
+Test the app:
+
+1. Install dependencies
+2. Run build
+3. Start server
+4. Verify:
+   - SQLite file auto-creates
+   - Register → Login → Dashboard works
+   - JWT stored in localStorage
+   - GET and POST APIs work
+5. Fix any errors found.
+```
+
+Agent v3 can auto-run each step.
+
+---
+
+# 📦 **STEP 11 — DOCKER TESTING**
+
+Tell Agent:
+
+```
+Build and run the Docker container locally.
+
+Check:
+- The server runs
+- SQLite file persists in /data
+- All pages load correctly
+
+Fix any issues.
+```
+
+---
+
+# 🌐 **STEP 12 — PREPARE FOR DIGITALOCEAN**
+
+Tell Agent:
+
+```
+Validate that the project is ready for DigitalOcean:
+
+- Dockerfile correct
+- /.do/app.yaml correct
+- /data mount path correct
+- Only env var needed is JWT_SECRET
+- Port 3000 exposed
+
+Output final deployment instructions for the user.
+```
+
+---
+
+# 🚀 **STEP 13 — FINAL CLEANUP**
+
+Tell Agent:
+
+```
+Generate a README.md with installation instructions, DO deployment steps, and basic usage.
+
+Do not add unnecessary files. Keep the project small, like Campfire.
+```
+
+---
+
+# 🎉 RESULT
+
+After running these 13 step-by-step prompts, Agent v3 will produce a **complete, tiny, Campfire-style self-hosted SaaS application** with:
+
+* SQLite DB
+* Email/password auth
+* JWT sessions
+* Minimal HTML UI
+* Clean API
+* Docker
+* DigitalOcean App Platform one-click deploy
+
+**You will have a fully functional product you can sell.**
+
+---
+
+# 👉 If you'd like, I can now generate:
+
+### ✔ A single-page “Agent orchestration script” that executes each step automatically
+
+### ✔ A final README.md you can use in your repo
+
+### ✔ The copy for your product landing page
+
+### ✔ A buyer onboarding PDF
+
+### ✔ A licensing agreement for source-code sales
+
+Just tell me what you want next.
