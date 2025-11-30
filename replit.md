@@ -82,7 +82,7 @@ A collection of strategic planning, project management, and productivity templat
   - SWOT Analysis (`/templates/swot`): 2x2 grid for Strengths, Weaknesses, Opportunities, and Threats analysis
   - SMART Goals (`/templates/smart-goals`): Structured framework for Specific, Measurable, Achievable, Relevant, and Time-bound goal setting
   - Eisenhower Matrix (`/templates/eisenhower-matrix`): 4-quadrant task prioritization (Do First, Schedule, Delegate, Delete)
-- **Export Functionality**: All templates support PDF and Word document export using `jspdf`, `html2canvas`, and `docx` libraries.
+- **Export Functionality**: All templates support Word document export using the `docx` library.
 - **Administrator Template Types**: Custom template categories can be managed by administrators in Settings > Administrator Settings > Data Management. Categories are stored in the `template_types` database table.
 
 ### Development Environment
