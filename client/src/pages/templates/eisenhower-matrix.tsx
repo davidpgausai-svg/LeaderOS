@@ -4,8 +4,9 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Download, FileText, Zap, Calendar, Users, Trash2, Plus, X } from "lucide-react";
+import { ArrowLeft, Download, FileText, Zap, Calendar, Users, Trash2, Plus, X, PlayCircle } from "lucide-react";
 import { Document, Packer, Paragraph, HeadingLevel } from "docx";
 
 type QuadrantType = "do" | "schedule" | "delegate" | "delete";
@@ -241,10 +242,28 @@ export default function EisenhowerMatrixTemplate() {
                 <p className="text-gray-600 dark:text-gray-400">Task Prioritization Framework</p>
               </div>
             </div>
-            <Button variant="outline" onClick={exportDocx} data-testid="button-eisenhower-export-docx">
-              <Download className="w-4 h-4 mr-2" />
-              Download Word
-            </Button>
+            <div className="flex gap-2">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" data-testid="button-eisenhower-tutorial">
+                    <PlayCircle className="w-4 h-4 mr-2" />
+                    Tutorial
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[640px]">
+                  <DialogHeader>
+                    <DialogTitle>Eisenhower Matrix Tutorial</DialogTitle>
+                  </DialogHeader>
+                  <div className="aspect-video flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
+                    <p className="text-gray-500 dark:text-gray-400">Tutorial video coming soon</p>
+                  </div>
+                </DialogContent>
+              </Dialog>
+              <Button variant="outline" onClick={exportDocx} data-testid="button-eisenhower-export-docx">
+                <Download className="w-4 h-4 mr-2" />
+                Download Word
+              </Button>
+            </div>
           </div>
 
           <div className="mb-4 text-center">

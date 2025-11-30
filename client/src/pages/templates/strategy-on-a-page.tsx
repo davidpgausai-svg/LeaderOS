@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Download, FileText, Plus, X, Target, Compass, Flag, BarChart3, Rocket, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Download, FileText, Plus, X, Target, Compass, Flag, BarChart3, Rocket, AlertTriangle, PlayCircle } from "lucide-react";
 import { Document, Packer, Paragraph, HeadingLevel, TextRun } from "docx";
 
 type Objective = {
@@ -359,10 +360,28 @@ export default function StrategyOnAPage() {
                 <p className="text-gray-600 dark:text-gray-400">Enterprise Strategic Planning Framework</p>
               </div>
             </div>
-            <Button variant="outline" onClick={exportDocx} data-testid="button-soap-export-docx">
-              <Download className="w-4 h-4 mr-2" />
-              Download Word
-            </Button>
+            <div className="flex gap-2">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" data-testid="button-soap-tutorial">
+                    <PlayCircle className="w-4 h-4 mr-2" />
+                    Tutorial
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[640px]">
+                  <DialogHeader>
+                    <DialogTitle>Strategy on a Page Tutorial</DialogTitle>
+                  </DialogHeader>
+                  <div className="aspect-video flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
+                    <p className="text-gray-500 dark:text-gray-400">Tutorial video coming soon</p>
+                  </div>
+                </DialogContent>
+              </Dialog>
+              <Button variant="outline" onClick={exportDocx} data-testid="button-soap-export-docx">
+                <Download className="w-4 h-4 mr-2" />
+                Download Word
+              </Button>
+            </div>
           </div>
 
           <div className="space-y-6 bg-white dark:bg-gray-900 p-6 rounded-lg">

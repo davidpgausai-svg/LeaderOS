@@ -9,10 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { 
   ArrowLeft, Download, FileText, Plus, X, ChevronDown, ChevronUp,
-  Landmark, TrendingUp, Users, Cpu, Scale, Leaf
+  Landmark, TrendingUp, Users, Cpu, Scale, Leaf, PlayCircle
 } from "lucide-react";
 import { Document, Packer, Paragraph, HeadingLevel, TextRun } from "docx";
 
@@ -541,10 +542,38 @@ export default function PestleTemplate() {
                 <p className="text-gray-600 dark:text-gray-400">External Macro-Environment Scanning Framework</p>
               </div>
             </div>
-            <Button variant="outline" onClick={exportDocx} data-testid="button-pestle-export-docx">
-              <Download className="w-4 h-4 mr-2" />
-              Download Word
-            </Button>
+            <div className="flex gap-2">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" data-testid="button-pestle-tutorial">
+                    <PlayCircle className="w-4 h-4 mr-2" />
+                    Tutorial
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[640px]">
+                  <DialogHeader>
+                    <DialogTitle>PESTLE Analysis Tutorial</DialogTitle>
+                  </DialogHeader>
+                  <div className="aspect-video">
+                    <iframe 
+                      width="100%" 
+                      height="100%" 
+                      src="https://www.youtube.com/embed/q3-8PW72XDQ?si=gSLTT15tgo6X260_" 
+                      title="PESTLE Analysis Tutorial" 
+                      frameBorder="0" 
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                      referrerPolicy="strict-origin-when-cross-origin" 
+                      allowFullScreen
+                      className="rounded-lg"
+                    />
+                  </div>
+                </DialogContent>
+              </Dialog>
+              <Button variant="outline" onClick={exportDocx} data-testid="button-pestle-export-docx">
+                <Download className="w-4 h-4 mr-2" />
+                Download Word
+              </Button>
+            </div>
           </div>
 
           <div className="space-y-6 bg-white dark:bg-gray-900 p-6 rounded-lg">
