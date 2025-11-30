@@ -254,8 +254,18 @@ export default function EisenhowerMatrixTemplate() {
                   <DialogHeader>
                     <DialogTitle>Eisenhower Matrix Tutorial</DialogTitle>
                   </DialogHeader>
-                  <div className="aspect-video flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
-                    <p className="text-gray-500 dark:text-gray-400">Tutorial video coming soon</p>
+                  <div className="aspect-video">
+                    <iframe 
+                      width="100%" 
+                      height="100%" 
+                      src="https://www.youtube.com/embed/tT89OZ7TNwc?si=bfhJ_Roo1yKDgL3k" 
+                      title="Eisenhower Matrix Tutorial" 
+                      frameBorder="0" 
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                      referrerPolicy="strict-origin-when-cross-origin" 
+                      allowFullScreen
+                      className="rounded-lg"
+                    />
                   </div>
                 </DialogContent>
               </Dialog>
