@@ -16,6 +16,8 @@ RUN mkdir -p /data
 
 ENV NODE_ENV=production
 ENV DATA_DIR=/data
+# INITIAL_REGISTRATION_TOKEN - Set this to a secure token (min 16 chars) for predictable registration URLs
+# JWT_SECRET - Required for authentication (set via deployment platform)
 
 EXPOSE 5000
 

@@ -105,3 +105,6 @@ integrations = ["javascript_database:1.0.0", "javascript_log_in_with_replit:1.0.
 
 [userenv.shared]
 CHAT_AI_PROVIDER = "gemini"
+
+[userenv.development]
+INITIAL_REGISTRATION_TOKEN = "MySecureToken12345678"

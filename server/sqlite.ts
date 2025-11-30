@@ -215,9 +215,16 @@ export function initializeDatabase() {
   try {
     const existingToken = sqlite.prepare('SELECT token FROM registration_tokens WHERE id = 1').get();
     if (!existingToken) {
-      const initialToken = generateRegistrationToken();
+      const envToken = process.env.INITIAL_REGISTRATION_TOKEN;
+      const initialToken = envToken && envToken.length >= 16 ? envToken : generateRegistrationToken();
       sqlite.prepare("INSERT INTO registration_tokens (id, token, created_at) VALUES (1, ?, datetime('now'))").run(initialToken);
-      console.log('[INFO] Initial registration token created');
+      if (envToken && envToken.length >= 16) {
+        console.log('[INFO] Initial registration token set from INITIAL_REGISTRATION_TOKEN environment variable');
+      } else if (envToken) {
+        console.log('[WARN] INITIAL_REGISTRATION_TOKEN must be at least 16 characters - using generated token instead');
+      } else {
+        console.log('[INFO] Initial registration token created (random)');
+      }
     }
   } catch (error) {
     console.error('[ERROR] Failed to initialize registration token:', error);

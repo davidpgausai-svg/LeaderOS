@@ -18,18 +18,28 @@ The frontend uses React 18 with TypeScript, Wouter for routing, Zustand for stat
 The backend is a REST API built with Express.js and TypeScript. It utilizes an abstracted storage interface, Zod for schema validation, and centralized error handling.
 
 ### Data Storage
-The application employs Drizzle ORM for type-safe PostgreSQL interactions. Drizzle migrations manage schema versioning with automatic migration on startup.
+The application uses SQLite with better-sqlite3 for lightweight, file-based data storage. The database file is stored in the `/data` directory (configurable via `DATA_DIR` environment variable). Tables are created automatically on startup.
 
-### Multi-Instance Migration System
-The application supports deployment across multiple Replit instances, each with its own database. Key features:
-- **Automatic migrations on startup** - `server/migrate.ts` runs Drizzle migrations before the server starts
-- **Advisory locking** - PostgreSQL advisory lock (key: 12345) prevents concurrent migration conflicts
-- **Migration journal seeding** - `scripts/seed-migration-journal.ts` helps existing instances adopt the migration system
-- **Instance operator guide** - `INSTANCE_OPERATOR_GUIDE.md` documents the git pull → restart workflow
-- **Schema changes workflow**: Modify `shared/schema.ts` → Run `npx drizzle-kit generate` → Commit migrations → Instances auto-apply on restart
+### Deployment
+The application supports Docker and DigitalOcean App Platform deployment:
+- **Dockerfile** - Multi-stage build for production deployment
+- **DigitalOcean App Spec** - `.do/app.yaml` configuration with persistent volume for SQLite data
+- **Environment Variables**:
+  - `JWT_SECRET` - Required for authentication (secret)
+  - `INITIAL_REGISTRATION_TOKEN` - Optional, sets the initial registration token for predictable URLs in automated deployments
+  - `DATA_DIR` - SQLite database directory (default: `/data`)
+  - `NODE_ENV` - Set to `production` for deployments
 
 ### Authentication and Authorization
-A role-based access control system integrates Replit OpenID Connect for authentication. Roles include Administrator, Co-Lead, View, and SME (Subject Matter Expert), with permissions enforced at the API level based on user roles and strategy assignments. SME users are explicitly blocked from logging in as they exist solely for tracking and assignment purposes. Administrators manage user roles and strategy assignments, ensuring data isolation.
+A role-based access control system using JWT email/password authentication. Roles include Administrator, Co-Lead, View, and SME (Subject Matter Expert), with permissions enforced at the API level based on user roles and strategy assignments. SME users are explicitly blocked from logging in as they exist solely for tracking and assignment purposes. Administrators manage user roles and strategy assignments, ensuring data isolation.
+
+### Secure Registration System
+Registration requires a secret token in the URL to prevent unauthorized signups:
+- **Registration URL format**: `/register/:token` (separate from login page)
+- **Token management**: Administrators can view and rotate the registration token in Settings > Security
+- **Environment variable**: Set `INITIAL_REGISTRATION_TOKEN` (min 16 characters) for consistent initial token across deployments
+- **First user**: Automatically gets Administrator role; subsequent users get Co-Lead role
+- **Security**: Login page has no link to registration page - tokens are shared privately
 
 ### Key Data Models
 Core entities include Users, User Strategy Assignments (linking users to strategies), Strategies (high-level objectives with a Change Continuum Framework and customizable colors), Projects (with custom communication URL field and documentation URLs), Actions (with two-tier filtering), Barriers (project-level risk tracking with severity and status lifecycle), Dependencies (relationships between projects and actions), Meeting Notes (report-out notes with dynamic project/action selection and PDF export), and Activities (audit trail). The database tables are: users, user_strategy_assignments, strategies, projects, actions, action_documents, action_checklist_items, barriers, dependencies, meeting_notes, activities, notifications, and sessions.
@@ -104,10 +114,11 @@ The project uses Vite for fast development and optimized builds, Tailwind CSS fo
 - `lucide-react`
 
 ### Backend Services
-- `drizzle-orm`
-- `@neondatabase/serverless`
-- `connect-pg-simple`
-- `express`
+- `better-sqlite3` - SQLite database driver
+- `drizzle-orm` - Type-safe ORM for migrations
+- `express` - Web server framework
+- `jsonwebtoken` - JWT authentication
+- `bcryptjs` - Password hashing
 
 ### Validation and Type Safety
 - `zod`

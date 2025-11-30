@@ -15,6 +15,9 @@ services:
       - key: JWT_SECRET
         scope: RUN_TIME
         type: SECRET
+      - key: INITIAL_REGISTRATION_TOKEN
+        scope: RUN_TIME
+        value: CHANGE_ME_TO_YOUR_SECURE_TOKEN
       - key: NODE_ENV
         scope: RUN_TIME
         value: production
