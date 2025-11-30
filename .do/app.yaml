@@ -24,8 +24,10 @@ services:
       - key: DATA_DIR
         scope: RUN_TIME
         value: /data
+    volumes:
+      - name: sqlite-data
+        mount_path: /data
 
 volumes:
   - name: sqlite-data
-    mount_path: /data
-    size: 1Gi
+    size_gib: 1
