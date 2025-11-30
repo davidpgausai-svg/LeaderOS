@@ -132,7 +132,7 @@ export function Sidebar() {
               </span>
             </div>
           )}
-          <div className="space-y-1">
+          <div className="space-y-2">
             {coreNavigation.map((item) => {
               const isActive = location === item.href;
               const Icon = item.icon;
