@@ -17,7 +17,7 @@ A comprehensive strategic planning platform for organizational management and ex
 
 Deploy your own instance of StrategicFlow to DigitalOcean with one click:
 
-[![Deploy to DigitalOcean](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/YOURNAME/strategicflow)
+[![Deploy to DigitalOcean](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/davidpgausai-svg/strategicflow)
 
 > **Setup Instructions:**
 > 1. Click the button above

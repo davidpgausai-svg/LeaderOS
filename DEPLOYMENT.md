@@ -6,9 +6,7 @@ The fastest way to deploy StrategicFlow is using DigitalOcean's 1-click deployme
 
 ### Deploy Now
 
-[![Deploy to DigitalOcean](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/YOURNAME/strategicflow)
-
-> **Note**: Replace `YOURNAME` with your GitHub username in the button URL above.
+[![Deploy to DigitalOcean](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/davidpgausai-svg/strategicflow)
 
 ### What Happens When You Click
 
@@ -57,32 +55,15 @@ The fastest way to deploy StrategicFlow is using DigitalOcean's 1-click deployme
    git push origin main
    ```
 
-2. **Update the deploy URL**
-   
-   Edit the button URL in this file and your README.md:
-   ```
-   https://cloud.digitalocean.com/apps/new?repo=https://github.com/YOURNAME/strategicflow
-   ```
-   Replace `YOURNAME` with your actual GitHub username.
-
-3. **Update `.do/app.yaml`**
-   
-   Edit the `repo` field to match your GitHub repository:
-   ```yaml
-   github:
-     repo: YOURNAME/strategicflow
-     branch: main
-   ```
-
-4. **Click the Deploy Button**
+2. **Click the Deploy Button**
    
    Click the "Deploy to DigitalOcean" button above (or share the link with customers).
 
-5. **Configure Secrets**
+3. **Configure Secrets**
    - Set `JWT_SECRET` to a secure random string
    - Update `INITIAL_REGISTRATION_TOKEN` to your desired registration token
 
-6. **Deploy**
+4. **Deploy**
    - Click "Create Resources"
    - Wait for the build and deployment (~90 seconds)
 
