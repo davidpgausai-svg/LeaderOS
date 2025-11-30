@@ -132,7 +132,7 @@ export function Sidebar() {
               </span>
             </div>
           )}
-          <div className="space-y-2">
+          <div className="flex flex-col gap-1">
             {coreNavigation.map((item) => {
               const isActive = location === item.href;
               const Icon = item.icon;
@@ -141,7 +141,7 @@ export function Sidebar() {
                 <div
                   className={`flex items-center ${isCollapsed ? 'justify-center px-2' : 'px-2'} py-2 text-sm font-medium rounded-md transition-colors ${
                     isActive
-                      ? "bg-white dark:bg-slate-700 shadow-md ring-2 ring-amber-400 dark:ring-amber-500"
+                      ? "bg-white dark:bg-slate-700 shadow-md ring-2 ring-amber-400 dark:ring-amber-500 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-800"
                       : "text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm"
                   }`}
                 >
@@ -151,7 +151,7 @@ export function Sidebar() {
               );
 
               return (
-                <Link key={item.name} href={item.href}>
+                <Link key={item.name} href={item.href} className="block">
                   {isCollapsed ? (
                     <Tooltip>
                       <TooltipTrigger asChild>
