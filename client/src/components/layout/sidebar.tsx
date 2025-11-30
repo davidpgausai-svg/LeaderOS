@@ -141,7 +141,7 @@ export function Sidebar() {
                 <div
                   className={`flex items-center ${isCollapsed ? 'justify-center px-2' : 'px-2'} py-2 text-sm font-medium rounded-md transition-colors ${
                     isActive
-                      ? "bg-white dark:bg-slate-700 shadow-md ring-1 ring-slate-200 dark:ring-slate-600"
+                      ? "bg-white dark:bg-slate-700 shadow-md ring-2 ring-amber-400 dark:ring-amber-500"
                       : "text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm"
                   }`}
                 >
