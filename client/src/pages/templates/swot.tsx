@@ -1,12 +1,10 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Link } from "wouter";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Download, FileText, CheckCircle2, AlertTriangle, TrendingUp, ShieldAlert } from "lucide-react";
-import { jsPDF } from "jspdf";
-import html2canvas from "html2canvas";
 import { Document, Packer, Paragraph, HeadingLevel } from "docx";
 
 const defaultContent = {
@@ -35,43 +33,9 @@ const defaultContent = {
 export default function SwotTemplate() {
   const [swotData, setSwotData] = useState(defaultContent);
   const { toast } = useToast();
-  const swotContainerRef = useRef<HTMLDivElement>(null);
 
   const handleTextChange = (section: keyof typeof defaultContent, value: string) => {
     setSwotData((prev) => ({ ...prev, [section]: value }));
-  };
-
-  const exportPDF = async () => {
-    if (!swotContainerRef.current) return;
-    
-    toast({ title: "Generating PDF...", description: "Please wait while we prepare your download." });
-
-    try {
-      const canvas = await html2canvas(swotContainerRef.current, { 
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff"
-      });
-      
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-      
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-      
-      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-      pdf.save("SWOT-Analysis.pdf");
-      
-      toast({ title: "Download Complete", className: "bg-green-600 text-white border-none" });
-    } catch (err) {
-      console.error("PDF Export Error:", err);
-      toast({ 
-        title: "Export Failed", 
-        description: err instanceof Error ? err.message : "Could not generate PDF.", 
-        variant: "destructive" 
-      });
-    }
   };
 
   const exportDocx = async () => {
@@ -142,22 +106,13 @@ export default function SwotTemplate() {
                 <p className="text-gray-600 dark:text-gray-400">Strategic Planning Framework</p>
               </div>
             </div>
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={exportDocx} data-testid="button-swot-export-docx">
-                <FileText className="w-4 h-4 mr-2" />
-                Word Doc
-              </Button>
-              <Button onClick={exportPDF} data-testid="button-swot-export-pdf">
-                <Download className="w-4 h-4 mr-2" />
-                PDF
-              </Button>
-            </div>
+            <Button variant="outline" onClick={exportDocx} data-testid="button-swot-export-docx">
+              <Download className="w-4 h-4 mr-2" />
+              Download Word
+            </Button>
           </div>
 
-          <div 
-            ref={swotContainerRef}
-            className="grid md:grid-cols-2 gap-6 bg-white dark:bg-gray-900 p-6 rounded-lg"
-          >
+          <div className="grid md:grid-cols-2 gap-6 bg-white dark:bg-gray-900 p-6 rounded-lg">
             <Card className="border-l-4 border-l-green-500 shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-green-600 dark:text-green-400 flex items-center gap-2">

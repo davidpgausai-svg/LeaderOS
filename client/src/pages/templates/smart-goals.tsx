@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Link } from "wouter";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
@@ -7,8 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Download, FileText, Target, BarChart2, CheckCircle, Clock, Compass } from "lucide-react";
-import { jsPDF } from "jspdf";
-import html2canvas from "html2canvas";
 import { Document, Packer, Paragraph, HeadingLevel } from "docx";
 
 type SmartGoal = {
@@ -32,7 +30,6 @@ const defaultGoal: SmartGoal = {
 export default function SmartGoalsTemplate() {
   const [goal, setGoal] = useState<SmartGoal>(defaultGoal);
   const { toast } = useToast();
-  const containerRef = useRef<HTMLDivElement>(null);
 
   const handleChange = (field: keyof SmartGoal, value: string) => {
     setGoal((prev) => ({ ...prev, [field]: value }));
@@ -42,39 +39,6 @@ export default function SmartGoalsTemplate() {
     const statement = `${goal.specific} ${goal.measurable} ${goal.achievable} ${goal.relevant} ${goal.timeBound}`;
     setGoal((prev) => ({ ...prev, goalStatement: statement }));
     toast({ title: "Goal statement generated!", description: "Review and refine as needed." });
-  };
-
-  const exportPDF = async () => {
-    if (!containerRef.current) return;
-    
-    toast({ title: "Generating PDF...", description: "Please wait while we prepare your download." });
-
-    try {
-      const canvas = await html2canvas(containerRef.current, { 
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff"
-      });
-      
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
-      
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-      
-      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-      pdf.save("SMART-Goals.pdf");
-      
-      toast({ title: "Download Complete", className: "bg-green-600 text-white border-none" });
-    } catch (err) {
-      console.error("PDF Export Error:", err);
-      toast({ 
-        title: "Export Failed", 
-        description: "Could not generate PDF.", 
-        variant: "destructive" 
-      });
-    }
   };
 
   const exportDocx = async () => {
@@ -169,19 +133,13 @@ export default function SmartGoalsTemplate() {
                 <p className="text-gray-600 dark:text-gray-400">Project Management Framework</p>
               </div>
             </div>
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={exportDocx} data-testid="button-smart-export-docx">
-                <FileText className="w-4 h-4 mr-2" />
-                Word Doc
-              </Button>
-              <Button onClick={exportPDF} data-testid="button-smart-export-pdf">
-                <Download className="w-4 h-4 mr-2" />
-                PDF
-              </Button>
-            </div>
+            <Button variant="outline" onClick={exportDocx} data-testid="button-smart-export-docx">
+              <Download className="w-4 h-4 mr-2" />
+              Download Word
+            </Button>
           </div>
 
-          <div ref={containerRef} className="space-y-6 bg-white dark:bg-gray-900 p-6 rounded-lg">
+          <div className="space-y-6 bg-white dark:bg-gray-900 p-6 rounded-lg">
             {smartItems.map((item) => {
               const Icon = item.icon;
               return (

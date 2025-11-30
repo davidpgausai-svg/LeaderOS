@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Link } from "wouter";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,8 +14,6 @@ import {
   ArrowLeft, Download, FileText, Plus, X, ChevronDown, ChevronUp,
   Landmark, TrendingUp, Users, Cpu, Scale, Leaf
 } from "lucide-react";
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
 import { Document, Packer, Paragraph, HeadingLevel, TextRun } from "docx";
 
 type TrendDirection = "Rising" | "Declining" | "Stable" | "Volatile" | "Unknown";
@@ -148,7 +146,6 @@ export default function PestleTemplate() {
     Environmental: true
   });
   const { toast } = useToast();
-  const containerRef = useRef<HTMLDivElement>(null);
 
   const toggleCategory = (category: CategoryType) => {
     setOpenCategories(prev => ({ ...prev, [category]: !prev[category] }));
@@ -199,51 +196,6 @@ export default function PestleTemplate() {
       case "Risk": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
       case "Opportunity": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
       case "Both": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-    }
-  };
-
-  const exportPDF = async () => {
-    if (!containerRef.current) return;
-    
-    toast({ title: "Generating PDF...", description: "Please wait while we prepare your download." });
-
-    try {
-      const canvas = await html2canvas(containerRef.current, { 
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff"
-      });
-      
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
-      
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = pageWidth;
-      const imgHeight = (canvas.height * pageWidth) / canvas.width;
-      
-      let yOffset = 0;
-      let pageNumber = 0;
-      
-      while (yOffset < imgHeight) {
-        if (pageNumber > 0) {
-          pdf.addPage();
-        }
-        pdf.addImage(imgData, "PNG", 0, -yOffset, imgWidth, imgHeight);
-        yOffset += pageHeight;
-        pageNumber++;
-      }
-      
-      pdf.save("PESTLE-Analysis.pdf");
-      
-      toast({ title: "Download Complete", className: "bg-green-600 text-white border-none" });
-    } catch (err) {
-      console.error("PDF Export Error:", err);
-      toast({ 
-        title: "Export Failed", 
-        description: "Could not generate PDF.", 
-        variant: "destructive" 
-      });
     }
   };
 
@@ -589,19 +541,13 @@ export default function PestleTemplate() {
                 <p className="text-gray-600 dark:text-gray-400">External Macro-Environment Scanning Framework</p>
               </div>
             </div>
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={exportDocx} data-testid="button-pestle-export-docx">
-                <FileText className="w-4 h-4 mr-2" />
-                Word Doc
-              </Button>
-              <Button onClick={exportPDF} data-testid="button-pestle-export-pdf">
-                <Download className="w-4 h-4 mr-2" />
-                PDF
-              </Button>
-            </div>
+            <Button variant="outline" onClick={exportDocx} data-testid="button-pestle-export-docx">
+              <Download className="w-4 h-4 mr-2" />
+              Download Word
+            </Button>
           </div>
 
-          <div ref={containerRef} className="space-y-6 bg-white dark:bg-gray-900 p-6 rounded-lg">
+          <div className="space-y-6 bg-white dark:bg-gray-900 p-6 rounded-lg">
             <Card className="border-l-4 border-l-gray-500">
               <CardHeader className="pb-3">
                 <CardTitle className="text-gray-700 dark:text-gray-300">Analysis Details</CardTitle>
