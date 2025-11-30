@@ -8,13 +8,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Landing() {
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { login, register } = useAuth();
+  const { login } = useAuth();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -22,16 +19,11 @@ export default function Landing() {
     setIsLoading(true);
 
     try {
-      if (isLogin) {
-        await login(email, password);
-        window.location.href = '/';
-      } else {
-        await register(email, password, firstName, lastName);
-        window.location.href = '/';
-      }
+      await login(email, password);
+      window.location.href = '/';
     } catch (error: any) {
       toast({
-        title: isLogin ? "Login failed" : "Registration failed",
+        title: "Login failed",
         description: error.message || "Please check your credentials and try again.",
         variant: "destructive",
       });
@@ -57,44 +49,13 @@ export default function Landing() {
 
         <Card className="border-gray-200 dark:border-gray-800 shadow-sm">
           <CardHeader className="text-center">
-            <CardTitle className="text-xl">
-              {isLogin ? "Sign in to continue" : "Create your account"}
-            </CardTitle>
+            <CardTitle className="text-xl">Sign in to continue</CardTitle>
             <CardDescription>
-              {isLogin 
-                ? "Enter your credentials to access the platform" 
-                : "Get started with strategic planning"}
+              Enter your credentials to access the platform
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {!isLogin && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
-                    <Input
-                      id="firstName"
-                      type="text"
-                      placeholder="John"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      data-testid="input-firstName"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
-                    <Input
-                      id="lastName"
-                      type="text"
-                      placeholder="Doe"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      data-testid="input-lastName"
-                    />
-                  </div>
-                </div>
-              )}
-
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -131,26 +92,13 @@ export default function Landing() {
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {isLogin ? "Signing in..." : "Creating account..."}
+                    Signing in...
                   </>
                 ) : (
-                  isLogin ? "Sign In" : "Create Account"
+                  "Sign In"
                 )}
               </Button>
             </form>
-
-            <div className="mt-6 text-center">
-              <button
-                type="button"
-                onClick={() => setIsLogin(!isLogin)}
-                className="text-sm text-primary hover:underline"
-                data-testid="button-toggle-auth"
-              >
-                {isLogin 
-                  ? "Don't have an account? Create one" 
-                  : "Already have an account? Sign in"}
-              </button>
-            </div>
           </CardContent>
         </Card>
 

@@ -31,8 +31,8 @@ export function useAuth() {
     return data;
   };
 
-  const register = async (email: string, password: string, firstName?: string, lastName?: string) => {
-    const res = await fetch('/api/auth/register', {
+  const register = async (registrationToken: string, email: string, password: string, firstName?: string, lastName?: string) => {
+    const res = await fetch(`/api/auth/register/${registrationToken}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password, firstName, lastName }),
@@ -49,6 +49,12 @@ export function useAuth() {
     return data;
   };
 
+  const validateRegistrationToken = async (token: string): Promise<boolean> => {
+    const res = await fetch(`/api/auth/validate-registration-token/${token}`);
+    const data = await res.json();
+    return data.valid === true;
+  };
+
   const logout = () => {
     localStorage.removeItem('jwt');
     queryClient.clear();
@@ -61,6 +67,7 @@ export function useAuth() {
     isAuthenticated: !!token && !!user,
     login,
     register,
+    validateRegistrationToken,
     logout,
     error,
   };

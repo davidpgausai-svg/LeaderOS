@@ -54,6 +54,10 @@ import {
   ChevronDown,
   FileText,
   Plus,
+  Link,
+  RefreshCw,
+  Copy,
+  Check,
 } from "lucide-react";
 import type { TemplateType } from "@shared/schema";
 
@@ -280,6 +284,10 @@ export default function Settings() {
     deadlines: true,
   });
   const [newTemplateTypeName, setNewTemplateTypeName] = useState("");
+  const [registrationToken, setRegistrationToken] = useState("");
+  const [isLoadingToken, setIsLoadingToken] = useState(false);
+  const [isRotatingToken, setIsRotatingToken] = useState(false);
+  const [copiedToken, setCopiedToken] = useState(false);
 
   const { data: users } = useQuery({
     queryKey: ["/api/users"],
@@ -301,6 +309,71 @@ export default function Settings() {
       setFrameworkOrder(sortedStrategies);
     }
   }, [strategies]);
+
+  // Fetch registration token when admin security tab is active
+  React.useEffect(() => {
+    if (adminActiveTab === "security" && canManageUsers() && !registrationToken) {
+      fetchRegistrationToken();
+    }
+  }, [adminActiveTab]);
+
+  const fetchRegistrationToken = async () => {
+    setIsLoadingToken(true);
+    try {
+      const response = await apiRequest("GET", "/api/admin/registration-token");
+      const data = await response.json();
+      setRegistrationToken(data.token);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch registration token",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingToken(false);
+    }
+  };
+
+  const rotateRegistrationToken = async () => {
+    setIsRotatingToken(true);
+    try {
+      const response = await apiRequest("POST", "/api/admin/registration-token/rotate");
+      const data = await response.json();
+      setRegistrationToken(data.token);
+      toast({
+        title: "Success",
+        description: "Registration link has been rotated. The old link is now invalid.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to rotate registration token",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRotatingToken(false);
+    }
+  };
+
+  const copyRegistrationUrl = async () => {
+    const baseUrl = window.location.origin;
+    const registrationUrl = `${baseUrl}/register/${registrationToken}`;
+    try {
+      await navigator.clipboard.writeText(registrationUrl);
+      setCopiedToken(true);
+      setTimeout(() => setCopiedToken(false), 2000);
+      toast({
+        title: "Copied!",
+        description: "Registration link copied to clipboard",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to copy to clipboard",
+        variant: "destructive",
+      });
+    }
+  };
 
   const updateUserMutation = useMutation({
     mutationFn: async (userData: any) => {
@@ -345,7 +418,7 @@ export default function Settings() {
     onSuccess: () => {
       toast({
         title: "Success",
-        description: "User added successfully. They can now sign in with Replit Auth.",
+        description: "User added successfully. Share the registration link with them to complete their account setup.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       setIsAddUserDialogOpen(false);
@@ -731,7 +804,7 @@ export default function Settings() {
                         className="bg-gray-50 dark:bg-gray-800"
                       />
                       <p className="text-sm text-gray-500">
-                        Email is managed by your Replit account
+                        Email cannot be changed after registration
                       </p>
                     </div>
 
@@ -998,7 +1071,7 @@ export default function Settings() {
                           User Role Management
                         </CardTitle>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                          Add users by name and email to grant them access. Only approved users can sign in with Replit Auth.
+                          Manage user roles and strategy assignments. New users can register using the secret registration link found in the Security tab.
                         </p>
                       </div>
                       <Button onClick={() => setIsAddUserDialogOpen(true)} data-testid="button-add-user">
@@ -1128,6 +1201,84 @@ export default function Settings() {
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="space-y-4">
+                      <div className="p-4 border rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                        <div className="flex items-center space-x-2 mb-3">
+                          <Link className="h-5 w-5 text-blue-600" />
+                          <h4 className="font-medium text-blue-800 dark:text-blue-200">
+                            User Registration Link
+                          </h4>
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                          Share this secret link with people you want to grant access to the platform. 
+                          The first person to register becomes an Administrator. All others become Co-Leads by default.
+                        </p>
+                        
+                        {isLoadingToken ? (
+                          <div className="flex items-center space-x-2 text-gray-500">
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                            <span>Loading registration link...</span>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-center space-x-2 mb-4">
+                              <Input
+                                value={registrationToken ? `${window.location.origin}/register/${registrationToken}` : ''}
+                                readOnly
+                                className="font-mono text-sm bg-white dark:bg-gray-800"
+                                data-testid="input-registration-url"
+                              />
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={copyRegistrationUrl}
+                                disabled={!registrationToken}
+                                data-testid="button-copy-registration-url"
+                              >
+                                {copiedToken ? (
+                                  <Check className="h-4 w-4 text-green-600" />
+                                ) : (
+                                  <Copy className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                            
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:text-orange-400 dark:border-orange-700 dark:hover:bg-orange-950"
+                                  disabled={isRotatingToken}
+                                  data-testid="button-rotate-registration-token"
+                                >
+                                  <RefreshCw className={`h-4 w-4 mr-2 ${isRotatingToken ? 'animate-spin' : ''}`} />
+                                  {isRotatingToken ? 'Rotating...' : 'Rotate Registration Link'}
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Rotate Registration Link?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This will create a new registration link and immediately invalidate the old one. 
+                                    Anyone with the old link will no longer be able to register.
+                                    <br /><br />
+                                    Use this if the registration link was shared with unauthorized users.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={rotateRegistrationToken}
+                                    className="bg-orange-600 hover:bg-orange-700"
+                                  >
+                                    Rotate Link
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </>
+                        )}
+                      </div>
+
                       <div className="p-4 border rounded-lg bg-green-50 dark:bg-green-900/20">
                         <div className="flex items-center space-x-2">
                           <Shield className="h-4 w-4 text-green-600" />
@@ -1141,31 +1292,18 @@ export default function Settings() {
                       </div>
 
                       <div className="space-y-3">
-                        <h4 className="font-medium">Organization Password Policy</h4>
+                        <h4 className="font-medium">Password Requirements</h4>
                         <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                          <p>• Minimum 8 characters required</p>
-                          <p>• Must include uppercase and lowercase letters</p>
-                          <p>• Must include at least one number</p>
-                          <p>• Must include at least one special character</p>
+                          <p>• Minimum 6 characters required</p>
+                          <p>• Email must be a valid email address</p>
                         </div>
-                        <Button variant="outline" data-testid="button-admin-change-policy">
-                          Update Password Policy
-                        </Button>
                       </div>
 
                       <div className="space-y-3">
                         <h4 className="font-medium">Session Management</h4>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Control user session timeouts and security settings
+                          User sessions expire after 7 days of inactivity
                         </p>
-                        <div className="flex space-x-2">
-                          <Button variant="outline" data-testid="button-admin-session-settings">
-                            Session Settings
-                          </Button>
-                          <Button variant="outline" data-testid="button-admin-force-logout">
-                            Force All Logout
-                          </Button>
-                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -1344,7 +1482,7 @@ export default function Settings() {
           <AlertDialogHeader>
             <AlertDialogTitle>Add New User</AlertDialogTitle>
             <AlertDialogDescription>
-              Add a user by name and email. They will be able to sign in with Replit Auth using this email address.
+              Pre-register a user by name and email. They can then use the registration link (found in Security settings) to create their password and complete account setup.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-4 my-4">

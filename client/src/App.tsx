@@ -25,6 +25,7 @@ import PestleTemplate from "@/pages/templates/pestle";
 import PortersFiveForcesTemplate from "@/pages/templates/porters-five-forces";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
+import Register from "@/pages/register";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -33,10 +34,11 @@ function Router() {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
 
-  // If not authenticated, redirect all routes to landing page
+  // If not authenticated, show landing (login) page and registration page
   if (!isAuthenticated) {
     return (
       <Switch>
+        <Route path="/register/:token" component={Register} />
         <Route component={Landing} />
       </Switch>
     );

@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import type { Express, RequestHandler } from 'express';
 import { storage } from './storage';
 import { logger } from './logger';
+import { getRegistrationToken, rotateRegistrationToken, validateRegistrationToken } from './sqlite';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
@@ -29,9 +30,20 @@ export function verifyToken(token: string): JWTPayload | null {
 }
 
 export async function setupAuth(app: Express) {
-  app.post('/api/auth/register', async (req, res) => {
+  app.get('/api/auth/validate-registration-token/:token', (req, res) => {
+    const { token } = req.params;
+    const isValid = validateRegistrationToken(token);
+    res.json({ valid: isValid });
+  });
+
+  app.post('/api/auth/register/:registrationToken', async (req, res) => {
     try {
+      const { registrationToken } = req.params;
       const { email, password, firstName, lastName } = req.body;
+
+      if (!validateRegistrationToken(registrationToken)) {
+        return res.status(403).json({ error: 'Invalid or expired registration link. Please contact your administrator for a new link.' });
+      }
 
       if (!email || !password) {
         return res.status(400).json({ error: 'Email and password are required' });
@@ -85,6 +97,37 @@ export async function setupAuth(app: Express) {
     } catch (error) {
       logger.error('Registration failed', error);
       res.status(500).json({ error: 'Registration failed. Please try again.' });
+    }
+  });
+
+  app.get('/api/admin/registration-token', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.userId);
+      if (!user || user.role !== 'administrator') {
+        return res.status(403).json({ error: 'Only administrators can view the registration token' });
+      }
+
+      const token = getRegistrationToken();
+      res.json({ token });
+    } catch (error) {
+      logger.error('Error fetching registration token', error);
+      res.status(500).json({ error: 'Failed to fetch registration token' });
+    }
+  });
+
+  app.post('/api/admin/registration-token/rotate', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.userId);
+      if (!user || user.role !== 'administrator') {
+        return res.status(403).json({ error: 'Only administrators can rotate the registration token' });
+      }
+
+      const newToken = rotateRegistrationToken(req.user.userId);
+      logger.info(`Registration token rotated by user ${req.user.userId}`);
+      res.json({ token: newToken, message: 'Registration token rotated successfully' });
+    } catch (error) {
+      logger.error('Error rotating registration token', error);
+      res.status(500).json({ error: 'Failed to rotate registration token' });
     }
   });
 

@@ -202,7 +202,51 @@ export function initializeDatabase() {
       context TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS registration_tokens (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      token TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      rotated_at TEXT,
+      rotated_by TEXT
+    );
   `);
+
+  try {
+    const existingToken = sqlite.prepare('SELECT token FROM registration_tokens WHERE id = 1').get();
+    if (!existingToken) {
+      const initialToken = generateRegistrationToken();
+      sqlite.prepare("INSERT INTO registration_tokens (id, token, created_at) VALUES (1, ?, datetime('now'))").run(initialToken);
+      console.log('[INFO] Initial registration token created');
+    }
+  } catch (error) {
+    console.error('[ERROR] Failed to initialize registration token:', error);
+  }
+}
+
+export function generateRegistrationToken(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let token = '';
+  for (let i = 0; i < 32; i++) {
+    token += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return token;
+}
+
+export function getRegistrationToken(): string | null {
+  const row = sqlite.prepare('SELECT token FROM registration_tokens WHERE id = 1').get() as { token: string } | undefined;
+  return row?.token || null;
+}
+
+export function rotateRegistrationToken(userId: string): string {
+  const newToken = generateRegistrationToken();
+  sqlite.prepare("UPDATE registration_tokens SET token = ?, rotated_at = datetime('now'), rotated_by = ? WHERE id = 1").run(newToken, userId);
+  return newToken;
+}
+
+export function validateRegistrationToken(token: string): boolean {
+  const row = sqlite.prepare('SELECT token FROM registration_tokens WHERE id = 1 AND token = ?').get(token);
+  return !!row;
 }
 
 initializeDatabase();
