@@ -558,7 +558,7 @@ export default function PestleTemplate() {
                     <iframe 
                       width="100%" 
                       height="100%" 
-                      src="https://www.youtube.com/embed/q3-8PW72XDQ?si=gSLTT15tgo6X260_" 
+                      src="https://www.youtube.com/embed/7qrahnx94nc?si=zYeFld-uOx3WNw64" 
                       title="PESTLE Analysis Tutorial" 
                       frameBorder="0" 
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
