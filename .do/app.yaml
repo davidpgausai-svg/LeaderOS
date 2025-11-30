@@ -1,0 +1,25 @@
+name: strategicflow
+services:
+  - name: api
+    source_dir: /
+    github:
+      deploy_on_push: true
+    build_command: npm install && npx tsc
+    run_command: node dist/server.js
+    http_port: 3000
+    instance_size_slug: basic-xxs
+    instance_count: 1
+    envs:
+      - key: JWT_SECRET
+        scope: RUN_TIME
+        type: SECRET
+      - key: PORT
+        scope: RUN_TIME
+        value: "3000"
+      - key: NODE_ENV
+        scope: RUN_TIME
+        value: "production"
+    volumes:
+      - name: sqlite-data
+        path: /data
+        size: 1Gi
