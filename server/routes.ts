@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertStrategySchema, insertProjectSchema, insertActionSchema, insertActionDocumentSchema, insertActionChecklistItemSchema, insertMeetingNoteSchema, insertBarrierSchema, insertDependencySchema, insertTemplateTypeSchema } from "@shared/schema";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated } from "./jwtAuth";
 import { z } from "zod";
 import { logger } from "./logger";
 import OpenAI from "openai";
@@ -42,20 +42,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     await (storage as any).seedData();
   }
 
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      res.json(user);
-    } catch (error) {
-      logger.error("Error fetching authenticated user", error);
-      res.status(500).json({ message: "Unable to load user information. Please try refreshing the page." });
-    }
-  });
   // User routes
   app.get("/api/users", async (req, res) => {
     try {

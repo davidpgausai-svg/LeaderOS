@@ -1,48 +1,159 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ChartLine } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartLine, Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Landing() {
-  const handleLogin = () => {
-    window.location.href = "/api/login";
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const { login, register } = useAuth();
+  const { toast } = useToast();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      if (isLogin) {
+        await login(email, password);
+        window.location.href = '/';
+      } else {
+        await register(email, password, firstName, lastName);
+        window.location.href = '/';
+      }
+    } catch (error: any) {
+      toast({
+        title: isLogin ? "Login failed" : "Registration failed",
+        description: error.message || "Please check your credentials and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-white dark:bg-black flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo and Title */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl mb-6">
             <ChartLine className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Executive Planner
+            StrategicFlow
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
             Strategic planning for organizational excellence
           </p>
         </div>
 
-        {/* Sign-in Card */}
-        <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-8 shadow-sm">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 text-center">
-            Sign in to continue
-          </h2>
-          
-          <Button 
-            onClick={handleLogin}
-            size="lg"
-            className="w-full text-base py-6 rounded-xl"
-            data-testid="button-login"
-          >
-            Sign in with Replit
-          </Button>
+        <Card className="border-gray-200 dark:border-gray-800 shadow-sm">
+          <CardHeader className="text-center">
+            <CardTitle className="text-xl">
+              {isLogin ? "Sign in to continue" : "Create your account"}
+            </CardTitle>
+            <CardDescription>
+              {isLogin 
+                ? "Enter your credentials to access the platform" 
+                : "Get started with strategic planning"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {!isLogin && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input
+                      id="firstName"
+                      type="text"
+                      placeholder="John"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      data-testid="input-firstName"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input
+                      id="lastName"
+                      type="text"
+                      placeholder="Doe"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      data-testid="input-lastName"
+                    />
+                  </div>
+                </div>
+              )}
 
-          <p className="text-xs text-center text-gray-500 dark:text-gray-400 mt-6">
-            Secure authentication powered by Replit
-          </p>
-        </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  data-testid="input-email"
+                />
+              </div>
 
-        {/* Footer */}
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  data-testid="input-password"
+                />
+              </div>
+
+              <Button 
+                type="submit" 
+                className="w-full py-6 text-base rounded-xl"
+                disabled={isLoading}
+                data-testid="button-submit"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {isLogin ? "Signing in..." : "Creating account..."}
+                  </>
+                ) : (
+                  isLogin ? "Sign In" : "Create Account"
+                )}
+              </Button>
+            </form>
+
+            <div className="mt-6 text-center">
+              <button
+                type="button"
+                onClick={() => setIsLogin(!isLogin)}
+                className="text-sm text-primary hover:underline"
+                data-testid="button-toggle-auth"
+              >
+                {isLogin 
+                  ? "Don't have an account? Create one" 
+                  : "Already have an account? Sign in"}
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+
         <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-8">
           Manage strategies, projects, and actions in one place
         </p>

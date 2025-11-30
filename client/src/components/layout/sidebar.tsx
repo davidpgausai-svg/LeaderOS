@@ -45,9 +45,8 @@ const secondaryNavigation = [
 export function Sidebar() {
   const [location] = useLocation();
   const { currentRole, currentUser } = useRole();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(() => {
-    // Default to collapsed, but check localStorage
     const stored = localStorage.getItem('sidebar-collapsed');
     return stored ? JSON.parse(stored) : true;
   });
@@ -57,7 +56,7 @@ export function Sidebar() {
   }, [isCollapsed]);
 
   const handleLogout = () => {
-    window.location.href = "/api/logout";
+    logout();
   };
 
   const toggleSidebar = () => {

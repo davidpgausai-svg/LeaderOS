@@ -1601,4 +1601,6 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-export const storage = new DatabaseStorage();
+// Use SQLite storage for production
+import { SQLiteStorage } from './sqliteStorage';
+export const storage: IStorage = new SQLiteStorage();

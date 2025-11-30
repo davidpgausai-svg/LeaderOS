@@ -1,0 +1,28 @@
+name: strategicflow
+
+services:
+  - name: api
+    source_dir: /
+    github:
+      deploy_on_push: true
+    dockerfile_path: Dockerfile
+    http_port: 5000
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    routes:
+      - path: /
+    envs:
+      - key: JWT_SECRET
+        scope: RUN_TIME
+        type: SECRET
+      - key: NODE_ENV
+        scope: RUN_TIME
+        value: production
+      - key: DATA_DIR
+        scope: RUN_TIME
+        value: /data
+
+volumes:
+  - name: sqlite-data
+    mount_path: /data
+    size: 1Gi
