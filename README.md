@@ -1,4 +1,4 @@
-# StrategicFlow
+# StrategyPlan
 
 A comprehensive strategic planning platform for organizational management and execution.
 
@@ -17,9 +17,9 @@ A comprehensive strategic planning platform for organizational management and ex
 
 ## Quick Deploy
 
-Deploy your own StrategicFlow instance in 90 seconds:
+Deploy your own StrategyPlan instance in 90 seconds:
 
-[![Deploy to DigitalOcean](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?spec=c3BlYzoKICBuYW1lOiBzdHJhdGVnaWNmbG93CiAgc2VydmljZXM6CiAgICAtIG5hbWU6IGFwaQogICAgICBpbWFnZToKICAgICAgICByZWdpc3RyeV90eXBlOiBET0NLRVJfSFVCCiAgICAgICAgcmVnaXN0cnk6IGRhdmlkcGdhdXNhaS1zdmcKICAgICAgICByZXBvc2l0b3J5OiBzdHJhdGVnaWNmbG93CiAgICAgICAgdGFnOiBsYXRlc3QKICAgICAgaHR0cF9wb3J0OiA1MDAwCiAgICAgIGluc3RhbmNlX2NvdW50OiAxCiAgICAgIGluc3RhbmNlX3NpemVfc2x1ZzogYmFzaWMteHhzCiAgICAgIHJvdXRlczoKICAgICAgICAtIHBhdGg6IC8KICAgICAgZW52czoKICAgICAgICAtIGtleTogSldUX1NFQ1JFVAogICAgICAgICAgc2NvcGU6IFJVTl9USU1FCiAgICAgICAgICB0eXBlOiBTRUNSRVQKICAgICAgICAtIGtleTogSU5JVElBTF9SRUdJU1RSQVRJT05fVE9LRU4KICAgICAgICAgIHNjb3BlOiBSVU5fVElNRQogICAgICAgICAgdHlwZTogU0VDUkVUCiAgICAgICAgLSBrZXk6IE5PREVfRU5WCiAgICAgICAgICBzY29wZTogUlVOX1RJTUUKICAgICAgICAgIHZhbHVlOiBwcm9kdWN0aW9uCiAgICAgICAgLSBrZXk6IERBVEFfRElSCiAgICAgICAgICBzY29wZTogUlVOX1RJTUUKICAgICAgICAgIHZhbHVlOiAvZGF0YQogICAgICB2b2x1bWVzOgogICAgICAgIC0gbmFtZTogc3FsaXRlLWRhdGEKICAgICAgICAgIG1vdW50X3BhdGg6IC9kYXRhCiAgICAgICAgICBzaXplX2dpYjogMQo=)
+[![Deploy to DigitalOcean](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?spec=c3BlYzoKICBuYW1lOiBzdHJhdGVneXBsYW4KICBzZXJ2aWNlczoKICAgIC0gbmFtZTogYXBpCiAgICAgIGltYWdlOgogICAgICAgIHJlZ2lzdHJ5X3R5cGU6IERPQ0tFUl9IVUIKICAgICAgICByZWdpc3RyeTogZHBnYXVzCiAgICAgICAgcmVwb3NpdG9yeTogc3RyYXRlZ3lwbGFuCiAgICAgICAgdGFnOiBsYXRlc3QKICAgICAgaHR0cF9wb3J0OiA1MDAwCiAgICAgIGluc3RhbmNlX2NvdW50OiAxCiAgICAgIGluc3RhbmNlX3NpemVfc2x1ZzogYmFzaWMteHhzCiAgICAgIHJvdXRlczoKICAgICAgICAtIHBhdGg6IC8KICAgICAgZW52czoKICAgICAgICAtIGtleTogSldUX1NFQ1JFVAogICAgICAgICAgc2NvcGU6IFJVTl9USU1FCiAgICAgICAgICB0eXBlOiBTRUNSRVQKICAgICAgICAtIGtleTogSU5JVElBTF9SRUdJU1RSQVRJT05fVE9LRU4KICAgICAgICAgIHNjb3BlOiBSVU5fVElNRQogICAgICAgICAgdHlwZTogU0VDUkVUCiAgICAgICAgLSBrZXk6IE5PREVfRU5WCiAgICAgICAgICBzY29wZTogUlVOX1RJTUUKICAgICAgICAgIHZhbHVlOiBwcm9kdWN0aW9uCiAgICAgICAgLSBrZXk6IERBVEFfRElSCiAgICAgICAgICBzY29wZTogUlVOX1RJTUUKICAgICAgICAgIHZhbHVlOiAvZGF0YQogICAgICB2b2x1bWVzOgogICAgICAgIC0gbmFtZTogc3FsaXRlLWRhdGEKICAgICAgICAgIG1vdW50X3BhdGg6IC9kYXRhCiAgICAgICAgICBzaXplX2dpYjogMQo=)
 
 **It's this easy:**
 1. Click the button above
@@ -41,12 +41,12 @@ The first user becomes Administrator with full control.
 
 ```bash
 docker run -d \
-  --name strategicflow \
+  --name strategyplan \
   -p 5000:5000 \
-  -v strategicflow-data:/data \
+  -v strategyplan-data:/data \
   -e JWT_SECRET="your-secret" \
   -e INITIAL_REGISTRATION_TOKEN="your-token" \
-  davidpgausai-svg/strategicflow:latest
+  dpgaus/strategyplan:latest
 ```
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions.

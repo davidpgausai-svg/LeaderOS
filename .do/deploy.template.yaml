@@ -4,7 +4,7 @@ spec:
     - name: api
       image:
         registry_type: DOCKER_HUB
-        registry: davidpgausai-svg
+        registry: dpgaus
         repository: strategyplan
         tag: latest
       http_port: 5000

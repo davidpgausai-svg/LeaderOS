@@ -1,12 +1,12 @@
-# StrategicFlow Deployment Guide
+# StrategyPlan Deployment Guide
 
 ## For Customers: 1-Click Deployment
 
-Deploy StrategicFlow in 90 seconds!
+Deploy StrategyPlan in 90 seconds!
 
 ### Deploy Now
 
-[![Deploy to DigitalOcean](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?spec=c3BlYzoKICBuYW1lOiBzdHJhdGVneXBsYW4KICBzZXJ2aWNlczoKICAgIC0gbmFtZTogYXBpCiAgICAgIGltYWdlOgogICAgICAgIHJlZ2lzdHJ5X3R5cGU6IERPQ0tFUl9IVUIKICAgICAgICByZWdpc3RyeTogZGF2aWRwZ2F1c2FpLXN2ZwogICAgICAgIHJlcG9zaXRvcnk6IHN0cmF0ZWd5cGxhbgogICAgICAgIHRhZzogbGF0ZXN0CiAgICAgIGh0dHBfcG9ydDogNTAwMAogICAgICBpbnN0YW5jZV9jb3VudDogMQogICAgICBpbnN0YW5jZV9zaXplX3NsdWc6IGJhc2ljLXh4cwogICAgICByb3V0ZXM6CiAgICAgICAgLSBwYXRoOiAvCiAgICAgIGVudnM6CiAgICAgICAgLSBrZXk6IEpXVF9TRUNSRVQKICAgICAgICAgIHNjb3BlOiBSVU5fVElNRQogICAgICAgICAgdHlwZTogU0VDUkVUCiAgICAgICAgLSBrZXk6IElOSVRJQUxfUkVHSVNUUkFUSU9OX1RPS0VOCiAgICAgICAgICBzY29wZTogUlVOX1RJTUUKICAgICAgICAgIHR5cGU6IFNFQ1JFVAogICAgICAgIC0ga2V5OiBOT0RFX0VOVgogICAgICAgICAgc2NvcGU6IFJVTl9USU1FCiAgICAgICAgICB2YWx1ZTogcHJvZHVjdGlvbgogICAgICAgIC0ga2V5OiBEQVRBX0RJUgogICAgICAgICAgc2NvcGU6IFJVTl9USU1FCiAgICAgICAgICB2YWx1ZTogL2RhdGEKICAgICAgdm9sdW1lczoKICAgICAgICAtIG5hbWU6IHNxbGl0ZS1kYXRhCiAgICAgICAgICBtb3VudF9wYXRoOiAvZGF0YQogICAgICAgICAgc2l6ZV9naWI6IDEK)
+[![Deploy to DigitalOcean](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?spec=c3BlYzoKICBuYW1lOiBzdHJhdGVneXBsYW4KICBzZXJ2aWNlczoKICAgIC0gbmFtZTogYXBpCiAgICAgIGltYWdlOgogICAgICAgIHJlZ2lzdHJ5X3R5cGU6IERPQ0tFUl9IVUIKICAgICAgICByZWdpc3RyeTogZHBnYXVzCiAgICAgICAgcmVwb3NpdG9yeTogc3RyYXRlZ3lwbGFuCiAgICAgICAgdGFnOiBsYXRlc3QKICAgICAgaHR0cF9wb3J0OiA1MDAwCiAgICAgIGluc3RhbmNlX2NvdW50OiAxCiAgICAgIGluc3RhbmNlX3NpemVfc2x1ZzogYmFzaWMteHhzCiAgICAgIHJvdXRlczoKICAgICAgICAtIHBhdGg6IC8KICAgICAgZW52czoKICAgICAgICAtIGtleTogSldUX1NFQ1JFVAogICAgICAgICAgc2NvcGU6IFJVTl9USU1FCiAgICAgICAgICB0eXBlOiBTRUNSRVQKICAgICAgICAtIGtleTogSU5JVElBTF9SRUdJU1RSQVRJT05fVE9LRU4KICAgICAgICAgIHNjb3BlOiBSVU5fVElNRQogICAgICAgICAgdHlwZTogU0VDUkVUCiAgICAgICAgLSBrZXk6IE5PREVfRU5WCiAgICAgICAgICBzY29wZTogUlVOX1RJTUUKICAgICAgICAgIHZhbHVlOiBwcm9kdWN0aW9uCiAgICAgICAgLSBrZXk6IERBVEFfRElSCiAgICAgICAgICBzY29wZTogUlVOX1RJTUUKICAgICAgICAgIHZhbHVlOiAvZGF0YQogICAgICB2b2x1bWVzOgogICAgICAgIC0gbmFtZTogc3FsaXRlLWRhdGEKICAgICAgICAgIG1vdW50X3BhdGg6IC9kYXRhCiAgICAgICAgICBzaXplX2dpYjogMQo=)
 
 ### Steps
 
@@ -14,7 +14,7 @@ Deploy StrategicFlow in 90 seconds!
 2. **Choose "Container image"** tab at the top
 3. **Fill in the container details:**
    - Registry provider: **Docker Hub**
-   - Repository: `davidpgausai-svg/strategyplan`
+   - Repository: `dpgaus/strategyplan`
    - Image tag: `latest`
    - Credentials: Leave blank (it's public)
 4. **Click Next**
@@ -53,17 +53,17 @@ Run these commands on your local machine:
 
 ```bash
 # Clone the repository
-git clone https://github.com/davidpgausai-svg/strategicflow.git
-cd strategicflow
+git clone https://github.com/davidpgausai-svg/strategyplan.git
+cd strategyplan
 
 # Log in to Docker Hub
 docker login
 
 # Build the image
-docker build -t davidpgausai-svg/strategicflow:latest .
+docker build -t dpgaus/strategyplan:latest .
 
 # Push to Docker Hub
-docker push davidpgausai-svg/strategicflow:latest
+docker push dpgaus/strategyplan:latest
 ```
 
 ### Step 3: Test the Deploy Button
@@ -82,10 +82,10 @@ When you make changes to StrategicFlow:
 
 ```bash
 # Build new version
-docker build -t davidpgausai-svg/strategicflow:latest .
+docker build -t dpgaus/strategyplan:latest .
 
 # Push to Docker Hub
-docker push davidpgausai-svg/strategicflow:latest
+docker push dpgaus/strategyplan:latest
 ```
 
 Customers get updates when they redeploy their app.
@@ -123,7 +123,7 @@ If the deploy button doesn't work, set up manually:
 3. Select **Container image**
 4. Enter:
    - Registry: `Docker Hub`
-   - Image: `davidpgausai-svg/strategicflow`
+   - Image: `dpgaus/strategyplan`
    - Tag: `latest`
 5. Add environment variables:
    - `JWT_SECRET` (mark as secret)
@@ -148,7 +148,7 @@ docker run -d \
   -v strategicflow-data:/data \
   -e JWT_SECRET="your-secure-secret-here" \
   -e INITIAL_REGISTRATION_TOKEN="your-registration-token" \
-  davidpgausai-svg/strategicflow:latest
+  dpgaus/strategyplan:latest
 ```
 
 ### Docker Compose
@@ -157,7 +157,7 @@ docker run -d \
 version: '3.8'
 services:
   app:
-    image: davidpgausai-svg/strategicflow:latest
+    image: dpgaus/strategyplan:latest
     ports:
       - "5000:5000"
     volumes:
@@ -181,7 +181,7 @@ volumes:
 
 ### "Image not found" error
 - The Docker image hasn't been pushed yet
-- Run `docker push davidpgausai-svg/strategicflow:latest`
+- Run `docker push dpgaus/strategyplan:latest`
 
 ### App won't start
 - Check that `JWT_SECRET` is set
