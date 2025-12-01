@@ -4,63 +4,74 @@ A comprehensive strategic planning platform for organizational management and ex
 
 ## Features
 
-- **Hierarchical Strategy Management**: Organize strategies, projects, and actions in a clear hierarchy
-- **Role-Based Access Control**: Administrator, Co-Lead, View, and SME roles with strategy-based permissions
-- **Progress Tracking**: Automatic progress calculation with cascading rollups
-- **Change Continuum Framework**: 9 mandatory fields for comprehensive change management
-- **Barriers & Dependencies**: Track risks, obstacles, and relationships between items
-- **Meeting Notes**: Create and export report-out notes with PDF generation
-- **AI Assistant**: Context-aware chat assistant for strategic guidance
-- **Templates**: Built-in strategic planning templates (SWOT, PESTLE, Porter's Five Forces, etc.)
+- **Strategy Management** - Organize strategies, projects, and actions hierarchically
+- **Role-Based Access** - Administrator, Co-Lead, View, and SME roles
+- **Progress Tracking** - Automatic progress calculation with rollups
+- **Change Management** - Built-in Change Continuum Framework
+- **Risk Tracking** - Barriers and dependencies visualization
+- **Meeting Notes** - Create and export report-out notes as PDF
+- **AI Assistant** - Context-aware strategic guidance
+- **Templates** - SWOT, PESTLE, Porter's Five Forces, and more
+
+---
 
 ## Quick Deploy
 
-Deploy your own instance of StrategicFlow to DigitalOcean with one click:
+Deploy your own StrategicFlow instance in 90 seconds:
 
-[![Deploy to DigitalOcean](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/davidpgausai-svg/strategicflow)
+[![Deploy to DigitalOcean](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?spec=c3BlYzoKICBuYW1lOiBzdHJhdGVnaWNmbG93CiAgc2VydmljZXM6CiAgICAtIG5hbWU6IGFwaQogICAgICBpbWFnZToKICAgICAgICByZWdpc3RyeV90eXBlOiBET0NLRVJfSFVCCiAgICAgICAgcmVnaXN0cnk6IGRhdmlkcGdhdXNhaS1zdmcKICAgICAgICByZXBvc2l0b3J5OiBzdHJhdGVnaWNmbG93CiAgICAgICAgdGFnOiBsYXRlc3QKICAgICAgaHR0cF9wb3J0OiA1MDAwCiAgICAgIGluc3RhbmNlX2NvdW50OiAxCiAgICAgIGluc3RhbmNlX3NpemVfc2x1ZzogYmFzaWMteHhzCiAgICAgIHJvdXRlczoKICAgICAgICAtIHBhdGg6IC8KICAgICAgZW52czoKICAgICAgICAtIGtleTogSldUX1NFQ1JFVAogICAgICAgICAgc2NvcGU6IFJVTl9USU1FCiAgICAgICAgICB0eXBlOiBTRUNSRVQKICAgICAgICAtIGtleTogSU5JVElBTF9SRUdJU1RSQVRJT05fVE9LRU4KICAgICAgICAgIHNjb3BlOiBSVU5fVElNRQogICAgICAgICAgdHlwZTogU0VDUkVUCiAgICAgICAgLSBrZXk6IE5PREVfRU5WCiAgICAgICAgICBzY29wZTogUlVOX1RJTUUKICAgICAgICAgIHZhbHVlOiBwcm9kdWN0aW9uCiAgICAgICAgLSBrZXk6IERBVEFfRElSCiAgICAgICAgICBzY29wZTogUlVOX1RJTUUKICAgICAgICAgIHZhbHVlOiAvZGF0YQogICAgICB2b2x1bWVzOgogICAgICAgIC0gbmFtZTogc3FsaXRlLWRhdGEKICAgICAgICAgIG1vdW50X3BhdGg6IC9kYXRhCiAgICAgICAgICBzaXplX2dpYjogMQo=)
 
-> **Setup Instructions:**
-> 1. Click the button above
-> 2. Set `JWT_SECRET` to a secure random string
-> 3. Optionally set `INITIAL_REGISTRATION_TOKEN` for your registration URL
-> 4. Click "Create Resources"
-> 5. Your app will be live in ~90 seconds!
+**It's this easy:**
+1. Click the button above
+2. Set `JWT_SECRET` (any random text)
+3. Set `INITIAL_REGISTRATION_TOKEN` (your registration password)
+4. Click "Create Resources"
+5. Done!
 
-For detailed deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md).
+**Then register at:**
+```
+https://your-app.ondigitalocean.app/register/YOUR_TOKEN
+```
 
-## Getting Started After Deployment
+The first user becomes Administrator with full control.
 
-1. **Register the first user**
-   - Go to `https://your-app.ondigitalocean.app/register/YOUR_TOKEN`
-   - The first user automatically becomes an Administrator
+---
 
-2. **Create strategies and invite team members**
-   - Go to Settings > Security to view/rotate your registration token
-   - Share the registration URL with team members
+## Self-Hosting
+
+```bash
+docker run -d \
+  --name strategicflow \
+  -p 5000:5000 \
+  -v strategicflow-data:/data \
+  -e JWT_SECRET="your-secret" \
+  -e INITIAL_REGISTRATION_TOKEN="your-token" \
+  davidpgausai-svg/strategicflow:latest
+```
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions.
+
+---
 
 ## Tech Stack
 
-- **Frontend**: React, TypeScript, Tailwind CSS, shadcn/ui
-- **Backend**: Express.js, TypeScript
-- **Database**: SQLite (persistent volume)
-- **Authentication**: JWT with email/password
+| Layer | Technology |
+|-------|------------|
+| Frontend | React, TypeScript, Tailwind CSS, shadcn/ui |
+| Backend | Express.js, TypeScript |
+| Database | SQLite (persistent) |
+| Auth | JWT email/password |
 
-## Environment Variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `JWT_SECRET` | Yes | Secret for JWT authentication |
-| `INITIAL_REGISTRATION_TOKEN` | Recommended | Registration token for predictable URLs |
+---
 
 ## Development
 
 ```bash
-# Install dependencies
 npm install
-
-# Start development server
 npm run dev
 ```
+
+---
 
 ## License
 
