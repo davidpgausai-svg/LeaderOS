@@ -38,6 +38,8 @@ function mapUser(row: any): User {
     profileImageUrl: row.profile_image_url,
     role: row.role,
     timezone: row.timezone,
+    organizationId: row.organization_id,
+    isSuperAdmin: row.is_super_admin,
     createdAt: parseDate(row.created_at),
     updatedAt: parseDate(row.updated_at),
   };
@@ -66,6 +68,7 @@ function mapStrategy(row: any): Strategy {
     changeChampionAssignment: row.change_champion_assignment,
     reinforcementPlan: row.reinforcement_plan,
     benefitsRealizationPlan: row.benefits_realization_plan,
+    organizationId: row.organization_id,
     createdBy: row.created_by,
     createdAt: parseDate(row.created_at),
   };
@@ -88,6 +91,7 @@ function mapProject(row: any): Project {
     isArchived: row.is_archived,
     documentFolderUrl: row.document_folder_url,
     communicationUrl: row.communication_url,
+    organizationId: row.organization_id,
     createdBy: row.created_by,
     createdAt: parseDate(row.created_at),
   };
@@ -101,6 +105,7 @@ function mapActivity(row: any): Activity {
     userId: row.user_id,
     strategyId: row.strategy_id,
     projectId: row.project_id,
+    organizationId: row.organization_id,
     createdAt: parseDate(row.created_at),
   };
 }
@@ -118,6 +123,7 @@ function mapAction(row: any): Action {
     status: row.status,
     dueDate: parseDate(row.due_date),
     isArchived: row.is_archived,
+    organizationId: row.organization_id,
     createdBy: row.created_by,
     createdAt: parseDate(row.created_at),
   };
@@ -133,6 +139,7 @@ function mapNotification(row: any): Notification {
     relatedEntityId: row.related_entity_id,
     relatedEntityType: row.related_entity_type,
     isRead: row.is_read,
+    organizationId: row.organization_id,
     createdAt: parseDate(row.created_at),
   };
 }
@@ -177,6 +184,7 @@ function mapMeetingNote(row: any): MeetingNote {
     selectedProjectIds: row.selected_project_ids,
     selectedActionIds: row.selected_action_ids,
     notes: row.notes,
+    organizationId: row.organization_id,
     createdBy: row.created_by,
     createdAt: parseDate(row.created_at),
     updatedAt: parseDate(row.updated_at),
@@ -196,6 +204,7 @@ function mapBarrier(row: any): Barrier {
     targetResolutionDate: parseDate(row.target_resolution_date),
     resolutionDate: parseDate(row.resolution_date),
     resolutionNotes: row.resolution_notes,
+    organizationId: row.organization_id,
     createdBy: row.created_by,
     createdAt: parseDate(row.created_at),
     updatedAt: parseDate(row.updated_at),
@@ -209,6 +218,7 @@ function mapDependency(row: any): Dependency {
     sourceId: row.source_id,
     targetType: row.target_type,
     targetId: row.target_id,
+    organizationId: row.organization_id,
     createdBy: row.created_by,
     createdAt: parseDate(row.created_at),
   };
@@ -232,6 +242,7 @@ function mapAiChatConversation(row: any): AiChatConversation {
     message: row.message,
     role: row.role,
     context: row.context ? JSON.parse(row.context) : null,
+    organizationId: row.organization_id,
     createdAt: parseDate(row.created_at),
   };
 }
@@ -248,19 +259,37 @@ export class SQLiteStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    const id = userData.id || randomUUID();
     const now = new Date().toISOString();
     
-    if (userData.email) {
-      const existing = sqlite.prepare('SELECT * FROM users WHERE email = ? AND id != ?').get(userData.email, id);
-      if (existing) {
-        sqlite.prepare('DELETE FROM users WHERE email = ?').run(userData.email);
-      }
+    // First, check for existing user by id or email to preserve organization context
+    let existingUser: { id: string, organization_id: string | null, is_super_admin: string, created_at: string } | undefined;
+    
+    // Try to find by id first
+    if (userData.id) {
+      existingUser = sqlite.prepare('SELECT id, organization_id, is_super_admin, created_at FROM users WHERE id = ?').get(userData.id) as typeof existingUser;
     }
+    
+    // If not found by id but email is provided, check by email
+    if (!existingUser && userData.email) {
+      existingUser = sqlite.prepare('SELECT id, organization_id, is_super_admin, created_at FROM users WHERE email = ?').get(userData.email) as typeof existingUser;
+    }
+    
+    // Use existing id if found, otherwise generate new one
+    const id = existingUser?.id || userData.id || randomUUID();
+    
+    // Delete duplicate email records (different id, same email) - but we've already captured the data above
+    if (userData.email) {
+      sqlite.prepare('DELETE FROM users WHERE email = ? AND id != ?').run(userData.email, id);
+    }
+    
+    // Only update organization_id/is_super_admin if explicitly provided, otherwise preserve existing values
+    const organizationId = userData.organizationId !== undefined ? userData.organizationId : (existingUser?.organization_id || null);
+    const isSuperAdmin = userData.isSuperAdmin !== undefined ? userData.isSuperAdmin : (existingUser?.is_super_admin || 'false');
+    const createdAt = existingUser?.created_at || now;
 
     const stmt = sqlite.prepare(`
-      INSERT INTO users (id, email, first_name, last_name, profile_image_url, role, timezone, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO users (id, email, first_name, last_name, profile_image_url, role, timezone, organization_id, is_super_admin, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         email = excluded.email,
         first_name = excluded.first_name,
@@ -268,6 +297,8 @@ export class SQLiteStorage implements IStorage {
         profile_image_url = excluded.profile_image_url,
         role = excluded.role,
         timezone = excluded.timezone,
+        organization_id = excluded.organization_id,
+        is_super_admin = excluded.is_super_admin,
         updated_at = excluded.updated_at
     `);
 
@@ -279,7 +310,9 @@ export class SQLiteStorage implements IStorage {
       userData.profileImageUrl || null,
       userData.role || 'co_lead',
       userData.timezone || 'America/Chicago',
-      now,
+      organizationId,
+      isSuperAdmin,
+      createdAt,
       now
     );
 
@@ -367,8 +400,8 @@ export class SQLiteStorage implements IStorage {
       INSERT INTO strategies (id, title, description, goal, start_date, target_date, metrics, status, completion_date,
         color_code, display_order, progress, case_for_change, vision_statement, success_metrics, stakeholder_map,
         readiness_rating, risk_exposure_rating, change_champion_assignment, reinforcement_plan, benefits_realization_plan,
-        created_by, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        organization_id, created_by, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       insertStrategy.title,
@@ -391,6 +424,7 @@ export class SQLiteStorage implements IStorage {
       insertStrategy.changeChampionAssignment || 'To be defined',
       insertStrategy.reinforcementPlan || 'To be defined',
       insertStrategy.benefitsRealizationPlan || 'To be defined',
+      insertStrategy.organizationId || null,
       insertStrategy.createdBy,
       now
     );
@@ -499,8 +533,8 @@ export class SQLiteStorage implements IStorage {
     sqlite.prepare(`
       INSERT INTO projects (id, title, description, strategy_id, kpi, kpi_tracking, accountable_leaders,
         resources_required, start_date, due_date, status, progress, is_archived, document_folder_url,
-        communication_url, created_by, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        communication_url, organization_id, created_by, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       insertProject.title,
@@ -517,6 +551,7 @@ export class SQLiteStorage implements IStorage {
       insertProject.isArchived || 'false',
       insertProject.documentFolderUrl || null,
       insertProject.communicationUrl || null,
+      insertProject.organizationId || null,
       insertProject.createdBy,
       now
     );
@@ -587,8 +622,8 @@ export class SQLiteStorage implements IStorage {
     const now = new Date().toISOString();
 
     sqlite.prepare(`
-      INSERT INTO activities (id, type, description, user_id, strategy_id, project_id, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO activities (id, type, description, user_id, strategy_id, project_id, organization_id, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       insertActivity.type,
@@ -596,6 +631,7 @@ export class SQLiteStorage implements IStorage {
       insertActivity.userId,
       insertActivity.strategyId || null,
       insertActivity.projectId || null,
+      insertActivity.organizationId || null,
       now
     );
 
@@ -628,8 +664,8 @@ export class SQLiteStorage implements IStorage {
 
     sqlite.prepare(`
       INSERT INTO actions (id, title, description, strategy_id, project_id, target_value, current_value,
-        measurement_unit, status, due_date, is_archived, created_by, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        measurement_unit, status, due_date, is_archived, organization_id, created_by, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       insertAction.title,
@@ -642,6 +678,7 @@ export class SQLiteStorage implements IStorage {
       insertAction.status || 'in_progress',
       toISOString(insertAction.dueDate),
       insertAction.isArchived || 'false',
+      insertAction.organizationId || null,
       insertAction.createdBy,
       now
     );
@@ -711,8 +748,8 @@ export class SQLiteStorage implements IStorage {
     const now = new Date().toISOString();
 
     sqlite.prepare(`
-      INSERT INTO notifications (id, user_id, type, title, message, related_entity_id, related_entity_type, is_read, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO notifications (id, user_id, type, title, message, related_entity_id, related_entity_type, is_read, organization_id, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       notification.userId,
@@ -722,6 +759,7 @@ export class SQLiteStorage implements IStorage {
       notification.relatedEntityId || null,
       notification.relatedEntityType || null,
       notification.isRead || 'false',
+      notification.organizationId || null,
       now
     );
 
@@ -886,8 +924,8 @@ export class SQLiteStorage implements IStorage {
     const now = new Date().toISOString();
 
     sqlite.prepare(`
-      INSERT INTO meeting_notes (id, title, meeting_date, strategy_id, selected_project_ids, selected_action_ids, notes, created_by, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO meeting_notes (id, title, meeting_date, strategy_id, selected_project_ids, selected_action_ids, notes, organization_id, created_by, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       note.title,
@@ -896,6 +934,7 @@ export class SQLiteStorage implements IStorage {
       note.selectedProjectIds,
       note.selectedActionIds,
       note.notes,
+      note.organizationId || null,
       note.createdBy,
       now,
       now
@@ -939,14 +978,15 @@ export class SQLiteStorage implements IStorage {
     const now = new Date().toISOString();
 
     sqlite.prepare(`
-      INSERT INTO ai_chat_conversations (id, user_id, message, role, context, created_at)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO ai_chat_conversations (id, user_id, message, role, context, organization_id, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       message.userId,
       message.message,
       message.role,
       message.context ? JSON.stringify(message.context) : null,
+      message.organizationId || null,
       now
     );
 
@@ -984,8 +1024,8 @@ export class SQLiteStorage implements IStorage {
 
     sqlite.prepare(`
       INSERT INTO barriers (id, project_id, title, description, severity, status, owner_id, identified_date,
-        target_resolution_date, resolution_date, resolution_notes, created_by, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        target_resolution_date, resolution_date, resolution_notes, organization_id, created_by, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       barrier.projectId,
@@ -998,6 +1038,7 @@ export class SQLiteStorage implements IStorage {
       toISOString(barrier.targetResolutionDate),
       null,
       barrier.resolutionNotes || null,
+      barrier.organizationId || null,
       barrier.createdBy,
       now,
       now
@@ -1058,14 +1099,15 @@ export class SQLiteStorage implements IStorage {
     const now = new Date().toISOString();
 
     sqlite.prepare(`
-      INSERT INTO dependencies (id, source_type, source_id, target_type, target_id, created_by, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO dependencies (id, source_type, source_id, target_type, target_id, organization_id, created_by, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       dependency.sourceType,
       dependency.sourceId,
       dependency.targetType,
       dependency.targetId,
+      dependency.organizationId || null,
       'system',
       now
     );

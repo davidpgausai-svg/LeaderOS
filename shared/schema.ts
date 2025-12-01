@@ -118,6 +118,7 @@ export const barriers = pgTable("barriers", {
   targetResolutionDate: timestamp("target_resolution_date"), // When it should be resolved by
   resolutionDate: timestamp("resolution_date"), // When it was actually resolved
   resolutionNotes: text("resolution_notes"), // How the barrier was resolved
+  organizationId: varchar("organization_id"), // Foreign key to organizations table
   createdBy: varchar("created_by").notNull(),
   createdAt: timestamp("created_at").default(sql`now()`),
   updatedAt: timestamp("updated_at").default(sql`now()`),
@@ -340,6 +341,7 @@ export const dependencies = pgTable("dependencies", {
   sourceId: varchar("source_id").notNull(), // ID of the project or action that has the dependency
   targetType: text("target_type").notNull(), // 'project' or 'action'
   targetId: varchar("target_id").notNull(), // ID of the project or action it depends on
+  organizationId: varchar("organization_id"), // Foreign key to organizations table
   createdBy: varchar("created_by").notNull(),
   createdAt: timestamp("created_at").default(sql`now()`),
 }, (table) => ({
@@ -380,6 +382,7 @@ export const aiChatConversations = pgTable("ai_chat_conversations", {
   message: text("message").notNull(),
   role: text("role").notNull(), // 'user' or 'assistant'
   context: jsonb("context"), // Page, role, strategies, etc.
+  organizationId: varchar("organization_id"), // Foreign key to organizations table
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
