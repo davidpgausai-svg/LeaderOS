@@ -1,0 +1,48 @@
+Dec 01 01:34:17  
+Dec 01 01:34:17  > rest-express@1.0.0 start
+Dec 01 01:34:17  > NODE_ENV=production node dist/index.js
+Dec 01 01:34:17  
+Dec 01 01:34:17  node:internal/errors:496
+Dec 01 01:34:17      ErrorCaptureStackTrace(err);
+Dec 01 01:34:17      ^
+Dec 01 01:34:17  
+Dec 01 01:34:17  Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'vite' imported from /app/dist/index.js
+Dec 01 01:34:17      at new NodeError (node:internal/errors:405:5)
+Dec 01 01:34:17      at packageResolve (node:internal/modules/esm/resolve:916:9)
+Dec 01 01:34:17      at moduleResolve (node:internal/modules/esm/resolve:973:20)
+Dec 01 01:34:17      at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+Dec 01 01:34:17      at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:404:12)
+Dec 01 01:34:17      at ModuleLoader.resolve (node:internal/modules/esm/loader:373:25)
+Dec 01 01:34:17      at ModuleLoader.getModuleJob (node:internal/modules/esm/loader:250:38)
+Dec 01 01:34:17      at ModuleWrap.<anonymous> (node:internal/modules/esm/module_job:76:39)
+Dec 01 01:34:17      at link (node:internal/modules/esm/module_job:75:36) {
+Dec 01 01:34:17    code: 'ERR_MODULE_NOT_FOUND'
+Dec 01 01:34:17  }
+Dec 01 01:34:17  
+Dec 01 01:34:17  Node.js v18.20.8
+Dec 01 01:33:51  
+Dec 01 01:33:51  > rest-express@1.0.0 start
+Dec 01 01:33:51  > NODE_ENV=production node dist/index.js
+Dec 01 01:33:51  
+Dec 01 01:33:51  node:internal/errors:496
+Dec 01 01:33:51      ErrorCaptureStackTrace(err);
+Dec 01 01:33:51      ^
+Dec 01 01:33:51  
+Dec 01 01:33:51  Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'vite' imported from /app/dist/index.js
+Dec 01 01:33:51      at new NodeError (node:internal/errors:405:5)
+Dec 01 01:33:51      at packageResolve (node:internal/modules/esm/resolve:916:9)
+Dec 01 01:33:51      at moduleResolve (node:internal/modules/esm/resolve:973:20)
+Dec 01 01:33:51      at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+Dec 01 01:33:51      at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:404:12)
+Dec 01 01:33:51      at ModuleLoader.resolve (node:internal/modules/esm/loader:373:25)
+Dec 01 01:33:51      at ModuleLoader.getModuleJob (node:internal/modules/esm/loader:250:38)
+Dec 01 01:33:51      at ModuleWrap.<anonymous> (node:internal/modules/esm/module_job:76:39)
+Dec 01 01:33:51      at link (node:internal/modules/esm/module_job:75:36) {
+Dec 01 01:33:51    code: 'ERR_MODULE_NOT_FOUND'
+Dec 01 01:33:51  }
+Dec 01 01:33:51  
+Dec 01 01:33:51  Node.js v18.20.8
+Dec 01 01:33:51  ERROR failed health checks after 4 attempts with error Readiness probe failed: dial tcp 10.244.99.90:8080: connect: connection refused
+Dec 01 01:33:52  ERROR failed health checks after 5 attempts with error Readiness probe failed: dial tcp 10.244.100.201:8080: connect: connection refused
+Dec 01 01:34:17  ERROR component terminated with non-zero exit code: 1,
+Dec 01 01:33:51  ERROR component terminated with non-zero exit code: 1,
