@@ -14,6 +14,7 @@ export const sqlite = new Database(DB_PATH);
 sqlite.pragma('journal_mode = WAL');
 
 export function initializeDatabase() {
+  // Step 1: Create base tables WITHOUT organization_id indexes (for compatibility with existing tables)
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS organizations (
       id TEXT PRIMARY KEY,
@@ -37,7 +38,6 @@ export function initializeDatabase() {
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );
-    CREATE INDEX IF NOT EXISTS idx_users_org ON users(organization_id);
 
     CREATE TABLE IF NOT EXISTS sessions (
       sid TEXT PRIMARY KEY,
@@ -81,7 +81,6 @@ export function initializeDatabase() {
       created_by TEXT NOT NULL,
       created_at TEXT DEFAULT (datetime('now'))
     );
-    CREATE INDEX IF NOT EXISTS idx_strategies_org ON strategies(organization_id);
 
     CREATE TABLE IF NOT EXISTS projects (
       id TEXT PRIMARY KEY,
@@ -103,7 +102,6 @@ export function initializeDatabase() {
       created_by TEXT NOT NULL,
       created_at TEXT DEFAULT (datetime('now'))
     );
-    CREATE INDEX IF NOT EXISTS idx_projects_org ON projects(organization_id);
 
     CREATE TABLE IF NOT EXISTS barriers (
       id TEXT PRIMARY KEY,
@@ -122,7 +120,6 @@ export function initializeDatabase() {
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );
-    CREATE INDEX IF NOT EXISTS idx_barriers_org ON barriers(organization_id);
 
     CREATE TABLE IF NOT EXISTS activities (
       id TEXT PRIMARY KEY,
@@ -134,7 +131,6 @@ export function initializeDatabase() {
       organization_id TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
-    CREATE INDEX IF NOT EXISTS idx_activities_org ON activities(organization_id);
 
     CREATE TABLE IF NOT EXISTS actions (
       id TEXT PRIMARY KEY,
@@ -152,7 +148,6 @@ export function initializeDatabase() {
       created_by TEXT NOT NULL,
       created_at TEXT DEFAULT (datetime('now'))
     );
-    CREATE INDEX IF NOT EXISTS idx_actions_org ON actions(organization_id);
 
     CREATE TABLE IF NOT EXISTS action_documents (
       id TEXT PRIMARY KEY,
@@ -183,7 +178,6 @@ export function initializeDatabase() {
       organization_id TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
-    CREATE INDEX IF NOT EXISTS idx_notifications_org ON notifications(organization_id);
 
     CREATE TABLE IF NOT EXISTS meeting_notes (
       id TEXT PRIMARY KEY,
@@ -198,7 +192,6 @@ export function initializeDatabase() {
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );
-    CREATE INDEX IF NOT EXISTS idx_meeting_notes_org ON meeting_notes(organization_id);
 
     CREATE TABLE IF NOT EXISTS dependencies (
       id TEXT PRIMARY KEY,
@@ -211,7 +204,6 @@ export function initializeDatabase() {
       created_at TEXT DEFAULT (datetime('now')),
       UNIQUE(source_type, source_id, target_type, target_id)
     );
-    CREATE INDEX IF NOT EXISTS idx_dependencies_org ON dependencies(organization_id);
 
     CREATE TABLE IF NOT EXISTS template_types (
       id TEXT PRIMARY KEY,
@@ -231,10 +223,33 @@ export function initializeDatabase() {
       organization_id TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
-    CREATE INDEX IF NOT EXISTS idx_ai_chat_org ON ai_chat_conversations(organization_id);
   `);
 
+  // Step 2: Run migrations to add organization_id columns to existing tables
   runMigrations();
+  
+  // Step 3: Create organization indexes AFTER migrations have added the columns
+  createOrganizationIndexes();
+}
+
+function createOrganizationIndexes() {
+  try {
+    sqlite.exec(`
+      CREATE INDEX IF NOT EXISTS idx_users_org ON users(organization_id);
+      CREATE INDEX IF NOT EXISTS idx_strategies_org ON strategies(organization_id);
+      CREATE INDEX IF NOT EXISTS idx_projects_org ON projects(organization_id);
+      CREATE INDEX IF NOT EXISTS idx_barriers_org ON barriers(organization_id);
+      CREATE INDEX IF NOT EXISTS idx_activities_org ON activities(organization_id);
+      CREATE INDEX IF NOT EXISTS idx_actions_org ON actions(organization_id);
+      CREATE INDEX IF NOT EXISTS idx_notifications_org ON notifications(organization_id);
+      CREATE INDEX IF NOT EXISTS idx_meeting_notes_org ON meeting_notes(organization_id);
+      CREATE INDEX IF NOT EXISTS idx_dependencies_org ON dependencies(organization_id);
+      CREATE INDEX IF NOT EXISTS idx_ai_chat_org ON ai_chat_conversations(organization_id);
+    `);
+    console.log('[DB] Organization indexes created/verified');
+  } catch (error) {
+    console.error('[DB] Error creating organization indexes:', error);
+  }
 }
 
 function runMigrations() {
