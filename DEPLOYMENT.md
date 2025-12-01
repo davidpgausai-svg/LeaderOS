@@ -11,12 +11,18 @@ Deploy StrategicFlow in 90 seconds!
 ### Steps
 
 1. **Click the Deploy button** - You'll go to DigitalOcean
-2. **If asked to choose a source** - Select **"Container image"**
-3. **Set your secrets** when prompted:
+2. **Choose "Container image"** tab at the top
+3. **Fill in the container details:**
+   - Registry provider: **Docker Hub**
+   - Repository: `davidpgausai-svg/strategicflow`
+   - Image tag: `latest`
+   - Credentials: Leave blank (it's public)
+4. **Click Next**
+5. **Set your secrets** when prompted:
    - `JWT_SECRET` - Any random text (keeps your app secure)
    - `INITIAL_REGISTRATION_TOKEN` - Your registration link password
-4. **Click "Create Resources"**
-5. **Wait ~90 seconds** - Your app is live!
+6. **Click "Create Resources"**
+7. **Wait ~90 seconds** - Your app is live!
 
 ### After Deployment
 
