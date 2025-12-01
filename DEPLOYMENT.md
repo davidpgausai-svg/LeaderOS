@@ -1,18 +1,18 @@
 # StrategicFlow Deployment Guide
 
-## 1-Click Deployment to DigitalOcean
+## For Customers: 1-Click Deployment
 
-Deploy StrategicFlow in 90 seconds - no GitHub or technical knowledge required!
+Deploy StrategicFlow in 90 seconds!
 
 ### Deploy Now
 
 [![Deploy to DigitalOcean](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?spec=c3BlYzoKICBuYW1lOiBzdHJhdGVnaWNmbG93CiAgc2VydmljZXM6CiAgICAtIG5hbWU6IGFwaQogICAgICBpbWFnZToKICAgICAgICByZWdpc3RyeV90eXBlOiBET0NLRVJfSFVCCiAgICAgICAgcmVnaXN0cnk6IGRhdmlkcGdhdXNhaS1zdmcKICAgICAgICByZXBvc2l0b3J5OiBzdHJhdGVnaWNmbG93CiAgICAgICAgdGFnOiBsYXRlc3QKICAgICAgaHR0cF9wb3J0OiA1MDAwCiAgICAgIGluc3RhbmNlX2NvdW50OiAxCiAgICAgIGluc3RhbmNlX3NpemVfc2x1ZzogYmFzaWMteHhzCiAgICAgIHJvdXRlczoKICAgICAgICAtIHBhdGg6IC8KICAgICAgZW52czoKICAgICAgICAtIGtleTogSldUX1NFQ1JFVAogICAgICAgICAgc2NvcGU6IFJVTl9USU1FCiAgICAgICAgICB0eXBlOiBTRUNSRVQKICAgICAgICAtIGtleTogSU5JVElBTF9SRUdJU1RSQVRJT05fVE9LRU4KICAgICAgICAgIHNjb3BlOiBSVU5fVElNRQogICAgICAgICAgdHlwZTogU0VDUkVUCiAgICAgICAgLSBrZXk6IE5PREVfRU5WCiAgICAgICAgICBzY29wZTogUlVOX1RJTUUKICAgICAgICAgIHZhbHVlOiBwcm9kdWN0aW9uCiAgICAgICAgLSBrZXk6IERBVEFfRElSCiAgICAgICAgICBzY29wZTogUlVOX1RJTUUKICAgICAgICAgIHZhbHVlOiAvZGF0YQogICAgICB2b2x1bWVzOgogICAgICAgIC0gbmFtZTogc3FsaXRlLWRhdGEKICAgICAgICAgIG1vdW50X3BhdGg6IC9kYXRhCiAgICAgICAgICBzaXplX2dpYjogMQo=)
 
-### What You Need to Do
+### Steps
 
-1. **Click the Deploy button above**
-2. **Log in to DigitalOcean** (or create a free account)
-3. **Set your secrets** (DigitalOcean will prompt you):
+1. **Click the Deploy button** - You'll go to DigitalOcean
+2. **If asked to choose a source** - Select **"Container image"**
+3. **Set your secrets** when prompted:
    - `JWT_SECRET` - Any random text (keeps your app secure)
    - `INITIAL_REGISTRATION_TOKEN` - Your registration link password
 4. **Click "Create Resources"**
@@ -26,34 +26,51 @@ Deploy StrategicFlow in 90 seconds - no GitHub or technical knowledge required!
    ```
    Replace `YOUR_TOKEN` with the `INITIAL_REGISTRATION_TOKEN` you set
 
-2. **First user becomes Administrator** - You'll have full control
+2. **First user becomes Administrator** - You have full control
 
-3. **Share with your team** - They can register at the same URL
+3. **Invite your team** - Share the registration URL with them
 
 ---
 
-## For App Maintainers: Publishing Updates
+## For App Publishers: Initial Setup
 
-If you're maintaining StrategicFlow, here's how to publish updates to Docker Hub:
+**Important:** Before the deploy button works, you must push the Docker image to Docker Hub.
 
-### First-Time Setup
+### Step 1: Create Docker Hub Account
 
-1. **Create a Docker Hub account** at https://hub.docker.com
+1. Go to https://hub.docker.com and create a free account
+2. Create a new repository named `strategicflow` (set to Public)
 
-2. **Create a public repository** named `strategicflow`
+### Step 2: Build and Push the Image
 
-3. **Log in to Docker Hub:**
-   ```bash
-   docker login
-   ```
+Run these commands on your local machine:
 
-4. **Build and push:**
-   ```bash
-   docker build -t davidpgausai-svg/strategicflow:latest .
-   docker push davidpgausai-svg/strategicflow:latest
-   ```
+```bash
+# Clone the repository
+git clone https://github.com/davidpgausai-svg/strategicflow.git
+cd strategicflow
 
-### Publishing Updates
+# Log in to Docker Hub
+docker login
+
+# Build the image
+docker build -t davidpgausai-svg/strategicflow:latest .
+
+# Push to Docker Hub
+docker push davidpgausai-svg/strategicflow:latest
+```
+
+### Step 3: Test the Deploy Button
+
+Once the image is on Docker Hub, click the deploy button above. It should:
+1. Take you to DigitalOcean
+2. Auto-select the container image source
+3. Prompt for your secrets
+4. Deploy successfully
+
+---
+
+## Publishing Updates
 
 When you make changes to StrategicFlow:
 
@@ -65,19 +82,18 @@ docker build -t davidpgausai-svg/strategicflow:latest .
 docker push davidpgausai-svg/strategicflow:latest
 ```
 
-### Regenerating the Deploy Button
+Customers get updates when they redeploy their app.
 
-If you change the app configuration, regenerate the deploy URL:
+---
 
-1. Edit `.do/deploy.template.yaml` as needed
-2. Generate new base64 spec:
-   ```bash
-   cat .do/deploy.template.yaml | base64 -w 0
-   ```
-3. Update the deploy button URL in README.md and DEPLOYMENT.md:
-   ```
-   https://cloud.digitalocean.com/apps/new?spec=YOUR_BASE64_OUTPUT
-   ```
+## If the Deploy Button Shows Options
+
+If DigitalOcean asks you to choose between:
+- Git repository
+- Container image  
+- Templates
+
+**Select "Container image"** - the app spec will auto-fill the rest.
 
 ---
 
@@ -85,18 +101,39 @@ If you change the app configuration, regenerate the deploy URL:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `JWT_SECRET` | Yes | Secret key for authentication (any random text) |
+| `JWT_SECRET` | Yes | Secret key for authentication |
 | `INITIAL_REGISTRATION_TOKEN` | Recommended | Registration URL password |
 | `NODE_ENV` | No | Auto-set to `production` |
 | `DATA_DIR` | No | Database directory (default: `/data`) |
 
 ---
 
-## Alternative: Self-Hosting with Docker
+## Alternative: Manual Container Image Setup
 
-Run StrategicFlow on your own server:
+If the deploy button doesn't work, set up manually:
 
-### Using Docker
+1. Go to https://cloud.digitalocean.com/apps
+2. Click **Create App**
+3. Select **Container image**
+4. Enter:
+   - Registry: `Docker Hub`
+   - Image: `davidpgausai-svg/strategicflow`
+   - Tag: `latest`
+5. Add environment variables:
+   - `JWT_SECRET` (mark as secret)
+   - `INITIAL_REGISTRATION_TOKEN` (mark as secret)
+   - `NODE_ENV` = `production`
+   - `DATA_DIR` = `/data`
+6. Add a volume:
+   - Mount path: `/data`
+   - Size: 1 GB
+7. Click **Create Resources**
+
+---
+
+## Self-Hosting with Docker
+
+Run on your own server:
 
 ```bash
 docker run -d \
@@ -108,9 +145,8 @@ docker run -d \
   davidpgausai-svg/strategicflow:latest
 ```
 
-### Using Docker Compose
+### Docker Compose
 
-Create `docker-compose.yml`:
 ```yaml
 version: '3.8'
 services:
@@ -130,42 +166,33 @@ volumes:
   strategicflow-data:
 ```
 
-Run:
-```bash
-docker-compose up -d
-```
-
 ---
 
 ## Troubleshooting
 
+### Deploy button shows source options
+- Select **"Container image"** - the settings will auto-populate
+
+### "Image not found" error
+- The Docker image hasn't been pushed yet
+- Run `docker push davidpgausai-svg/strategicflow:latest`
+
 ### App won't start
-- Check that `JWT_SECRET` is set in your environment variables
-- Look at the app logs in DigitalOcean dashboard
+- Check that `JWT_SECRET` is set
+- View logs in DigitalOcean dashboard
 
 ### Registration link doesn't work
-- Make sure the token in the URL matches your `INITIAL_REGISTRATION_TOKEN`
-- URL format: `/register/YOUR_TOKEN` (not `/register?token=`)
-
-### Data lost after restart
-- Ensure the volume is properly mounted at `/data`
-- On DigitalOcean, check that the volume appears in your app's Components
+- URL format must be `/register/YOUR_TOKEN`
+- Token must match `INITIAL_REGISTRATION_TOKEN`
 
 ---
 
-## Architecture
+## Regenerating the Deploy Button
 
-| Component | Technology |
-|-----------|------------|
-| Frontend | React, TypeScript, Tailwind CSS |
-| Backend | Express.js REST API |
-| Database | SQLite (persistent volume) |
-| Authentication | JWT with email/password |
-| Port | 5000 |
+If you change `.do/deploy.template.yaml`:
 
-## Security Best Practices
+```bash
+cat .do/deploy.template.yaml | base64 -w 0
+```
 
-1. Use a strong, random `JWT_SECRET`
-2. Rotate the registration token after setup (Settings > Security)
-3. HTTPS is automatic on DigitalOcean
-4. Back up your data volume regularly
+Then update the deploy button URLs with the new base64 string.
