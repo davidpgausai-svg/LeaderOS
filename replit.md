@@ -26,6 +26,12 @@ The application supports Docker and DigitalOcean App Platform deployment, utiliz
 ### Multi-Tenancy Architecture
 The platform supports multiple organizations with complete data isolation on a single database. All data is scoped by `organization_id`, and a Super Admin role can manage all organizations. Each organization has a unique registration token.
 
+**Security Implementation:**
+- All list endpoints first load organization-scoped data, then apply additional query filters (strategyId, assignedTo) to prevent cross-tenant data access
+- Individual resource endpoints (/api/users/:id, /api/strategies/:id, /api/projects/:id) require authentication and verify organization ownership
+- Non-administrator roles (Co-Lead, View) are further restricted to assigned strategies only
+- Super Admins (identified via SUPER_ADMIN_EMAILS env var) have global access override for all organizations
+
 ### Authentication and Authorization
 A role-based access control system uses JWT email/password authentication. Permissions are enforced at the API level based on user roles (Administrator, Co-Lead, View, SME), strategy assignments, and organization membership. SME users cannot log in.
 
