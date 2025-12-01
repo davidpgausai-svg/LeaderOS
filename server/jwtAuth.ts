@@ -3,7 +3,9 @@ import jwt from 'jsonwebtoken';
 import type { Express, RequestHandler } from 'express';
 import { storage } from './storage';
 import { logger } from './logger';
-import { getOrganizationByToken, updateOrganizationToken, getAllOrganizations, createOrganization, deleteOrganization, getUserByEmail, updateUserPassword } from './pgStorage';
+import { getOrganizationByToken, updateOrganizationToken, getAllOrganizations, createOrganization, deleteOrganization, getUserByEmail, updateUserPassword, createPasswordResetToken, getPasswordResetToken, markPasswordResetTokenUsed } from './pgStorage';
+import { sendPasswordResetEmail } from './email';
+import crypto from 'crypto';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
@@ -271,6 +273,103 @@ export async function setupAuth(app: Express) {
     } catch (error) {
       logger.error('Login failed', error);
       res.status(500).json({ error: 'Login failed. Please try again.' });
+    }
+  });
+
+  // Password Reset: Request a reset link
+  app.post('/api/auth/request-password-reset', async (req, res) => {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      const user = await getUserByEmail(email);
+      
+      // Always return success to prevent email enumeration attacks
+      // But only send email if user exists
+      if (user && user.role !== 'sme') {
+        // Generate a secure random token
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        const tokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+        
+        // Token expires in 30 minutes
+        const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+        
+        await createPasswordResetToken(user.id, tokenHash, expiresAt);
+        
+        // Send the email with the plain token (we store the hash)
+        const emailSent = await sendPasswordResetEmail(user.email!, resetToken, user.firstName);
+        
+        if (!emailSent) {
+          logger.error(`Failed to send password reset email to ${email}`);
+        } else {
+          logger.info(`Password reset email sent to ${email}`);
+        }
+      } else {
+        logger.info(`Password reset requested for non-existent or SME user: ${email}`);
+      }
+
+      // Always return success to prevent email enumeration
+      res.json({ 
+        success: true, 
+        message: 'If an account exists with this email, you will receive a password reset link shortly.' 
+      });
+    } catch (error) {
+      logger.error('Password reset request failed', error);
+      res.status(500).json({ error: 'Unable to process password reset request. Please try again.' });
+    }
+  });
+
+  // Password Reset: Reset password with token
+  app.post('/api/auth/reset-password', async (req, res) => {
+    try {
+      const { token, password } = req.body;
+
+      if (!token || !password) {
+        return res.status(400).json({ error: 'Token and password are required' });
+      }
+
+      if (password.length < 6) {
+        return res.status(400).json({ error: 'Password must be at least 6 characters' });
+      }
+
+      // Hash the provided token to compare with stored hash
+      const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+      
+      const resetToken = await getPasswordResetToken(tokenHash);
+      
+      if (!resetToken) {
+        return res.status(400).json({ error: 'Invalid or expired reset link. Please request a new one.' });
+      }
+
+      // Check if token is expired
+      if (new Date() > resetToken.expiresAt) {
+        return res.status(400).json({ error: 'Reset link has expired. Please request a new one.' });
+      }
+
+      // Check if token was already used
+      if (resetToken.usedAt) {
+        return res.status(400).json({ error: 'This reset link has already been used. Please request a new one.' });
+      }
+
+      // Update the user's password
+      const passwordHash = await bcrypt.hash(password, 10);
+      await updateUserPassword(resetToken.userId, passwordHash);
+      
+      // Mark token as used
+      await markPasswordResetTokenUsed(resetToken.id);
+
+      logger.info(`Password reset successful for user ${resetToken.userId}`);
+
+      res.json({ 
+        success: true, 
+        message: 'Password has been reset successfully. You can now log in with your new password.' 
+      });
+    } catch (error) {
+      logger.error('Password reset failed', error);
+      res.status(500).json({ error: 'Unable to reset password. Please try again.' });
     }
   });
 
