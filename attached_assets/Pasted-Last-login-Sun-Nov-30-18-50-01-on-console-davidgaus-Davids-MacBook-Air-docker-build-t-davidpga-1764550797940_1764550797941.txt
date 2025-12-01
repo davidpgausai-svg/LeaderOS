@@ -1,0 +1,89 @@
+Last login: Sun Nov 30 18:50:01 on console
+davidgaus@Davids-MacBook-Air ~ % docker build -t davidpgausai-svg/strategyplan:latest .
+
+[+] Building 0.0s (1/1) FINISHED                           docker:desktop-linux
+ => [internal] load build definition from Dockerfile                       0.0s
+ => => transferring dockerfile: 2B                                         0.0s
+ERROR: failed to build: failed to solve: failed to read dockerfile: open Dockerfile: no such file or directory
+davidgaus@Davids-MacBook-Air ~ % cd StrategyPlan
+
+davidgaus@Davids-MacBook-Air StrategyPlan % ls
+attached_assets			package.json
+client				postcss.config.js
+components.json			README.md
+create_milestones.sql		replit.md
+data				scripts
+DEPLOYMENT.md			server
+Dockerfile			shared
+drizzle.config.ts		tailwind.config.ts
+INSTANCE_OPERATOR_GUIDE.md	tsconfig.json
+migrations			vite.config.ts
+package-lock.json
+davidgaus@Davids-MacBook-Air StrategyPlan % docker build -t davidpgausai-svg/strategyplan:latest .
+
+[+] Building 83.0s (16/16) FINISHED                        docker:desktop-linux
+ => [internal] load build definition from Dockerfile                       0.0s
+ => => transferring dockerfile: 882B                                       0.0s
+ => [internal] load metadata for docker.io/library/node:18-alpine          4.8s
+ => [auth] library/node:pull token for registry-1.docker.io                0.0s
+ => [internal] load .dockerignore                                          0.0s
+ => => transferring context: 2B                                            0.0s
+ => [builder 1/7] FROM docker.io/library/node:18-alpine@sha256:8d6421d663  2.3s
+ => => resolve docker.io/library/node:18-alpine@sha256:8d6421d663b4c28fd3  0.0s
+ => => sha256:02bb84e9f3412827f177bc6c020812249b32a8425d2c185 443B / 443B  0.2s
+ => => sha256:8bfa36aa66ce614f6da68a16fb71f875da8d623310f 1.26MB / 1.26MB  0.5s
+ => => sha256:d84c815451acbca96b6e6bdb479929222bec57121 39.66MB / 39.66MB  1.8s
+ => => sha256:6e771e15690e2fabf2332d3a3b744495411d6e0b00b 3.99MB / 3.99MB  0.5s
+ => => extracting sha256:6e771e15690e2fabf2332d3a3b744495411d6e0b00b2aea6  0.0s
+ => => extracting sha256:d84c815451acbca96b6e6bdb479929222bec57121dfe10cc  0.4s
+ => => extracting sha256:8bfa36aa66ce614f6da68a16fb71f875da8d623310f0cb80  0.0s
+ => => extracting sha256:02bb84e9f3412827f177bc6c020812249b32a8425d2c1858  0.0s
+ => [internal] load build context                                          0.3s
+ => => transferring context: 53.22MB                                       0.3s
+ => [builder 2/7] RUN apk add --no-cache python3 make g++                  5.4s
+ => [builder 3/7] WORKDIR /app                                             0.0s 
+ => [builder 4/7] COPY package*.json ./                                    0.0s 
+ => [builder 5/7] RUN npm ci                                              56.9s 
+ => [production 5/7] RUN npm ci --omit=dev                                56.2s
+ => [builder 6/7] COPY . .                                                 0.2s
+ => [builder 7/7] RUN npm run build                                        4.2s
+ => [production 6/7] COPY --from=builder /app/dist ./dist                  0.1s
+ => [production 7/7] RUN mkdir -p /data                                    0.1s
+ => exporting to image                                                     9.0s
+ => => exporting layers                                                    6.6s
+ => => exporting manifest sha256:e64f6ecec1f0c6403778dfeae75c813b864c8159  0.0s
+ => => exporting config sha256:480c835d4c887f17a64033bab9ad1d9dc0221f79b8  0.0s
+ => => exporting attestation manifest sha256:9a9bc54bb80b3b6533f3fd8cc84f  0.0s
+ => => exporting manifest list sha256:4d92447e91deb784502a147b0c9efbebf8c  0.0s
+ => => naming to docker.io/davidpgausai-svg/strategyplan:latest            0.0s
+ => => unpacking to docker.io/davidpgausai-svg/strategyplan:latest         2.4s
+davidgaus@Davids-MacBook-Air StrategyPlan % docker build -t davidpgausai-svg/strategyplan:latest .
+
+[+] Building 0.5s (15/15) FINISHED                         docker:desktop-linux
+ => [internal] load build definition from Dockerfile                       0.0s
+ => => transferring dockerfile: 882B                                       0.0s
+ => [internal] load metadata for docker.io/library/node:18-alpine          0.4s
+ => [internal] load .dockerignore                                          0.0s
+ => => transferring context: 2B                                            0.0s
+ => [builder 1/7] FROM docker.io/library/node:18-alpine@sha256:8d6421d663  0.0s
+ => => resolve docker.io/library/node:18-alpine@sha256:8d6421d663b4c28fd3  0.0s
+ => [internal] load build context                                          0.0s
+ => => transferring context: 26.93kB                                       0.0s
+ => CACHED [builder 2/7] RUN apk add --no-cache python3 make g++           0.0s
+ => CACHED [builder 3/7] WORKDIR /app                                      0.0s
+ => CACHED [builder 4/7] COPY package*.json ./                             0.0s
+ => CACHED [production 5/7] RUN npm ci --omit=dev                          0.0s
+ => CACHED [builder 5/7] RUN npm ci                                        0.0s
+ => CACHED [builder 6/7] COPY . .                                          0.0s
+ => CACHED [builder 7/7] RUN npm run build                                 0.0s
+ => CACHED [production 6/7] COPY --from=builder /app/dist ./dist           0.0s
+ => CACHED [production 7/7] RUN mkdir -p /data                             0.0s
+ => exporting to image                                                     0.0s
+ => => exporting layers                                                    0.0s
+ => => exporting manifest sha256:e64f6ecec1f0c6403778dfeae75c813b864c8159  0.0s
+ => => exporting config sha256:480c835d4c887f17a64033bab9ad1d9dc0221f79b8  0.0s
+ => => exporting attestation manifest sha256:8682f78fff04c3409d693117040f  0.0s
+ => => exporting manifest list sha256:ddc015f6013e75f24c25f5ef69e072b8c70  0.0s
+ => => naming to docker.io/davidpgausai-svg/strategyplan:latest            0.0s
+ => => unpacking to docker.io/davidpgausai-svg/strategyplan:latest         0.0s
+davidgaus@Davids-MacBook-Air StrategyPlan % 
