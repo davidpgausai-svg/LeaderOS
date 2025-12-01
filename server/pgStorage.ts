@@ -6,7 +6,7 @@ import {
   users, strategies, projects, activities, actions, notifications,
   actionDocuments, actionChecklistItems, userStrategyAssignments,
   meetingNotes, aiChatConversations, barriers, dependencies, templateTypes,
-  organizations,
+  organizations, passwordResetTokens,
   type User, type UpsertUser, type InsertUser,
   type Strategy, type InsertStrategy,
   type Project, type InsertProject,
@@ -21,7 +21,8 @@ import {
   type Barrier, type InsertBarrier,
   type Dependency, type InsertDependency,
   type TemplateType, type InsertTemplateType,
-  type Organization
+  type Organization,
+  type PasswordResetToken
 } from '@shared/schema';
 
 export class PostgresStorage implements IStorage {
@@ -680,4 +681,40 @@ export async function setupSuperAdmin(): Promise<void> {
       }
     }
   }
+}
+
+// Password Reset Token Functions
+export async function createPasswordResetToken(
+  userId: string, 
+  tokenHash: string, 
+  expiresAt: Date
+): Promise<PasswordResetToken> {
+  // Invalidate any existing tokens for this user
+  await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
+  
+  const [token] = await db.insert(passwordResetTokens).values({
+    userId,
+    tokenHash,
+    expiresAt,
+  }).returning();
+  
+  return token;
+}
+
+export async function getPasswordResetToken(tokenHash: string): Promise<PasswordResetToken | undefined> {
+  const [token] = await db.select()
+    .from(passwordResetTokens)
+    .where(eq(passwordResetTokens.tokenHash, tokenHash));
+  return token || undefined;
+}
+
+export async function markPasswordResetTokenUsed(tokenId: string): Promise<void> {
+  await db.update(passwordResetTokens)
+    .set({ usedAt: new Date() })
+    .where(eq(passwordResetTokens.id, tokenId));
+}
+
+export async function cleanupExpiredTokens(): Promise<void> {
+  await db.delete(passwordResetTokens)
+    .where(sql`${passwordResetTokens.expiresAt} < NOW() OR ${passwordResetTokens.usedAt} IS NOT NULL`);
 }
