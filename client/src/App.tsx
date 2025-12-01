@@ -26,6 +26,8 @@ import PortersFiveForcesTemplate from "@/pages/templates/porters-five-forces";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Register from "@/pages/register";
+import ForgotPassword from "@/pages/forgot-password";
+import ResetPassword from "@/pages/reset-password";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -39,6 +41,9 @@ function Router() {
     return (
       <Switch>
         <Route path="/register/:token" component={Register} />
+        <Route path="/forgot-password" component={ForgotPassword} />
+        <Route path="/reset-password" component={ResetPassword} />
+        <Route path="/landing" component={Landing} />
         <Route component={Landing} />
       </Switch>
     );

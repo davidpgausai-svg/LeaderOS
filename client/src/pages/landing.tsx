@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,7 +41,7 @@ export default function Landing() {
             <ChartLine className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            StrategicFlow
+            StrategyPlan
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
             Strategic planning for organizational excellence
@@ -98,6 +99,12 @@ export default function Landing() {
                   "Sign In"
                 )}
               </Button>
+
+              <div className="text-center mt-4">
+                <Link href="/forgot-password" className="text-sm text-primary hover:underline" data-testid="link-forgot-password">
+                  Forgot your password?
+                </Link>
+              </div>
             </form>
           </CardContent>
         </Card>
