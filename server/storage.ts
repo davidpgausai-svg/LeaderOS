@@ -111,6 +111,6 @@ export interface IStorage {
   deleteTemplateType(id: string): Promise<boolean>;
 }
 
-// Use SQLite storage
-import { SQLiteStorage } from './sqliteStorage';
-export const storage: IStorage = new SQLiteStorage();
+// Use PostgreSQL storage
+import { PostgresStorage } from './pgStorage';
+export const storage: IStorage = new PostgresStorage();

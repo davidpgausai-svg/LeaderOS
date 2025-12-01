@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import type { Express, RequestHandler } from 'express';
 import { storage } from './storage';
 import { logger } from './logger';
-import { getOrganizationByToken, rotateOrganizationToken, getAllOrganizations, createOrganization, deleteOrganization } from './sqlite';
+import { getOrganizationByToken, updateOrganizationToken, getAllOrganizations, createOrganization, deleteOrganization, getUserByEmail, updateUserPassword } from './pgStorage';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
@@ -30,9 +30,9 @@ export function verifyToken(token: string): JWTPayload | null {
 }
 
 export async function setupAuth(app: Express) {
-  app.get('/api/auth/validate-registration-token/:token', (req, res) => {
+  app.get('/api/auth/validate-registration-token/:token', async (req, res) => {
     const { token } = req.params;
-    const org = getOrganizationByToken(token);
+    const org = await getOrganizationByToken(token);
     res.json({ valid: !!org, organizationName: org?.name || null });
   });
 
@@ -41,7 +41,7 @@ export async function setupAuth(app: Express) {
       const { registrationToken } = req.params;
       const { email, password, firstName, lastName } = req.body;
 
-      const org = getOrganizationByToken(registrationToken);
+      const org = await getOrganizationByToken(registrationToken);
       if (!org) {
         return res.status(403).json({ error: 'Invalid or expired registration link. Please contact your administrator for a new link.' });
       }
@@ -82,13 +82,8 @@ export async function setupAuth(app: Express) {
         isSuperAdmin: isFirstUserEver ? 'true' : 'false',
       });
 
-      const sqliteStorage = storage as any;
-      if (sqliteStorage.sqlite) {
-        sqliteStorage.sqlite.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, user.id);
-      } else {
-        const { sqlite } = await import('./sqlite');
-        sqlite.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, user.id);
-      }
+      // Store password hash in PostgreSQL
+      await updateUserPassword(user.id, passwordHash);
 
       const token = generateToken({ userId: user.id, email: user.email! });
 
@@ -123,7 +118,7 @@ export async function setupAuth(app: Express) {
         return res.status(400).json({ error: 'User is not associated with an organization' });
       }
 
-      const orgs = getAllOrganizations();
+      const orgs = await getAllOrganizations();
       const org = orgs.find(o => o.id === user.organizationId);
       if (!org) {
         return res.status(404).json({ error: 'Organization not found' });
@@ -148,9 +143,9 @@ export async function setupAuth(app: Express) {
         return res.status(400).json({ error: 'User is not associated with an organization' });
       }
 
-      const newToken = rotateOrganizationToken(user.organizationId);
+      const updatedOrg = await updateOrganizationToken(user.organizationId);
       logger.info(`Registration token rotated for org ${user.organizationId} by user ${req.user.userId}`);
-      res.json({ token: newToken, message: 'Registration token rotated successfully' });
+      res.json({ token: updatedOrg?.registrationToken, message: 'Registration token rotated successfully' });
     } catch (error) {
       logger.error('Error rotating registration token', error);
       res.status(500).json({ error: 'Failed to rotate registration token' });
@@ -165,7 +160,7 @@ export async function setupAuth(app: Express) {
         return res.status(403).json({ error: 'Only super administrators can view all organizations' });
       }
 
-      const orgs = getAllOrganizations();
+      const orgs = await getAllOrganizations();
       res.json(orgs);
     } catch (error) {
       logger.error('Error fetching organizations', error);
@@ -186,7 +181,7 @@ export async function setupAuth(app: Express) {
         return res.status(400).json({ error: 'Organization name is required' });
       }
 
-      const org = createOrganization(name.trim());
+      const org = await createOrganization(name.trim());
       logger.info(`Organization ${org.name} created by super admin ${req.user.userId}`);
       res.status(201).json(org);
     } catch (error) {
@@ -204,7 +199,7 @@ export async function setupAuth(app: Express) {
       }
 
       const { orgId } = req.params;
-      deleteOrganization(orgId);
+      await deleteOrganization(orgId);
       logger.info(`Organization ${orgId} deleted by super admin ${req.user.userId}`);
       res.json({ message: 'Organization deleted successfully' });
     } catch (error) {
@@ -222,9 +217,9 @@ export async function setupAuth(app: Express) {
       }
 
       const { orgId } = req.params;
-      const newToken = rotateOrganizationToken(orgId);
+      const updatedOrg = await updateOrganizationToken(orgId);
       logger.info(`Registration token for org ${orgId} rotated by super admin ${req.user.userId}`);
-      res.json({ token: newToken, message: 'Registration token rotated successfully' });
+      res.json({ token: updatedOrg?.registrationToken, message: 'Registration token rotated successfully' });
     } catch (error) {
       logger.error('Error rotating organization token', error);
       res.status(500).json({ error: 'Failed to rotate organization token' });
@@ -239,38 +234,38 @@ export async function setupAuth(app: Express) {
         return res.status(400).json({ error: 'Email and password are required' });
       }
 
-      const { sqlite } = await import('./sqlite');
-      const row = sqlite.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase()) as any;
+      // Use PostgreSQL for user lookup
+      const user = await getUserByEmail(email);
 
-      if (!row) {
+      if (!user) {
         return res.status(401).json({ error: 'Invalid email or password' });
       }
 
-      if (!row.password_hash) {
+      if (!user.passwordHash) {
         return res.status(401).json({ error: 'Account not set up for password login. Please contact administrator.' });
       }
 
-      const isValid = await bcrypt.compare(password, row.password_hash);
+      const isValid = await bcrypt.compare(password, user.passwordHash);
       if (!isValid) {
         return res.status(401).json({ error: 'Invalid email or password' });
       }
 
-      if (row.role === 'sme') {
+      if (user.role === 'sme') {
         return res.status(403).json({ error: 'SME users cannot log in. Please contact administrator.' });
       }
 
-      const token = generateToken({ userId: row.id, email: row.email });
+      const token = generateToken({ userId: user.id, email: user.email! });
 
       res.json({
         token,
         user: {
-          id: row.id,
-          email: row.email,
-          firstName: row.first_name,
-          lastName: row.last_name,
-          role: row.role,
-          organizationId: row.organization_id,
-          isSuperAdmin: row.is_super_admin === 'true',
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          organizationId: user.organizationId,
+          isSuperAdmin: user.isSuperAdmin === 'true',
         }
       });
     } catch (error) {

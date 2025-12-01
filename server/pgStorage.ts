@@ -1,0 +1,683 @@
+import { db } from './db';
+import { eq, desc, and, sql } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
+import type { IStorage } from './storage';
+import {
+  users, strategies, projects, activities, actions, notifications,
+  actionDocuments, actionChecklistItems, userStrategyAssignments,
+  meetingNotes, aiChatConversations, barriers, dependencies, templateTypes,
+  organizations,
+  type User, type UpsertUser, type InsertUser,
+  type Strategy, type InsertStrategy,
+  type Project, type InsertProject,
+  type Activity, type InsertActivity,
+  type Action, type InsertAction,
+  type Notification, type InsertNotification,
+  type ActionDocument, type InsertActionDocument,
+  type ActionChecklistItem, type InsertActionChecklistItem,
+  type UserStrategyAssignment,
+  type MeetingNote, type InsertMeetingNote,
+  type AiChatConversation, type InsertAiChatConversation,
+  type Barrier, type InsertBarrier,
+  type Dependency, type InsertDependency,
+  type TemplateType, type InsertTemplateType,
+  type Organization
+} from '@shared/schema';
+
+export class PostgresStorage implements IStorage {
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    let existingUser: User | undefined;
+    
+    if (userData.id) {
+      existingUser = await this.getUser(userData.id);
+    }
+    if (!existingUser && userData.email) {
+      existingUser = await this.getUserByEmail(userData.email);
+    }
+    
+    const id = existingUser?.id || userData.id || randomUUID();
+    const organizationId = userData.organizationId !== undefined ? userData.organizationId : (existingUser?.organizationId || null);
+    const isSuperAdmin = userData.isSuperAdmin !== undefined ? userData.isSuperAdmin : (existingUser?.isSuperAdmin || 'false');
+
+    if (userData.email && existingUser?.id !== id) {
+      await db.delete(users).where(and(eq(users.email, userData.email)));
+    }
+
+    const [user] = await db.insert(users).values({
+      id,
+      email: userData.email || null,
+      firstName: userData.firstName || null,
+      lastName: userData.lastName || null,
+      profileImageUrl: userData.profileImageUrl || null,
+      role: userData.role || 'co_lead',
+      timezone: userData.timezone || 'America/Chicago',
+      organizationId,
+      isSuperAdmin,
+    }).onConflictDoUpdate({
+      target: users.id,
+      set: {
+        email: userData.email || sql`${users.email}`,
+        firstName: userData.firstName || sql`${users.firstName}`,
+        lastName: userData.lastName || sql`${users.lastName}`,
+        profileImageUrl: userData.profileImageUrl || sql`${users.profileImageUrl}`,
+        role: userData.role || sql`${users.role}`,
+        timezone: userData.timezone || sql`${users.timezone}`,
+        organizationId: organizationId,
+        isSuperAdmin: isSuperAdmin,
+        updatedAt: new Date(),
+      }
+    }).returning();
+
+    return user;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values({
+      id: randomUUID(),
+      ...insertUser,
+    }).returning();
+    return user;
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const [user] = await db.update(users)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return user || undefined;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return db.select().from(users);
+  }
+
+  async getUsersByOrganization(organizationId: string): Promise<User[]> {
+    return db.select().from(users).where(eq(users.organizationId, organizationId));
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    await db.delete(userStrategyAssignments).where(eq(userStrategyAssignments.userId, id));
+    const result = await db.delete(users).where(eq(users.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getStrategy(id: string): Promise<Strategy | undefined> {
+    const [strategy] = await db.select().from(strategies).where(eq(strategies.id, id));
+    return strategy || undefined;
+  }
+
+  async getAllStrategies(): Promise<Strategy[]> {
+    return db.select().from(strategies).orderBy(strategies.displayOrder);
+  }
+
+  async getStrategiesByOrganization(organizationId: string): Promise<Strategy[]> {
+    return db.select().from(strategies)
+      .where(eq(strategies.organizationId, organizationId))
+      .orderBy(strategies.displayOrder);
+  }
+
+  async getStrategiesByCreator(creatorId: string): Promise<Strategy[]> {
+    return db.select().from(strategies).where(eq(strategies.createdBy, creatorId));
+  }
+
+  async createStrategy(insertStrategy: InsertStrategy): Promise<Strategy> {
+    const [strategy] = await db.insert(strategies).values({
+      id: randomUUID(),
+      ...insertStrategy,
+      progress: 0,
+    }).returning();
+
+    await this.createActivity({
+      type: 'strategy_created',
+      description: `Created strategy "${insertStrategy.title}"`,
+      userId: insertStrategy.createdBy,
+      strategyId: strategy.id,
+      organizationId: insertStrategy.organizationId,
+    });
+
+    return strategy;
+  }
+
+  async updateStrategy(id: string, updates: Partial<Strategy>): Promise<Strategy | undefined> {
+    const [strategy] = await db.update(strategies)
+      .set(updates)
+      .where(eq(strategies.id, id))
+      .returning();
+    return strategy || undefined;
+  }
+
+  async deleteStrategy(id: string): Promise<boolean> {
+    await db.delete(userStrategyAssignments).where(eq(userStrategyAssignments.strategyId, id));
+    await db.delete(projects).where(eq(projects.strategyId, id));
+    await db.delete(actions).where(eq(actions.strategyId, id));
+    await db.delete(activities).where(eq(activities.strategyId, id));
+    const result = await db.delete(strategies).where(eq(strategies.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getProject(id: string): Promise<Project | undefined> {
+    const [project] = await db.select().from(projects).where(eq(projects.id, id));
+    return project || undefined;
+  }
+
+  async getAllProjects(): Promise<Project[]> {
+    return db.select().from(projects);
+  }
+
+  async getProjectsByOrganization(organizationId: string): Promise<Project[]> {
+    return db.select().from(projects).where(eq(projects.organizationId, organizationId));
+  }
+
+  async getProjectsByStrategy(strategyId: string): Promise<Project[]> {
+    return db.select().from(projects).where(eq(projects.strategyId, strategyId));
+  }
+
+  async getProjectsByAssignee(assigneeId: string): Promise<Project[]> {
+    const allProjects = await this.getAllProjects();
+    return allProjects.filter(project => {
+      try {
+        const leaders = JSON.parse(project.accountableLeaders);
+        return Array.isArray(leaders) && leaders.includes(assigneeId);
+      } catch {
+        return project.accountableLeaders === assigneeId;
+      }
+    });
+  }
+
+  async createProject(insertProject: InsertProject): Promise<Project> {
+    const [project] = await db.insert(projects).values({
+      id: randomUUID(),
+      ...insertProject,
+      progress: 0,
+    }).returning();
+
+    await this.createActivity({
+      type: 'project_created',
+      description: `Created project "${insertProject.title}"`,
+      userId: insertProject.createdBy,
+      strategyId: insertProject.strategyId,
+      projectId: project.id,
+      organizationId: insertProject.organizationId,
+    });
+
+    return project;
+  }
+
+  async updateProject(id: string, updates: Partial<Project>): Promise<Project | undefined> {
+    const [project] = await db.update(projects)
+      .set(updates)
+      .where(eq(projects.id, id))
+      .returning();
+    return project || undefined;
+  }
+
+  async deleteProject(id: string): Promise<boolean> {
+    await db.delete(actions).where(eq(actions.projectId, id));
+    await db.delete(barriers).where(eq(barriers.projectId, id));
+    const result = await db.delete(projects).where(eq(projects.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getActivity(id: string): Promise<Activity | undefined> {
+    const [activity] = await db.select().from(activities).where(eq(activities.id, id));
+    return activity || undefined;
+  }
+
+  async getAllActivities(): Promise<Activity[]> {
+    return db.select().from(activities).orderBy(desc(activities.createdAt));
+  }
+
+  async getActivitiesByOrganization(organizationId: string): Promise<Activity[]> {
+    return db.select().from(activities)
+      .where(eq(activities.organizationId, organizationId))
+      .orderBy(desc(activities.createdAt));
+  }
+
+  async getActivitiesByUser(userId: string): Promise<Activity[]> {
+    return db.select().from(activities)
+      .where(eq(activities.userId, userId))
+      .orderBy(desc(activities.createdAt));
+  }
+
+  async createActivity(insertActivity: InsertActivity): Promise<Activity> {
+    const [activity] = await db.insert(activities).values({
+      id: randomUUID(),
+      ...insertActivity,
+    }).returning();
+    return activity;
+  }
+
+  async getAction(id: string): Promise<Action | undefined> {
+    const [action] = await db.select().from(actions).where(eq(actions.id, id));
+    return action || undefined;
+  }
+
+  async getAllActions(): Promise<Action[]> {
+    return db.select().from(actions);
+  }
+
+  async getActionsByOrganization(organizationId: string): Promise<Action[]> {
+    return db.select().from(actions).where(eq(actions.organizationId, organizationId));
+  }
+
+  async getActionsByStrategy(strategyId: string): Promise<Action[]> {
+    return db.select().from(actions).where(eq(actions.strategyId, strategyId));
+  }
+
+  async getActionsByProject(projectId: string): Promise<Action[]> {
+    return db.select().from(actions).where(eq(actions.projectId, projectId));
+  }
+
+  async createAction(insertAction: InsertAction): Promise<Action> {
+    const [action] = await db.insert(actions).values({
+      id: randomUUID(),
+      ...insertAction,
+    }).returning();
+
+    await this.createActivity({
+      type: 'action_created',
+      description: `Created action "${insertAction.title}"`,
+      userId: insertAction.createdBy,
+      strategyId: insertAction.strategyId,
+      projectId: insertAction.projectId,
+      organizationId: insertAction.organizationId,
+    });
+
+    return action;
+  }
+
+  async updateAction(id: string, updates: Partial<Action>): Promise<Action | undefined> {
+    const [action] = await db.update(actions)
+      .set(updates)
+      .where(eq(actions.id, id))
+      .returning();
+    return action || undefined;
+  }
+
+  async deleteAction(id: string): Promise<boolean> {
+    await db.delete(actionDocuments).where(eq(actionDocuments.actionId, id));
+    await db.delete(actionChecklistItems).where(eq(actionChecklistItems.actionId, id));
+    const result = await db.delete(actions).where(eq(actions.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async recalculateProjectProgress(projectId: string): Promise<void> {
+    const projectActions = await this.getActionsByProject(projectId);
+    if (projectActions.length === 0) {
+      await this.updateProject(projectId, { progress: 0 });
+      return;
+    }
+
+    const completedActions = projectActions.filter(a => a.status === 'achieved').length;
+    const progress = Math.round((completedActions / projectActions.length) * 100);
+    await this.updateProject(projectId, { progress });
+
+    const project = await this.getProject(projectId);
+    if (project) {
+      await this.recalculateStrategyProgress(project.strategyId);
+    }
+  }
+
+  async recalculateStrategyProgress(strategyId: string): Promise<void> {
+    const strategyProjects = await this.getProjectsByStrategy(strategyId);
+    if (strategyProjects.length === 0) {
+      await this.updateStrategy(strategyId, { progress: 0 });
+      return;
+    }
+
+    const totalProgress = strategyProjects.reduce((sum, p) => sum + p.progress, 0);
+    const avgProgress = Math.round(totalProgress / strategyProjects.length);
+    await this.updateStrategy(strategyId, { progress: avgProgress });
+  }
+
+  async createNotification(insertNotification: InsertNotification): Promise<Notification> {
+    const [notification] = await db.insert(notifications).values({
+      id: randomUUID(),
+      ...insertNotification,
+    }).returning();
+    return notification;
+  }
+
+  async getNotificationsByUser(userId: string): Promise<Notification[]> {
+    return db.select().from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt));
+  }
+
+  async markNotificationAsRead(id: string): Promise<Notification | undefined> {
+    const [notification] = await db.update(notifications)
+      .set({ isRead: 'true' })
+      .where(eq(notifications.id, id))
+      .returning();
+    return notification || undefined;
+  }
+
+  async markNotificationAsUnread(id: string): Promise<Notification | undefined> {
+    const [notification] = await db.update(notifications)
+      .set({ isRead: 'false' })
+      .where(eq(notifications.id, id))
+      .returning();
+    return notification || undefined;
+  }
+
+  async markAllNotificationsAsRead(userId: string): Promise<void> {
+    await db.update(notifications)
+      .set({ isRead: 'true' })
+      .where(eq(notifications.userId, userId));
+  }
+
+  async deleteNotification(id: string): Promise<boolean> {
+    const result = await db.delete(notifications).where(eq(notifications.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getActionDocuments(actionId: string): Promise<ActionDocument[]> {
+    return db.select().from(actionDocuments).where(eq(actionDocuments.actionId, actionId));
+  }
+
+  async createActionDocument(insertDocument: InsertActionDocument): Promise<ActionDocument> {
+    const [document] = await db.insert(actionDocuments).values({
+      id: randomUUID(),
+      ...insertDocument,
+    }).returning();
+    return document;
+  }
+
+  async updateActionDocument(id: string, updates: Partial<ActionDocument>): Promise<ActionDocument | undefined> {
+    const [document] = await db.update(actionDocuments)
+      .set(updates)
+      .where(eq(actionDocuments.id, id))
+      .returning();
+    return document || undefined;
+  }
+
+  async deleteActionDocument(id: string): Promise<boolean> {
+    const result = await db.delete(actionDocuments).where(eq(actionDocuments.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getActionChecklistItems(actionId: string): Promise<ActionChecklistItem[]> {
+    return db.select().from(actionChecklistItems)
+      .where(eq(actionChecklistItems.actionId, actionId))
+      .orderBy(actionChecklistItems.orderIndex);
+  }
+
+  async createActionChecklistItem(insertItem: InsertActionChecklistItem): Promise<ActionChecklistItem> {
+    const [item] = await db.insert(actionChecklistItems).values({
+      id: randomUUID(),
+      ...insertItem,
+    }).returning();
+    return item;
+  }
+
+  async updateActionChecklistItem(id: string, updates: Partial<ActionChecklistItem>): Promise<ActionChecklistItem | undefined> {
+    const [item] = await db.update(actionChecklistItems)
+      .set(updates)
+      .where(eq(actionChecklistItems.id, id))
+      .returning();
+    return item || undefined;
+  }
+
+  async deleteActionChecklistItem(id: string): Promise<boolean> {
+    const result = await db.delete(actionChecklistItems).where(eq(actionChecklistItems.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getUserStrategyAssignments(userId: string): Promise<UserStrategyAssignment[]> {
+    return db.select().from(userStrategyAssignments).where(eq(userStrategyAssignments.userId, userId));
+  }
+
+  async getStrategyAssignments(strategyId: string): Promise<UserStrategyAssignment[]> {
+    return db.select().from(userStrategyAssignments).where(eq(userStrategyAssignments.strategyId, strategyId));
+  }
+
+  async assignStrategy(userId: string, strategyId: string, assignedBy: string): Promise<UserStrategyAssignment> {
+    const [assignment] = await db.insert(userStrategyAssignments).values({
+      id: randomUUID(),
+      userId,
+      strategyId,
+      assignedBy,
+    }).returning();
+    return assignment;
+  }
+
+  async unassignStrategy(userId: string, strategyId: string): Promise<boolean> {
+    const result = await db.delete(userStrategyAssignments)
+      .where(and(
+        eq(userStrategyAssignments.userId, userId),
+        eq(userStrategyAssignments.strategyId, strategyId)
+      ))
+      .returning();
+    return result.length > 0;
+  }
+
+  async getUserAssignedStrategyIds(userId: string): Promise<string[]> {
+    const assignments = await this.getUserStrategyAssignments(userId);
+    return assignments.map(a => a.strategyId);
+  }
+
+  async getAllMeetingNotes(): Promise<MeetingNote[]> {
+    return db.select().from(meetingNotes).orderBy(desc(meetingNotes.meetingDate));
+  }
+
+  async getMeetingNotesByOrganization(organizationId: string): Promise<MeetingNote[]> {
+    return db.select().from(meetingNotes)
+      .where(eq(meetingNotes.organizationId, organizationId))
+      .orderBy(desc(meetingNotes.meetingDate));
+  }
+
+  async getMeetingNote(id: string): Promise<MeetingNote | undefined> {
+    const [note] = await db.select().from(meetingNotes).where(eq(meetingNotes.id, id));
+    return note || undefined;
+  }
+
+  async createMeetingNote(insertNote: InsertMeetingNote): Promise<MeetingNote> {
+    const [note] = await db.insert(meetingNotes).values({
+      id: randomUUID(),
+      ...insertNote,
+    }).returning();
+    return note;
+  }
+
+  async updateMeetingNote(id: string, updates: Partial<MeetingNote>): Promise<MeetingNote | undefined> {
+    const [note] = await db.update(meetingNotes)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(meetingNotes.id, id))
+      .returning();
+    return note || undefined;
+  }
+
+  async deleteMeetingNote(id: string): Promise<boolean> {
+    const result = await db.delete(meetingNotes).where(eq(meetingNotes.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async saveChatMessage(insertMessage: InsertAiChatConversation): Promise<AiChatConversation> {
+    const [message] = await db.insert(aiChatConversations).values({
+      id: randomUUID(),
+      ...insertMessage,
+    }).returning();
+    return message;
+  }
+
+  async getRecentChatHistory(userId: string, limit: number): Promise<AiChatConversation[]> {
+    return db.select().from(aiChatConversations)
+      .where(eq(aiChatConversations.userId, userId))
+      .orderBy(desc(aiChatConversations.createdAt))
+      .limit(limit);
+  }
+
+  async clearChatHistory(userId: string): Promise<void> {
+    await db.delete(aiChatConversations).where(eq(aiChatConversations.userId, userId));
+  }
+
+  async getBarrier(id: string): Promise<Barrier | undefined> {
+    const [barrier] = await db.select().from(barriers).where(eq(barriers.id, id));
+    return barrier || undefined;
+  }
+
+  async getAllBarriers(): Promise<Barrier[]> {
+    return db.select().from(barriers);
+  }
+
+  async getBarriersByProject(projectId: string): Promise<Barrier[]> {
+    return db.select().from(barriers).where(eq(barriers.projectId, projectId));
+  }
+
+  async createBarrier(insertBarrier: InsertBarrier): Promise<Barrier> {
+    const [barrier] = await db.insert(barriers).values({
+      id: randomUUID(),
+      ...insertBarrier,
+    }).returning();
+    return barrier;
+  }
+
+  async updateBarrier(id: string, updates: Partial<Barrier>): Promise<Barrier | undefined> {
+    const [barrier] = await db.update(barriers)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(barriers.id, id))
+      .returning();
+    return barrier || undefined;
+  }
+
+  async deleteBarrier(id: string): Promise<boolean> {
+    const result = await db.delete(barriers).where(eq(barriers.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getAllDependencies(): Promise<Dependency[]> {
+    return db.select().from(dependencies);
+  }
+
+  async getDependenciesBySource(sourceType: string, sourceId: string): Promise<Dependency[]> {
+    return db.select().from(dependencies)
+      .where(and(eq(dependencies.sourceType, sourceType), eq(dependencies.sourceId, sourceId)));
+  }
+
+  async getDependenciesByTarget(targetType: string, targetId: string): Promise<Dependency[]> {
+    return db.select().from(dependencies)
+      .where(and(eq(dependencies.targetType, targetType), eq(dependencies.targetId, targetId)));
+  }
+
+  async createDependency(insertDependency: InsertDependency & { createdBy: string }): Promise<Dependency> {
+    const [dependency] = await db.insert(dependencies).values({
+      sourceType: insertDependency.sourceType,
+      sourceId: insertDependency.sourceId,
+      targetType: insertDependency.targetType,
+      targetId: insertDependency.targetId,
+      organizationId: insertDependency.organizationId,
+      createdBy: insertDependency.createdBy,
+    }).returning();
+    return dependency;
+  }
+
+  async deleteDependency(id: string): Promise<boolean> {
+    const result = await db.delete(dependencies).where(eq(dependencies.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getAllTemplateTypes(): Promise<TemplateType[]> {
+    return db.select().from(templateTypes).orderBy(templateTypes.displayOrder);
+  }
+
+  async createTemplateType(insertTemplateType: InsertTemplateType): Promise<TemplateType> {
+    const [templateType] = await db.insert(templateTypes).values({
+      id: randomUUID(),
+      ...insertTemplateType,
+    }).returning();
+    return templateType;
+  }
+
+  async deleteTemplateType(id: string): Promise<boolean> {
+    const result = await db.delete(templateTypes).where(eq(templateTypes.id, id)).returning();
+    return result.length > 0;
+  }
+}
+
+export async function getAllOrganizations(): Promise<Organization[]> {
+  return db.select().from(organizations).orderBy(organizations.createdAt);
+}
+
+export async function getOrganization(id: string): Promise<Organization | undefined> {
+  const [org] = await db.select().from(organizations).where(eq(organizations.id, id));
+  return org || undefined;
+}
+
+export async function getOrganizationByToken(token: string): Promise<Organization | undefined> {
+  const [org] = await db.select().from(organizations).where(eq(organizations.registrationToken, token));
+  return org || undefined;
+}
+
+export async function createOrganization(name: string): Promise<Organization> {
+  const token = randomUUID().replace(/-/g, '') + randomUUID().replace(/-/g, '').substring(0, 8);
+  const [org] = await db.insert(organizations).values({
+    id: randomUUID(),
+    name,
+    registrationToken: token,
+  }).returning();
+  return org;
+}
+
+export async function updateOrganizationToken(id: string): Promise<Organization | undefined> {
+  const newToken = randomUUID().replace(/-/g, '') + randomUUID().replace(/-/g, '').substring(0, 8);
+  const [org] = await db.update(organizations)
+    .set({ registrationToken: newToken })
+    .where(eq(organizations.id, id))
+    .returning();
+  return org || undefined;
+}
+
+export async function deleteOrganization(id: string): Promise<boolean> {
+  const result = await db.delete(organizations).where(eq(organizations.id, id)).returning();
+  return result.length > 0;
+}
+
+export async function ensureDefaultOrganization(): Promise<void> {
+  const orgs = await getAllOrganizations();
+  if (orgs.length === 0) {
+    await createOrganization('Default Organization');
+    console.log('[DB] Created default organization');
+  }
+}
+
+export async function getUserByEmail(email: string): Promise<User | undefined> {
+  const [user] = await db.select().from(users).where(eq(users.email, email.toLowerCase()));
+  return user || undefined;
+}
+
+export async function updateUserPassword(userId: string, passwordHash: string): Promise<void> {
+  await db.update(users).set({ passwordHash }).where(eq(users.id, userId));
+}
+
+export async function setupSuperAdmin(): Promise<void> {
+  const superAdminEmails = process.env.SUPER_ADMIN_EMAILS?.split(',').map(e => e.trim().toLowerCase()) || [];
+  
+  if (superAdminEmails.length > 0) {
+    for (const email of superAdminEmails) {
+      const [user] = await db.select().from(users).where(eq(users.email, email));
+      if (user) {
+        await db.update(users).set({ isSuperAdmin: 'true' }).where(eq(users.email, email));
+        console.log(`[INFO] Set ${email} as Super Admin`);
+      }
+    }
+  } else {
+    const [existingSuperAdmin] = await db.select().from(users).where(eq(users.isSuperAdmin, 'true'));
+    if (!existingSuperAdmin) {
+      const [firstUser] = await db.select().from(users).orderBy(users.createdAt).limit(1);
+      if (firstUser) {
+        await db.update(users).set({ isSuperAdmin: 'true' }).where(eq(users.id, firstUser.id));
+        console.log(`[INFO] Set first user (${firstUser.email}) as Super Admin (no SUPER_ADMIN_EMAILS configured)`);
+      }
+    }
+  }
+}
