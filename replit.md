@@ -18,7 +18,7 @@ The frontend is built with React 18, TypeScript, Wouter for routing, Zustand for
 The backend is an Express.js REST API with TypeScript, featuring an abstracted storage interface, Zod for schema validation, and centralized error handling.
 
 ### Data Storage
-SQLite with `better-sqlite3` is used for lightweight, file-based data storage, with automatic table creation on startup.
+PostgreSQL (via Replit's built-in Neon-backed database) is used for persistent data storage across deployments. The database is managed through Drizzle ORM with schema defined in `shared/schema.ts`.
 
 ### Deployment
 The application supports Docker and DigitalOcean App Platform deployment, utilizing environment variables for configuration (`JWT_SECRET`, `INITIAL_REGISTRATION_TOKEN`, `DATA_DIR`, `NODE_ENV`).
@@ -34,6 +34,9 @@ The platform supports multiple organizations with complete data isolation on a s
 
 ### Authentication and Authorization
 A role-based access control system uses JWT email/password authentication. Permissions are enforced at the API level based on user roles (Administrator, Co-Lead, View, SME), strategy assignments, and organization membership. SME users cannot log in.
+
+### Password Reset System
+Email-based password reset flow using Resend for transactional emails. Users can request a reset link from the login page, receive an email with a secure token (expires in 30 minutes, single-use), and set a new password. Tokens are hashed before storage for security, and the system prevents email enumeration attacks by always returning a success message.
 
 ### Secure Registration System
 Registration requires an organization-specific secret token in the URL (`/register/:token`). Administrators can manage tokens, and the first registrant for an organization becomes an Administrator. Super Admins can be designated via the `SUPER_ADMIN_EMAILS` environment variable.
@@ -84,7 +87,8 @@ The project uses Vite for development, Tailwind CSS for styling, and TypeScript 
 - `tailwindcss`
 - `class-variance-authority`
 - `lucide-react`
-- `better-sqlite3`
+- `@neondatabase/serverless`
+- `resend`
 - `drizzle-orm`
 - `express`
 - `jsonwebtoken`
