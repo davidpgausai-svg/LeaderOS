@@ -43,21 +43,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // User routes
-  app.get("/api/users", async (req, res) => {
+  app.get("/api/users", isAuthenticated, async (req: any, res) => {
     try {
-      const users = await storage.getAllUsers();
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      let users;
+      
+      // Super Admins can see all users across all organizations
+      if (user.isSuperAdmin === 'true') {
+        users = await storage.getAllUsers();
+      } else {
+        // Regular users only see users in their organization
+        users = user.organizationId 
+          ? await storage.getUsersByOrganization(user.organizationId)
+          : [];
+      }
+      
       res.json(users);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch users" });
     }
   });
 
-  app.get("/api/users/:id", async (req, res) => {
+  app.get("/api/users/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const requestingUserId = req.user.claims.sub;
+      const requestingUser = await storage.getUser(requestingUserId);
+      
+      if (!requestingUser) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
       const user = await storage.getUser(req.params.id);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
+      
+      // Verify organization access (Super Admins can access all, others only their org)
+      if (requestingUser.isSuperAdmin !== 'true' && 
+          requestingUser.organizationId !== user.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
       res.json(user);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch user" });
@@ -253,14 +285,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let strategies;
       
-      // Administrators see all strategies
-      if (user.role === 'administrator') {
+      // Super Admins can see all strategies across all organizations
+      if (user.isSuperAdmin === 'true') {
         strategies = await storage.getAllStrategies();
+      } else if (user.role === 'administrator') {
+        // Administrators see all strategies in their organization
+        strategies = user.organizationId 
+          ? await storage.getStrategiesByOrganization(user.organizationId)
+          : [];
       } else {
-        // Co-Lead and View users see only assigned strategies
+        // Co-Lead and View users see only assigned strategies in their organization
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
-        const allStrategies = await storage.getAllStrategies();
-        strategies = allStrategies.filter(s => assignedStrategyIds.includes(s.id));
+        const orgStrategies = user.organizationId 
+          ? await storage.getStrategiesByOrganization(user.organizationId)
+          : [];
+        strategies = orgStrategies.filter(s => assignedStrategyIds.includes(s.id));
       }
       
       res.json(strategies);
@@ -270,12 +309,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/strategies/:id", async (req, res) => {
+  app.get("/api/strategies/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
       const strategy = await storage.getStrategy(req.params.id);
       if (!strategy) {
         return res.status(404).json({ message: "Strategy not found" });
       }
+      
+      // Verify organization access
+      if (user.isSuperAdmin !== 'true' && 
+          user.organizationId !== strategy.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      // For non-administrators, also check strategy assignment
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        if (!assignedStrategyIds.includes(strategy.id)) {
+          return res.status(403).json({ message: "Access denied to this strategy" });
+        }
+      }
+      
       res.json(strategy);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch strategy" });
@@ -637,18 +698,36 @@ Respond ONLY with a valid JSON object in this exact format:
       const { strategyId, assignedTo } = req.query;
       let projects;
       
-      if (strategyId) {
-        projects = await storage.getProjectsByStrategy(strategyId as string);
-      } else if (assignedTo) {
-        projects = await storage.getProjectsByAssignee(assignedTo as string);
-      } else {
+      // First get the base set of projects based on organization and role
+      if (user.isSuperAdmin === 'true') {
+        // Super Admins see all projects across all organizations
         projects = await storage.getAllProjects();
+      } else if (user.organizationId) {
+        // All other users are limited to their organization first
+        projects = await storage.getProjectsByOrganization(user.organizationId);
+        
+        // Non-administrator roles are further limited to assigned strategies
+        if (user.role !== 'administrator') {
+          const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+          projects = projects.filter((p: any) => assignedStrategyIds.includes(p.strategyId));
+        }
+      } else {
+        projects = [];
       }
       
-      // Filter by assigned strategies for non-administrators
-      if (user.role !== 'administrator') {
-        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
-        projects = projects.filter((p: any) => assignedStrategyIds.includes(p.strategyId));
+      // Then apply query filters on top of the organization-scoped results
+      if (strategyId) {
+        projects = projects.filter((p: any) => p.strategyId === strategyId);
+      }
+      if (assignedTo) {
+        projects = projects.filter((p: any) => {
+          try {
+            const leaders = JSON.parse(p.accountableLeaders);
+            return Array.isArray(leaders) && leaders.includes(assignedTo);
+          } catch {
+            return p.accountableLeaders === assignedTo;
+          }
+        });
       }
       
       res.json(projects);
@@ -658,12 +737,34 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.get("/api/projects/:id", async (req, res) => {
+  app.get("/api/projects/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
       const project = await storage.getProject(req.params.id);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
+      
+      // Verify organization access
+      if (user.isSuperAdmin !== 'true' && 
+          user.organizationId !== project.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      // For non-administrators, also check strategy assignment
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        if (!assignedStrategyIds.includes(project.strategyId)) {
+          return res.status(403).json({ message: "Access denied to this project" });
+        }
+      }
+      
       res.json(project);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch project" });
@@ -1296,16 +1397,26 @@ Respond ONLY with a valid JSON object in this exact format:
       const { userId: queryUserId } = req.query;
       let activities;
       
-      if (queryUserId) {
-        activities = await storage.getActivitiesByUser(queryUserId as string);
-      } else {
+      // First get the base set of activities based on organization and role
+      if (user.isSuperAdmin === 'true') {
+        // Super Admins see all activities across all organizations
         activities = await storage.getAllActivities();
+      } else if (user.organizationId) {
+        // All other users are limited to their organization first
+        activities = await storage.getActivitiesByOrganization(user.organizationId);
+        
+        // Non-administrator roles are further limited to assigned strategies
+        if (user.role !== 'administrator') {
+          const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+          activities = activities.filter((a: any) => assignedStrategyIds.includes(a.strategyId));
+        }
+      } else {
+        activities = [];
       }
       
-      // Filter by assigned strategies for non-administrators
-      if (user.role !== 'administrator') {
-        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
-        activities = activities.filter((a: any) => assignedStrategyIds.includes(a.strategyId));
+      // Then apply query filters on top of the organization-scoped results
+      if (queryUserId) {
+        activities = activities.filter((a: any) => a.userId === queryUserId);
       }
       
       res.json(activities);
@@ -1325,12 +1436,23 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(401).json({ message: "User not found" });
       }
 
-      let actions = await storage.getAllActions();
+      let actions;
       
-      // Filter by assigned strategies for non-administrators
-      if (user.role !== 'administrator') {
+      // Super Admins see all actions across all organizations
+      if (user.isSuperAdmin === 'true') {
+        actions = await storage.getAllActions();
+      } else if (user.role === 'administrator') {
+        // Administrators see all actions in their organization
+        actions = user.organizationId 
+          ? await storage.getActionsByOrganization(user.organizationId)
+          : [];
+      } else {
+        // Co-Lead and View users see only actions from assigned strategies in their organization
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
-        actions = actions.filter((a: any) => assignedStrategyIds.includes(a.strategyId));
+        const orgActions = user.organizationId 
+          ? await storage.getActionsByOrganization(user.organizationId)
+          : [];
+        actions = orgActions.filter((a: any) => assignedStrategyIds.includes(a.strategyId));
       }
       
       res.json(actions);
@@ -1910,12 +2032,23 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(401).json({ message: "User not found" });
       }
 
-      let meetingNotes = await storage.getAllMeetingNotes();
+      let meetingNotes;
       
-      // Filter by assigned strategies for non-administrators
-      if (user.role !== 'administrator') {
+      // Super Admins see all meeting notes across all organizations
+      if (user.isSuperAdmin === 'true') {
+        meetingNotes = await storage.getAllMeetingNotes();
+      } else if (user.role === 'administrator') {
+        // Administrators see all meeting notes in their organization
+        meetingNotes = user.organizationId 
+          ? await storage.getMeetingNotesByOrganization(user.organizationId)
+          : [];
+      } else {
+        // Co-Lead and View users see only meeting notes from assigned strategies in their organization
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
-        meetingNotes = meetingNotes.filter((note: any) => 
+        const orgNotes = user.organizationId 
+          ? await storage.getMeetingNotesByOrganization(user.organizationId)
+          : [];
+        meetingNotes = orgNotes.filter((note: any) => 
           assignedStrategyIds.includes(note.strategyId)
         );
       }

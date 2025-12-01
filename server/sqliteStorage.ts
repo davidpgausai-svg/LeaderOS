@@ -371,6 +371,11 @@ export class SQLiteStorage implements IStorage {
     return rows.map(mapUser);
   }
 
+  async getUsersByOrganization(organizationId: string): Promise<User[]> {
+    const rows = sqlite.prepare('SELECT * FROM users WHERE organization_id = ?').all(organizationId);
+    return rows.map(mapUser);
+  }
+
   async deleteUser(id: string): Promise<boolean> {
     sqlite.prepare('DELETE FROM user_strategy_assignments WHERE user_id = ?').run(id);
     const result = sqlite.prepare('DELETE FROM users WHERE id = ?').run(id);
@@ -384,6 +389,11 @@ export class SQLiteStorage implements IStorage {
 
   async getAllStrategies(): Promise<Strategy[]> {
     const rows = sqlite.prepare('SELECT * FROM strategies ORDER BY display_order ASC').all();
+    return rows.map(mapStrategy);
+  }
+
+  async getStrategiesByOrganization(organizationId: string): Promise<Strategy[]> {
+    const rows = sqlite.prepare('SELECT * FROM strategies WHERE organization_id = ? ORDER BY display_order ASC').all(organizationId);
     return rows.map(mapStrategy);
   }
 
@@ -509,6 +519,11 @@ export class SQLiteStorage implements IStorage {
     return rows.map(mapProject);
   }
 
+  async getProjectsByOrganization(organizationId: string): Promise<Project[]> {
+    const rows = sqlite.prepare('SELECT * FROM projects WHERE organization_id = ?').all(organizationId);
+    return rows.map(mapProject);
+  }
+
   async getProjectsByStrategy(strategyId: string): Promise<Project[]> {
     const rows = sqlite.prepare('SELECT * FROM projects WHERE strategy_id = ?').all(strategyId);
     return rows.map(mapProject);
@@ -612,6 +627,11 @@ export class SQLiteStorage implements IStorage {
     return rows.map(mapActivity);
   }
 
+  async getActivitiesByOrganization(organizationId: string): Promise<Activity[]> {
+    const rows = sqlite.prepare('SELECT * FROM activities WHERE organization_id = ? ORDER BY created_at DESC').all(organizationId);
+    return rows.map(mapActivity);
+  }
+
   async getActivitiesByUser(userId: string): Promise<Activity[]> {
     const rows = sqlite.prepare('SELECT * FROM activities WHERE user_id = ? ORDER BY created_at DESC').all(userId);
     return rows.map(mapActivity);
@@ -645,6 +665,11 @@ export class SQLiteStorage implements IStorage {
 
   async getAllActions(): Promise<Action[]> {
     const rows = sqlite.prepare('SELECT * FROM actions').all();
+    return rows.map(mapAction);
+  }
+
+  async getActionsByOrganization(organizationId: string): Promise<Action[]> {
+    const rows = sqlite.prepare('SELECT * FROM actions WHERE organization_id = ?').all(organizationId);
     return rows.map(mapAction);
   }
 
@@ -911,6 +936,11 @@ export class SQLiteStorage implements IStorage {
 
   async getAllMeetingNotes(): Promise<MeetingNote[]> {
     const rows = sqlite.prepare('SELECT * FROM meeting_notes ORDER BY meeting_date DESC').all();
+    return rows.map(mapMeetingNote);
+  }
+
+  async getMeetingNotesByOrganization(organizationId: string): Promise<MeetingNote[]> {
+    const rows = sqlite.prepare('SELECT * FROM meeting_notes WHERE organization_id = ? ORDER BY meeting_date DESC').all(organizationId);
     return rows.map(mapMeetingNote);
   }
 

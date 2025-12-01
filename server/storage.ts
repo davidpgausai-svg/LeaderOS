@@ -7,11 +7,13 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
+  getUsersByOrganization(organizationId: string): Promise<User[]>;
   deleteUser(id: string): Promise<boolean>;
 
   // Strategy methods
   getStrategy(id: string): Promise<Strategy | undefined>;
   getAllStrategies(): Promise<Strategy[]>;
+  getStrategiesByOrganization(organizationId: string): Promise<Strategy[]>;
   getStrategiesByCreator(creatorId: string): Promise<Strategy[]>;
   createStrategy(strategy: InsertStrategy): Promise<Strategy>;
   updateStrategy(id: string, updates: Partial<Strategy>): Promise<Strategy | undefined>;
@@ -20,6 +22,7 @@ export interface IStorage {
   // Project methods
   getProject(id: string): Promise<Project | undefined>;
   getAllProjects(): Promise<Project[]>;
+  getProjectsByOrganization(organizationId: string): Promise<Project[]>;
   getProjectsByStrategy(strategyId: string): Promise<Project[]>;
   getProjectsByAssignee(assigneeId: string): Promise<Project[]>;
   createProject(project: InsertProject): Promise<Project>;
@@ -29,12 +32,14 @@ export interface IStorage {
   // Activity methods
   getActivity(id: string): Promise<Activity | undefined>;
   getAllActivities(): Promise<Activity[]>;
+  getActivitiesByOrganization(organizationId: string): Promise<Activity[]>;
   getActivitiesByUser(userId: string): Promise<Activity[]>;
   createActivity(activity: InsertActivity): Promise<Activity>;
 
   // Action methods
   getAction(id: string): Promise<Action | undefined>;
   getAllActions(): Promise<Action[]>;
+  getActionsByOrganization(organizationId: string): Promise<Action[]>;
   getActionsByStrategy(strategyId: string): Promise<Action[]>;
   getActionsByProject(projectId: string): Promise<Action[]>;
   createAction(action: InsertAction): Promise<Action>;
@@ -74,6 +79,7 @@ export interface IStorage {
 
   // Meeting Notes methods
   getAllMeetingNotes(): Promise<MeetingNote[]>;
+  getMeetingNotesByOrganization(organizationId: string): Promise<MeetingNote[]>;
   getMeetingNote(id: string): Promise<MeetingNote | undefined>;
   createMeetingNote(note: InsertMeetingNote): Promise<MeetingNote>;
   updateMeetingNote(id: string, updates: Partial<MeetingNote>): Promise<MeetingNote | undefined>;
