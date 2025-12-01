@@ -1,8 +1,8 @@
-# StrategicFlow - Strategic Planning Platform
+# StrategyPlan - Strategic Planning Platform
 
 ## Overview
 
-StrategicFlow is a comprehensive strategic planning platform designed for organizational management and execution. It provides a hierarchical system for managing strategies, projects, and actions, enabling executives to define high-level strategies and leaders to implement specific projects with measurable actions. The platform features role-based views, progress tracking, activity monitoring, and comprehensive reporting for strategic initiatives, with a business vision to streamline strategic planning and execution across organizations.
+StrategyPlan is a comprehensive multi-tenant strategic planning platform for organizational management and execution. It provides a hierarchical system for managing strategies, projects, and actions, enabling executives to define high-level strategies and leaders to implement specific projects with measurable actions. The platform offers role-based views, progress tracking, activity monitoring, and comprehensive reporting for strategic initiatives, aiming to streamline strategic planning and execution across organizations.
 
 ## User Preferences
 
@@ -12,129 +12,85 @@ Access Control: Two-layer settings system: 1) Administrator layer for managing u
 ## System Architecture
 
 ### Frontend
-The frontend uses React 18 with TypeScript, Wouter for routing, Zustand for state management, and Radix UI with Tailwind CSS for styling, complemented by shadcn/ui. Forms are handled with React Hook Form and Zod validation, and data fetching uses TanStack Query.
+The frontend is built with React 18, TypeScript, Wouter for routing, Zustand for state management, Radix UI with Tailwind CSS for styling, and shadcn/ui. Forms use React Hook Form and Zod validation, with TanStack Query for data fetching.
 
 ### Backend
-The backend is a REST API built with Express.js and TypeScript. It utilizes an abstracted storage interface, Zod for schema validation, and centralized error handling.
+The backend is an Express.js REST API with TypeScript, featuring an abstracted storage interface, Zod for schema validation, and centralized error handling.
 
 ### Data Storage
-The application uses SQLite with better-sqlite3 for lightweight, file-based data storage. The database file is stored in the `/data` directory (configurable via `DATA_DIR` environment variable). Tables are created automatically on startup.
+SQLite with `better-sqlite3` is used for lightweight, file-based data storage, with automatic table creation on startup.
 
 ### Deployment
-The application supports Docker and DigitalOcean App Platform deployment:
-- **Dockerfile** - Multi-stage build for production deployment
-- **DigitalOcean App Spec** - `.do/app.yaml` configuration with persistent volume for SQLite data
-- **Environment Variables**:
-  - `JWT_SECRET` - Required for authentication (secret)
-  - `INITIAL_REGISTRATION_TOKEN` - Optional, sets the initial registration token for predictable URLs in automated deployments
-  - `DATA_DIR` - SQLite database directory (default: `/data`)
-  - `NODE_ENV` - Set to `production` for deployments
+The application supports Docker and DigitalOcean App Platform deployment, utilizing environment variables for configuration (`JWT_SECRET`, `INITIAL_REGISTRATION_TOKEN`, `DATA_DIR`, `NODE_ENV`).
+
+### Multi-Tenancy Architecture
+The platform supports multiple organizations with complete data isolation on a single database. All data is scoped by `organization_id`, and a Super Admin role can manage all organizations. Each organization has a unique registration token.
 
 ### Authentication and Authorization
-A role-based access control system using JWT email/password authentication. Roles include Administrator, Co-Lead, View, and SME (Subject Matter Expert), with permissions enforced at the API level based on user roles and strategy assignments. SME users are explicitly blocked from logging in as they exist solely for tracking and assignment purposes. Administrators manage user roles and strategy assignments, ensuring data isolation.
+A role-based access control system uses JWT email/password authentication. Permissions are enforced at the API level based on user roles (Administrator, Co-Lead, View, SME), strategy assignments, and organization membership. SME users cannot log in.
 
 ### Secure Registration System
-Registration requires a secret token in the URL to prevent unauthorized signups:
-- **Registration URL format**: `/register/:token` (separate from login page)
-- **Token management**: Administrators can view and rotate the registration token in Settings > Security
-- **Environment variable**: Set `INITIAL_REGISTRATION_TOKEN` (min 16 characters) for consistent initial token across deployments
-- **First user**: Automatically gets Administrator role; subsequent users get Co-Lead role
-- **Security**: Login page has no link to registration page - tokens are shared privately
+Registration requires an organization-specific secret token in the URL (`/register/:token`). Administrators can manage tokens, and the first registrant for an organization becomes an Administrator. Super Admins can be designated via the `SUPER_ADMIN_EMAILS` environment variable.
 
 ### Key Data Models
-Core entities include Users, User Strategy Assignments (linking users to strategies), Strategies (high-level objectives with a Change Continuum Framework and customizable colors), Projects (with custom communication URL field and documentation URLs), Actions (with two-tier filtering), Barriers (project-level risk tracking with severity and status lifecycle), Dependencies (relationships between projects and actions), Meeting Notes (report-out notes with dynamic project/action selection and PDF export), and Activities (audit trail). The database tables are: users, user_strategy_assignments, strategies, projects, actions, action_documents, action_checklist_items, barriers, dependencies, meeting_notes, activities, notifications, and sessions.
+Core entities include Organizations (for multi-tenancy), Users (with organization membership and optional super_admin status), User Strategy Assignments, Strategies (with Change Continuum Framework), Projects (with communication URL), Actions, Barriers, Dependencies, Meeting Notes, Activities, AI Chat Conversations, and Template Types. All tables include organization_id for data isolation.
 
 ### Progress Calculation
-A backend-driven system automatically calculates progress for actions, projects, and strategies with cascading rollups. Progress is read-only in the UI and recalculated server-side upon data changes, excluding archived items.
+Backend-driven progress calculation for actions, projects, and strategies, with cascading rollups and read-only display in the UI.
 
 ### Archiving System
-Strategies follow an Active → Completed → Archived lifecycle. Archiving a strategy cascades to its associated projects and actions. Archived items are hidden by default but appear on the Timeline with completion metrics.
+Strategies follow an Active → Completed → Archived lifecycle, with cascading archiving to projects and actions. Archived items are hidden by default but tracked.
 
 ### Change Continuum Framework
-Each strategy incorporates 9 mandatory fields for change management: Case for Change, Vision Statement, Success Metrics, Stakeholder Map, Readiness Rating, Risk Exposure Rating, Change Champion Assignment, Reinforcement Plan, and Benefits Realization Plan. These fields are enforced for completion and displayed in collapsible sections with full dark mode support. AI generation includes data sanitization to ensure all fields are converted to readable strings (handles objects/arrays properly) to prevent "[object Object]" display errors.
-
-### Project Communication URLs
-Each project includes an optional custom communication URL field that can be managed via the project's three-dot menu. This allows linking to communication materials, templates, or documentation specific to each project.
+Strategies incorporate 9 mandatory change management fields (e.g., Case for Change, Vision Statement), enforced for completion and supporting AI generation with data sanitization.
 
 ### Barriers System
-A comprehensive risk and obstacle tracking system at the project level. Each barrier tracks description, severity (High, Medium, Low), status lifecycle (Active → Mitigated → Resolved → Closed), owner assignment, creation/resolution dates, and resolution notes. Barriers are managed via a dedicated modal accessible from project cards (three-dot menu). Project cards display up to 2 active barriers with severity indicators and status badges, showing "+X more" for overflow. All barrier operations (create, status updates, delete) are logged to the activity audit trail. Role-based access control enforces permissions: Administrators and Co-Leads can manage barriers; View users see barriers read-only; SME users are excluded. The AI Chat Assistant integrates barriers data to provide executive-level insights on risks and obstacles. API supports both project-scoped and global barrier queries with role-based filtering (administrators see all, others see only barriers in assigned strategies).
+A project-level risk tracking system for barriers, including description, severity, status lifecycle, owner, and resolution notes. Barriers are visible on project cards and are integrated with the AI Chat Assistant for insights.
 
 ### Dependencies System
-A feature for tracking and visualizing relationships between projects and actions across strategies. Dependencies can represent "blocks" or "depends_on" relationships. Key features include:
-- **DependencyTags component**: Displays on project and action cards, showing dependencies the item has and dependencies that point to it. Administrators and Co-Leads can add/remove dependencies.
-- **Dependency creation**: Users select a target type (project or action), then choose from available items within their assigned strategies.
-- **Graph page**: A dedicated visualization page (`/graph`) showing three columns (Strategies, Projects, Actions) with:
-  - Dashed lines for hierarchy relationships (strategy→project, project→action)
-  - Solid colored lines for explicit dependencies between items
-  - Hover highlighting to emphasize related connections
-  - Strategy filtering and pan/zoom controls for large plans
-- **Activity logging**: Dependency creation and deletion events are recorded in the activity audit trail.
-- **Role-based access**: Administrators and Co-Leads can manage dependencies; View users see dependencies read-only; SME users are excluded.
+Tracks and visualizes relationships between projects and actions across strategies, representing "blocks" or "depends_on." Features include DependencyTags, a dedicated graph visualization page, and activity logging.
 
 ### View-Only Access
-All Strategy and Project cards offer view-only access via dedicated buttons, displaying comprehensive details in read-only modals for all users, regardless of edit permissions.
+Strategy and Project cards offer view-only access via dedicated buttons, displaying comprehensive details in read-only modals for all users.
 
 ### Notification System
-A real-time notification system alerts users to action completions, project progress, strategy status changes, and due date warnings/overdue alerts. Notifications appear in a dedicated panel with an unread count, read/unread toggling, and deletion options. A background job handles due date alerts. SME users are excluded from all notifications as they cannot log in to the system.
+A real-time notification system for action completions, project progress, strategy status changes, and due date alerts. SME users are excluded.
 
 ### Meeting Notes (Report-Out Meetings)
-A comprehensive system for creating and managing report-out meeting notes with dynamic content selection. Users can create notes tied to a specific strategy, then dynamically select which projects and actions to include (not all). Features include: hierarchical cascading selectors (Strategy → Projects → Actions), rich text notes field, meeting date tracking, PDF export for email distribution, and proper authorization (users can only create notes for assigned strategies and must be the creator or an administrator to edit/delete). Notes are stored in the database with selected projects and actions as JSON arrays. Accessible via the "Meeting Notes" link in the sidebar.
+Allows creation and management of report-out meeting notes tied to strategies, with dynamic selection of projects and actions, rich text fields, PDF export, and authorization controls.
 
 ### AI Chat Assistant
-A floating chat assistant named "Strategic AI Assistant" accessible from all pages via a button in the bottom-right corner. Provides contextual help including navigation guidance, real-time status updates with live data from strategies/projects/actions, and copy writing assistance. The assistant has access to the user's assigned strategies, projects, and action counts with progress percentages, enabling data-driven responses. Chat history is persisted per user in the database. Supports two AI providers: OpenAI (GPT-4o via Replit AI Integrations, billed to credits) and Google Gemini (user's own free API key). Provider selection is controlled via the CHAT_AI_PROVIDER environment variable ('openai' or 'gemini'). Currently configured to use Gemini for cost-free operation within Google's free tier limits (15 requests/min, 1,500/day).
+A floating "Strategic AI Assistant" provides contextual help, real-time status updates with live data, and copy writing assistance. It has access to user-assigned strategies and persists chat history. Supports OpenAI (GPT-4o) and Google Gemini (Gemini 2.0 Flash) based on environment variable configuration.
 
 ### Templates Feature
-A collection of strategic planning, project management, and productivity templates accessible to all logged-in users via the sidebar. Features include:
-- **Main Templates Page** (`/templates`): Card grid displaying available templates with category filtering (Strategic Planning, Project Management, Daily Tasks, plus custom categories).
-- **Built-in Templates**:
-  - Strategy on a Page (`/templates/strategy-on-a-page`): Comprehensive enterprise framework with Mission, Vision, Strategic Priorities (3-5), Objectives with KPIs, Key Initiatives linked to priorities, and Risks & Mitigations with impact/likelihood assessment
-  - PESTLE Analysis (`/templates/pestle`): External macro-environment scanning framework evaluating Political, Economic, Social, Technological, Legal, and Environmental factors with trend direction, likelihood/impact scoring, strategic implications, and response status tracking
-  - Porter's Five Forces (`/templates/porters-five-forces`): Competitive industry analysis framework assessing Threat of New Entrants, Supplier Power, Buyer Power, Threat of Substitutes, and Competitive Rivalry with dimension-level scoring, diagnostic prompts, and strategic response planning
-  - SWOT Analysis (`/templates/swot`): 2x2 grid for Strengths, Weaknesses, Opportunities, and Threats analysis
-  - SMART Goals (`/templates/smart-goals`): Structured framework for Specific, Measurable, Achievable, Relevant, and Time-bound goal setting
-  - Eisenhower Matrix (`/templates/eisenhower-matrix`): 4-quadrant task prioritization (Do First, Schedule, Delegate, Delete)
-- **Export Functionality**: All templates support Word document export using the `docx` library.
-- **Administrator Template Types**: Custom template categories can be managed by administrators in Settings > Administrator Settings > Data Management. Categories are stored in the `template_types` database table.
+A collection of strategic planning, project management, and productivity templates (e.g., Strategy on a Page, PESTLE Analysis, SWOT Analysis) accessible via the sidebar. All templates support Word document export, and administrators can manage custom template categories.
 
 ### Development Environment
-The project uses Vite for fast development and optimized builds, Tailwind CSS for styling, and TypeScript for static type checking.
+The project uses Vite for development, Tailwind CSS for styling, and TypeScript for type checking.
 
 ## External Dependencies
 
-### Core Frameworks
 - `@tanstack/react-query`
 - `wouter`
 - `react-hook-form`
 - `zustand`
-
-### UI and Styling
 - `@radix-ui/*`
 - `tailwindcss`
 - `class-variance-authority`
 - `lucide-react`
-
-### Backend Services
-- `better-sqlite3` - SQLite database driver
-- `drizzle-orm` - Type-safe ORM for migrations
-- `express` - Web server framework
-- `jsonwebtoken` - JWT authentication
-- `bcryptjs` - Password hashing
-
-### Validation and Type Safety
+- `better-sqlite3`
+- `drizzle-orm`
+- `express`
+- `jsonwebtoken`
+- `bcryptjs`
 - `zod`
 - `drizzle-zod`
 - `@hookform/resolvers`
-
-### Development Tools
 - `vite`
 - `typescript`
-
-### Document Generation
-- `react-to-print` - PDF export functionality for meeting notes
-- `jspdf` - PDF generation for templates
-- `html2canvas` - HTML to canvas conversion for PDF export
-- `docx` - Word document generation for templates
-
-### AI Services
-- `openai` - GPT-4o via Replit AI Integrations for Change Continuum generation and optional chat
-- `@google/generative-ai` - Gemini 2.0 Flash for cost-free chat assistant (user's API key)
+- `react-to-print`
+- `jspdf`
+- `html2canvas`
+- `docx`
+- `openai`
+- `@google/generative-ai`

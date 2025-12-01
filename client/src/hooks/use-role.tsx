@@ -20,6 +20,7 @@ interface RoleStore {
   canEditProject: (project: any) => boolean;
   canEditAllStrategies: () => boolean;
   isStrategyAssigned: (strategyId: string) => boolean;
+  isSuperAdmin: () => boolean;
 }
 
 export const useRole = create<RoleStore>((set, get) => ({
@@ -119,5 +120,12 @@ export const useRole = create<RoleStore>((set, get) => ({
     }
     // Co-Lead and View users can only access assigned strategies
     return assignedStrategyIds.includes(strategyId);
+  },
+
+  isSuperAdmin: () => {
+    const { currentUser } = get();
+    const value = currentUser?.isSuperAdmin;
+    if (value === undefined || value === null) return false;
+    return value === 'true' || (value as unknown as boolean) === true || String(value).toLowerCase() === 'true';
   },
 }));
