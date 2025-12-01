@@ -11,18 +11,17 @@ Deploy StrategyPlan in 90 seconds!
 ### Steps
 
 1. **Click the Deploy button** - You'll go to DigitalOcean
-2. **Choose "Container image"** tab at the top
-3. **Fill in the container details:**
-   - Registry provider: **Docker Hub**
-   - Repository: `dpgaus/strategyplan`
-   - Image tag: `latest`
-   - Credentials: Leave blank (it's public)
-4. **Click Next**
-5. **Set your secrets** when prompted:
-   - `JWT_SECRET` - Any random text (keeps your app secure)
-   - `INITIAL_REGISTRATION_TOKEN` - Your registration link password
-6. **Click "Create Resources"**
-7. **Wait ~90 seconds** - Your app is live!
+2. **Review the app configuration** - It will show "strategyplan" as the app name
+3. **IMPORTANT: Before clicking "Create Resources", scroll down and click on the "api" service**
+4. **Click "Edit" next to Environment Variables**
+5. **Add your secrets:**
+   - Click "Add Variable"
+   - Key: `JWT_SECRET`, Value: any random text (e.g., `my-secret-key-12345`)
+   - Click "Add Variable" again
+   - Key: `INITIAL_REGISTRATION_TOKEN`, Value: your registration password (min 16 chars, e.g., `customer-signup-2024`)
+6. **Click "Save"**
+7. **Click "Create Resources"**
+8. **Wait ~2 minutes** - Your app is live!
 
 ### After Deployment
 
