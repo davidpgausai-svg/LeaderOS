@@ -3,6 +3,22 @@ import { pgTable, text, varchar, timestamp, integer, jsonb, index, unique, seria
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Organizations table for multi-tenancy
+export const organizations = pgTable("organizations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  registrationToken: text("registration_token").notNull().unique(),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+export const insertOrganizationSchema = createInsertSchema(organizations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
+export type Organization = typeof organizations.$inferSelect;
+
 // Session storage table for Replit Auth
 export const sessions = pgTable(
   "sessions",
@@ -23,6 +39,8 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   role: text("role").notNull().default('co_lead'), // 'administrator', 'co_lead', 'view', or 'sme'
   timezone: varchar("timezone").default('America/Chicago'), // User's timezone (e.g., 'America/Chicago', 'America/New_York')
+  organizationId: varchar("organization_id"), // Foreign key to organizations table
+  isSuperAdmin: text("is_super_admin").notNull().default('false'), // 'true' or 'false' - Super Admin can manage all organizations
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -61,6 +79,7 @@ export const strategies = pgTable("strategies", {
   changeChampionAssignment: text("change_champion_assignment").notNull().default("To be defined"),
   reinforcementPlan: text("reinforcement_plan").notNull().default("To be defined"),
   benefitsRealizationPlan: text("benefits_realization_plan").notNull().default("To be defined"),
+  organizationId: varchar("organization_id"), // Foreign key to organizations table
   createdBy: varchar("created_by").notNull(),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
@@ -81,6 +100,7 @@ export const projects = pgTable("projects", {
   isArchived: text("is_archived").notNull().default('false'), // 'true' or 'false' for cascade archival
   documentFolderUrl: text("document_folder_url"), // OneDrive/Google Drive URL for project documents
   communicationUrl: text("communication_url"), // Custom communication template URL
+  organizationId: varchar("organization_id"), // Foreign key to organizations table
   createdBy: varchar("created_by").notNull(),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
@@ -110,6 +130,7 @@ export const activities = pgTable("activities", {
   userId: varchar("user_id").notNull(),
   strategyId: varchar("strategy_id"),
   projectId: varchar("project_id"),
+  organizationId: varchar("organization_id"), // Foreign key to organizations table
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
@@ -125,6 +146,7 @@ export const actions = pgTable("actions", {
   status: text("status").notNull().default('in_progress'), // 'in_progress', 'achieved', 'at_risk', 'not_started'
   dueDate: timestamp("due_date"),
   isArchived: text("is_archived").notNull().default('false'), // 'true' or 'false' for cascade archival
+  organizationId: varchar("organization_id"), // Foreign key to organizations table
   createdBy: varchar("created_by").notNull(),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
@@ -158,6 +180,7 @@ export const notifications = pgTable("notifications", {
   relatedEntityId: varchar("related_entity_id"), // Optional - ID of related strategy/tactic/outcome
   relatedEntityType: text("related_entity_type"), // Optional - 'strategy', 'project', 'action'
   isRead: text("is_read").notNull().default('false'), // 'true' or 'false'
+  organizationId: varchar("organization_id"), // Foreign key to organizations table
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
@@ -170,6 +193,7 @@ export const meetingNotes = pgTable("meeting_notes", {
   selectedProjectIds: text("selected_project_ids").notNull(), // JSON array of selected project IDs
   selectedActionIds: text("selected_action_ids").notNull(), // JSON array of selected action IDs
   notes: text("notes").notNull(), // Meeting notes content
+  organizationId: varchar("organization_id"), // Foreign key to organizations table
   createdBy: varchar("created_by").notNull(), // User who created these notes
   createdAt: timestamp("created_at").default(sql`now()`),
   updatedAt: timestamp("updated_at").default(sql`now()`),

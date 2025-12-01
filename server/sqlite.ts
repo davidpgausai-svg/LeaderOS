@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 
 const DATA_DIR = process.env.DATA_DIR || './data';
 const DB_PATH = path.join(DATA_DIR, 'StrategicFlow.sqlite');
@@ -14,6 +15,14 @@ sqlite.pragma('journal_mode = WAL');
 
 export function initializeDatabase() {
   sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS organizations (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      registration_token TEXT NOT NULL UNIQUE,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_org_token ON organizations(registration_token);
+
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       email TEXT UNIQUE,
@@ -23,9 +32,12 @@ export function initializeDatabase() {
       profile_image_url TEXT,
       role TEXT NOT NULL DEFAULT 'co_lead',
       timezone TEXT DEFAULT 'America/Chicago',
+      organization_id TEXT,
+      is_super_admin TEXT NOT NULL DEFAULT 'false',
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );
+    CREATE INDEX IF NOT EXISTS idx_users_org ON users(organization_id);
 
     CREATE TABLE IF NOT EXISTS sessions (
       sid TEXT PRIMARY KEY,
@@ -65,9 +77,11 @@ export function initializeDatabase() {
       change_champion_assignment TEXT NOT NULL DEFAULT 'To be defined',
       reinforcement_plan TEXT NOT NULL DEFAULT 'To be defined',
       benefits_realization_plan TEXT NOT NULL DEFAULT 'To be defined',
+      organization_id TEXT,
       created_by TEXT NOT NULL,
       created_at TEXT DEFAULT (datetime('now'))
     );
+    CREATE INDEX IF NOT EXISTS idx_strategies_org ON strategies(organization_id);
 
     CREATE TABLE IF NOT EXISTS projects (
       id TEXT PRIMARY KEY,
@@ -85,9 +99,11 @@ export function initializeDatabase() {
       is_archived TEXT NOT NULL DEFAULT 'false',
       document_folder_url TEXT,
       communication_url TEXT,
+      organization_id TEXT,
       created_by TEXT NOT NULL,
       created_at TEXT DEFAULT (datetime('now'))
     );
+    CREATE INDEX IF NOT EXISTS idx_projects_org ON projects(organization_id);
 
     CREATE TABLE IF NOT EXISTS barriers (
       id TEXT PRIMARY KEY,
@@ -101,10 +117,12 @@ export function initializeDatabase() {
       target_resolution_date TEXT,
       resolution_date TEXT,
       resolution_notes TEXT,
+      organization_id TEXT,
       created_by TEXT NOT NULL,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );
+    CREATE INDEX IF NOT EXISTS idx_barriers_org ON barriers(organization_id);
 
     CREATE TABLE IF NOT EXISTS activities (
       id TEXT PRIMARY KEY,
@@ -113,8 +131,10 @@ export function initializeDatabase() {
       user_id TEXT NOT NULL,
       strategy_id TEXT,
       project_id TEXT,
+      organization_id TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
+    CREATE INDEX IF NOT EXISTS idx_activities_org ON activities(organization_id);
 
     CREATE TABLE IF NOT EXISTS actions (
       id TEXT PRIMARY KEY,
@@ -128,9 +148,11 @@ export function initializeDatabase() {
       status TEXT NOT NULL DEFAULT 'in_progress',
       due_date TEXT,
       is_archived TEXT NOT NULL DEFAULT 'false',
+      organization_id TEXT,
       created_by TEXT NOT NULL,
       created_at TEXT DEFAULT (datetime('now'))
     );
+    CREATE INDEX IF NOT EXISTS idx_actions_org ON actions(organization_id);
 
     CREATE TABLE IF NOT EXISTS action_documents (
       id TEXT PRIMARY KEY,
@@ -158,8 +180,10 @@ export function initializeDatabase() {
       related_entity_id TEXT,
       related_entity_type TEXT,
       is_read TEXT NOT NULL DEFAULT 'false',
+      organization_id TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
+    CREATE INDEX IF NOT EXISTS idx_notifications_org ON notifications(organization_id);
 
     CREATE TABLE IF NOT EXISTS meeting_notes (
       id TEXT PRIMARY KEY,
@@ -169,10 +193,12 @@ export function initializeDatabase() {
       selected_project_ids TEXT NOT NULL,
       selected_action_ids TEXT NOT NULL,
       notes TEXT NOT NULL,
+      organization_id TEXT,
       created_by TEXT NOT NULL,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );
+    CREATE INDEX IF NOT EXISTS idx_meeting_notes_org ON meeting_notes(organization_id);
 
     CREATE TABLE IF NOT EXISTS dependencies (
       id TEXT PRIMARY KEY,
@@ -180,10 +206,12 @@ export function initializeDatabase() {
       source_id TEXT NOT NULL,
       target_type TEXT NOT NULL,
       target_id TEXT NOT NULL,
+      organization_id TEXT,
       created_by TEXT NOT NULL,
       created_at TEXT DEFAULT (datetime('now')),
       UNIQUE(source_type, source_id, target_type, target_id)
     );
+    CREATE INDEX IF NOT EXISTS idx_dependencies_org ON dependencies(organization_id);
 
     CREATE TABLE IF NOT EXISTS template_types (
       id TEXT PRIMARY KEY,
@@ -200,34 +228,142 @@ export function initializeDatabase() {
       message TEXT NOT NULL,
       role TEXT NOT NULL,
       context TEXT,
+      organization_id TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
-
-    CREATE TABLE IF NOT EXISTS registration_tokens (
-      id INTEGER PRIMARY KEY CHECK (id = 1),
-      token TEXT NOT NULL,
-      created_at TEXT DEFAULT (datetime('now')),
-      rotated_at TEXT,
-      rotated_by TEXT
-    );
+    CREATE INDEX IF NOT EXISTS idx_ai_chat_org ON ai_chat_conversations(organization_id);
   `);
 
+  runMigrations();
+}
+
+function runMigrations() {
   try {
-    const existingToken = sqlite.prepare('SELECT token FROM registration_tokens WHERE id = 1').get();
-    if (!existingToken) {
+    const columns = sqlite.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+    const hasOrgId = columns.some(col => col.name === 'organization_id');
+    
+    if (!hasOrgId) {
+      console.log('[MIGRATION] Adding organization_id column to users table...');
+      sqlite.exec('ALTER TABLE users ADD COLUMN organization_id TEXT');
+      sqlite.exec('ALTER TABLE users ADD COLUMN is_super_admin TEXT NOT NULL DEFAULT "false"');
+    }
+
+    const stratColumns = sqlite.prepare("PRAGMA table_info(strategies)").all() as { name: string }[];
+    if (!stratColumns.some(col => col.name === 'organization_id')) {
+      console.log('[MIGRATION] Adding organization_id column to strategies table...');
+      sqlite.exec('ALTER TABLE strategies ADD COLUMN organization_id TEXT');
+    }
+
+    const projColumns = sqlite.prepare("PRAGMA table_info(projects)").all() as { name: string }[];
+    if (!projColumns.some(col => col.name === 'organization_id')) {
+      console.log('[MIGRATION] Adding organization_id column to projects table...');
+      sqlite.exec('ALTER TABLE projects ADD COLUMN organization_id TEXT');
+    }
+
+    const actColumns = sqlite.prepare("PRAGMA table_info(actions)").all() as { name: string }[];
+    if (!actColumns.some(col => col.name === 'organization_id')) {
+      console.log('[MIGRATION] Adding organization_id column to actions table...');
+      sqlite.exec('ALTER TABLE actions ADD COLUMN organization_id TEXT');
+    }
+
+    const activColumns = sqlite.prepare("PRAGMA table_info(activities)").all() as { name: string }[];
+    if (!activColumns.some(col => col.name === 'organization_id')) {
+      console.log('[MIGRATION] Adding organization_id column to activities table...');
+      sqlite.exec('ALTER TABLE activities ADD COLUMN organization_id TEXT');
+    }
+
+    const notifColumns = sqlite.prepare("PRAGMA table_info(notifications)").all() as { name: string }[];
+    if (!notifColumns.some(col => col.name === 'organization_id')) {
+      console.log('[MIGRATION] Adding organization_id column to notifications table...');
+      sqlite.exec('ALTER TABLE notifications ADD COLUMN organization_id TEXT');
+    }
+
+    const meetColumns = sqlite.prepare("PRAGMA table_info(meeting_notes)").all() as { name: string }[];
+    if (!meetColumns.some(col => col.name === 'organization_id')) {
+      console.log('[MIGRATION] Adding organization_id column to meeting_notes table...');
+      sqlite.exec('ALTER TABLE meeting_notes ADD COLUMN organization_id TEXT');
+    }
+
+    const barrierColumns = sqlite.prepare("PRAGMA table_info(barriers)").all() as { name: string }[];
+    if (!barrierColumns.some(col => col.name === 'organization_id')) {
+      console.log('[MIGRATION] Adding organization_id column to barriers table...');
+      sqlite.exec('ALTER TABLE barriers ADD COLUMN organization_id TEXT');
+    }
+
+    const depColumns = sqlite.prepare("PRAGMA table_info(dependencies)").all() as { name: string }[];
+    if (!depColumns.some(col => col.name === 'organization_id')) {
+      console.log('[MIGRATION] Adding organization_id column to dependencies table...');
+      sqlite.exec('ALTER TABLE dependencies ADD COLUMN organization_id TEXT');
+    }
+
+    const chatColumns = sqlite.prepare("PRAGMA table_info(ai_chat_conversations)").all() as { name: string }[];
+    if (!chatColumns.some(col => col.name === 'organization_id')) {
+      console.log('[MIGRATION] Adding organization_id column to ai_chat_conversations table...');
+      sqlite.exec('ALTER TABLE ai_chat_conversations ADD COLUMN organization_id TEXT');
+    }
+
+    migrateExistingDataToDefaultOrg();
+    
+    setupSuperAdmin();
+    
+  } catch (error) {
+    console.error('[MIGRATION ERROR]', error);
+  }
+}
+
+function migrateExistingDataToDefaultOrg() {
+  const existingUsers = sqlite.prepare('SELECT id FROM users WHERE organization_id IS NULL').all();
+  
+  if (existingUsers.length > 0) {
+    console.log(`[MIGRATION] Found ${existingUsers.length} users without organization. Creating default organization...`);
+    
+    let defaultOrg = sqlite.prepare('SELECT id FROM organizations WHERE name = ?').get('Default Organization') as { id: string } | undefined;
+    
+    if (!defaultOrg) {
+      const orgId = crypto.randomUUID();
       const envToken = process.env.INITIAL_REGISTRATION_TOKEN;
-      const initialToken = envToken && envToken.length >= 16 ? envToken : generateRegistrationToken();
-      sqlite.prepare("INSERT INTO registration_tokens (id, token, created_at) VALUES (1, ?, datetime('now'))").run(initialToken);
-      if (envToken && envToken.length >= 16) {
-        console.log('[INFO] Initial registration token set from INITIAL_REGISTRATION_TOKEN environment variable');
-      } else if (envToken) {
-        console.log('[WARN] INITIAL_REGISTRATION_TOKEN must be at least 16 characters - using generated token instead');
-      } else {
-        console.log('[INFO] Initial registration token created (random)');
+      const token = envToken && envToken.length >= 16 ? envToken : generateRegistrationToken();
+      
+      sqlite.prepare('INSERT INTO organizations (id, name, registration_token) VALUES (?, ?, ?)').run(orgId, 'Default Organization', token);
+      defaultOrg = { id: orgId };
+      console.log('[MIGRATION] Created Default Organization');
+    }
+    
+    sqlite.exec(`UPDATE users SET organization_id = '${defaultOrg.id}' WHERE organization_id IS NULL`);
+    sqlite.exec(`UPDATE strategies SET organization_id = '${defaultOrg.id}' WHERE organization_id IS NULL`);
+    sqlite.exec(`UPDATE projects SET organization_id = '${defaultOrg.id}' WHERE organization_id IS NULL`);
+    sqlite.exec(`UPDATE actions SET organization_id = '${defaultOrg.id}' WHERE organization_id IS NULL`);
+    sqlite.exec(`UPDATE activities SET organization_id = '${defaultOrg.id}' WHERE organization_id IS NULL`);
+    sqlite.exec(`UPDATE notifications SET organization_id = '${defaultOrg.id}' WHERE organization_id IS NULL`);
+    sqlite.exec(`UPDATE meeting_notes SET organization_id = '${defaultOrg.id}' WHERE organization_id IS NULL`);
+    sqlite.exec(`UPDATE barriers SET organization_id = '${defaultOrg.id}' WHERE organization_id IS NULL`);
+    sqlite.exec(`UPDATE dependencies SET organization_id = '${defaultOrg.id}' WHERE organization_id IS NULL`);
+    sqlite.exec(`UPDATE ai_chat_conversations SET organization_id = '${defaultOrg.id}' WHERE organization_id IS NULL`);
+    
+    console.log('[MIGRATION] Migrated existing data to Default Organization');
+  }
+}
+
+function setupSuperAdmin() {
+  const superAdminEmails = process.env.SUPER_ADMIN_EMAILS?.split(',').map(e => e.trim().toLowerCase()) || [];
+  
+  if (superAdminEmails.length > 0) {
+    for (const email of superAdminEmails) {
+      const user = sqlite.prepare('SELECT id FROM users WHERE LOWER(email) = ?').get(email);
+      if (user) {
+        sqlite.prepare('UPDATE users SET is_super_admin = ? WHERE LOWER(email) = ?').run('true', email);
+        console.log(`[INFO] Set ${email} as Super Admin`);
       }
     }
-  } catch (error) {
-    console.error('[ERROR] Failed to initialize registration token:', error);
+  } else {
+    const existingSuperAdmin = sqlite.prepare('SELECT id FROM users WHERE is_super_admin = ?').get('true');
+    if (!existingSuperAdmin) {
+      const firstUser = sqlite.prepare('SELECT id, email FROM users ORDER BY created_at ASC LIMIT 1').get() as { id: string; email: string } | undefined;
+      if (firstUser) {
+        sqlite.prepare('UPDATE users SET is_super_admin = ? WHERE id = ?').run('true', firstUser.id);
+        console.log(`[INFO] Set first user (${firstUser.email}) as Super Admin (no SUPER_ADMIN_EMAILS configured)`);
+      }
+    }
   }
 }
 
@@ -240,20 +376,40 @@ export function generateRegistrationToken(): string {
   return token;
 }
 
-export function getRegistrationToken(): string | null {
-  const row = sqlite.prepare('SELECT token FROM registration_tokens WHERE id = 1').get() as { token: string } | undefined;
-  return row?.token || null;
+export function getOrganizationByToken(token: string): { id: string; name: string } | null {
+  const row = sqlite.prepare('SELECT id, name FROM organizations WHERE registration_token = ?').get(token) as { id: string; name: string } | undefined;
+  return row || null;
 }
 
-export function rotateRegistrationToken(userId: string): string {
+export function createOrganization(name: string): { id: string; name: string; registrationToken: string } {
+  const id = crypto.randomUUID();
+  const token = generateRegistrationToken();
+  sqlite.prepare('INSERT INTO organizations (id, name, registration_token) VALUES (?, ?, ?)').run(id, name, token);
+  return { id, name, registrationToken: token };
+}
+
+export function getAllOrganizations(): { id: string; name: string; registrationToken: string; createdAt: string }[] {
+  return sqlite.prepare('SELECT id, name, registration_token as registrationToken, created_at as createdAt FROM organizations ORDER BY created_at ASC').all() as any[];
+}
+
+export function rotateOrganizationToken(orgId: string): string {
   const newToken = generateRegistrationToken();
-  sqlite.prepare("UPDATE registration_tokens SET token = ?, rotated_at = datetime('now'), rotated_by = ? WHERE id = 1").run(newToken, userId);
+  sqlite.prepare('UPDATE organizations SET registration_token = ? WHERE id = ?').run(newToken, orgId);
   return newToken;
 }
 
-export function validateRegistrationToken(token: string): boolean {
-  const row = sqlite.prepare('SELECT token FROM registration_tokens WHERE id = 1 AND token = ?').get(token);
-  return !!row;
+export function deleteOrganization(orgId: string): void {
+  sqlite.exec(`DELETE FROM users WHERE organization_id = '${orgId}'`);
+  sqlite.exec(`DELETE FROM strategies WHERE organization_id = '${orgId}'`);
+  sqlite.exec(`DELETE FROM projects WHERE organization_id = '${orgId}'`);
+  sqlite.exec(`DELETE FROM actions WHERE organization_id = '${orgId}'`);
+  sqlite.exec(`DELETE FROM activities WHERE organization_id = '${orgId}'`);
+  sqlite.exec(`DELETE FROM notifications WHERE organization_id = '${orgId}'`);
+  sqlite.exec(`DELETE FROM meeting_notes WHERE organization_id = '${orgId}'`);
+  sqlite.exec(`DELETE FROM barriers WHERE organization_id = '${orgId}'`);
+  sqlite.exec(`DELETE FROM dependencies WHERE organization_id = '${orgId}'`);
+  sqlite.exec(`DELETE FROM ai_chat_conversations WHERE organization_id = '${orgId}'`);
+  sqlite.prepare('DELETE FROM organizations WHERE id = ?').run(orgId);
 }
 
 initializeDatabase();

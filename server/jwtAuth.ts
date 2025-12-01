@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import type { Express, RequestHandler } from 'express';
 import { storage } from './storage';
 import { logger } from './logger';
-import { getRegistrationToken, rotateRegistrationToken, validateRegistrationToken } from './sqlite';
+import { getOrganizationByToken, rotateOrganizationToken, getAllOrganizations, createOrganization, deleteOrganization } from './sqlite';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
@@ -32,8 +32,8 @@ export function verifyToken(token: string): JWTPayload | null {
 export async function setupAuth(app: Express) {
   app.get('/api/auth/validate-registration-token/:token', (req, res) => {
     const { token } = req.params;
-    const isValid = validateRegistrationToken(token);
-    res.json({ valid: isValid });
+    const org = getOrganizationByToken(token);
+    res.json({ valid: !!org, organizationName: org?.name || null });
   });
 
   app.post('/api/auth/register/:registrationToken', async (req, res) => {
@@ -41,7 +41,8 @@ export async function setupAuth(app: Express) {
       const { registrationToken } = req.params;
       const { email, password, firstName, lastName } = req.body;
 
-      if (!validateRegistrationToken(registrationToken)) {
+      const org = getOrganizationByToken(registrationToken);
+      if (!org) {
         return res.status(403).json({ error: 'Invalid or expired registration link. Please contact your administrator for a new link.' });
       }
 
@@ -64,13 +65,21 @@ export async function setupAuth(app: Express) {
       }
 
       const passwordHash = await bcrypt.hash(password, 10);
-      const isFirstUser = existingUsers.length === 0;
+      
+      // Check if this is the first user in this organization
+      const orgUsers = existingUsers.filter((u: any) => u.organizationId === org.id);
+      const isFirstUserInOrg = orgUsers.length === 0;
+      
+      // Check if this is the very first user (Super Admin)
+      const isFirstUserEver = existingUsers.length === 0;
 
       const user = await storage.upsertUser({
         email: email.toLowerCase(),
         firstName: firstName || null,
         lastName: lastName || null,
-        role: isFirstUser ? 'administrator' : 'co_lead',
+        role: isFirstUserInOrg ? 'administrator' : 'co_lead',
+        organizationId: org.id,
+        isSuperAdmin: isFirstUserEver ? 'true' : 'false',
       });
 
       const sqliteStorage = storage as any;
@@ -92,6 +101,8 @@ export async function setupAuth(app: Express) {
           firstName: user.firstName,
           lastName: user.lastName,
           role: user.role,
+          organizationId: org.id,
+          organizationName: org.name,
         }
       });
     } catch (error) {
