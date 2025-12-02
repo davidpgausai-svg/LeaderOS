@@ -52,11 +52,16 @@ export async function sendPasswordResetEmail(
     const { client, fromEmail } = await getResendClient();
     logger.info(`Got Resend client, fromEmail: ${fromEmail}`);
     
-    const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+    // Use APP_URL if set (for stable production domain), otherwise fall back to Replit domains
+    const baseUrl = process.env.APP_URL 
+      ? process.env.APP_URL.replace(/\/$/, '') // Remove trailing slash if present
+      : process.env.REPLIT_DEV_DOMAIN 
       ? `https://${process.env.REPLIT_DEV_DOMAIN}`
       : process.env.REPLIT_DOMAINS
       ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
       : 'http://localhost:5000';
+    
+    logger.info(`Password reset link will use base URL: ${baseUrl}`);
     
     const resetLink = `${baseUrl}/reset-password?token=${resetToken}`;
     const greeting = firstName ? `Hi ${firstName},` : 'Hi,';
