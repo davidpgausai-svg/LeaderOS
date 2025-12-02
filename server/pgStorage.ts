@@ -527,11 +527,19 @@ export class PostgresStorage implements IStorage {
     return barrier || undefined;
   }
 
-  async getAllBarriers(): Promise<Barrier[]> {
+  async getAllBarriers(organizationId?: string): Promise<Barrier[]> {
+    if (organizationId) {
+      return db.select().from(barriers).where(eq(barriers.organizationId, organizationId));
+    }
     return db.select().from(barriers);
   }
 
-  async getBarriersByProject(projectId: string): Promise<Barrier[]> {
+  async getBarriersByProject(projectId: string, organizationId?: string): Promise<Barrier[]> {
+    if (organizationId) {
+      return db.select().from(barriers).where(
+        and(eq(barriers.projectId, projectId), eq(barriers.organizationId, organizationId))
+      );
+    }
     return db.select().from(barriers).where(eq(barriers.projectId, projectId));
   }
 

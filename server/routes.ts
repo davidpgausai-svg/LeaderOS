@@ -949,31 +949,43 @@ Respond ONLY with a valid JSON object in this exact format:
 
       const { projectId } = req.query;
       
+      // Determine organizationId for filtering (Super Admins see all, regular users see their org only)
+      // Non-super-admin users must have an organizationId to access barriers
+      if (user.isSuperAdmin !== 'true' && !user.organizationId) {
+        return res.status(403).json({ message: "Forbidden: User not associated with an organization" });
+      }
+      const filterOrgId = user.isSuperAdmin === 'true' ? undefined : user.organizationId!;
+      
       // If projectId is provided, return barriers for that project
       if (projectId) {
-        // Get the project to check strategy access
+        // Get the project to check organization and strategy access
         const project = await storage.getProject(projectId as string);
         if (!project) {
           return res.status(404).json({ message: "Project not found" });
         }
         
-        // Check if user has access to the strategy (administrators see all, others need assignment)
-        if (user.role !== 'administrator') {
+        // Verify user has access to this project's organization (unless Super Admin)
+        if (user.isSuperAdmin !== 'true' && user.organizationId !== project.organizationId) {
+          return res.status(403).json({ message: "Forbidden: You do not have access to this project's organization" });
+        }
+        
+        // Check if user has access to the strategy (administrators and super admins see all, others need assignment)
+        if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
           const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
           if (!assignedStrategyIds.includes(project.strategyId)) {
             return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
           }
         }
         
-        const barriers = await storage.getBarriersByProject(projectId as string);
+        const barriers = await storage.getBarriersByProject(projectId as string, filterOrgId);
         return res.json(barriers);
       }
       
       // If no projectId, return all barriers for user's assigned strategies
-      const allBarriers = await storage.getAllBarriers();
+      const allBarriers = await storage.getAllBarriers(filterOrgId);
       
       if (user.role === 'administrator') {
-        // Administrators see all barriers
+        // Administrators see all barriers in their organization
         return res.json(allBarriers);
       }
       
@@ -1011,25 +1023,31 @@ Respond ONLY with a valid JSON object in this exact format:
       
       const validatedData = insertBarrierSchema.parse(req.body);
       
-      // Override createdBy with authenticated user (security: prevent spoofing)
-      const barrierData = {
-        ...validatedData,
-        createdBy: user.id,
-      };
-      
-      // Get the project to check strategy access
-      const project = await storage.getProject(barrierData.projectId);
+      // Get the project first to validate access and derive organizationId
+      const project = await storage.getProject(validatedData.projectId);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
       
+      // Verify user has access to this project's organization (unless Super Admin)
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== project.organizationId) {
+        return res.status(403).json({ message: "Forbidden: You do not have access to this project's organization" });
+      }
+      
       // Check if user has access to the strategy (administrators see all, others need assignment)
-      if (user.role !== 'administrator') {
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
         if (!assignedStrategyIds.includes(project.strategyId)) {
           return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
         }
       }
+      
+      // Derive organizationId from the project (security: prevent cross-tenant barriers)
+      const barrierData = {
+        ...validatedData,
+        createdBy: user.id,
+        organizationId: project.organizationId,
+      };
       
       const barrier = await storage.createBarrier(barrierData);
       
@@ -1072,22 +1090,27 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(404).json({ message: "Barrier not found" });
       }
       
-      // Get the project to check strategy access
+      // Get the project to check strategy access and organization
       const project = await storage.getProject(existingBarrier.projectId);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
       
+      // Verify user has access to this project's organization (unless Super Admin)
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== project.organizationId) {
+        return res.status(403).json({ message: "Forbidden: You do not have access to this project's organization" });
+      }
+      
       // Check if user has access to the strategy (administrators see all, others need assignment)
-      if (user.role !== 'administrator') {
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
         if (!assignedStrategyIds.includes(project.strategyId)) {
           return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
         }
       }
       
-      // Prevent changing projectId and createdBy (security: prevent ownership transfer)
-      const { projectId: _, createdBy: __, ...updateData } = req.body;
+      // Prevent changing projectId, createdBy, and organizationId (security: prevent ownership/tenant transfer)
+      const { projectId: _, createdBy: __, organizationId: ___, ...updateData } = req.body;
       
       const barrier = await storage.updateBarrier(req.params.id, updateData);
       if (!barrier) {
@@ -1132,14 +1155,19 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(404).json({ message: "Barrier not found" });
       }
       
-      // Get the project to check strategy access
+      // Get the project to check strategy access and organization
       const project = await storage.getProject(existingBarrier.projectId);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
       
+      // Verify user has access to this project's organization (unless Super Admin)
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== project.organizationId) {
+        return res.status(403).json({ message: "Forbidden: You do not have access to this project's organization" });
+      }
+      
       // Check if user has access to the strategy (administrators see all, others need assignment)
-      if (user.role !== 'administrator') {
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
         if (!assignedStrategyIds.includes(project.strategyId)) {
           return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });

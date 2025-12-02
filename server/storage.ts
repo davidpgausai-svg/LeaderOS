@@ -92,8 +92,8 @@ export interface IStorage {
 
   // Barrier methods
   getBarrier(id: string): Promise<Barrier | undefined>;
-  getAllBarriers(): Promise<Barrier[]>;
-  getBarriersByProject(projectId: string): Promise<Barrier[]>;
+  getAllBarriers(organizationId?: string): Promise<Barrier[]>;
+  getBarriersByProject(projectId: string, organizationId?: string): Promise<Barrier[]>;
   createBarrier(barrier: InsertBarrier): Promise<Barrier>;
   updateBarrier(id: string, updates: Partial<Barrier>): Promise<Barrier | undefined>;
   deleteBarrier(id: string): Promise<boolean>;
