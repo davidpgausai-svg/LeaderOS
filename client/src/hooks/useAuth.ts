@@ -2,11 +2,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import type { User } from "@shared/schema";
 
+type UserWithOrgName = User & { organizationName?: string | null };
+
 export function useAuth() {
   const queryClient = useQueryClient();
   const token = typeof window !== 'undefined' ? localStorage.getItem('jwt') : null;
 
-  const { data: user, isLoading, error } = useQuery<User | null>({
+  const { data: user, isLoading, error } = useQuery<UserWithOrgName | null>({
     queryKey: ["/api/auth/user"],
     queryFn: async () => {
       const storedToken = localStorage.getItem('jwt');
