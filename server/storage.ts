@@ -99,9 +99,9 @@ export interface IStorage {
   deleteBarrier(id: string): Promise<boolean>;
 
   // Dependency methods
-  getAllDependencies(): Promise<Dependency[]>;
-  getDependenciesBySource(sourceType: string, sourceId: string): Promise<Dependency[]>;
-  getDependenciesByTarget(targetType: string, targetId: string): Promise<Dependency[]>;
+  getAllDependencies(organizationId?: string): Promise<Dependency[]>;
+  getDependenciesBySource(sourceType: string, sourceId: string, organizationId?: string): Promise<Dependency[]>;
+  getDependenciesByTarget(targetType: string, targetId: string, organizationId?: string): Promise<Dependency[]>;
   createDependency(dependency: InsertDependency): Promise<Dependency>;
   deleteDependency(id: string): Promise<boolean>;
 

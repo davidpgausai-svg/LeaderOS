@@ -1205,20 +1205,28 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(401).json({ message: "User not found" });
       }
 
+      // Non-super-admin users must have an organizationId to access dependencies
+      if (user.isSuperAdmin !== 'true' && !user.organizationId) {
+        return res.status(403).json({ message: "Forbidden: User not associated with an organization" });
+      }
+      
+      // Determine organizationId for filtering (Super Admins see all, regular users see their org only)
+      const filterOrgId = user.isSuperAdmin === 'true' ? undefined : user.organizationId!;
+
       const { sourceType, sourceId, targetType, targetId } = req.query;
       
       let dependencies;
       
       if (sourceType && sourceId) {
-        dependencies = await storage.getDependenciesBySource(sourceType as string, sourceId as string);
+        dependencies = await storage.getDependenciesBySource(sourceType as string, sourceId as string, filterOrgId);
       } else if (targetType && targetId) {
-        dependencies = await storage.getDependenciesByTarget(targetType as string, targetId as string);
+        dependencies = await storage.getDependenciesByTarget(targetType as string, targetId as string, filterOrgId);
       } else {
-        dependencies = await storage.getAllDependencies();
+        dependencies = await storage.getAllDependencies(filterOrgId);
       }
       
-      // Filter dependencies based on user access to strategies
-      if (user.role !== 'administrator') {
+      // Filter dependencies based on user access to strategies (for non-admin, non-super-admin users)
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
         const allProjects = await storage.getAllProjects();
         const allActions = await storage.getAllActions();
@@ -1265,35 +1273,63 @@ Respond ONLY with a valid JSON object in this exact format:
       
       const validatedData = insertDependencySchema.parse(req.body);
       
-      // Override createdBy with authenticated user
-      const dependencyData = {
-        ...validatedData,
-        createdBy: user.id,
-      };
+      // Get the source item to derive organizationId
+      let sourceItem: any = null;
+      let sourceOrganizationId: string | null = null;
+      if (validatedData.sourceType === 'project') {
+        sourceItem = await storage.getProject(validatedData.sourceId);
+        sourceOrganizationId = sourceItem?.organizationId || null;
+      } else if (validatedData.sourceType === 'action') {
+        sourceItem = await storage.getAction(validatedData.sourceId);
+        // For actions, get organizationId from the parent project
+        if (sourceItem?.projectId) {
+          const parentProject = await storage.getProject(sourceItem.projectId);
+          sourceOrganizationId = parentProject?.organizationId || null;
+        }
+      }
       
-      // Verify user has access to both source and target items
-      if (user.role !== 'administrator') {
+      if (!sourceItem) {
+        return res.status(404).json({ message: "Source item not found" });
+      }
+      
+      if (!sourceOrganizationId) {
+        return res.status(400).json({ message: "Could not determine organization for source item" });
+      }
+      
+      // Verify user has access to this organization (unless Super Admin)
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== sourceOrganizationId) {
+        return res.status(403).json({ message: "Forbidden: You do not have access to this organization" });
+      }
+      
+      // Get the target item to verify access
+      let targetItem: any = null;
+      let targetOrganizationId: string | null = null;
+      if (validatedData.targetType === 'project') {
+        targetItem = await storage.getProject(validatedData.targetId);
+        targetOrganizationId = targetItem?.organizationId || null;
+      } else if (validatedData.targetType === 'action') {
+        targetItem = await storage.getAction(validatedData.targetId);
+        if (targetItem?.projectId) {
+          const parentProject = await storage.getProject(targetItem.projectId);
+          targetOrganizationId = parentProject?.organizationId || null;
+        }
+      }
+      
+      if (!targetItem) {
+        return res.status(404).json({ message: "Target item not found" });
+      }
+      
+      // Verify target is in the same organization
+      if (sourceOrganizationId !== targetOrganizationId) {
+        return res.status(400).json({ message: "Cannot create dependencies across different organizations" });
+      }
+      
+      // Verify user has access to both source and target items' strategies (for non-admin, non-super-admin users)
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
         
-        // Check source access
-        let sourceStrategyId: string | null = null;
-        if (dependencyData.sourceType === 'project') {
-          const sourceProject = await storage.getProject(dependencyData.sourceId);
-          sourceStrategyId = sourceProject?.strategyId || null;
-        } else if (dependencyData.sourceType === 'action') {
-          const sourceAction = await storage.getAction(dependencyData.sourceId);
-          sourceStrategyId = sourceAction?.strategyId || null;
-        }
-        
-        // Check target access
-        let targetStrategyId: string | null = null;
-        if (dependencyData.targetType === 'project') {
-          const targetProject = await storage.getProject(dependencyData.targetId);
-          targetStrategyId = targetProject?.strategyId || null;
-        } else if (dependencyData.targetType === 'action') {
-          const targetAction = await storage.getAction(dependencyData.targetId);
-          targetStrategyId = targetAction?.strategyId || null;
-        }
+        const sourceStrategyId = sourceItem.strategyId;
+        const targetStrategyId = targetItem.strategyId;
         
         if (!sourceStrategyId || !assignedStrategyIds.includes(sourceStrategyId)) {
           return res.status(403).json({ message: "Forbidden: You do not have access to the source item's strategy" });
@@ -1303,6 +1339,13 @@ Respond ONLY with a valid JSON object in this exact format:
           return res.status(403).json({ message: "Forbidden: You do not have access to the target item's strategy" });
         }
       }
+      
+      // Create dependency with organizationId derived from source item
+      const dependencyData = {
+        ...validatedData,
+        createdBy: user.id,
+        organizationId: sourceOrganizationId,
+      };
       
       const dependency = await storage.createDependency(dependencyData);
       
@@ -1359,16 +1402,38 @@ Respond ONLY with a valid JSON object in this exact format:
       
       const dependencyId = req.params.id;
       
-      // Get the dependency to log activity
-      const allDependencies = await storage.getAllDependencies();
+      // Determine organizationId for filtering (Super Admins see all, regular users see their org only)
+      const filterOrgId = user.isSuperAdmin === 'true' ? undefined : (user.organizationId || undefined);
+      
+      // Get the dependency to log activity (filtered by organization)
+      const allDependencies = await storage.getAllDependencies(filterOrgId);
       const existingDependency = allDependencies.find((d: any) => d.id === dependencyId);
       
       if (!existingDependency) {
         return res.status(404).json({ message: "Dependency not found" });
       }
       
-      // Verify user has access to the source item's strategy
-      if (user.role !== 'administrator') {
+      // Verify user has access to the source item's organization (unless Super Admin)
+      if (user.isSuperAdmin !== 'true') {
+        let sourceOrganizationId: string | null = null;
+        if (existingDependency.sourceType === 'project') {
+          const sourceProject = await storage.getProject(existingDependency.sourceId);
+          sourceOrganizationId = sourceProject?.organizationId || null;
+        } else if (existingDependency.sourceType === 'action') {
+          const sourceAction = await storage.getAction(existingDependency.sourceId);
+          if (sourceAction?.projectId) {
+            const parentProject = await storage.getProject(sourceAction.projectId);
+            sourceOrganizationId = parentProject?.organizationId || null;
+          }
+        }
+        
+        if (user.organizationId !== sourceOrganizationId) {
+          return res.status(403).json({ message: "Forbidden: You do not have access to this organization" });
+        }
+      }
+      
+      // Verify user has access to the source item's strategy (for non-admin, non-super-admin users)
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
         
         let sourceStrategyId: string | null = null;

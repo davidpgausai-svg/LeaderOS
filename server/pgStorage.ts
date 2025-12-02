@@ -564,16 +564,35 @@ export class PostgresStorage implements IStorage {
     return result.length > 0;
   }
 
-  async getAllDependencies(): Promise<Dependency[]> {
+  async getAllDependencies(organizationId?: string): Promise<Dependency[]> {
+    if (organizationId) {
+      return db.select().from(dependencies).where(eq(dependencies.organizationId, organizationId));
+    }
     return db.select().from(dependencies);
   }
 
-  async getDependenciesBySource(sourceType: string, sourceId: string): Promise<Dependency[]> {
+  async getDependenciesBySource(sourceType: string, sourceId: string, organizationId?: string): Promise<Dependency[]> {
+    if (organizationId) {
+      return db.select().from(dependencies)
+        .where(and(
+          eq(dependencies.sourceType, sourceType), 
+          eq(dependencies.sourceId, sourceId),
+          eq(dependencies.organizationId, organizationId)
+        ));
+    }
     return db.select().from(dependencies)
       .where(and(eq(dependencies.sourceType, sourceType), eq(dependencies.sourceId, sourceId)));
   }
 
-  async getDependenciesByTarget(targetType: string, targetId: string): Promise<Dependency[]> {
+  async getDependenciesByTarget(targetType: string, targetId: string, organizationId?: string): Promise<Dependency[]> {
+    if (organizationId) {
+      return db.select().from(dependencies)
+        .where(and(
+          eq(dependencies.targetType, targetType), 
+          eq(dependencies.targetId, targetId),
+          eq(dependencies.organizationId, organizationId)
+        ));
+    }
     return db.select().from(dependencies)
       .where(and(eq(dependencies.targetType, targetType), eq(dependencies.targetId, targetId)));
   }
