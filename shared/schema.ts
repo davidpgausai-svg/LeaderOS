@@ -325,6 +325,8 @@ export const insertBarrierSchema = createInsertSchema(barriers).omit({
   updatedAt: true,
   identifiedDate: true,
   resolutionDate: true,
+  createdBy: true,
+  organizationId: true,
 }).extend({
   targetResolutionDate: z.coerce.date().optional().nullable(),
 });
@@ -371,6 +373,7 @@ export const insertDependencySchema = createInsertSchema(dependencies).omit({
   id: true,
   createdAt: true,
   createdBy: true,
+  organizationId: true,
 });
 
 export type InsertDependency = z.infer<typeof insertDependencySchema>;

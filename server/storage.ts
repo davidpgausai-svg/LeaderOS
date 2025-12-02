@@ -94,7 +94,7 @@ export interface IStorage {
   getBarrier(id: string): Promise<Barrier | undefined>;
   getAllBarriers(organizationId?: string): Promise<Barrier[]>;
   getBarriersByProject(projectId: string, organizationId?: string): Promise<Barrier[]>;
-  createBarrier(barrier: InsertBarrier): Promise<Barrier>;
+  createBarrier(barrier: InsertBarrier & { createdBy: string; organizationId?: string | null }): Promise<Barrier>;
   updateBarrier(id: string, updates: Partial<Barrier>): Promise<Barrier | undefined>;
   deleteBarrier(id: string): Promise<boolean>;
 
@@ -102,7 +102,7 @@ export interface IStorage {
   getAllDependencies(organizationId?: string): Promise<Dependency[]>;
   getDependenciesBySource(sourceType: string, sourceId: string, organizationId?: string): Promise<Dependency[]>;
   getDependenciesByTarget(targetType: string, targetId: string, organizationId?: string): Promise<Dependency[]>;
-  createDependency(dependency: InsertDependency): Promise<Dependency>;
+  createDependency(dependency: InsertDependency & { createdBy: string; organizationId?: string | null }): Promise<Dependency>;
   deleteDependency(id: string): Promise<boolean>;
 
   // Template Type methods

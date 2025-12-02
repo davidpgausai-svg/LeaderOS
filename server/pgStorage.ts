@@ -543,10 +543,19 @@ export class PostgresStorage implements IStorage {
     return db.select().from(barriers).where(eq(barriers.projectId, projectId));
   }
 
-  async createBarrier(insertBarrier: InsertBarrier): Promise<Barrier> {
+  async createBarrier(insertBarrier: InsertBarrier & { createdBy: string; organizationId?: string | null }): Promise<Barrier> {
     const [barrier] = await db.insert(barriers).values({
       id: randomUUID(),
-      ...insertBarrier,
+      title: insertBarrier.title,
+      description: insertBarrier.description,
+      projectId: insertBarrier.projectId,
+      severity: insertBarrier.severity,
+      status: insertBarrier.status,
+      ownerId: insertBarrier.ownerId,
+      targetResolutionDate: insertBarrier.targetResolutionDate,
+      resolutionNotes: insertBarrier.resolutionNotes,
+      createdBy: insertBarrier.createdBy,
+      organizationId: insertBarrier.organizationId,
     }).returning();
     return barrier;
   }
@@ -597,7 +606,7 @@ export class PostgresStorage implements IStorage {
       .where(and(eq(dependencies.targetType, targetType), eq(dependencies.targetId, targetId)));
   }
 
-  async createDependency(insertDependency: InsertDependency & { createdBy: string }): Promise<Dependency> {
+  async createDependency(insertDependency: InsertDependency & { createdBy: string; organizationId?: string | null }): Promise<Dependency> {
     const [dependency] = await db.insert(dependencies).values({
       sourceType: insertDependency.sourceType,
       sourceId: insertDependency.sourceId,
