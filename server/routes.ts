@@ -483,7 +483,11 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(400).json({ message: "Start date must be before or equal to target date" });
       }
       
-      const strategy = await storage.createStrategy(validatedData);
+      const strategy = await storage.createStrategy({
+        ...validatedData,
+        organizationId: user.organizationId,
+        createdBy: userId,
+      });
       res.status(201).json(strategy);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -801,7 +805,10 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(400).json({ message: "Start date must be before or equal to due date" });
       }
       
-      const project = await storage.createProject(validatedData);
+      const project = await storage.createProject({
+        ...validatedData,
+        organizationId: user.organizationId,
+      });
 
       // Recalculate parent strategy progress when a project is created
       await storage.recalculateStrategyProgress(project.strategyId);
@@ -1486,7 +1493,10 @@ Respond ONLY with a valid JSON object in this exact format:
         }
       }
       
-      const action = await storage.createAction(validatedData);
+      const action = await storage.createAction({
+        ...validatedData,
+        organizationId: user.organizationId,
+      });
       
       await storage.createActivity({
         type: "action_created",
@@ -1494,6 +1504,7 @@ Respond ONLY with a valid JSON object in this exact format:
         userId: action.createdBy,
         strategyId: action.strategyId,
         projectId: action.projectId,
+        organizationId: user.organizationId,
       });
 
       // Recalculate progress: action -> project -> strategy
