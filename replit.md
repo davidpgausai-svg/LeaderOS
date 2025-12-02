@@ -38,6 +38,8 @@ A role-based access control system uses JWT email/password authentication. Permi
 ### Password Reset System
 Email-based password reset flow using Resend for transactional emails. Users can request a reset link from the login page, receive an email with a secure token (expires in 30 minutes, single-use), and set a new password. Tokens are hashed before storage for security, and the system prevents email enumeration attacks by always returning a success message.
 
+**Important:** The `APP_URL` environment variable must be set to the stable published domain (e.g., `https://strategyplanner.replit.app`) to ensure password reset links work correctly. Without this, links may use the ephemeral dev domain which changes frequently.
+
 ### Secure Registration System
 Registration requires an organization-specific secret token in the URL (`/register/:token`). Administrators can manage tokens, and the first registrant for an organization becomes an Administrator. Super Admins can be designated via the `SUPER_ADMIN_EMAILS` environment variable.
 
