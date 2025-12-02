@@ -504,12 +504,17 @@ Respond ONLY with a valid JSON object in this exact format:
       const user = await storage.getUser(userId);
       
       // Only administrators can update strategies
-      if (!user || user.role !== 'administrator') {
+      if (!user || (user.role !== 'administrator' && user.isSuperAdmin !== 'true')) {
         return res.status(403).json({ message: "Forbidden: Only administrators can update strategies" });
       }
 
       // Get the old strategy to compare changes
       const oldStrategy = await storage.getStrategy(req.params.id);
+      
+      // Verify organization ownership (unless Super Admin)
+      if (oldStrategy && user.isSuperAdmin !== 'true' && user.organizationId !== oldStrategy.organizationId) {
+        return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
+      }
       
       const validatedData = insertStrategySchema.parse(req.body);
       
@@ -570,13 +575,23 @@ Respond ONLY with a valid JSON object in this exact format:
       const user = await storage.getUser(userId);
       
       // Only administrators can reorder strategies
-      if (!user || user.role !== 'administrator') {
+      if (!user || (user.role !== 'administrator' && user.isSuperAdmin !== 'true')) {
         return res.status(403).json({ message: "Forbidden: Only administrators can reorder strategies" });
       }
       
       const { strategyOrders } = req.body;
       if (!Array.isArray(strategyOrders)) {
         return res.status(400).json({ message: "strategyOrders must be an array" });
+      }
+      
+      // Verify all strategies belong to user's organization (unless Super Admin)
+      if (user.isSuperAdmin !== 'true') {
+        for (const { id } of strategyOrders) {
+          const strategy = await storage.getStrategy(id);
+          if (strategy && strategy.organizationId !== user.organizationId) {
+            return res.status(403).json({ message: "Forbidden: You do not have access to one or more strategies" });
+          }
+        }
       }
       
       for (const { id, displayOrder } of strategyOrders) {
@@ -599,8 +614,17 @@ Respond ONLY with a valid JSON object in this exact format:
       const user = await storage.getUser(userId);
       
       // Only administrators can delete strategies
-      if (!user || user.role !== 'administrator') {
+      if (!user || (user.role !== 'administrator' && user.isSuperAdmin !== 'true')) {
         return res.status(403).json({ message: "Forbidden: Only administrators can delete strategies" });
+      }
+      
+      // Verify organization ownership (unless Super Admin)
+      const strategy = await storage.getStrategy(req.params.id);
+      if (!strategy) {
+        return res.status(404).json({ message: "Strategy not found" });
+      }
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== strategy.organizationId) {
+        return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
       }
       
       const deleted = await storage.deleteStrategy(req.params.id);
@@ -620,13 +644,18 @@ Respond ONLY with a valid JSON object in this exact format:
       const user = await storage.getUser(userId);
       
       // Only administrators can complete strategies
-      if (!user || user.role !== 'administrator') {
+      if (!user || (user.role !== 'administrator' && user.isSuperAdmin !== 'true')) {
         return res.status(403).json({ message: "Forbidden: Only administrators can complete strategies" });
       }
       
       const strategy = await storage.getStrategy(req.params.id);
       if (!strategy) {
         return res.status(404).json({ message: "Strategy not found" });
+      }
+      
+      // Verify organization ownership (unless Super Admin)
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== strategy.organizationId) {
+        return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
       }
 
       // Only update status and completionDate, keep other fields unchanged
@@ -649,13 +678,18 @@ Respond ONLY with a valid JSON object in this exact format:
       const user = await storage.getUser(userId);
       
       // Only administrators can archive strategies
-      if (!user || user.role !== 'administrator') {
+      if (!user || (user.role !== 'administrator' && user.isSuperAdmin !== 'true')) {
         return res.status(403).json({ message: "Forbidden: Only administrators can archive strategies" });
       }
 
       const strategy = await storage.getStrategy(req.params.id);
       if (!strategy) {
         return res.status(404).json({ message: "Strategy not found" });
+      }
+      
+      // Verify organization ownership (unless Super Admin)
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== strategy.organizationId) {
+        return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
       }
 
       if (strategy.status !== 'Completed') {
@@ -843,8 +877,13 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(404).json({ message: "Project not found" });
       }
       
+      // Verify organization access (unless Super Admin)
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== oldProject.organizationId) {
+        return res.status(403).json({ message: "Forbidden: You do not have access to this project" });
+      }
+      
       // Check if user has access to the strategy (administrators see all, others need assignment)
-      if (user.role !== 'administrator') {
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
         if (!assignedStrategyIds.includes(oldProject.strategyId)) {
           return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
@@ -914,8 +953,13 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(404).json({ message: "Project not found" });
       }
       
+      // Verify organization access (unless Super Admin)
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== project.organizationId) {
+        return res.status(403).json({ message: "Forbidden: You do not have access to this project" });
+      }
+      
       // Check if user has access to the strategy (administrators see all, others need assignment)
-      if (user.role !== 'administrator') {
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
         if (!assignedStrategyIds.includes(project.strategyId)) {
           return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
@@ -1636,8 +1680,17 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(404).json({ message: "Action not found" });
       }
       
+      // Get action's organization from its parent project
+      const actionProject = oldAction.projectId ? await storage.getProject(oldAction.projectId) : null;
+      const actionOrgId = actionProject?.organizationId;
+      
+      // Verify organization access (unless Super Admin)
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== actionOrgId) {
+        return res.status(403).json({ message: "Forbidden: You do not have access to this action" });
+      }
+      
       // Check if user has access to the strategy (administrators see all, others need assignment)
-      if (user.role !== 'administrator') {
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
         if (!assignedStrategyIds.includes(oldAction.strategyId)) {
           return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
@@ -1716,8 +1769,17 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(404).json({ message: "Action not found" });
       }
       
+      // Get action's organization from its parent project
+      const actionProject = action.projectId ? await storage.getProject(action.projectId) : null;
+      const actionOrgId = actionProject?.organizationId;
+      
+      // Verify organization access (unless Super Admin)
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== actionOrgId) {
+        return res.status(403).json({ message: "Forbidden: You do not have access to this action" });
+      }
+      
       // Check if user has access to the strategy (administrators see all, others need assignment)
-      if (user.role !== 'administrator') {
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
         if (!assignedStrategyIds.includes(action.strategyId)) {
           return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
@@ -2180,9 +2242,14 @@ Respond ONLY with a valid JSON object in this exact format:
       if (!note) {
         return res.status(404).json({ message: "Meeting note not found" });
       }
+      
+      // Verify organization access (unless Super Admin)
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== note.organizationId) {
+        return res.status(403).json({ message: "Access denied to this meeting note" });
+      }
 
       // Check access: administrators can access all, others only assigned strategies
-      if (user.role !== 'administrator') {
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
         if (!assignedStrategyIds.includes(note.strategyId)) {
           return res.status(403).json({ message: "Access denied to this meeting note" });
@@ -2215,14 +2282,18 @@ Respond ONLY with a valid JSON object in this exact format:
       });
 
       // Check access: user must have access to the strategy
-      if (user.role !== 'administrator') {
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
         if (!assignedStrategyIds.includes(validatedData.strategyId)) {
           return res.status(403).json({ message: "Access denied to this strategy" });
         }
       }
-
-      const note = await storage.createMeetingNote(validatedData);
+      
+      // Inject organizationId from user context
+      const note = await storage.createMeetingNote({
+        ...validatedData,
+        organizationId: user.organizationId,
+      });
       res.status(201).json(note);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -2249,9 +2320,14 @@ Respond ONLY with a valid JSON object in this exact format:
       if (!existingNote) {
         return res.status(404).json({ message: "Meeting note not found" });
       }
+      
+      // Verify organization access (unless Super Admin)
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== existingNote.organizationId) {
+        return res.status(403).json({ message: "Access denied - you do not have access to this meeting note" });
+      }
 
       // Check strategy access for non-administrators (must be currently assigned to the strategy)
-      if (user.role !== 'administrator') {
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
         if (!assignedStrategyIds.includes(existingNote.strategyId)) {
           return res.status(403).json({ message: "Access denied - you are not assigned to this strategy" });
@@ -2320,17 +2396,22 @@ Respond ONLY with a valid JSON object in this exact format:
       if (!existingNote) {
         return res.status(404).json({ message: "Meeting note not found" });
       }
+      
+      // Verify organization access (unless Super Admin)
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== existingNote.organizationId) {
+        return res.status(403).json({ message: "Access denied to this meeting note" });
+      }
 
       // Check strategy access for non-administrators
-      if (user.role !== 'administrator') {
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
         if (!assignedStrategyIds.includes(existingNote.strategyId)) {
           return res.status(403).json({ message: "Access denied to this strategy" });
         }
       }
 
-      // Check access: user must be the creator or an administrator
-      if (user.role !== 'administrator' && existingNote.createdBy !== userId) {
+      // Check access: user must be the creator or an administrator/super admin
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true' && existingNote.createdBy !== userId) {
         return res.status(403).json({ message: "Only the creator or an administrator can delete this note" });
       }
 
@@ -2557,23 +2638,40 @@ ${outputTemplate}`;
         lastName: user.lastName,
       };
 
-      // Get user's assigned strategies for context
+      // Get user's assigned strategies for context (filtered by organization)
       let assignedStrategies = [];
       let assignedStrategyIds: string[] = [];
-      if (user.role !== 'administrator') {
-        assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
-        const strategies = await storage.getAllStrategies();
-        assignedStrategies = strategies.filter((s: any) => assignedStrategyIds.includes(s.id));
-      } else {
+      
+      // Super Admins see all, regular users see their organization's data
+      if (user.isSuperAdmin === 'true') {
         const strategies = await storage.getAllStrategies();
         assignedStrategies = strategies;
         assignedStrategyIds = strategies.map((s: any) => s.id);
+      } else if (user.role === 'administrator') {
+        // Administrators see all strategies in their organization
+        const strategies = user.organizationId 
+          ? await storage.getStrategiesByOrganization(user.organizationId)
+          : [];
+        assignedStrategies = strategies;
+        assignedStrategyIds = strategies.map((s: any) => s.id);
+      } else {
+        // Co-Lead and View users see only assigned strategies in their organization
+        assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        const orgStrategies = user.organizationId 
+          ? await storage.getStrategiesByOrganization(user.organizationId)
+          : [];
+        assignedStrategies = orgStrategies.filter((s: any) => assignedStrategyIds.includes(s.id));
       }
 
-      // Get projects, actions, and barriers for assigned strategies to provide real status updates
-      const allProjects = await storage.getAllProjects();
-      const allActions = await storage.getAllActions();
-      const allBarriers = await storage.getAllBarriers();
+      // Get projects, actions, and barriers for assigned strategies (filtered by organization)
+      const filterOrgId = user.isSuperAdmin === 'true' ? undefined : (user.organizationId || undefined);
+      const allProjects = filterOrgId 
+        ? await storage.getProjectsByOrganization(filterOrgId)
+        : await storage.getAllProjects();
+      const allActions = filterOrgId 
+        ? await storage.getActionsByOrganization(filterOrgId)
+        : await storage.getAllActions();
+      const allBarriers = await storage.getAllBarriers(filterOrgId);
       
       const relevantProjects = allProjects.filter((p: any) => assignedStrategyIds.includes(p.strategyId));
       const relevantActions = allActions.filter((a: any) => 
