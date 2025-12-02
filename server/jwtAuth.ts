@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import type { Express, RequestHandler } from 'express';
 import { storage } from './storage';
 import { logger } from './logger';
-import { getOrganizationByToken, updateOrganizationToken, getAllOrganizations, createOrganization, deleteOrganization, getUserByEmail, updateUserPassword, createPasswordResetToken, getPasswordResetToken, markPasswordResetTokenUsed } from './pgStorage';
+import { getOrganization, getOrganizationByToken, updateOrganizationToken, getAllOrganizations, createOrganization, deleteOrganization, getUserByEmail, updateUserPassword, createPasswordResetToken, getPasswordResetToken, markPasswordResetTokenUsed } from './pgStorage';
 import { sendPasswordResetEmail } from './email';
 import crypto from 'crypto';
 
@@ -261,7 +261,7 @@ export async function setupAuth(app: Express) {
       // Fetch organization name if user has an organization
       let organizationName: string | null = null;
       if (user.organizationId) {
-        const organization = await storage.getOrganization(user.organizationId);
+        const organization = await getOrganization(user.organizationId);
         organizationName = organization?.name || null;
       }
 
@@ -391,7 +391,7 @@ export async function setupAuth(app: Express) {
       // Fetch organization name if user has an organization
       let organizationName: string | null = null;
       if (user.organizationId) {
-        const organization = await storage.getOrganization(user.organizationId);
+        const organization = await getOrganization(user.organizationId);
         organizationName = organization?.name || null;
       }
       
