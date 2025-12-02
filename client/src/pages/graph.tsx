@@ -90,7 +90,10 @@ export default function Graph() {
   const { data: dependencies = [] } = useQuery<Dependency[]>({
     queryKey: ["/api/dependencies"],
     queryFn: async () => {
-      const response = await fetch("/api/dependencies");
+      const token = localStorage.getItem('jwt');
+      const response = await fetch("/api/dependencies", {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      });
       if (!response.ok) throw new Error("Failed to fetch dependencies");
       return response.json();
     },

@@ -172,7 +172,10 @@ export default function Projects() {
   const { data: allBarriers } = useQuery<Barrier[]>({
     queryKey: ["/api/barriers"],
     queryFn: async () => {
-      const response = await fetch("/api/barriers");
+      const token = localStorage.getItem('jwt');
+      const response = await fetch("/api/barriers", {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      });
       if (!response.ok) throw new Error("Failed to fetch barriers");
       return response.json();
     },

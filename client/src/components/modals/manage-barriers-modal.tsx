@@ -81,7 +81,10 @@ export function ManageBarriersModal({ isOpen, onClose, projectId }: ManageBarrie
   const { data: barriers, isLoading: barriersLoading } = useQuery({
     queryKey: ["/api/barriers", projectId],
     queryFn: async () => {
-      const response = await fetch(`/api/barriers?projectId=${projectId}`);
+      const token = localStorage.getItem('jwt');
+      const response = await fetch(`/api/barriers?projectId=${projectId}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      });
       if (!response.ok) throw new Error("Failed to fetch barriers");
       return response.json();
     },
@@ -103,7 +106,6 @@ export function ManageBarriersModal({ isOpen, onClose, projectId }: ManageBarrie
       ownerId: undefined,
       targetResolutionDate: undefined,
       resolutionNotes: "",
-      createdBy: currentUser?.id || "",
     },
   });
 
@@ -121,7 +123,6 @@ export function ManageBarriersModal({ isOpen, onClose, projectId }: ManageBarrie
         ownerId: undefined,
         targetResolutionDate: undefined,
         resolutionNotes: "",
-        createdBy: currentUser?.id || "",
       });
     } else if (viewMode === "edit" && editingBarrier) {
       form.reset({
@@ -133,10 +134,9 @@ export function ManageBarriersModal({ isOpen, onClose, projectId }: ManageBarrie
         ownerId: editingBarrier.ownerId || undefined,
         targetResolutionDate: editingBarrier.targetResolutionDate ? new Date(editingBarrier.targetResolutionDate) : undefined,
         resolutionNotes: editingBarrier.resolutionNotes || "",
-        createdBy: editingBarrier.createdBy,
       });
     }
-  }, [viewMode, editingBarrier, projectId, currentUser, form]);
+  }, [viewMode, editingBarrier, projectId, form]);
 
   const createBarrierMutation = useMutation({
     mutationFn: async (data: InsertBarrier) => {
