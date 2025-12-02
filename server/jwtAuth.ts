@@ -258,6 +258,13 @@ export async function setupAuth(app: Express) {
 
       const token = generateToken({ userId: user.id, email: user.email! });
 
+      // Fetch organization name if user has an organization
+      let organizationName: string | null = null;
+      if (user.organizationId) {
+        const organization = await storage.getOrganization(user.organizationId);
+        organizationName = organization?.name || null;
+      }
+
       res.json({
         token,
         user: {
@@ -268,6 +275,7 @@ export async function setupAuth(app: Express) {
           role: user.role,
           organizationId: user.organizationId,
           isSuperAdmin: user.isSuperAdmin === 'true',
+          organizationName,
         }
       });
     } catch (error) {
@@ -379,7 +387,18 @@ export async function setupAuth(app: Express) {
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
-      res.json(user);
+      
+      // Fetch organization name if user has an organization
+      let organizationName: string | null = null;
+      if (user.organizationId) {
+        const organization = await storage.getOrganization(user.organizationId);
+        organizationName = organization?.name || null;
+      }
+      
+      res.json({
+        ...user,
+        organizationName
+      });
     } catch (error) {
       logger.error('Error fetching authenticated user', error);
       res.status(500).json({ message: 'Unable to load user information.' });

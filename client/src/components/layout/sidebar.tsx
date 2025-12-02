@@ -69,7 +69,7 @@ export function Sidebar() {
       <div className={`${isCollapsed ? 'p-4' : 'p-6'} border-b border-gray-200 dark:border-gray-800 flex items-center justify-between`}>
         {!isCollapsed && (
           <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Executive Planner</h1>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">StrategyPlan</h1>
           </div>
         )}
         <Button
@@ -261,6 +261,9 @@ export function Sidebar() {
                   {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.email || "User"}
                 </p>
                 <p className="text-xs capitalize">{user?.role || currentRole}</p>
+                {user?.organizationName && (
+                  <p className="text-xs text-gray-400">{user.organizationName}</p>
+                )}
               </TooltipContent>
             </Tooltip>
             <Tooltip>
@@ -291,6 +294,9 @@ export function Sidebar() {
                   {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.email || "User"}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{user?.role || currentRole}</p>
+                {user?.organizationName && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{user.organizationName}</p>
+                )}
               </div>
             </div>
             <Button
