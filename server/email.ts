@@ -48,7 +48,9 @@ export async function sendPasswordResetEmail(
   firstName?: string | null
 ): Promise<boolean> {
   try {
+    logger.info(`Attempting to send password reset email to ${toEmail}`);
     const { client, fromEmail } = await getResendClient();
+    logger.info(`Got Resend client, fromEmail: ${fromEmail}`);
     
     const baseUrl = process.env.REPLIT_DEV_DOMAIN 
       ? `https://${process.env.REPLIT_DEV_DOMAIN}`
