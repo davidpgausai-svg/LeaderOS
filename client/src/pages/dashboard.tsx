@@ -140,6 +140,7 @@ export default function Dashboard() {
                   return (
                     <FrameworkCard
                       key={strategy.id}
+                      strategyId={strategy.id}
                       title={strategy.title.toUpperCase()}
                       goal={strategy.goal || strategy.description}
                       description={strategy.description}

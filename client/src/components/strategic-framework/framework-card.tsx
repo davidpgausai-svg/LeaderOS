@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 
 interface FrameworkCardProps {
+  strategyId: string;
   title: string;
   goal: string;
   description: string;
@@ -41,6 +42,7 @@ interface FrameworkCardProps {
 }
 
 export function FrameworkCard({ 
+  strategyId,
   title, 
   goal, 
   description, 
@@ -314,13 +316,13 @@ export function FrameworkCard({
 
         {/* Action Buttons */}
         <div className="flex space-x-2 pt-2">
-          <Link href="/projects">
+          <Link href={`/projects?strategyId=${strategyId}`}>
             <Button variant="outline" size="sm" className="flex-1">
               View Projects
               <ChevronRight className="w-3 h-3 ml-1" />
             </Button>
           </Link>
-          <Link href="/actions">
+          <Link href={`/actions?strategyId=${strategyId}`}>
             <Button 
               variant="outline" 
               size="sm" 

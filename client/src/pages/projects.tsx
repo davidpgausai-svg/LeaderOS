@@ -189,6 +189,7 @@ export default function Projects() {
     [location]
   );
   const lastAppliedUrlParam = useRef<string | null>(null);
+  const hasInitializedCollapse = useRef(false);
   
   useEffect(() => {
     if (strategies && urlStrategyId && urlStrategyId !== lastAppliedUrlParam.current) {
@@ -215,14 +216,27 @@ export default function Projects() {
     }
   };
 
-  // Auto-collapse all strategies when "All Strategies" filter is active
+  // Track the previous filter value to detect actual filter changes
+  const prevStrategyFilter = useRef(strategyFilter);
+  
+  // Auto-collapse all strategies when "All Strategies" filter is active (initial load only)
+  // or when user explicitly changes the filter
   useEffect(() => {
-    if (strategies && strategyFilter === "all") {
-      // Collapse all strategy cards
-      const allStrategyIds = new Set((strategies as Strategy[]).map(s => s.id));
-      setCollapsedStrategies(allStrategyIds);
-    } else if (strategyFilter !== "all") {
-      // Expand when a specific strategy is selected
+    if (!strategies) return;
+    
+    const filterChanged = prevStrategyFilter.current !== strategyFilter;
+    prevStrategyFilter.current = strategyFilter;
+    
+    // Only set collapse state on initial load or when filter actually changes
+    if (strategyFilter === "all") {
+      if (!hasInitializedCollapse.current || filterChanged) {
+        // Collapse all strategy cards
+        const allStrategyIds = new Set((strategies as Strategy[]).map(s => s.id));
+        setCollapsedStrategies(allStrategyIds);
+        hasInitializedCollapse.current = true;
+      }
+    } else if (filterChanged) {
+      // Expand when a specific strategy is selected (only on filter change)
       setCollapsedStrategies(new Set());
     }
   }, [strategies, strategyFilter]);
