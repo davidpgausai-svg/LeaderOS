@@ -672,7 +672,7 @@ export default function Actions() {
                                 <div key={group.projectId || 'unlinked'} className="space-y-3">
                                   {/* Project Header with indentation */}
                                   <div className="ml-4 flex items-center space-x-3">
-                                    <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                       {group.projectTitle}
                                     </h4>
                                     
