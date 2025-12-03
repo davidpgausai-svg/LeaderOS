@@ -487,15 +487,15 @@ export default function Projects() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex h-screen bg-fog dark:bg-navy">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="bg-white dark:bg-gray-800 shadow-sm border-b px-6 py-4">
+        <header className="bg-white dark:bg-navy-dark shadow-sm border-b border-fog-dark dark:border-graphite-dark px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Projects</h1>
-              <p className="text-gray-600 dark:text-gray-400">Track your assigned projects and progress</p>
+              <h1 className="text-2xl font-bold text-navy dark:text-white">Projects</h1>
+              <p className="text-graphite dark:text-fog-dark">Track your assigned projects and progress</p>
             </div>
             {canCreateProjects() && (
               <Button onClick={() => setIsCreateProjectOpen(true)} data-testid="button-create-project">
@@ -507,7 +507,7 @@ export default function Projects() {
         </header>
 
         {/* Filters */}
-        <div className="bg-white dark:bg-gray-800 border-b px-6 py-4">
+        <div className="bg-white dark:bg-navy-dark border-b border-fog-dark dark:border-graphite-dark px-6 py-4">
           <div className="flex flex-wrap gap-4">
             <div className="flex-1 min-w-64">
               <div className="relative">

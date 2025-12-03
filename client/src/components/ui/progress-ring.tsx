@@ -21,11 +21,11 @@ export function ProgressRing({
   const strokeDashoffset = circumference - (normalizedProgress / 100) * circumference;
 
   const getProgressColor = (value: number) => {
-    if (value >= 100) return "stroke-green-500";
-    if (value >= 75) return "stroke-emerald-500";
-    if (value >= 50) return "stroke-blue-500";
-    if (value >= 25) return "stroke-amber-500";
-    return "stroke-gray-400";
+    if (value >= 100) return "stroke-lime-dark";
+    if (value >= 75) return "stroke-lime";
+    if (value >= 50) return "stroke-teal";
+    if (value >= 25) return "stroke-teal-light";
+    return "stroke-fog-dark";
   };
 
   return (
@@ -42,7 +42,7 @@ export function ProgressRing({
           fill="none"
           stroke="currentColor"
           strokeWidth={strokeWidth}
-          className="text-gray-200 dark:text-gray-700"
+          className="text-fog-dark dark:text-graphite-dark"
         />
         <circle
           cx={size / 2}
@@ -58,7 +58,7 @@ export function ProgressRing({
       </svg>
       {showPercentage && (
         <span 
-          className="absolute text-[9px] font-semibold text-gray-700 dark:text-gray-300"
+          className="absolute text-[9px] font-semibold text-navy dark:text-fog"
           style={{ fontSize: size * 0.28 }}
         >
           {Math.round(normalizedProgress)}%

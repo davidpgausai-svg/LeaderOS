@@ -262,11 +262,11 @@ export default function Strategies() {
       <Sidebar />
       <main className="flex-1 overflow-auto">
         {/* Header */}
-        <header className="bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800 px-6 py-4">
+        <header className="bg-white dark:bg-navy-dark border-b border-fog-dark dark:border-graphite-dark px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Strategy</h2>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
+              <h2 className="text-2xl font-bold text-navy dark:text-white">Strategy</h2>
+              <p className="text-graphite dark:text-fog-dark mt-1">
                 Manage and track strategic initiatives
               </p>
             </div>
@@ -280,7 +280,7 @@ export default function Strategies() {
         </header>
 
         {/* Filters */}
-        <div className="p-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+        <div className="p-6 border-b border-fog-dark dark:border-graphite-dark bg-fog dark:bg-navy">
           <div className="flex items-center space-x-4">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
