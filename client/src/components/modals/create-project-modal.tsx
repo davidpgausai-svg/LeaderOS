@@ -137,10 +137,12 @@ export function CreateProjectModal({ isOpen, onClose, strategyId }: CreateProjec
       return;
     }
 
-    // Ensure accountableLeaders is properly formatted
+    // Ensure accountableLeaders is properly formatted and handle nullable URL fields
     const submitData = {
       ...data,
       accountableLeaders: JSON.stringify(selectedLeaders),
+      documentFolderUrl: data.documentFolderUrl?.trim() || null,
+      communicationUrl: data.communicationUrl?.trim() || null,
     };
     createProjectMutation.mutate(submitData);
   };

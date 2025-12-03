@@ -262,6 +262,7 @@ export const insertProjectSchema = createInsertSchema(projects).omit({
       return JSON.stringify([str]);
     }
   }),
+  documentFolderUrl: z.string().nullable().optional(),
   communicationUrl: z.string().nullable().optional(),
 });
 

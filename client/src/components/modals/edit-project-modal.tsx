@@ -152,6 +152,8 @@ export function EditProjectModal({ isOpen, onClose, project }: EditProjectModalP
     const submitData = {
       ...data,
       accountableLeaders: JSON.stringify(selectedLeaders),
+      documentFolderUrl: data.documentFolderUrl?.trim() || null,
+      communicationUrl: data.communicationUrl?.trim() || null,
     };
     updateProjectMutation.mutate(submitData);
   };
