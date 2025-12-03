@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { ProgressRing } from "@/components/ui/progress-ring";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
@@ -643,36 +644,83 @@ export default function Projects() {
                                 <CardContent className="p-6">
                                   <div className="flex items-start justify-between mb-4">
                                     <div className="flex-1">
-                                      <div className="flex items-center space-x-3 mb-2">
+                                      <div className="flex items-center gap-3 mb-2">
                                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                                           {project.title}
                                         </h3>
-                                        <Badge 
-                                          className={`${statusInfo.color} text-white`}
-                                          data-testid={`badge-status-${project.id}`}
-                                        >
-                                          {statusInfo.label}
-                                        </Badge>
+                                        {/* Compact color-coded status dropdown */}
+                                        {canEditProject(project) ? (
+                                          <Select
+                                            value={project.status}
+                                            onValueChange={(value) => handleStatusChange(project.id, value)}
+                                          >
+                                            <SelectTrigger 
+                                              className="w-auto h-7 px-2 border-0 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800" 
+                                              data-testid={`select-status-${project.id}`}
+                                            >
+                                              <div className="flex items-center gap-1.5">
+                                                <div className={`w-3 h-3 rounded-full ${statusInfo.color}`} />
+                                                <ChevronDown className="w-3 h-3 text-gray-500" />
+                                              </div>
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="NYS">
+                                                <div className="flex items-center gap-2">
+                                                  <div className="w-3 h-3 rounded-full bg-gray-500" />
+                                                  Not Yet Started
+                                                </div>
+                                              </SelectItem>
+                                              <SelectItem value="OT">
+                                                <div className="flex items-center gap-2">
+                                                  <div className="w-3 h-3 rounded-full bg-blue-500" />
+                                                  On Track
+                                                </div>
+                                              </SelectItem>
+                                              <SelectItem value="OH">
+                                                <div className="flex items-center gap-2">
+                                                  <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                                                  On Hold
+                                                </div>
+                                              </SelectItem>
+                                              <SelectItem value="B">
+                                                <div className="flex items-center gap-2">
+                                                  <div className="w-3 h-3 rounded-full bg-red-500" />
+                                                  Behind
+                                                </div>
+                                              </SelectItem>
+                                              <SelectItem value="C">
+                                                <div className="flex items-center gap-2">
+                                                  <div className="w-3 h-3 rounded-full bg-green-500" />
+                                                  Completed
+                                                </div>
+                                              </SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        ) : (
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <div 
+                                                  className={`w-3 h-3 rounded-full ${statusInfo.color}`}
+                                                  data-testid={`status-indicator-${project.id}`}
+                                                />
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                <p>{statusInfo.label}</p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                        )}
+                                        {/* Progress donut chart */}
+                                        <ProgressRing 
+                                          progress={project.progress} 
+                                          size={28} 
+                                          strokeWidth={3}
+                                        />
                                       </div>
                                       <p className="text-gray-600 dark:text-gray-400 mb-4">
                                         {project.description}
                                       </p>
-                                      
-                                      {/* Communication Plan Link */}
-                                      {project.communicationUrl && (
-                                        <a
-                                          href={project.communicationUrl}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline mb-2"
-                                          data-testid={`link-communication-plan-${project.id}`}
-                                          aria-label="Open communication plan in new tab"
-                                        >
-                                          <MessageSquarePlus className="w-4 h-4" />
-                                          Communication Plan
-                                          <ExternalLink className="w-3 h-3" />
-                                        </a>
-                                      )}
                                     </div>
                                     
                                     <DropdownMenu>
@@ -809,20 +857,57 @@ export default function Projects() {
                                       </div>
                                     )}
 
+                                    {/* Document Folder section */}
                                     {project.documentFolderUrl && (
                                       <div className="space-y-2">
                                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                           Document Folder
                                         </span>
+                                        <div className="space-y-1">
+                                          <a
+                                            href={project.documentFolderUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                                            data-testid="link-document-folder"
+                                          >
+                                            <ExternalLink className="w-4 h-4" />
+                                            Open Project Documents
+                                          </a>
+                                          {/* Communication Plan link placed under Document Folder when both exist */}
+                                          {project.communicationUrl && (
+                                            <a
+                                              href={project.communicationUrl}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                                              data-testid={`link-communication-plan-${project.id}`}
+                                              aria-label="Open communication plan in new tab"
+                                            >
+                                              <MessageSquarePlus className="w-4 h-4" />
+                                              Communication Plan
+                                            </a>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Communication Plan shown separately if no Document Folder */}
+                                    {!project.documentFolderUrl && project.communicationUrl && (
+                                      <div className="space-y-2">
+                                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                          Communication
+                                        </span>
                                         <a
-                                          href={project.documentFolderUrl}
+                                          href={project.communicationUrl}
                                           target="_blank"
                                           rel="noopener noreferrer"
                                           className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
-                                          data-testid="link-document-folder"
+                                          data-testid={`link-communication-plan-${project.id}`}
+                                          aria-label="Open communication plan in new tab"
                                         >
-                                          <ExternalLink className="w-4 h-4" />
-                                          Open Project Documents
+                                          <MessageSquarePlus className="w-4 h-4" />
+                                          Communication Plan
                                         </a>
                                       </div>
                                     )}
@@ -921,32 +1006,6 @@ export default function Projects() {
                                       strategyId={project.strategyId}
                                     />
                                   </div>
-
-                                  {/* Action Controls */}
-                                  {canEditProject(project) && (
-                                    <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-                                      <Select
-                                        value={project.status}
-                                        onValueChange={(value) => handleStatusChange(project.id, value)}
-                                      >
-                                        <SelectTrigger className="w-40" data-testid={`select-status-${project.id}`}>
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="NYS">Not Yet Started</SelectItem>
-                                          <SelectItem value="OT">On Track</SelectItem>
-                                          <SelectItem value="OH">On Hold</SelectItem>
-                                          <SelectItem value="B">Behind</SelectItem>
-                                          <SelectItem value="C">Completed</SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                      
-                                      <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-md">
-                                        <span className="text-sm text-gray-600 dark:text-gray-400">Progress:</span>
-                                        <span className="text-sm font-semibold text-gray-900 dark:text-white">{project.progress}%</span>
-                                      </div>
-                                    </div>
-                                  )}
                                 </CardContent>
                               </Card>
                             );
