@@ -120,6 +120,7 @@ export default function Actions() {
   const [isCreateActionOpen, setIsCreateActionOpen] = useState(false);
   const [isEditActionOpen, setIsEditActionOpen] = useState(false);
   const [selectedAction, setSelectedAction] = useState<Action | null>(null);
+  const [collapsedActions, setCollapsedActions] = useState<Set<string>>(new Set());
 
   const { data: actions, isLoading: actionsLoading } = useQuery({
     queryKey: ["/api/actions"],
@@ -201,6 +202,20 @@ export default function Actions() {
       setCollapsedStrategies(new Set());
     }
   }, [strategies, strategyFilter]);
+
+  // Initialize collapsed state for achieved actions on load
+  const hasInitializedActionCollapse = useRef(false);
+  useEffect(() => {
+    if (actions && !hasInitializedActionCollapse.current) {
+      const achievedActionIds = (actions as Action[])
+        .filter(a => a.status === 'achieved')
+        .map(a => a.id);
+      if (achievedActionIds.length > 0) {
+        setCollapsedActions(new Set(achievedActionIds));
+      }
+      hasInitializedActionCollapse.current = true;
+    }
+  }, [actions]);
 
   // Enhance actions with strategy and project data
   const actionsWithDetails = (actions as Action[])?.map((action) => ({
@@ -505,6 +520,17 @@ export default function Actions() {
 
   const handleStatusChange = (action: Action, newStatus: string) => {
     updateActionStatusMutation.mutate({ action, status: newStatus });
+    
+    // Auto-collapse when achieved, auto-expand when changed to other status
+    setCollapsedActions(prev => {
+      const newSet = new Set(prev);
+      if (newStatus === 'achieved') {
+        newSet.add(action.id);
+      } else {
+        newSet.delete(action.id);
+      }
+      return newSet;
+    });
   };
 
   const getProjectsForStrategy = (strategyId: string) => {
@@ -763,13 +789,14 @@ export default function Actions() {
                                   {group.actions.map((action) => {
                                     const statusInfo = getStatusDisplay(action.status);
                                     const dueDateInfo = action.dueDate ? getDueDateDisplay(action.dueDate) : null;
+                                    const isActionCollapsed = collapsedActions.has(action.id);
                                     
                                     return (
                                       <Card key={action.id} className="border border-gray-200 dark:border-gray-700">
-                                        <CardContent className="p-6">
-                                          <div className="flex items-start justify-between mb-4">
+                                        <CardContent className={isActionCollapsed ? "p-4" : "p-6"}>
+                                          <div className={`flex items-start justify-between ${isActionCollapsed ? "" : "mb-4"}`}>
                                             <div className="flex-1">
-                                              <div className="flex items-center space-x-3 mb-2">
+                                              <div className={`flex items-center space-x-3 ${isActionCollapsed ? "" : "mb-2"}`}>
                                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                                                   {action.title}
                                                 </h3>
@@ -798,9 +825,11 @@ export default function Actions() {
                                                   </Badge>
                                                 )}
                                               </div>
-                                              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                                                {action.description}
-                                              </p>
+                                              {!isActionCollapsed && (
+                                                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                                                  {action.description}
+                                                </p>
+                                              )}
                                             </div>
                                             
                                             <DropdownMenu>
@@ -850,79 +879,83 @@ export default function Actions() {
                                             </DropdownMenu>
                                           </div>
 
-                                          {/* Action Details Grid */}
-                                          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-                                            {/* Target vs Current */}
-                                            {(action.targetValue || action.currentValue) && (
-                                              <div className="space-y-2">
-                                                <div className="flex items-center space-x-2">
-                                                  <TrendingUp className="w-4 h-4 text-green-500" />
-                                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                    Performance
-                                                  </span>
-                                                </div>
-                                                {action.targetValue && (
-                                                  <div className="text-sm">
-                                                    <span className="text-gray-600 dark:text-gray-400">Target: </span>
-                                                    <span className="font-medium">{action.targetValue}</span>
-                                                    {action.measurementUnit && (
-                                                      <span className="text-gray-500"> {action.measurementUnit}</span>
+                                          {/* Action Details Grid - hidden when collapsed */}
+                                          {!isActionCollapsed && (
+                                            <>
+                                              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+                                                {/* Target vs Current */}
+                                                {(action.targetValue || action.currentValue) && (
+                                                  <div className="space-y-2">
+                                                    <div className="flex items-center space-x-2">
+                                                      <TrendingUp className="w-4 h-4 text-green-500" />
+                                                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                        Performance
+                                                      </span>
+                                                    </div>
+                                                    {action.targetValue && (
+                                                      <div className="text-sm">
+                                                        <span className="text-gray-600 dark:text-gray-400">Target: </span>
+                                                        <span className="font-medium">{action.targetValue}</span>
+                                                        {action.measurementUnit && (
+                                                          <span className="text-gray-500"> {action.measurementUnit}</span>
+                                                        )}
+                                                      </div>
+                                                    )}
+                                                    {action.currentValue && (
+                                                      <div className="text-sm">
+                                                        <span className="text-gray-600 dark:text-gray-400">Current: </span>
+                                                        <span className="font-medium">{action.currentValue}</span>
+                                                        {action.measurementUnit && (
+                                                          <span className="text-gray-500"> {action.measurementUnit}</span>
+                                                        )}
+                                                      </div>
                                                     )}
                                                   </div>
                                                 )}
-                                                {action.currentValue && (
-                                                  <div className="text-sm">
-                                                    <span className="text-gray-600 dark:text-gray-400">Current: </span>
-                                                    <span className="font-medium">{action.currentValue}</span>
-                                                    {action.measurementUnit && (
-                                                      <span className="text-gray-500"> {action.measurementUnit}</span>
-                                                    )}
+
+                                                {/* Linked Project */}
+                                                {action.project && (
+                                                  <div className="space-y-2">
+                                                    <div className="flex items-center space-x-2">
+                                                      <Target className="w-4 h-4 text-blue-500" />
+                                                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                        Linked Project
+                                                      </span>
+                                                    </div>
+                                                    <p className="text-sm text-gray-900 dark:text-white">
+                                                      {action.project.title}
+                                                    </p>
+                                                  </div>
+                                                )}
+
+                                                {/* Due Date */}
+                                                {action.dueDate && (
+                                                  <div className="space-y-2">
+                                                    <div className="flex items-center space-x-2">
+                                                      <Calendar className="w-4 h-4 text-orange-500" />
+                                                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                        Due Date
+                                                      </span>
+                                                    </div>
+                                                    <p className="text-sm text-gray-900 dark:text-white">
+                                                      {new Date(action.dueDate).toLocaleDateString()}
+                                                    </p>
                                                   </div>
                                                 )}
                                               </div>
-                                            )}
 
-                                            {/* Linked Project */}
-                                            {action.project && (
-                                              <div className="space-y-2">
-                                                <div className="flex items-center space-x-2">
-                                                  <Target className="w-4 h-4 text-blue-500" />
-                                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                    Linked Project
-                                                  </span>
-                                                </div>
-                                                <p className="text-sm text-gray-900 dark:text-white">
-                                                  {action.project.title}
-                                                </p>
+                                              {/* Dependencies Section */}
+                                              <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg">
+                                                <DependencyTags
+                                                  sourceType="action"
+                                                  sourceId={action.id}
+                                                  sourceTitle={action.title}
+                                                  strategyId={action.strategyId}
+                                                  compact
+                                                />
                                               </div>
-                                            )}
-
-                                            {/* Due Date */}
-                                            {action.dueDate && (
-                                              <div className="space-y-2">
-                                                <div className="flex items-center space-x-2">
-                                                  <Calendar className="w-4 h-4 text-orange-500" />
-                                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                    Due Date
-                                                  </span>
-                                                </div>
-                                                <p className="text-sm text-gray-900 dark:text-white">
-                                                  {new Date(action.dueDate).toLocaleDateString()}
-                                                </p>
-                                              </div>
-                                            )}
-                                          </div>
-
-                                          {/* Dependencies Section */}
-                                          <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg">
-                                            <DependencyTags
-                                              sourceType="action"
-                                              sourceId={action.id}
-                                              sourceTitle={action.title}
-                                              strategyId={action.strategyId}
-                                              compact
-                                            />
-                                          </div>
+                                            </>
+                                          )}
                                         </CardContent>
                                       </Card>
                                     );
