@@ -42,6 +42,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { DependencyTags } from "@/components/dependencies/dependency-tags";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { ProgressRing } from "@/components/ui/progress-ring";
 import { 
   Plus, 
   Search, 
@@ -401,9 +408,16 @@ export default function Actions() {
     );
   };
 
+  // Calculate project progress based on completed actions
+  const calculateProjectProgress = (projectActions: Action[]): number => {
+    if (projectActions.length === 0) return 0;
+    const completedCount = projectActions.filter(a => a.status === 'achieved').length;
+    return Math.round((completedCount / projectActions.length) * 100);
+  };
+
   // Group actions by project for visual hierarchy
   const groupActionsByProject = (actions: Action[]) => {
-    const groups: { projectId: string | null; projectTitle: string; project: Project | null; actions: Action[] }[] = [];
+    const groups: { projectId: string | null; projectTitle: string; project: Project | null; actions: Action[]; progress: number }[] = [];
     const projectMap = new Map<string | null, Action[]>();
     
     // Group actions
@@ -426,13 +440,16 @@ export default function Actions() {
           })()
         : "Not Linked to Project";
       
+      const sortedActions = projectActions.sort((a, b) => 
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+      
       groups.push({
         projectId,
         projectTitle,
         project: fullProject,
-        actions: projectActions.sort((a, b) => 
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        )
+        actions: sortedActions,
+        progress: calculateProjectProgress(sortedActions)
       });
     });
     
@@ -690,22 +707,53 @@ export default function Actions() {
                                       {group.projectTitle}
                                     </h4>
                                     
+                                    {/* Progress Ring - only show for linked projects */}
+                                    {group.project && (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div className="cursor-default" data-testid={`progress-ring-${group.projectId}`}>
+                                              <ProgressRing 
+                                                progress={group.progress} 
+                                                size={28} 
+                                                strokeWidth={3}
+                                              />
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>{group.progress}% complete ({group.actions.filter(a => a.status === 'achieved').length}/{group.actions.length} actions)</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    )}
+                                    
                                     {/* Accountable Leaders */}
                                     {group.project && (
-                                      <div className="flex items-center space-x-2">
-                                        {accountableLeaders.length > 0 ? (
-                                          accountableLeaders.map((leader) => (
-                                            <Avatar key={leader.id} className="w-6 h-6">
-                                              <AvatarFallback className="bg-purple-500 text-white text-xs">
-                                                {leader.firstName?.[0]}{leader.lastName?.[0]}
-                                              </AvatarFallback>
-                                            </Avatar>
-                                          ))
-                                        ) : (
-                                          <span className="text-xs text-gray-500 dark:text-gray-400 italic">
-                                            Assign a leader at the project level.
-                                          </span>
-                                        )}
+                                      <div className="flex items-center space-x-1">
+                                        <TooltipProvider>
+                                          {accountableLeaders.length > 0 ? (
+                                            accountableLeaders.map((leader) => (
+                                              <Tooltip key={leader.id}>
+                                                <TooltipTrigger asChild>
+                                                  <div>
+                                                    <Avatar className="w-6 h-6 cursor-default">
+                                                      <AvatarFallback className="bg-purple-500 text-white text-xs">
+                                                        {leader.firstName?.[0]}{leader.lastName?.[0]}
+                                                      </AvatarFallback>
+                                                    </Avatar>
+                                                  </div>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                  <p>{leader.firstName} {leader.lastName}</p>
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            ))
+                                          ) : (
+                                            <span className="text-xs text-gray-500 dark:text-gray-400 italic">
+                                              Assign a leader at the project level.
+                                            </span>
+                                          )}
+                                        </TooltipProvider>
                                       </div>
                                     )}
                                   </div>
