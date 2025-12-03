@@ -44,7 +44,7 @@ export default function Landing() {
             StrategyPlan
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Strategic planning for organizational excellence
+            Executive Planner: Design the strategy. Deliver the outcomes
           </p>
         </div>
 
