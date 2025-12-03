@@ -64,14 +64,14 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex h-screen bg-fog dark:bg-navy">
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="bg-white dark:bg-navy-dark shadow-sm border-b border-fog-dark dark:border-graphite-dark px-6 py-4">
+        <header className="bg-white dark:bg-gray-800 shadow-sm border-b px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-navy dark:text-white">Design the Strategy. Deliver the Outcomes.</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Design the Strategy. Deliver the Outcomes.</h1>
             </div>
             <div className="flex space-x-3">
               {canCreateStrategies() && (
@@ -93,8 +93,8 @@ export default function Dashboard() {
                 value={activeStrategies}
                 change={{ value: "+12%", label: "from last quarter", trend: "up" }}
                 icon={Target}
-                iconBgColor="bg-teal/20"
-                iconColor="text-teal"
+                iconBgColor="bg-blue-100"
+                iconColor="text-blue-600"
               />
 
               <MetricCard
@@ -102,16 +102,16 @@ export default function Dashboard() {
                 value={`${completionRate}%`}
                 change={{ value: `${completedItems}/${totalItems}`, label: "strategies & projects", trend: "neutral" }}
                 icon={TrendingUp}
-                iconBgColor="bg-lime/20"
-                iconColor="text-lime-dark"
+                iconBgColor="bg-purple-100"
+                iconColor="text-purple-600"
               />
               <MetricCard
                 title="Team Members"
                 value={(users as any[])?.length || 0}
                 change={{ value: "+3%", label: "this month", trend: "up" }}
                 icon={Users}
-                iconBgColor="bg-navy/10"
-                iconColor="text-navy dark:text-teal-light"
+                iconBgColor="bg-orange-100"
+                iconColor="text-orange-600"
               />
             </div>
 
@@ -119,8 +119,8 @@ export default function Dashboard() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-bold text-navy dark:text-white">Strategies Overview</h2>
-                  <p className="text-graphite dark:text-fog-dark mt-1">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Strategies Overview</h2>
+                  <p className="text-gray-600 dark:text-gray-400 mt-1">
                     Current organizational strategies with projects and actions tracking
                   </p>
                 </div>

@@ -27,9 +27,9 @@ import {
 import { NotificationBell } from "@/components/notifications/notification-bell";
 
 const coreNavigation = [
-  { name: "Strategy", href: "/strategies", icon: Target, iconColor: "text-navy dark:text-teal" },
-  { name: "Projects", href: "/projects", icon: CheckSquare, iconColor: "text-teal dark:text-teal-light" },
-  { name: "Actions", href: "/actions", icon: TrendingUp, iconColor: "text-lime-dark dark:text-lime" },
+  { name: "Strategy", href: "/strategies", icon: Target, iconColor: "text-indigo-500" },
+  { name: "Projects", href: "/projects", icon: CheckSquare, iconColor: "text-emerald-500" },
+  { name: "Actions", href: "/actions", icon: TrendingUp, iconColor: "text-amber-500" },
 ];
 
 const secondaryNavigation = [
@@ -64,19 +64,19 @@ export function Sidebar() {
   };
 
   return (
-    <aside className={`${isCollapsed ? 'w-20' : 'w-64'} bg-fog dark:bg-navy-dark border-r border-fog-dark dark:border-graphite-dark flex flex-col transition-all duration-300`}>
+    <aside className={`${isCollapsed ? 'w-20' : 'w-64'} bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-300`}>
       {/* Header with Toggle */}
-      <div className={`${isCollapsed ? 'p-4' : 'p-6'} border-b border-fog-dark dark:border-graphite-dark flex items-center justify-between`}>
+      <div className={`${isCollapsed ? 'p-4' : 'p-6'} border-b border-gray-200 dark:border-gray-800 flex items-center justify-between`}>
         {!isCollapsed && (
           <div>
-            <h1 className="text-xl font-bold text-navy dark:text-white">Executive Planner</h1>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Executive Planner</h1>
           </div>
         )}
         <Button
           onClick={toggleSidebar}
           variant="ghost"
           size="sm"
-          className="text-graphite hover:text-navy dark:text-fog-dark dark:hover:text-white"
+          className="text-gray-500 hover:text-gray-900 dark:hover:text-white"
           data-testid="button-toggle-sidebar"
         >
           {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
@@ -95,8 +95,8 @@ export function Sidebar() {
             <div
               className={`flex items-center ${isCollapsed ? 'justify-center px-3' : 'px-3'} py-2 text-sm font-medium rounded-md transition-colors ${
                 isActive
-                  ? "text-white bg-navy dark:bg-teal dark:text-navy"
-                  : "text-graphite dark:text-fog-dark hover:bg-fog-dark dark:hover:bg-graphite-dark"
+                  ? "text-white bg-primary"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
               }`}
             >
               <Icon className={`${isCollapsed ? '' : 'mr-3'} h-4 w-4`} />
@@ -123,10 +123,10 @@ export function Sidebar() {
         })()}
 
         {/* Core Navigation - Visual Group */}
-        <div className={`${isCollapsed ? 'py-2 px-1' : 'p-2'} bg-gradient-to-r from-fog to-fog-dark dark:from-navy dark:to-navy-dark rounded-lg border border-fog-dark dark:border-graphite-dark`}>
+        <div className={`${isCollapsed ? 'py-2 px-1' : 'p-2'} bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-lg border border-slate-200 dark:border-slate-700`}>
           {!isCollapsed && (
             <div className="px-2 pb-1.5 mb-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-graphite dark:text-fog-dark">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Core
               </span>
             </div>
@@ -140,12 +140,12 @@ export function Sidebar() {
                 <div
                   className={`flex items-center ${isCollapsed ? 'justify-center px-2' : 'px-2'} py-2 text-sm font-medium rounded-md transition-colors ${
                     isActive
-                      ? "bg-white dark:bg-graphite shadow-md ring-2 ring-teal dark:ring-teal ring-offset-2 ring-offset-fog dark:ring-offset-navy"
-                      : "text-graphite dark:text-fog hover:bg-white dark:hover:bg-graphite-dark hover:shadow-sm"
+                      ? "bg-white dark:bg-slate-700 shadow-md ring-2 ring-amber-400 dark:ring-amber-500 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-800"
+                      : "text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm"
                   }`}
                 >
                   <Icon className={`${isCollapsed ? '' : 'mr-3'} h-5 w-5 ${item.iconColor}`} />
-                  {!isCollapsed && <span className={`font-semibold ${isActive ? 'text-navy dark:text-white' : ''}`}>{item.name}</span>}
+                  {!isCollapsed && <span className={`font-semibold ${isActive ? 'text-gray-900 dark:text-white' : ''}`}>{item.name}</span>}
                 </div>
               );
 
@@ -178,8 +178,8 @@ export function Sidebar() {
             <div
               className={`flex items-center ${isCollapsed ? 'justify-center px-3' : 'px-3'} py-2 text-sm font-medium rounded-md transition-colors ${
                 isActive
-                  ? "text-white bg-navy dark:bg-teal dark:text-navy"
-                  : "text-graphite dark:text-fog-dark hover:bg-fog-dark dark:hover:bg-graphite-dark"
+                  ? "text-white bg-primary"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
               }`}
             >
               <Icon className={`${isCollapsed ? '' : 'mr-3'} h-4 w-4`} />
@@ -218,8 +218,8 @@ export function Sidebar() {
                 <div
                   className={`flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                     location === "/documentation"
-                      ? "text-white bg-navy dark:bg-teal dark:text-navy"
-                      : "text-graphite dark:text-fog-dark hover:bg-fog-dark dark:hover:bg-graphite-dark"
+                      ? "text-white bg-primary"
+                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
                   }`}
                   data-testid="link-documentation"
                 >
@@ -234,8 +234,8 @@ export function Sidebar() {
             <div
               className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                 location === "/documentation"
-                  ? "text-white bg-navy dark:bg-teal dark:text-navy"
-                  : "text-graphite dark:text-fog-dark hover:bg-fog-dark dark:hover:bg-graphite-dark"
+                  ? "text-white bg-primary"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
               }`}
               data-testid="link-documentation"
             >
@@ -247,12 +247,12 @@ export function Sidebar() {
       </nav>
       
       {/* User Profile */}
-      <div className="p-4 border-t border-fog-dark dark:border-graphite-dark space-y-3">
+      <div className="p-4 border-t border-gray-200 dark:border-gray-800 space-y-3">
         {isCollapsed ? (
           <>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="w-8 h-8 mx-auto bg-navy dark:bg-teal rounded-full flex items-center justify-center text-white dark:text-navy text-sm font-medium cursor-pointer">
+                <div className="w-8 h-8 mx-auto bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium cursor-pointer">
                   {user?.firstName?.[0] || user?.lastName?.[0] || "U"}
                 </div>
               </TooltipTrigger>
@@ -262,7 +262,7 @@ export function Sidebar() {
                 </p>
                 <p className="text-xs capitalize">{user?.role || currentRole}</p>
                 {user?.organizationName && (
-                  <p className="text-xs text-fog-dark">{user.organizationName}</p>
+                  <p className="text-xs text-gray-400">{user.organizationName}</p>
                 )}
               </TooltipContent>
             </Tooltip>
@@ -272,7 +272,7 @@ export function Sidebar() {
                   onClick={handleLogout}
                   variant="outline"
                   size="sm"
-                  className="w-full justify-center text-graphite dark:text-fog-dark hover:text-navy dark:hover:text-white"
+                  className="w-full justify-center text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
                   data-testid="button-logout"
                 >
                   <LogOut className="h-4 w-4" />
@@ -286,16 +286,16 @@ export function Sidebar() {
         ) : (
           <>
             <div className="flex items-center">
-              <div className="w-8 h-8 bg-navy dark:bg-teal rounded-full flex items-center justify-center text-white dark:text-navy text-sm font-medium">
+              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
                 {user?.firstName?.[0] || user?.lastName?.[0] || "U"}
               </div>
               <div className="ml-3 flex-1">
-                <p className="text-sm font-medium text-navy dark:text-white">
+                <p className="text-sm font-medium text-gray-900 dark:text-white">
                   {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.email || "User"}
                 </p>
-                <p className="text-xs text-graphite dark:text-fog-dark capitalize">{user?.role || currentRole}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{user?.role || currentRole}</p>
                 {user?.organizationName && (
-                  <p className="text-xs text-graphite-dark dark:text-fog-dark mt-0.5">{user.organizationName}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{user.organizationName}</p>
                 )}
               </div>
             </div>
@@ -303,7 +303,7 @@ export function Sidebar() {
               onClick={handleLogout}
               variant="outline"
               size="sm"
-              className="w-full justify-start text-graphite dark:text-fog-dark hover:text-navy dark:hover:text-white"
+              className="w-full justify-start text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
               data-testid="button-logout"
             >
               <LogOut className="mr-2 h-4 w-4" />
