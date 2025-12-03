@@ -890,7 +890,23 @@ Respond ONLY with a valid JSON object in this exact format:
         }
       }
       
-      const project = await storage.updateProject(req.params.id, req.body);
+      // Process the update data - convert date strings to Date objects
+      const updateData = { ...req.body };
+      if (updateData.startDate) {
+        updateData.startDate = new Date(updateData.startDate);
+      }
+      if (updateData.dueDate) {
+        updateData.dueDate = new Date(updateData.dueDate);
+      }
+      // Handle nullable URL fields
+      if (updateData.documentFolderUrl === '') {
+        updateData.documentFolderUrl = null;
+      }
+      if (updateData.communicationUrl === '') {
+        updateData.communicationUrl = null;
+      }
+      
+      const project = await storage.updateProject(req.params.id, updateData);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
