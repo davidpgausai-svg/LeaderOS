@@ -655,7 +655,7 @@ export default function Projects() {
                                             onValueChange={(value) => handleStatusChange(project.id, value)}
                                           >
                                             <SelectTrigger 
-                                              className="w-auto h-7 px-2 border-0 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800" 
+                                              className="w-auto h-7 px-2 border-0 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 [&>svg]:hidden" 
                                               data-testid={`select-status-${project.id}`}
                                             >
                                               <div className="flex items-center gap-1.5">
