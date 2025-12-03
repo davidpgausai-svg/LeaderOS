@@ -98,9 +98,9 @@ export default function Dashboard() {
               />
 
               <MetricCard
-                title="Completion Rate"
+                title="Strategy & Project Completion"
                 value={`${completionRate}%`}
-                change={{ value: `${completedItems}/${totalItems}`, label: "overall progress", trend: "neutral" }}
+                change={{ value: `${completedItems}/${totalItems}`, label: "strategies & projects", trend: "neutral" }}
                 icon={TrendingUp}
                 iconBgColor="bg-purple-100"
                 iconColor="text-purple-600"
