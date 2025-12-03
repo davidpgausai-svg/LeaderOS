@@ -33,6 +33,13 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   FileText,
   Calendar,
   Plus,
@@ -40,6 +47,7 @@ import {
   Trash2,
   Eye,
   Download,
+  Filter,
 } from "lucide-react";
 import { CreateEditMeetingNoteModal } from "@/components/modals/create-edit-meeting-note-modal";
 import { MeetingNotePrintView } from "@/components/meeting-notes/meeting-note-print-view";
@@ -64,6 +72,9 @@ export default function MeetingNotes() {
   // Print state
   const [printNote, setPrintNote] = useState<MeetingNote | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
+  
+  // Filter state
+  const [strategyFilter, setStrategyFilter] = useState<string>("all");
 
   const { data: meetingNotes, isLoading: notesLoading } = useQuery({
     queryKey: ["/api/meeting-notes"],
@@ -108,10 +119,19 @@ export default function MeetingNotes() {
     strategy: (strategies as Strategy[])?.find((s) => s.id === note.strategyId),
   })) || [];
 
-  // Sort by meeting date descending (most recent first)
-  const sortedNotes = [...notesWithDetails].sort((a, b) => {
+  // Filter by selected strategy and sort by meeting date descending (most recent first)
+  const filteredNotes = strategyFilter === "all" 
+    ? notesWithDetails 
+    : notesWithDetails.filter((note) => note.strategyId === strategyFilter);
+  
+  const sortedNotes = [...filteredNotes].sort((a, b) => {
     return new Date(b.meetingDate).getTime() - new Date(a.meetingDate).getTime();
   });
+  
+  // Get unique strategies that have meeting notes for the filter dropdown
+  const strategiesWithNotes = (strategies as Strategy[])?.filter((strategy) =>
+    notesWithDetails.some((note) => note.strategyId === strategy.id)
+  ) || [];
 
   const handleDeleteNote = (noteId: string) => {
     deleteMeetingNoteMutation.mutate(noteId);
@@ -178,6 +198,53 @@ export default function MeetingNotes() {
                 >
                   <Plus className="w-4 h-4" />
                   New Meeting Note
+                </Button>
+              )}
+            </div>
+
+            {/* Strategy Filter */}
+            <div className="mb-6 flex items-center gap-3">
+              <Filter className="w-4 h-4 text-gray-500" />
+              <Select
+                value={strategyFilter}
+                onValueChange={setStrategyFilter}
+              >
+                <SelectTrigger 
+                  className="w-[280px]"
+                  data-testid="select-strategy-filter"
+                >
+                  <SelectValue placeholder="Filter by strategy" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" data-testid="select-item-all-strategies">
+                    All Strategies
+                  </SelectItem>
+                  {strategiesWithNotes.map((strategy) => (
+                    <SelectItem 
+                      key={strategy.id} 
+                      value={strategy.id}
+                      data-testid={`select-item-strategy-${strategy.id}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: strategy.colorCode }}
+                        />
+                        {strategy.title}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {strategyFilter !== "all" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setStrategyFilter("all")}
+                  className="text-gray-500 hover:text-gray-700"
+                  data-testid="button-clear-filter"
+                >
+                  Clear filter
                 </Button>
               )}
             </div>
