@@ -23,6 +23,7 @@ export default {
         },
         primary: {
           DEFAULT: "var(--primary)",
+          dark: "var(--primary-dark)",
           foreground: "var(--primary-foreground)",
         },
         secondary: {
@@ -35,6 +36,7 @@ export default {
         },
         accent: {
           DEFAULT: "var(--accent)",
+          light: "var(--accent-light)",
           foreground: "var(--accent-foreground)",
         },
         destructive: {
@@ -51,9 +53,32 @@ export default {
           "4": "var(--chart-4)",
           "5": "var(--chart-5)",
         },
-        success: "var(--success)",
+        success: {
+          DEFAULT: "var(--success)",
+          dark: "var(--success-dark)",
+        },
         warning: "var(--warning)",
         error: "var(--error)",
+        graphite: {
+          DEFAULT: "#2B2B2B",
+          dark: "#3A3A3C",
+        },
+        fog: {
+          DEFAULT: "#F0F2F5",
+          dark: "#D8DCE1",
+        },
+        navy: {
+          DEFAULT: "#0A1A2F",
+          light: "#112233",
+        },
+        teal: {
+          DEFAULT: "#2BCDD4",
+          light: "#3AB6FF",
+        },
+        lime: {
+          DEFAULT: "#79D70F",
+          light: "#A4FF3B",
+        },
       },
       fontFamily: {
         sans: ["var(--font-inter)"],
