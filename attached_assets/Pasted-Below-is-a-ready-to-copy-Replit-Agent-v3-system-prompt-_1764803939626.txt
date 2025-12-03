@@ -1,0 +1,106 @@
+Below is a **ready-to-copy Replit Agent v3 system prompt**, engineered in a high-credibility, enterprise-aligned tone, instructing your Agent to **update your Strategy Plan app’s UI to the executive-grade color palette** you selected.
+
+This gives the agent **exact directives**, **token-safe wording**, and **clear implementation requirements** across Tailwind, CSS variables, and component usage.
+
+---
+
+# ✅ **Replit Agent v3 Prompt — Update Strategy Plan UI Color System**
+
+Use this prompt exactly as-is inside your Agent v3 YAML or system field.
+
+---
+
+### **Replit Agent v3 Prompt**
+
+**Objective:**
+Update the Strategy Plan application’s visual design system to align with the new enterprise-grade color palette derived from the official Strategy Plan logo (Deep Navy). Apply these colors consistently across Tailwind config, global CSS variables, and component tokens.
+
+**Brand Color System to Implement:**
+
+1. **Primary Color (Deep Navy / Midnight Blue)**
+
+   * `#0A1A2F`
+   * `#112233`
+     Use for: primary buttons, top nav, left nav, headings, borders, logo-adjacent elements.
+
+2. **Secondary Accent (Executive Teal / Digital Aqua)**
+
+   * `#2BCDD4`
+   * `#3AB6FF`
+     Use for: progress indicators, hover states, interactive highlights, CTA outlines.
+
+3. **Performance Color (Execution Green / Lime KPI)**
+
+   * `#A4FF3B`
+   * `#79D70F`
+     Use for: KPI success states, milestone completion, “On Track” signals, positive deltas.
+
+4. **Stability Neutrals (Graphite + Fog Gray)**
+
+   * Graphite: `#2B2B2B`, `#3A3A3C`
+   * Fog Gray: `#F0F2F5`, `#D8DCE1`
+     Use for: backgrounds, cards, borders, section dividers, non-primary surfaces.
+
+5. **Typography Colors**
+
+   * Primary text: `#0A1A2F`
+   * Secondary text: `#2B2B2B`
+   * Inverse text (on navy): `#FAFAFA`
+
+**Implementation Requirements:**
+
+* Update **Tailwind config**:
+
+  * Add all brand colors under `theme.extend.colors`.
+  * Ensure naming conventions:
+
+    * `primary`, `primary-dark`
+    * `accent`, `accent-light`
+    * `success`, `success-dark`
+    * `graphite`, `fog`
+  * Enable color tokens for UI components (`bg-primary`, `text-primary`, `border-accent`, etc).
+
+* Update **global CSS variables** in `:root`:
+
+  * `--primary`, `--primary-dark`
+  * `--accent`, `--accent-light`
+  * `--success`, `--success-dark`
+  * `--graphite`, `--fog`
+  * `--text-primary`, `--text-inverse`
+
+* Apply colors across the entire app:
+
+  * Navigation bars
+  * Sidebar frames
+  * Buttons (primary, secondary, subtle)
+  * Forms and field focus states
+  * Cards and dashboard modules
+  * KPI indicators
+  * Tables and pagination
+  * Hover, active, disabled states
+  * Modal backgrounds & overlays
+
+* Enforce consistent **executive UI feel**:
+
+  * High contrast navigation
+  * Minimalistic layout using fog gray surfaces
+  * Strategic pops of teal and green
+  * Restrained use of accent colors
+  * KPI-driven green reserved exclusively for performance signals
+
+* Do **not** alter functionality — only apply the new design system.
+
+* After updating, regenerate any `.css`, `.tsx`, `.vue`, or styling files needed to propagate these variables throughout the application.
+
+* Validate all color tokens render correctly in development mode.
+
+---
+
+If you want, I can also generate:
+
+✔ A complete Tailwind config file with all variables
+✔ A full component style map (buttons, cards, modals, nav bars)
+✔ A design-system markdown file to ship to customers
+✔ A full UI mockup your Agent can follow
+
+Just tell me what would accelerate velocity.
