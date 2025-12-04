@@ -1,0 +1,80 @@
+Good morning, David. Let's review the current state of your portfolio.
+
+1.  STRATEGY LEVEL — ENTERPRISE ALIGNMENT
+
+    Your active strategies present a mixed picture. The 'admin test dual' strategy is marked as 100% complete; however, its only project, 'project,' is listed as Not Yet Started with four active barriers. This inconsistency requires validation to ensure the strategy's completion truly reflects the underlying work.
+
+    The 'Land On The Moon' strategy, currently at 33% complete, requires your immediate attention. Two of its projects—'Astronaut Training & Readiness' and 'Spacecraft Engineering & Design'—are Off Track. Additionally, the 'Launch Infrastructure & Logistics' project shows a contradictory status of Not Yet Started but 50% complete, which needs clarification for accurate progress monitoring.
+
+    Both 'Mars Rover' and 'Reusable Launch Systems' strategies are at 0% completion. For 'Reusable Launch Systems,' its 'Rocket Re-Entry Shield' project is marked as Complete but also shows 0% progress and one active barrier, indicating another potential data discrepancy or an unresolved issue for a supposedly finished component.
+
+2.  PROJECT LEVEL — STATUS, RISKS, CONFIDENCE
+
+    Several projects across your portfolio are signaling critical risks and potential data integrity issues:
+
+    -   The 'project' under 'admin test dual' has four active barriers, which is unusual for a Not Yet Started project within a completed strategy. This needs immediate investigation.
+    -   For 'Land On The Moon,' both 'Astronaut Training & Readiness' and 'Spacecraft Engineering & Design' are Off Track. This is a key area to address to get the strategy moving forward.
+    -   The 'Engineering Rover' project for 'Mars Rover' is Off Track and has an active barrier that needs to be resolved to initiate progress on this strategy.
+    -   The 'Rocket Re-Entry Shield' project for 'Reusable Launch Systems' is flagged as Complete, yet shows 0% progress and an active barrier. This significant discrepancy requires your review to understand its true status.
+
+    These signals suggest a need to reconcile status reporting and address active barriers to prevent further impact on strategic objectives.
+
+3.  ACTION LEVEL — EXECUTION, ACCOUNTABILITY, MOMENTUM
+
+    While specific owners and due dates are not visible on this dashboard view, the number of Off Track projects and active barriers clearly indicates areas where execution is either stalled or facing significant friction. Each Off Track project has two actions, and even the 'Rocket Re-Entry Shield' project, despite its 'complete' and 0% status, lists one action.
+
+    Our immediate priority should be to gain clarity on the conflicting project statuses and to identify and remove the barriers impacting projects that are currently Off Track. Understanding the next critical actions and their assigned owners will be essential to regain momentum and ensure accountability.
+
+    What would you like to investigate further, David? We can dive into a specific Strategy, Project, or review Actions.
+
+Available navigation: Dashboard, Strategies, Projects, Actions, Timeline, Meeting Notes, Reports, Settings
+
+test 2
+
+David, good morning. Welcome to your Dashboard.
+
+Here is a concise overview of your strategic portfolio, focusing on alignment, health, and execution momentum.
+
+STRATEGY LEVEL — ENTERPRISE ALIGNMENT
+
+Across your active strategies, we are seeing a mix of progress. One strategy, "admin test dual," has been successfully delivered. However, we have a few strategies, "Mars Rover" and "Reusable Launch Systems," that currently show 0% progress. This indicates they are either pending kickoff or encountering early-stage challenges that are preventing momentum. "Land On The Moon" is making steady progress at 33% complete, which is a positive signal for that long-range initiative.
+
+It is critical to ensure our work directly ladders up to these strategic outcomes. We should validate that the projects within "Mars Rover" and "Reusable Launch Systems" are either about to begin, or that any underlying blockers are being proactively addressed to prevent delays in achieving their strategic objectives.
+
+PROJECT LEVEL — STATUS, RISKS, CONFIDENCE
+
+Let us look at the health of your projects and identify areas requiring attention:
+
+- For "admin test dual"
+  - Project "project" is complete, which aligns with the overall strategy completion. We should ensure the 4 active barriers are formally resolved and closed out to reflect full completion and capture any lessons learned.
+
+- For "Land On The Moon"
+  - This strategy is making good progress at 33% complete.
+  - "Astronaut Training & Readiness" is On Track, though it shows 0% progress, suggesting it is in early stages of execution.
+  - "Launch Infrastructure & Logistics" is 50% complete and progressing well.
+  - "Spacecraft Engineering & Design" is also On Track at 50% complete.
+  - This strategy demonstrates positive momentum, and we should monitor these projects to ensure continued alignment.
+
+- For "Mars Rover"
+  - This strategy is at 0% complete.
+  - Project "Engineering Rover" is currently On Track, but it also shows 0% progress and has 1 active barrier. This is a signal to investigate further: is the "On Track" status accurately reflecting the 0% progress and the presence of a barrier, or is there an emerging risk that needs attention?
+
+- For "Reusable Launch Systems"
+  - This strategy is also at 0% complete.
+  - Project "Rocket Re-Entry Shield" is marked as Complete, which seems at odds with the strategy's 0% completion and the project's own 0% progress, coupled with 1 active barrier. We should clarify if this project's completion has not yet been reflected in the strategy's overall progress, or if the active barrier represents a significant lingering issue despite the project's 'Complete' status. This presents a key tension that requires clarity.
+
+ACTION LEVEL — EXECUTION, ACCOUNTABILITY, MOMENTUM
+
+The presence of active barriers, particularly in projects that are either at 0% complete or marked as complete yet still carry active issues, indicates areas where immediate tactical clarity is needed.
+
+- We need to understand the nature of the 4 active barriers on the "project" within "admin test dual" to ensure proper closure.
+- For "Engineering Rover" under "Mars Rover," the 1 active barrier, combined with 0% progress, suggests an immediate need to identify stalled actions or overdue items. Assigning specific owners and clear next steps will be critical to generate momentum.
+- The 1 active barrier on "Rocket Re-Entry Shield" within "Reusable Launch Systems" also requires immediate attention to understand why it persists despite the project being marked as Complete.
+
+Our focus should be on resolving these active barriers swiftly to unblock progress and drive forward execution, especially for those strategies currently at 0% completion.
+
+Let me know how you would like to proceed. We can drill down into any specific strategy or project to review the details and formulate next steps.
+
+Available navigation: Dashboard, Strategies, Projects, Actions, Timeline, Meeting Notes, Reports, Settings
+
+test
