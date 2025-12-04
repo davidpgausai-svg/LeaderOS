@@ -1,0 +1,201 @@
+Here's a comprehensive export of the deep-link navigation and expandable actions system we built:
+
+Deep-Link Navigation System - Technical Export
+Overview
+A navigation system that allows users to click on projects/actions from any page and be navigated to the appropriate page with:
+
+Automatic filtering to show the relevant item
+Auto-scroll to the specific card
+3-second blue highlight animation
+URL cleanup after navigation completes
+1. URL Query Parameter System
+Pattern: Pages accept query parameters (projectId, actionId, strategyId) that trigger navigation behavior.
+
+// Check URL for query params on page load
+useEffect(() => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const projectIdParam = urlParams.get('projectId');
+  const actionIdParam = urlParams.get('actionId');
+  
+  if (projectIdParam && projectIdParam !== lastAppliedProjectId.current) {
+    lastAppliedProjectId.current = projectIdParam;
+    setHighlightedProjectId(projectIdParam);
+    
+    // Auto-filter to show the project's strategy
+    const project = projects?.find(p => p.id === projectIdParam);
+    if (project) {
+      setStrategyFilter(project.strategyId);
+    }
+    
+    // Scroll with retry logic (handles race conditions)
+    setTimeout(() => {
+      const element = document.getElementById(`project-card-${projectIdParam}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else {
+        setTimeout(() => {
+          const retryElement = document.getElementById(`project-card-${projectIdParam}`);
+          retryElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+      }
+    }, 200);
+    
+    // Clear highlight and URL after 3 seconds
+    setTimeout(() => {
+      setHighlightedProjectId(null);
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+    }, 3000);
+  }
+}, [location, projects]);
+
+2. Guard Refs to Prevent Re-application
+// Prevent re-applying the same deep-link on data refetches
+const lastAppliedProjectId = useRef<string | null>(null);
+const lastAppliedActionId = useRef<string | null>(null);
+// Reset guards when filters change manually
+useEffect(() => {
+  if (prevStrategyFilter.current !== strategyFilter) {
+    lastAppliedProjectId.current = null;
+    prevStrategyFilter.current = strategyFilter;
+  }
+}, [strategyFilter]);
+
+3. Highlight State and Card Styling
+const [highlightedProjectId, setHighlightedProjectId] = useState<string | null>(null);
+// In the Card component:
+<Card 
+  id={`project-card-${project.id}`}
+  className={`border transition-all duration-500 ${
+    highlightedProjectId === project.id 
+      ? 'border-blue-500 ring-2 ring-blue-500/50 bg-blue-50/50 dark:bg-blue-950/30' 
+      : 'border-gray-200 dark:border-gray-700'
+  }`}
+>
+
+4. Navigation Functions
+// Navigate to Projects page with deep-link
+const navigateToProject = (projectId: string) => {
+  setLocation(`/projects?projectId=${projectId}`);
+};
+// Navigate to Actions page with deep-link
+const navigateToAction = (actionId: string) => {
+  setLocation(`/actions?actionId=${actionId}`);
+};
+
+5. Expandable Actions Section (Project Cards)
+State Management:
+
+const [expandedProjectActions, setExpandedProjectActions] = useState<Set<string>>(new Set());
+const toggleProjectActions = (projectId: string) => {
+  setExpandedProjectActions(prev => {
+    const newSet = new Set(prev);
+    if (newSet.has(projectId)) {
+      newSet.delete(projectId);
+    } else {
+      newSet.add(projectId);
+    }
+    return newSet;
+  });
+};
+
+Helper Functions:
+
+// Get actions for a specific project
+const getProjectActions = (projectId: string): Action[] => {
+  return (actions || []).filter(a => a.projectId === projectId && a.isArchived !== 'true');
+};
+// Get action status color
+const getActionStatusColor = (status: string) => {
+  switch (status) {
+    case 'achieved': return 'fill-green-500 text-green-500';
+    case 'in_progress': return 'fill-blue-500 text-blue-500';
+    case 'at_risk': return 'fill-yellow-500 text-yellow-500';
+    default: return 'fill-gray-300 text-gray-300';
+  }
+};
+
+UI Component:
+
+{/* Expandable Actions Section */}
+{(() => {
+  const projectActions = getProjectActions(project.id);
+  const isExpanded = expandedProjectActions.has(project.id);
+  
+  if (projectActions.length === 0) return null;
+  
+  return (
+    <div className="mt-4">
+      <button
+        onClick={() => toggleProjectActions(project.id)}
+        className="flex items-center justify-between w-full p-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+      >
+        <div className="flex items-center space-x-2">
+          <ListTodo className="w-4 h-4 text-gray-500" />
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Actions ({projectActions.length})
+          </span>
+        </div>
+        {isExpanded ? (
+          <ChevronDown className="w-4 h-4 text-gray-400" />
+        ) : (
+          <ChevronRight className="w-4 h-4 text-gray-400" />
+        )}
+      </button>
+      
+      {isExpanded && (
+        <div className="mt-2 border border-gray-100 dark:border-gray-800 rounded-lg bg-gray-50/50 dark:bg-gray-900/50">
+          <div className="p-2 space-y-1">
+            {projectActions.map((action) => (
+              <div 
+                key={action.id}
+                className="flex items-center justify-between py-2 px-3 rounded hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors"
+                onClick={() => navigateToAction(action.id)}
+              >
+                <div className="flex items-center space-x-2 min-w-0 flex-1">
+                  <Circle className={`w-2.5 h-2.5 flex-shrink-0 ${getActionStatusColor(action.status)}`} />
+                  <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
+                    {action.title}
+                  </span>
+                </div>
+                <span className="text-xs text-gray-500">
+                  {action.progress || 0}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+})()}
+
+6. Required Imports
+import { useLocation } from "wouter";
+import { useEffect, useState, useRef } from "react";
+import { ChevronDown, ChevronRight, Circle, ListTodo } from "lucide-react";
+
+7. Key Design Decisions
+Decision	Rationale
+200ms scroll delay + 300ms retry	Handles DOM rendering race conditions
+3-second highlight duration	Long enough to notice, short enough not to annoy
+Guard refs (lastAppliedProjectId)	Prevents re-triggering on data refetches
+window.history.replaceState for cleanup	Clears URL without triggering navigation
+Collapsed by default	Keeps UI clean; users expand when needed
+Status color dots	Quick visual indicator without text clutter
+8. Data Flow Summary
+User clicks project/action anywhere
+    ↓
+setLocation('/projects?projectId=xxx') or setLocation('/actions?actionId=xxx')
+    ↓
+Target page loads, useEffect reads URL params
+    ↓
+Auto-filter strategy to show the item
+    ↓
+Scroll to element with retry logic
+    ↓
+Apply blue highlight for 3 seconds
+    ↓
+Clear highlight and clean URL
+
+This should give you everything needed to implement the same system in your sister application. The pattern is reusable across any hierarchical data structure (Strategy → Project → Action or similar).
