@@ -171,6 +171,16 @@ export default function Strategies() {
     }
   };
 
+  // Get action status badge
+  const getActionStatusBadge = (status: string) => {
+    switch (status) {
+      case 'achieved': return { label: 'Achieved', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' };
+      case 'in_progress': return { label: 'In Progress', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' };
+      case 'at_risk': return { label: 'At Risk', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' };
+      default: return { label: 'Not Started', color: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' };
+    }
+  };
+
   // Get project status display
   const getProjectStatusBadge = (status: string) => {
     switch (status) {
@@ -680,24 +690,27 @@ export default function Strategies() {
                                   {isProjectExpanded && projectActions.length > 0 && (
                                     <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30 px-4 py-2">
                                       <div className="space-y-1.5">
-                                        {projectActions.map((action: any) => (
-                                          <div
-                                            key={action.id}
-                                            className="flex items-center justify-between py-1.5 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded px-2 -mx-2 transition-colors"
-                                            onClick={() => navigateToAction(action.id)}
-                                            data-testid={`action-row-${action.id}`}
-                                          >
-                                            <div className="flex items-center space-x-2 flex-1 min-w-0">
-                                              <Circle className={`w-2.5 h-2.5 flex-shrink-0 ${getActionStatusColor(action.status)}`} />
-                                              <span className="text-sm text-gray-700 dark:text-gray-300 truncate hover:text-primary cursor-pointer">
-                                                {action.title}
-                                              </span>
+                                        {projectActions.map((action: any) => {
+                                          const actionBadge = getActionStatusBadge(action.status);
+                                          return (
+                                            <div
+                                              key={action.id}
+                                              className="flex items-center justify-between py-1.5 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded px-2 -mx-2 transition-colors"
+                                              onClick={() => navigateToAction(action.id)}
+                                              data-testid={`action-row-${action.id}`}
+                                            >
+                                              <div className="flex items-center space-x-2 flex-1 min-w-0">
+                                                <Circle className={`w-2.5 h-2.5 flex-shrink-0 ${getActionStatusColor(action.status)}`} />
+                                                <span className="text-sm text-gray-700 dark:text-gray-300 truncate hover:text-primary cursor-pointer">
+                                                  {action.title}
+                                                </span>
+                                              </div>
+                                              <Badge className={`text-xs px-1.5 py-0 ml-2 flex-shrink-0 ${actionBadge.color}`}>
+                                                {actionBadge.label}
+                                              </Badge>
                                             </div>
-                                            <span className="text-xs text-gray-500 dark:text-gray-400 ml-2 flex-shrink-0">
-                                              {action.progress || 0}%
-                                            </span>
-                                          </div>
-                                        ))}
+                                          );
+                                        })}
                                       </div>
                                     </div>
                                   )}
