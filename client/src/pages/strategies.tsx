@@ -661,21 +661,21 @@ export default function Strategies() {
                                           {projectActions.length} action{projectActions.length !== 1 ? 's' : ''}
                                         </span>
                                       </div>
-                                    </div>
 
-                                    <div className="flex items-center space-x-2 flex-shrink-0">
-                                      {/* Navigate to project */}
+                                      {/* Navigate to project - next to title */}
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-7 w-7 p-0"
+                                        className="h-7 w-7 p-0 flex-shrink-0"
                                         onClick={(e) => navigateToProject(project.id, e)}
                                         title="View project details"
                                         data-testid={`button-view-project-${project.id}`}
                                       >
                                         <Eye className="w-3.5 h-3.5 text-gray-500" />
                                       </Button>
+                                    </div>
 
+                                    <div className="flex items-center space-x-2 flex-shrink-0">
                                       {/* Status badge */}
                                       <Badge className={`text-xs px-1.5 py-0 ${statusBadge.color}`}>
                                         {statusBadge.label}
