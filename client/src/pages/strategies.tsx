@@ -156,9 +156,16 @@ export default function Strategies() {
     });
   };
 
-  // Get actions for a specific project
+  // Get actions for a specific project (sorted by due date)
   const getProjectActions = (projectId: string) => {
-    return (actions || []).filter(a => a.projectId === projectId && a.isArchived !== 'true');
+    const filtered = (actions || []).filter(a => a.projectId === projectId && a.isArchived !== 'true');
+    // Sort by due date (items without due date go last)
+    return filtered.sort((a, b) => {
+      if (!a.dueDate && !b.dueDate) return 0;
+      if (!a.dueDate) return 1;
+      if (!b.dueDate) return -1;
+      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+    });
   };
 
   // Get action status color

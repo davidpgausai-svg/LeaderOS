@@ -138,6 +138,7 @@ type Action = {
   status: string;
   progress: number;
   isArchived: string;
+  dueDate?: string;
 };
 
 function formatDateWithoutTimezone(dateString: string): string {
@@ -334,7 +335,14 @@ export default function Projects() {
 
   // Get actions for a specific project
   const getProjectActions = (projectId: string): Action[] => {
-    return (actions || []).filter(a => a.projectId === projectId && a.isArchived !== 'true');
+    const filtered = (actions || []).filter(a => a.projectId === projectId && a.isArchived !== 'true');
+    // Sort by due date (items without due date go last)
+    return filtered.sort((a, b) => {
+      if (!a.dueDate && !b.dueDate) return 0;
+      if (!a.dueDate) return 1;
+      if (!b.dueDate) return -1;
+      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+    });
   };
 
   // Get action status color

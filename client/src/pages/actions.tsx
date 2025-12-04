@@ -473,10 +473,13 @@ export default function Actions() {
       ? actions 
       : actions.filter(action => action.projectId === projectFilter);
     
-    // Sort actions by creation date
-    return [...filtered].sort((a, b) => 
-      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-    );
+    // Sort actions by due date (items without due date go last)
+    return [...filtered].sort((a, b) => {
+      if (!a.dueDate && !b.dueDate) return 0;
+      if (!a.dueDate) return 1;
+      if (!b.dueDate) return -1;
+      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+    });
   };
 
   // Calculate project progress based on completed actions
@@ -511,9 +514,12 @@ export default function Actions() {
           })()
         : "Not Linked to Project";
       
-      const sortedActions = projectActions.sort((a, b) => 
-        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-      );
+      const sortedActions = projectActions.sort((a, b) => {
+        if (!a.dueDate && !b.dueDate) return 0;
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+      });
       
       groups.push({
         projectId,
