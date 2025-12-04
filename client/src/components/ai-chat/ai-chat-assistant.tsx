@@ -22,7 +22,7 @@ export function AiChatAssistant() {
   const { user } = useAuth();
   const [location] = useLocation();
   const { toast } = useToast();
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   // Get current page name from location
   const getCurrentPage = () => {
@@ -99,9 +99,7 @@ export function AiChatAssistant() {
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatHistory, sendMessageMutation.isPending]);
 
   return (
@@ -146,7 +144,7 @@ export function AiChatAssistant() {
           </div>
 
           {/* Messages */}
-          <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+          <ScrollArea className="flex-1 p-4">
             {isLoadingHistory ? (
               <div className="flex items-center justify-center h-full">
                 <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
@@ -190,6 +188,7 @@ export function AiChatAssistant() {
                     </div>
                   </div>
                 )}
+                <div ref={bottomRef} data-testid="sentinel-ai-chat-bottom" />
               </div>
             )}
           </ScrollArea>
