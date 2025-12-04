@@ -404,12 +404,12 @@ export default function Strategies() {
                 <Card key={strategy.id} className="overflow-hidden" style={{ borderLeft: `4px solid ${strategy.colorCode}` }}>
                   {/* Compact Header - Always Visible */}
                   <CardHeader 
-                    className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors py-4"
+                    className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors py-3 px-4"
                     onClick={() => toggleStrategyCollapse(strategy.id)}
                   >
-                    <div className="flex items-center justify-between flex-wrap gap-3">
-                      {/* Left section: Chevron, Status dot, Title, Dates */}
-                      <div className="flex items-center space-x-3 flex-1 min-w-0">
+                    <div className="flex flex-col gap-2">
+                      {/* Row 1: Chevron, Status dot, Full Title */}
+                      <div className="flex items-center gap-2">
                         {isCollapsed ? (
                           <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
                         ) : (
@@ -419,27 +419,27 @@ export default function Strategies() {
                           className="w-3 h-3 rounded-full flex-shrink-0"
                           style={{ backgroundColor: strategy.colorCode }}
                         />
-                        <div className="min-w-0">
-                          <h3 className="text-lg font-bold text-gray-900 dark:text-white truncate">
-                            {strategy.title}
-                          </h3>
-                          <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                            <Calendar className="w-3 h-3" />
-                            <span>{formatDateShort(strategy.startDate)} - {formatDateShort(strategy.targetDate)}</span>
-                          </div>
-                        </div>
+                        <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white flex-1">
+                          {strategy.title}
+                        </h3>
                       </div>
                       
-                      {/* Right section: Project count, Progress, Status, Buttons */}
-                      <div className="flex items-center space-x-3 flex-shrink-0">
+                      {/* Row 2: Meta info and actions */}
+                      <div className="flex flex-wrap items-center gap-2 pl-8">
+                        {/* Date range */}
+                        <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                          <Calendar className="w-3 h-3" />
+                          <span className="whitespace-nowrap">{formatDateShort(strategy.startDate)} - {formatDateShort(strategy.targetDate)}</span>
+                        </div>
+                        
                         {/* Project count */}
-                        <div className="flex items-center space-x-1.5 text-sm text-gray-600 dark:text-gray-400">
-                          <FolderOpen className="w-4 h-4" />
-                          <span>{strategy.projects.length} project{strategy.projects.length !== 1 ? 's' : ''}</span>
+                        <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
+                          <FolderOpen className="w-3.5 h-3.5" />
+                          <span className="whitespace-nowrap">{strategy.projects.length} project{strategy.projects.length !== 1 ? 's' : ''}</span>
                         </div>
                         
                         {/* Progress Ring */}
-                        <ProgressRing progress={strategyProgress} size={36} strokeWidth={3} />
+                        <ProgressRing progress={strategyProgress} size={32} strokeWidth={3} />
                         
                         {/* Status Badge */}
                         <Badge 
@@ -450,6 +450,9 @@ export default function Strategies() {
                           {strategy.status.toLowerCase()}
                         </Badge>
                         
+                        {/* Spacer to push buttons right on larger screens */}
+                        <div className="flex-1 min-w-0 hidden lg:block" />
+                        
                         {/* Metrics Button */}
                         <Button
                           variant="outline"
@@ -458,11 +461,11 @@ export default function Strategies() {
                             e.stopPropagation();
                             handleViewStrategy(strategy);
                           }}
-                          className="h-8 px-3 text-xs"
+                          className="h-7 px-2 text-xs"
                           data-testid={`button-metrics-${strategy.id}`}
                         >
-                          <BarChart3 className="w-3.5 h-3.5 mr-1.5" />
-                          Metrics
+                          <BarChart3 className="w-3.5 h-3.5 sm:mr-1" />
+                          <span className="hidden sm:inline">Metrics</span>
                         </Button>
                         
                         {/* Continuum Button */}
@@ -476,11 +479,11 @@ export default function Strategies() {
                               toggleStrategyCollapse(strategy.id);
                             }
                           }}
-                          className="h-8 px-3 text-xs"
+                          className="h-7 px-2 text-xs"
                           data-testid={`button-continuum-${strategy.id}`}
                         >
-                          <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-                          Continuum
+                          <RefreshCw className="w-3.5 h-3.5 sm:mr-1" />
+                          <span className="hidden sm:inline">Continuum</span>
                         </Button>
                         
                         {/* Navigate to Projects */}
@@ -488,7 +491,7 @@ export default function Strategies() {
                           variant="ghost"
                           size="sm"
                           onClick={(e) => navigateToProjects(strategy.id, e)}
-                          className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                          className="h-7 w-7 p-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                           title="Go to Projects"
                           data-testid={`button-nav-projects-${strategy.id}`}
                         >
@@ -498,7 +501,7 @@ export default function Strategies() {
                         {/* Menu */}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" data-testid={`button-strategy-menu-${strategy.id}`}>
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" data-testid={`button-strategy-menu-${strategy.id}`}>
                               <MoreVertical className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
