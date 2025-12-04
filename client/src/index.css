@@ -10,7 +10,7 @@
   --card-foreground: hsl(222.2 84% 4.9%);
   --popover: hsl(0 0% 100%);
   --popover-foreground: hsl(222.2 84% 4.9%);
-  --primary: hsl(201 100% 15%); /* Deep Navy #00334e */
+  --primary: hsl(228 93% 46%); /* Blue #0832e1 */
   --primary-foreground: hsl(0 0% 100%); /* White text */
   --secondary: hsl(245.1 70.6% 63.1%);
   --secondary-foreground: hsl(210 40% 98%);
@@ -42,7 +42,7 @@
   --card-foreground: hsl(210 40% 98%);
   --popover: hsl(222.2 84% 4.9%);
   --popover-foreground: hsl(210 40% 98%);
-  --primary: hsl(201 100% 15%); /* Deep Navy #00334e */
+  --primary: hsl(228 93% 46%); /* Blue #0832e1 */
   --primary-foreground: hsl(0 0% 100%); /* White text */
   --secondary: hsl(217.2 32.6% 17.5%);
   --secondary-foreground: hsl(210 40% 98%);
