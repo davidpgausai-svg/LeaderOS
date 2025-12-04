@@ -653,26 +653,27 @@ export default function Strategies() {
                                       )}
                                       
                                       {/* Project title and action count */}
-                                      <div className="flex-1 min-w-0">
-                                        <span className="font-medium text-sm text-gray-900 dark:text-white truncate block">
-                                          {project.title}
-                                        </span>
+                                      <div className="min-w-0">
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="font-medium text-sm text-gray-900 dark:text-white truncate">
+                                            {project.title}
+                                          </span>
+                                          {/* Navigate to project - immediately after title */}
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-6 w-6 p-0 flex-shrink-0"
+                                            onClick={(e) => navigateToProject(project.id, e)}
+                                            title="View project details"
+                                            data-testid={`button-view-project-${project.id}`}
+                                          >
+                                            <Eye className="w-3.5 h-3.5 text-gray-500" />
+                                          </Button>
+                                        </div>
                                         <span className="text-xs text-gray-500 dark:text-gray-400">
                                           {projectActions.length} action{projectActions.length !== 1 ? 's' : ''}
                                         </span>
                                       </div>
-
-                                      {/* Navigate to project - next to title */}
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-7 w-7 p-0 flex-shrink-0"
-                                        onClick={(e) => navigateToProject(project.id, e)}
-                                        title="View project details"
-                                        data-testid={`button-view-project-${project.id}`}
-                                      >
-                                        <Eye className="w-3.5 h-3.5 text-gray-500" />
-                                      </Button>
                                     </div>
 
                                     <div className="flex items-center space-x-2 flex-shrink-0">
