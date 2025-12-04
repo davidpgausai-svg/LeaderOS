@@ -638,7 +638,19 @@ export default function Strategies() {
                               No projects yet. Create your first project to get started.
                             </p>
                           ) : (
-                            strategy.projects.map((project: any) => {
+                            [...strategy.projects]
+                              .sort((a: any, b: any) => {
+                                // Sort by start date (earliest first), projects without start date go last
+                                const aDate = a.startDate ? new Date(a.startDate).getTime() : null;
+                                const bDate = b.startDate ? new Date(b.startDate).getTime() : null;
+                                const aValid = aDate !== null && !isNaN(aDate);
+                                const bValid = bDate !== null && !isNaN(bDate);
+                                if (!aValid && !bValid) return 0;
+                                if (!aValid) return 1;
+                                if (!bValid) return -1;
+                                return aDate - bDate;
+                              })
+                              .map((project: any) => {
                               const projectActions = getProjectActions(project.id);
                               const isProjectExpanded = !collapsedProjects.has(project.id);
                               const statusBadge = getProjectStatusBadge(project.status);
