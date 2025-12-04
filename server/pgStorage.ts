@@ -512,10 +512,11 @@ export class PostgresStorage implements IStorage {
   }
 
   async getRecentChatHistory(userId: string, limit: number): Promise<AiChatConversation[]> {
-    return db.select().from(aiChatConversations)
+    const messages = await db.select().from(aiChatConversations)
       .where(eq(aiChatConversations.userId, userId))
       .orderBy(desc(aiChatConversations.createdAt))
       .limit(limit);
+    return messages.reverse();
   }
 
   async clearChatHistory(userId: string): Promise<void> {
