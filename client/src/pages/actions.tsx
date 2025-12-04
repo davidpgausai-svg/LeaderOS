@@ -121,6 +121,10 @@ export default function Actions() {
   const [isEditActionOpen, setIsEditActionOpen] = useState(false);
   const [selectedAction, setSelectedAction] = useState<Action | null>(null);
   const [collapsedActions, setCollapsedActions] = useState<Set<string>>(new Set());
+  
+  // Deep-link navigation state
+  const [highlightedActionId, setHighlightedActionId] = useState<string | null>(null);
+  const lastAppliedActionId = useRef<string | null>(null);
 
   const { data: actions, isLoading: actionsLoading } = useQuery({
     queryKey: ["/api/actions"],
@@ -137,6 +141,11 @@ export default function Actions() {
   const navigateToProjects = (strategyId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setLocation(`/projects?strategyId=${strategyId}`);
+  };
+
+  // Navigate to Projects page with deep-link to specific project
+  const navigateToProject = (projectId: string) => {
+    setLocation(`/projects?projectId=${projectId}`);
   };
 
   const { data: users } = useQuery({
@@ -167,6 +176,53 @@ export default function Actions() {
       }
     }
   }, [strategies, urlStrategyId]);
+
+  // Check URL for actionId param to auto-scroll and highlight specific action
+  const urlActionId = useMemo(() => 
+    new URLSearchParams(window.location.search).get('actionId'),
+    [location]
+  );
+  
+  // Deep-link navigation for actionId
+  useEffect(() => {
+    if (actions && urlActionId && urlActionId !== lastAppliedActionId.current) {
+      lastAppliedActionId.current = urlActionId;
+      setHighlightedActionId(urlActionId);
+      
+      // Auto-filter to show the action's strategy and expand it
+      const action = (actions as Action[]).find(a => a.id === urlActionId);
+      if (action) {
+        setStrategyFilter(action.strategyId);
+        setCollapsedStrategies(new Set());
+        // Make sure the action is not collapsed
+        setCollapsedActions(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(urlActionId);
+          return newSet;
+        });
+      }
+      
+      // Scroll with retry logic (handles DOM rendering race conditions)
+      setTimeout(() => {
+        const element = document.getElementById(`action-card-${urlActionId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          setTimeout(() => {
+            const retryElement = document.getElementById(`action-card-${urlActionId}`);
+            retryElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 300);
+        }
+      }, 200);
+      
+      // Clear highlight and URL after 3 seconds
+      setTimeout(() => {
+        setHighlightedActionId(null);
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+      }, 3000);
+    }
+  }, [location, actions, urlActionId]);
 
   // Handler for manual filter dropdown changes
   const handleStrategyFilterChange = (value: string) => {
@@ -729,9 +785,19 @@ export default function Actions() {
                                 <div key={group.projectId || 'unlinked'} className="space-y-3">
                                   {/* Project Header with indentation */}
                                   <div className="ml-4 flex items-center space-x-3">
-                                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                      {group.projectTitle}
-                                    </h4>
+                                    {group.projectId ? (
+                                      <button
+                                        onClick={() => navigateToProject(group.projectId!)}
+                                        className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary hover:underline transition-colors"
+                                        data-testid={`link-project-${group.projectId}`}
+                                      >
+                                        {group.projectTitle}
+                                      </button>
+                                    ) : (
+                                      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        {group.projectTitle}
+                                      </h4>
+                                    )}
                                     
                                     {/* Progress Ring - only show for linked projects */}
                                     {group.project && (
@@ -792,7 +858,15 @@ export default function Actions() {
                                     const isActionCollapsed = collapsedActions.has(action.id);
                                     
                                     return (
-                                      <Card key={action.id} className="border border-gray-200 dark:border-gray-700">
+                                      <Card 
+                                        key={action.id} 
+                                        id={`action-card-${action.id}`}
+                                        className={`border transition-all duration-500 ${
+                                          highlightedActionId === action.id 
+                                            ? 'border-blue-500 ring-2 ring-blue-500/50 bg-blue-50/50 dark:bg-blue-950/30' 
+                                            : 'border-gray-200 dark:border-gray-700'
+                                        }`}
+                                      >
                                         <CardContent className={isActionCollapsed ? "p-4" : "p-6"}>
                                           <div className={`flex items-start justify-between ${isActionCollapsed ? "" : "mb-4"}`}>
                                             <div className="flex-1">

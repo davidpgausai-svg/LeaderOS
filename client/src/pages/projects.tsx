@@ -69,7 +69,9 @@ import {
   AlertTriangle,
   ShieldCheck,
   ArrowLeft,
-  ArrowRight
+  ArrowRight,
+  ListTodo,
+  Circle
 } from "lucide-react";
 import { useLocation } from "wouter";
 
@@ -129,6 +131,15 @@ type Barrier = {
   updatedAt: string;
 };
 
+type Action = {
+  id: string;
+  title: string;
+  projectId?: string;
+  status: string;
+  progress: number;
+  isArchived: string;
+};
+
 function formatDateWithoutTimezone(dateString: string): string {
   try {
     const date = new Date(dateString);
@@ -156,6 +167,11 @@ export default function Projects() {
   const [searchTerm, setSearchTerm] = useState("");
   const [strategyFilter, setStrategyFilter] = useState("all");
   const [collapsedStrategies, setCollapsedStrategies] = useState<Set<string>>(new Set());
+  
+  // Deep-link navigation state
+  const [highlightedProjectId, setHighlightedProjectId] = useState<string | null>(null);
+  const [expandedProjectActions, setExpandedProjectActions] = useState<Set<string>>(new Set());
+  const lastAppliedProjectId = useRef<string | null>(null);
 
   const { data: projects, isLoading: projectsLoading } = useQuery({
     queryKey: ["/api/projects"],
@@ -182,6 +198,11 @@ export default function Projects() {
     },
   });
 
+  // Fetch all actions for expandable actions section
+  const { data: actions } = useQuery<Action[]>({
+    queryKey: ["/api/actions"],
+  });
+
   // Check URL for strategyId param to auto-filter to that strategy
   // Note: wouter's location only includes pathname, so we use window.location.search for query params
   // The location dependency ensures this re-runs when navigating between pages
@@ -206,6 +227,47 @@ export default function Projects() {
       }
     }
   }, [strategies, urlStrategyId]);
+
+  // Check URL for projectId param to auto-scroll and highlight specific project
+  const urlProjectId = useMemo(() => 
+    new URLSearchParams(window.location.search).get('projectId'),
+    [location]
+  );
+  
+  // Deep-link navigation for projectId
+  useEffect(() => {
+    if (projects && urlProjectId && urlProjectId !== lastAppliedProjectId.current) {
+      lastAppliedProjectId.current = urlProjectId;
+      setHighlightedProjectId(urlProjectId);
+      
+      // Auto-filter to show the project's strategy
+      const project = (projects as Project[]).find(p => p.id === urlProjectId);
+      if (project) {
+        setStrategyFilter(project.strategyId);
+        setCollapsedStrategies(new Set());
+      }
+      
+      // Scroll with retry logic (handles DOM rendering race conditions)
+      setTimeout(() => {
+        const element = document.getElementById(`project-card-${urlProjectId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          setTimeout(() => {
+            const retryElement = document.getElementById(`project-card-${urlProjectId}`);
+            retryElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 300);
+        }
+      }, 200);
+      
+      // Clear highlight and URL after 3 seconds
+      setTimeout(() => {
+        setHighlightedProjectId(null);
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+      }, 3000);
+    }
+  }, [location, projects, urlProjectId]);
 
   // Handler for manual filter dropdown changes
   const handleStrategyFilterChange = (value: string) => {
@@ -250,6 +312,39 @@ export default function Projects() {
   const navigateToActions = (strategyId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setLocation(`/actions?strategyId=${strategyId}`);
+  };
+
+  // Navigate to Actions page with deep-link to specific action
+  const navigateToAction = (actionId: string) => {
+    setLocation(`/actions?actionId=${actionId}`);
+  };
+
+  // Toggle expanded actions for a project
+  const toggleProjectActions = (projectId: string) => {
+    setExpandedProjectActions(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(projectId)) {
+        newSet.delete(projectId);
+      } else {
+        newSet.add(projectId);
+      }
+      return newSet;
+    });
+  };
+
+  // Get actions for a specific project
+  const getProjectActions = (projectId: string): Action[] => {
+    return (actions || []).filter(a => a.projectId === projectId && a.isArchived !== 'true');
+  };
+
+  // Get action status color
+  const getActionStatusColor = (status: string) => {
+    switch (status) {
+      case 'achieved': return 'fill-green-500 text-green-500';
+      case 'in_progress': return 'fill-blue-500 text-blue-500';
+      case 'at_risk': return 'fill-yellow-500 text-yellow-500';
+      default: return 'fill-gray-300 text-gray-300';
+    }
   };
 
   const updateProjectMutation = useMutation({
@@ -640,7 +735,15 @@ export default function Projects() {
                             const accountableLeaders = getAccountableLeaders(project);
                             
                             return (
-                              <Card key={project.id} className="border border-gray-200 dark:border-gray-700">
+                              <Card 
+                                key={project.id} 
+                                id={`project-card-${project.id}`}
+                                className={`border transition-all duration-500 ${
+                                  highlightedProjectId === project.id 
+                                    ? 'border-blue-500 ring-2 ring-blue-500/50 bg-blue-50/50 dark:bg-blue-950/30' 
+                                    : 'border-gray-200 dark:border-gray-700'
+                                }`}
+                              >
                                 <CardContent className="p-6">
                                   <div className="flex items-start justify-between mb-4">
                                     <div className="flex-1">
@@ -1006,6 +1109,61 @@ export default function Projects() {
                                       strategyId={project.strategyId}
                                     />
                                   </div>
+
+                                  {/* Expandable Actions Section */}
+                                  {(() => {
+                                    const projectActions = getProjectActions(project.id);
+                                    const isExpanded = expandedProjectActions.has(project.id);
+                                    
+                                    if (projectActions.length === 0) return null;
+                                    
+                                    return (
+                                      <div className="mt-4">
+                                        <button
+                                          onClick={() => toggleProjectActions(project.id)}
+                                          className="flex items-center justify-between w-full p-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+                                          data-testid={`button-toggle-actions-${project.id}`}
+                                        >
+                                          <div className="flex items-center space-x-2">
+                                            <ListTodo className="w-4 h-4 text-gray-500" />
+                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                              Actions ({projectActions.length})
+                                            </span>
+                                          </div>
+                                          {isExpanded ? (
+                                            <ChevronDown className="w-4 h-4 text-gray-400" />
+                                          ) : (
+                                            <ChevronRight className="w-4 h-4 text-gray-400" />
+                                          )}
+                                        </button>
+                                        
+                                        {isExpanded && (
+                                          <div className="mt-2 border border-gray-100 dark:border-gray-800 rounded-lg bg-gray-50/50 dark:bg-gray-900/50">
+                                            <div className="p-2 space-y-1">
+                                              {projectActions.map((action) => (
+                                                <div 
+                                                  key={action.id}
+                                                  className="flex items-center justify-between py-2 px-3 rounded hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors"
+                                                  onClick={() => navigateToAction(action.id)}
+                                                  data-testid={`action-item-${action.id}`}
+                                                >
+                                                  <div className="flex items-center space-x-2 min-w-0 flex-1">
+                                                    <Circle className={`w-2.5 h-2.5 flex-shrink-0 ${getActionStatusColor(action.status)}`} />
+                                                    <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
+                                                      {action.title}
+                                                    </span>
+                                                  </div>
+                                                  <span className="text-xs text-gray-500">
+                                                    {action.progress || 0}%
+                                                  </span>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
                                 </CardContent>
                               </Card>
                             );
