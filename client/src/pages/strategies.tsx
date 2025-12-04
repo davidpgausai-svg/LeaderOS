@@ -39,7 +39,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ArrowRight, Target } from "lucide-react";
+import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen } from "lucide-react";
+import { ProgressRing } from "@/components/ui/progress-ring";
 import { useLocation } from "wouter";
 import {
   Collapsible,
@@ -64,6 +65,7 @@ export default function Strategies() {
   const [strategyFilter, setStrategyFilter] = useState("all");
   const [expandedContinuum, setExpandedContinuum] = useState<Record<string, boolean>>({});
   const [collapsedStrategies, setCollapsedStrategies] = useState<Set<string>>(new Set());
+  const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
 
   const { data: strategies, isLoading: strategiesLoading } = useQuery({
     queryKey: ["/api/strategies"],
@@ -71,6 +73,11 @@ export default function Strategies() {
 
   const { data: projects } = useQuery({
     queryKey: ["/api/projects"],
+  });
+
+  // Fetch all actions for expandable actions section
+  const { data: actions } = useQuery<any[]>({
+    queryKey: ["/api/actions"],
   });
 
   // Check URL for strategyId param to auto-filter to that strategy
@@ -122,6 +129,64 @@ export default function Strategies() {
   const navigateToProjects = (strategyId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setLocation(`/projects?strategyId=${strategyId}`);
+  };
+
+  // Navigate to Projects page with deep-link to specific project
+  const navigateToProject = (projectId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setLocation(`/projects?projectId=${projectId}`);
+  };
+
+  // Navigate to Actions page with deep-link to specific action
+  const navigateToAction = (actionId: string) => {
+    setLocation(`/actions?actionId=${actionId}`);
+  };
+
+  // Toggle project collapse
+  const toggleProjectCollapse = (projectId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCollapsedProjects(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(projectId)) {
+        newSet.delete(projectId);
+      } else {
+        newSet.add(projectId);
+      }
+      return newSet;
+    });
+  };
+
+  // Get actions for a specific project
+  const getProjectActions = (projectId: string) => {
+    return (actions || []).filter(a => a.projectId === projectId && a.isArchived !== 'true');
+  };
+
+  // Get action status color
+  const getActionStatusColor = (status: string) => {
+    switch (status) {
+      case 'achieved': return 'fill-green-500 text-green-500';
+      case 'in_progress': return 'fill-blue-500 text-blue-500';
+      case 'at_risk': return 'fill-yellow-500 text-yellow-500';
+      default: return 'fill-gray-300 text-gray-300';
+    }
+  };
+
+  // Get project status display
+  const getProjectStatusBadge = (status: string) => {
+    switch (status) {
+      case 'C': return { label: 'C', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' };
+      case 'OT': return { label: 'OT', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' };
+      case 'OH': return { label: 'OH', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' };
+      case 'B': return { label: 'B', color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' };
+      case 'NYS': return { label: 'NYS', color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200' };
+      default: return { label: status, color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200' };
+    }
+  };
+
+  // Format date for display
+  const formatDateShort = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   // Enhance strategies with projects
@@ -330,54 +395,110 @@ export default function Strategies() {
               )}
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {filteredStrategies.map((strategy: any) => {
                 const isCollapsed = collapsedStrategies.has(strategy.id);
+                const strategyProgress = strategy.progress || 0;
                 
                 return (
-                <Card key={strategy.id} className="overflow-hidden">
+                <Card key={strategy.id} className="overflow-hidden" style={{ borderLeft: `4px solid ${strategy.colorCode}` }}>
+                  {/* Compact Header - Always Visible */}
                   <CardHeader 
-                    className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                    className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors py-4"
                     onClick={() => toggleStrategyCollapse(strategy.id)}
-                    style={{ borderLeft: `4px solid ${strategy.colorCode}` }}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
+                    <div className="flex items-center justify-between flex-wrap gap-3">
+                      {/* Left section: Chevron, Status dot, Title, Dates */}
+                      <div className="flex items-center space-x-3 flex-1 min-w-0">
                         {isCollapsed ? (
-                          <ChevronRight className="w-5 h-5 text-gray-400" />
+                          <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
                         ) : (
-                          <ChevronDown className="w-5 h-5 text-gray-400" />
+                          <ChevronDown className="w-5 h-5 text-gray-400 flex-shrink-0" />
                         )}
                         <div 
-                          className="w-4 h-4 rounded-full"
+                          className="w-3 h-3 rounded-full flex-shrink-0"
                           style={{ backgroundColor: strategy.colorCode }}
                         />
-                        <div>
-                          <CardTitle className="text-lg font-semibold">
+                        <div className="min-w-0">
+                          <h3 className="text-lg font-bold text-gray-900 dark:text-white truncate">
                             {strategy.title}
-                          </CardTitle>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            {strategy.projects.length} project{strategy.projects.length !== 1 ? 's' : ''}
-                          </p>
+                          </h3>
+                          <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            <Calendar className="w-3 h-3" />
+                            <span>{formatDateShort(strategy.startDate)} - {formatDateShort(strategy.targetDate)}</span>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge variant="outline" style={{ color: strategy.colorCode }}>
-                          {strategy.status}
+                      
+                      {/* Right section: Project count, Progress, Status, Buttons */}
+                      <div className="flex items-center space-x-3 flex-shrink-0">
+                        {/* Project count */}
+                        <div className="flex items-center space-x-1.5 text-sm text-gray-600 dark:text-gray-400">
+                          <FolderOpen className="w-4 h-4" />
+                          <span>{strategy.projects.length} project{strategy.projects.length !== 1 ? 's' : ''}</span>
+                        </div>
+                        
+                        {/* Progress Ring */}
+                        <ProgressRing progress={strategyProgress} size={36} strokeWidth={3} />
+                        
+                        {/* Status Badge */}
+                        <Badge 
+                          variant="outline" 
+                          className="text-xs font-medium"
+                          style={{ color: strategy.colorCode, borderColor: strategy.colorCode }}
+                        >
+                          {strategy.status.toLowerCase()}
                         </Badge>
+                        
+                        {/* Metrics Button */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewStrategy(strategy);
+                          }}
+                          className="h-8 px-3 text-xs"
+                          data-testid={`button-metrics-${strategy.id}`}
+                        >
+                          <BarChart3 className="w-3.5 h-3.5 mr-1.5" />
+                          Metrics
+                        </Button>
+                        
+                        {/* Continuum Button */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedContinuum(prev => ({ ...prev, [strategy.id]: !prev[strategy.id] }));
+                            if (isCollapsed) {
+                              toggleStrategyCollapse(strategy.id);
+                            }
+                          }}
+                          className="h-8 px-3 text-xs"
+                          data-testid={`button-continuum-${strategy.id}`}
+                        >
+                          <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                          Continuum
+                        </Button>
+                        
+                        {/* Navigate to Projects */}
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={(e) => navigateToProjects(strategy.id, e)}
-                          className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                          className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                           title="Go to Projects"
                           data-testid={`button-nav-projects-${strategy.id}`}
                         >
                           <ArrowRight className="h-4 w-4" />
                         </Button>
+                        
+                        {/* Menu */}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="sm" data-testid={`button-strategy-menu-${strategy.id}`}>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" data-testid={`button-strategy-menu-${strategy.id}`}>
                               <MoreVertical className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -404,6 +525,30 @@ export default function Strategies() {
                                   <Edit className="h-4 w-4 mr-2" />
                                   Edit Strategy
                                 </DropdownMenuItem>
+                                {strategy.status === 'Active' && (
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      completeStrategyMutation.mutate(strategy.id);
+                                    }}
+                                    data-testid={`button-complete-${strategy.id}`}
+                                  >
+                                    <CheckCircle className="h-4 w-4 mr-2" />
+                                    Mark as Completed
+                                  </DropdownMenuItem>
+                                )}
+                                {strategy.status === 'Completed' && (
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      archiveStrategyMutation.mutate(strategy.id);
+                                    }}
+                                    data-testid={`button-archive-${strategy.id}`}
+                                  >
+                                    <Archive className="h-4 w-4 mr-2" />
+                                    Archive
+                                  </DropdownMenuItem>
+                                )}
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
                                     <DropdownMenuItem
@@ -442,151 +587,168 @@ export default function Strategies() {
                     </div>
                   </CardHeader>
 
+                  {/* Expanded Content - Projects and Continuum */}
                   {!isCollapsed && (
-                    <CardContent className="p-6">
-                      <div className="space-y-4 mb-6">
-                    <div className="flex items-center text-sm text-gray-500">
-                      <span className="font-medium">Start:</span>
-                      <span className="ml-2">
-                        {new Date(strategy.startDate).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <div className="flex items-center text-sm text-gray-500">
-                      <span className="font-medium">Target:</span>
-                      <span className="ml-2">
-                        {new Date(strategy.targetDate).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <div className="flex items-center text-sm text-gray-500">
-                      <span className="font-medium">Metrics:</span>
-                      <span className="ml-2">{strategy.metrics}</span>
-                    </div>
-                  </div>
-
-                  {/* Change Continuum Section */}
-                  <Collapsible
-                    open={expandedContinuum[strategy.id]}
-                    onOpenChange={(open) => setExpandedContinuum(prev => ({ ...prev, [strategy.id]: open }))}
-                    className="mt-4"
-                  >
-                    <CollapsibleTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="w-full flex items-center justify-between text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-2"
-                        data-testid={`button-toggle-continuum-${strategy.id}`}
-                      >
-                        <span className="text-sm font-medium">Change Continuum</span>
-                        {expandedContinuum[strategy.id] ? (
-                          <ChevronUp className="h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="mt-2 space-y-2 text-sm">
-                      <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                        <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Case for Change</div>
-                        <div className="text-gray-600 dark:text-gray-400">{strategy.caseForChange || "To be defined"}</div>
-                      </div>
-                      <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                        <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Vision Statement</div>
-                        <div className="text-gray-600 dark:text-gray-400">{strategy.visionStatement || "To be defined"}</div>
-                      </div>
-                      <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                        <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Success Metrics</div>
-                        <div className="text-gray-600 dark:text-gray-400">{strategy.successMetrics || "To be defined"}</div>
-                      </div>
-                      <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                        <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Stakeholder Map</div>
-                        <div className="text-gray-600 dark:text-gray-400">{strategy.stakeholderMap || "To be defined"}</div>
-                      </div>
-                      <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                        <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Readiness Rating (RAG)</div>
-                        <div className="text-gray-600 dark:text-gray-400">{strategy.readinessRating || "To be defined"}</div>
-                      </div>
-                      <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                        <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Risk Exposure Rating</div>
-                        <div className="text-gray-600 dark:text-gray-400">{strategy.riskExposureRating || "To be defined"}</div>
-                      </div>
-                      <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                        <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Change Champion Assignment</div>
-                        <div className="text-gray-600 dark:text-gray-400">{strategy.changeChampionAssignment || "To be defined"}</div>
-                      </div>
-                      <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                        <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Reinforcement Plan</div>
-                        <div className="text-gray-600 dark:text-gray-400">{strategy.reinforcementPlan || "To be defined"}</div>
-                      </div>
-                      <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                        <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Benefits Realization Plan</div>
-                        <div className="text-gray-600 dark:text-gray-400">{strategy.benefitsRealizationPlan || "To be defined"}</div>
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-
-                  <div className="mt-6 pt-4 border-t border-gray-200 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-500">
-                        {strategy.projects.length} projects
-                      </span>
-                      <Button
-                        size="sm"
-                        onClick={() => handleCreateProject(strategy.id)}
-                        style={{ backgroundColor: strategy.colorCode, borderColor: strategy.colorCode }}
-                        className="text-white hover:opacity-90"
-                      >
-                        <Plus className="mr-1 h-3 w-3" />
-                        Add Project
-                      </Button>
-                    </div>
-                    
-                    {/* Complete and Archive buttons */}
-                    {canEditAllStrategies() && strategy.status === 'Active' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => completeStrategyMutation.mutate(strategy.id)}
-                        className="w-full"
-                        data-testid={`button-complete-${strategy.id}`}
-                      >
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Mark as Completed
-                      </Button>
-                    )}
-                    
-                    {canEditAllStrategies() && strategy.status === 'Completed' && (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
+                    <CardContent className="pt-0 px-6 pb-4">
+                      {/* Projects Section */}
+                      <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                            Projects ({strategy.projects.length})
+                          </h4>
                           <Button
                             size="sm"
-                            variant="outline"
-                            className="w-full"
-                            data-testid={`button-archive-${strategy.id}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCreateProject(strategy.id);
+                            }}
+                            className="h-7 px-2 text-xs"
+                            style={{ backgroundColor: strategy.colorCode, borderColor: strategy.colorCode }}
+                            data-testid={`button-add-project-${strategy.id}`}
                           >
-                            <Archive className="mr-2 h-4 w-4" />
-                            Archive
+                            <Plus className="w-3 h-3 mr-1" />
+                            Add Project
                           </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Archive Strategy</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to archive "{strategy.title}"? This will also archive all associated projects and actions. Archived items can still be viewed in reports.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => archiveStrategyMutation.mutate(strategy.id)}
-                              data-testid={`button-confirm-archive-${strategy.id}`}
-                            >
-                              Archive
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    )}
-                  </div>
+                        </div>
+
+                        {/* Project List */}
+                        <div className="space-y-2">
+                          {strategy.projects.length === 0 ? (
+                            <p className="text-sm text-gray-500 dark:text-gray-400 italic py-2">
+                              No projects yet. Create your first project to get started.
+                            </p>
+                          ) : (
+                            strategy.projects.map((project: any) => {
+                              const projectActions = getProjectActions(project.id);
+                              const isProjectExpanded = !collapsedProjects.has(project.id);
+                              const statusBadge = getProjectStatusBadge(project.status);
+                              const projectProgress = project.progress || 0;
+
+                              return (
+                                <div key={project.id} className="border border-gray-200 dark:border-gray-700 rounded-lg">
+                                  {/* Project Row */}
+                                  <div
+                                    className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                                    onClick={(e) => toggleProjectCollapse(project.id, e)}
+                                  >
+                                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                                      {/* Expand chevron */}
+                                      {isProjectExpanded ? (
+                                        <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                      ) : (
+                                        <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                      )}
+                                      
+                                      {/* Project title and action count */}
+                                      <div className="flex-1 min-w-0">
+                                        <span className="font-medium text-sm text-gray-900 dark:text-white truncate block">
+                                          {project.title}
+                                        </span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                                          {projectActions.length} action{projectActions.length !== 1 ? 's' : ''}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    <div className="flex items-center space-x-2 flex-shrink-0">
+                                      {/* Navigate to project */}
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 w-7 p-0"
+                                        onClick={(e) => navigateToProject(project.id, e)}
+                                        title="View project details"
+                                        data-testid={`button-view-project-${project.id}`}
+                                      >
+                                        <Eye className="w-3.5 h-3.5 text-gray-500" />
+                                      </Button>
+
+                                      {/* Status badge */}
+                                      <Badge className={`text-xs px-1.5 py-0 ${statusBadge.color}`}>
+                                        {statusBadge.label}
+                                      </Badge>
+
+                                      {/* Progress ring */}
+                                      <ProgressRing progress={projectProgress} size={28} strokeWidth={2.5} />
+                                    </div>
+                                  </div>
+
+                                  {/* Expanded Actions */}
+                                  {isProjectExpanded && projectActions.length > 0 && (
+                                    <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30 px-4 py-2">
+                                      <div className="space-y-1.5">
+                                        {projectActions.map((action: any) => (
+                                          <div
+                                            key={action.id}
+                                            className="flex items-center justify-between py-1.5 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded px-2 -mx-2 transition-colors"
+                                            onClick={() => navigateToAction(action.id)}
+                                            data-testid={`action-row-${action.id}`}
+                                          >
+                                            <div className="flex items-center space-x-2 flex-1 min-w-0">
+                                              <Circle className={`w-2.5 h-2.5 flex-shrink-0 ${getActionStatusColor(action.status)}`} />
+                                              <span className="text-sm text-gray-700 dark:text-gray-300 truncate hover:text-primary cursor-pointer">
+                                                {action.title}
+                                              </span>
+                                            </div>
+                                            <span className="text-xs text-gray-500 dark:text-gray-400 ml-2 flex-shrink-0">
+                                              {action.progress || 0}%
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Change Continuum Section - Collapsible */}
+                      {expandedContinuum[strategy.id] && (
+                        <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+                          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Change Continuum</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
+                            <div className="bg-gray-50 dark:bg-gray-800 p-2.5 rounded">
+                              <div className="font-medium text-gray-700 dark:text-gray-300 text-xs mb-0.5">Case for Change</div>
+                              <div className="text-gray-600 dark:text-gray-400 text-xs">{strategy.caseForChange || "To be defined"}</div>
+                            </div>
+                            <div className="bg-gray-50 dark:bg-gray-800 p-2.5 rounded">
+                              <div className="font-medium text-gray-700 dark:text-gray-300 text-xs mb-0.5">Vision Statement</div>
+                              <div className="text-gray-600 dark:text-gray-400 text-xs">{strategy.visionStatement || "To be defined"}</div>
+                            </div>
+                            <div className="bg-gray-50 dark:bg-gray-800 p-2.5 rounded">
+                              <div className="font-medium text-gray-700 dark:text-gray-300 text-xs mb-0.5">Success Metrics</div>
+                              <div className="text-gray-600 dark:text-gray-400 text-xs">{strategy.successMetrics || "To be defined"}</div>
+                            </div>
+                            <div className="bg-gray-50 dark:bg-gray-800 p-2.5 rounded">
+                              <div className="font-medium text-gray-700 dark:text-gray-300 text-xs mb-0.5">Stakeholder Map</div>
+                              <div className="text-gray-600 dark:text-gray-400 text-xs">{strategy.stakeholderMap || "To be defined"}</div>
+                            </div>
+                            <div className="bg-gray-50 dark:bg-gray-800 p-2.5 rounded">
+                              <div className="font-medium text-gray-700 dark:text-gray-300 text-xs mb-0.5">Readiness Rating (RAG)</div>
+                              <div className="text-gray-600 dark:text-gray-400 text-xs">{strategy.readinessRating || "To be defined"}</div>
+                            </div>
+                            <div className="bg-gray-50 dark:bg-gray-800 p-2.5 rounded">
+                              <div className="font-medium text-gray-700 dark:text-gray-300 text-xs mb-0.5">Risk Exposure Rating</div>
+                              <div className="text-gray-600 dark:text-gray-400 text-xs">{strategy.riskExposureRating || "To be defined"}</div>
+                            </div>
+                            <div className="bg-gray-50 dark:bg-gray-800 p-2.5 rounded">
+                              <div className="font-medium text-gray-700 dark:text-gray-300 text-xs mb-0.5">Change Champion</div>
+                              <div className="text-gray-600 dark:text-gray-400 text-xs">{strategy.changeChampionAssignment || "To be defined"}</div>
+                            </div>
+                            <div className="bg-gray-50 dark:bg-gray-800 p-2.5 rounded">
+                              <div className="font-medium text-gray-700 dark:text-gray-300 text-xs mb-0.5">Reinforcement Plan</div>
+                              <div className="text-gray-600 dark:text-gray-400 text-xs">{strategy.reinforcementPlan || "To be defined"}</div>
+                            </div>
+                            <div className="bg-gray-50 dark:bg-gray-800 p-2.5 rounded">
+                              <div className="font-medium text-gray-700 dark:text-gray-300 text-xs mb-0.5">Benefits Realization</div>
+                              <div className="text-gray-600 dark:text-gray-400 text-xs">{strategy.benefitsRealizationPlan || "To be defined"}</div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   )}
                 </Card>
