@@ -57,6 +57,7 @@ export interface IStorage {
   markNotificationAsUnread(id: string): Promise<Notification | undefined>;
   markAllNotificationsAsRead(userId: string): Promise<void>;
   deleteNotification(id: string): Promise<boolean>;
+  deleteDueDateNotificationsForAction(actionId: string): Promise<number>;
 
   // Action Document methods
   getActionDocuments(actionId: string): Promise<ActionDocument[]>;

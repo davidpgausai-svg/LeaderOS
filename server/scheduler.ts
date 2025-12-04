@@ -8,6 +8,15 @@ import { differenceInDays } from "date-fns";
 const notifiedActions = new Map<string, Set<number>>();
 
 /**
+ * Clear notification tracking for an action when its due date changes.
+ * This allows the scheduler to send fresh notifications based on the new date.
+ */
+export function clearActionNotificationTracking(actionId: string) {
+  notifiedActions.delete(actionId);
+  logger.info(`Cleared notification tracking for action: ${actionId}`);
+}
+
+/**
  * Check all actions and send due date notifications for actions that are:
  * - 14, 7, or 1 day(s) before due
  * - 1 or 7 day(s) past due

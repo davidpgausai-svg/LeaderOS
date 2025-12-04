@@ -1,5 +1,5 @@
 import { db } from './db';
-import { eq, desc, and, sql } from 'drizzle-orm';
+import { eq, desc, and, sql, inArray } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import type { IStorage } from './storage';
 import {
@@ -380,6 +380,27 @@ export class PostgresStorage implements IStorage {
   async deleteNotification(id: string): Promise<boolean> {
     const result = await db.delete(notifications).where(eq(notifications.id, id)).returning();
     return result.length > 0;
+  }
+
+  async deleteDueDateNotificationsForAction(actionId: string): Promise<number> {
+    const dueDateNotificationTypes = [
+      'action_due_14_days',
+      'action_due_7_days',
+      'action_due_1_day',
+      'action_overdue_1_day',
+      'action_overdue_7_days'
+    ];
+    
+    const result = await db.delete(notifications)
+      .where(
+        and(
+          eq(notifications.relatedEntityId, actionId),
+          eq(notifications.relatedEntityType, 'action'),
+          inArray(notifications.type, dueDateNotificationTypes)
+        )
+      )
+      .returning();
+    return result.length;
   }
 
   async getActionDocuments(actionId: string): Promise<ActionDocument[]> {

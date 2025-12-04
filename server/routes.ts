@@ -8,6 +8,7 @@ import { logger } from "./logger";
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { notifyActionCompleted, notifyActionAchieved, notifyProjectProgress, notifyProjectStatusChanged, notifyStrategyStatusChanged, notifyReadinessRatingChanged, notifyRiskExposureChanged } from "./notifications";
+import { clearActionNotificationTracking } from "./scheduler";
 
 // Validation helpers
 function isValidHexColor(color: string): boolean {
@@ -1714,6 +1715,23 @@ Respond ONLY with a valid JSON object in this exact format:
       }
       
       const validatedData = insertActionSchema.parse(req.body);
+      
+      // Check if due date changed - if so, clear notification tracking and delete stale notifications
+      // Normalize dates to compare: convert to timestamps or treat null/undefined as equivalent
+      const oldDueTime = oldAction.dueDate ? new Date(oldAction.dueDate).getTime() : null;
+      const newDueTime = validatedData.dueDate ? new Date(validatedData.dueDate).getTime() : null;
+      const dueDateChanged = oldDueTime !== newDueTime;
+      if (dueDateChanged) {
+        // Clear in-memory notification tracking so scheduler can send fresh notifications
+        clearActionNotificationTracking(req.params.id);
+        
+        // Delete existing due-date notifications for this action from the database
+        const deletedCount = await storage.deleteDueDateNotificationsForAction(req.params.id);
+        if (deletedCount > 0) {
+          logger.info(`Deleted ${deletedCount} stale due-date notifications for action: ${oldAction.title}`);
+        }
+      }
+      
       const action = await storage.updateAction(req.params.id, validatedData);
       if (!action) {
         return res.status(404).json({ message: "Action not found" });
