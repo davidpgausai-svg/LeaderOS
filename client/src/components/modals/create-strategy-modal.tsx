@@ -546,7 +546,7 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
                 type="submit"
                 disabled={createStrategyMutation.isPending}
               >
-                {createStrategyMutation.isPending ? "Creating..." : "Create Strategy"}
+                {createStrategyMutation.isPending ? "Creating..." : "Create Priority"}
               </Button>
             </div>
           </form>
