@@ -3209,6 +3209,23 @@ Available navigation: Dashboard, Strategies, Projects, Actions, Timeline, Meetin
         return res.status(400).json({ message: "goalIds must be an array" });
       }
 
+      // Validate all goalIds belong to the user's organization
+      if (goalIds.length > 0) {
+        const orgGoals = await storage.getExecutiveGoalsByOrganization(user.organizationId);
+        const orgGoalIds = new Set(orgGoals.map(g => g.id));
+        const invalidGoalIds = goalIds.filter(id => !orgGoalIds.has(id));
+        if (invalidGoalIds.length > 0) {
+          return res.status(403).json({ 
+            message: "Cannot assign executive goals from other organizations" 
+          });
+        }
+      }
+
+      // Clear the legacy executiveGoalId field when using junction table
+      if (strategy.executiveGoalId) {
+        await storage.updateStrategy(req.params.id, { executiveGoalId: null });
+      }
+
       const strategyGoals = await storage.setStrategyExecutiveGoals(req.params.id, goalIds, user.organizationId);
       res.json(strategyGoals);
     } catch (error) {
