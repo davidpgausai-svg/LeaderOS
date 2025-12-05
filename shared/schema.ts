@@ -167,6 +167,7 @@ export const actions = pgTable("actions", {
   dueDate: timestamp("due_date"),
   isArchived: text("is_archived").notNull().default('false'), // 'true' or 'false' for cascade archival
   documentFolderUrl: text("document_folder_url"), // External folder URL (ClickUp, OneDrive, etc.)
+  notes: text("notes"), // User notes for the action
   organizationId: varchar("organization_id"), // Foreign key to organizations table
   createdBy: varchar("created_by").notNull(),
   createdAt: timestamp("created_at").default(sql`now()`),
