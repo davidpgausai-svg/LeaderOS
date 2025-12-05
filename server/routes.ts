@@ -3146,6 +3146,105 @@ Available navigation: Dashboard, Strategies, Projects, Actions, Timeline, Meetin
     }
   });
 
+  // Strategy Executive Goals (many-to-many relationship)
+  app.get("/api/strategies/:id/executive-goals", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      // Verify strategy exists and belongs to user's organization
+      const strategy = await storage.getStrategy(req.params.id);
+      if (!strategy) {
+        return res.status(404).json({ message: "Strategy not found" });
+      }
+
+      if (strategy.organizationId !== user.organizationId) {
+        return res.status(403).json({ message: "Cannot access strategies from other organizations" });
+      }
+
+      const strategyGoals = await storage.getStrategyExecutiveGoals(req.params.id);
+      res.json(strategyGoals);
+    } catch (error) {
+      logger.error("Failed to fetch strategy executive goals", error);
+      res.status(500).json({ message: "Failed to fetch strategy executive goals" });
+    }
+  });
+
+  app.put("/api/strategies/:id/executive-goals", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      // Only administrators can set executive goals
+      if (user.role !== 'administrator') {
+        return res.status(403).json({ message: "Only administrators can assign executive goals" });
+      }
+
+      // Verify strategy exists and belongs to user's organization
+      const strategy = await storage.getStrategy(req.params.id);
+      if (!strategy) {
+        return res.status(404).json({ message: "Strategy not found" });
+      }
+
+      if (strategy.organizationId !== user.organizationId) {
+        return res.status(403).json({ message: "Cannot modify strategies from other organizations" });
+      }
+
+      const { goalIds } = req.body;
+      if (!Array.isArray(goalIds)) {
+        return res.status(400).json({ message: "goalIds must be an array" });
+      }
+
+      const strategyGoals = await storage.setStrategyExecutiveGoals(req.params.id, goalIds, user.organizationId);
+      res.json(strategyGoals);
+    } catch (error) {
+      logger.error("Failed to set strategy executive goals", error);
+      res.status(500).json({ message: "Failed to set strategy executive goals" });
+    }
+  });
+
+  // Get all strategy-executive-goal mappings for the organization
+  app.get("/api/strategy-executive-goals", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      const strategies = await storage.getStrategiesByOrganization(user.organizationId);
+      const allMappings = [];
+      
+      for (const strategy of strategies) {
+        const mappings = await storage.getStrategyExecutiveGoals(strategy.id);
+        allMappings.push(...mappings);
+      }
+      
+      res.json(allMappings);
+    } catch (error) {
+      logger.error("Failed to fetch all strategy executive goal mappings", error);
+      res.status(500).json({ message: "Failed to fetch strategy executive goal mappings" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
