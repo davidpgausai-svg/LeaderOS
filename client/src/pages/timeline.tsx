@@ -105,7 +105,14 @@ export default function Timeline() {
 
   const filteredStrategies = useMemo(() => {
     if (!strategies) return [];
-    const activeStrategies = strategies.filter(s => s.status !== 'Archived');
+    const activeStrategies = strategies
+      .filter(s => s.status !== 'Archived')
+      .sort((a, b) => {
+        const dateA = new Date(a.startDate).getTime();
+        const dateB = new Date(b.startDate).getTime();
+        if (dateA !== dateB) return dateA - dateB;
+        return a.id.localeCompare(b.id);
+      });
     if (selectedPriorityIds.length === 0) return activeStrategies;
     return activeStrategies.filter(s => selectedPriorityIds.includes(s.id));
   }, [strategies, selectedPriorityIds]);
@@ -119,7 +126,14 @@ export default function Timeline() {
     const allDates: Date[] = [];
 
     filteredStrategies.forEach(strategy => {
-      const strategyProjects = projects.filter(p => p.strategyId === strategy.id);
+      const strategyProjects = projects
+        .filter(p => p.strategyId === strategy.id)
+        .sort((a, b) => {
+          const dateA = a.startDate ? new Date(a.startDate).getTime() : Infinity;
+          const dateB = b.startDate ? new Date(b.startDate).getTime() : Infinity;
+          if (dateA !== dateB) return dateA - dateB;
+          return a.id.localeCompare(b.id);
+        });
       const hasProjects = strategyProjects.length > 0;
       
       if (!hasProjects) return;
@@ -140,7 +154,14 @@ export default function Timeline() {
 
       if (expandedRows.has(`priority-${strategy.id}`)) {
         strategyProjects.forEach(project => {
-          const projectActions = actions.filter(a => a.projectId === project.id && a.dueDate);
+          const projectActions = actions
+            .filter(a => a.projectId === project.id && a.dueDate)
+            .sort((a, b) => {
+              const dateA = new Date(a.dueDate!).getTime();
+              const dateB = new Date(b.dueDate!).getTime();
+              if (dateA !== dateB) return dateA - dateB;
+              return a.id.localeCompare(b.id);
+            });
           const hasActions = projectActions.length > 0;
           
           if (!hasActions && !project.startDate && !project.dueDate) return;
@@ -358,6 +379,40 @@ export default function Timeline() {
         targetX: getPositionPixels(targetStartDate),
         targetY: targetRowIndex * 48 + 24,
         targetDate: targetStartDate,
+      };
+    }).filter(Boolean);
+  }, [dependencies, ganttRows, getPositionPixels]);
+
+  const getAllDependencyLines = useMemo(() => {
+    if (!dependencies || !ganttRows || ganttRows.length === 0) return [];
+    
+    const visibleRowIds = new Set(ganttRows.map(r => r.id));
+    
+    return dependencies.map(dep => {
+      const sourceRowId = `${dep.sourceType}-${dep.sourceId}`;
+      const targetRowId = `${dep.targetType}-${dep.targetId}`;
+      
+      if (!visibleRowIds.has(sourceRowId) || !visibleRowIds.has(targetRowId)) return null;
+      
+      const sourceRow = ganttRows.find(r => r.id === sourceRowId);
+      const targetRow = ganttRows.find(r => r.id === targetRowId);
+      
+      if (!sourceRow || !targetRow) return null;
+      
+      const sourceEndDate = sourceRow.endDate || sourceRow.startDate;
+      const targetStartDate = targetRow.startDate || targetRow.endDate;
+      
+      if (!sourceEndDate || !targetStartDate) return null;
+      
+      const sourceRowIndex = ganttRows.findIndex(r => r.id === sourceRowId);
+      const targetRowIndex = ganttRows.findIndex(r => r.id === targetRowId);
+      
+      return {
+        id: dep.id,
+        sourceX: getPositionPixels(sourceEndDate),
+        sourceY: sourceRowIndex * 48 + 24,
+        targetX: getPositionPixels(targetStartDate),
+        targetY: targetRowIndex * 48 + 24,
       };
     }).filter(Boolean);
   }, [dependencies, ganttRows, getPositionPixels]);
@@ -676,31 +731,24 @@ export default function Timeline() {
                       </div>
                     )}
 
-                    {showDependencyLine && (
+                    {getAllDependencyLines.length > 0 && (
                       <svg 
-                        className="absolute top-12 left-0 pointer-events-none z-20" 
+                        className="absolute top-12 left-0 pointer-events-none z-[5]" 
                         style={{ width: `${totalWidth}px`, height: `${ganttRows.length * 48}px` }}
                       >
-                        {getDependencyLines(showDependencyLine).map((line, idx) => (
-                          line && (
-                            <g key={idx}>
-                              <line
-                                x1={line.sourceX}
-                                y1={line.sourceY}
-                                x2={line.targetX}
-                                y2={line.targetY}
-                                stroke="#6366f1"
-                                strokeWidth="2"
-                                strokeDasharray="6 4"
-                                markerEnd="url(#arrowhead)"
-                              />
-                              <circle cx={line.targetX} cy={line.targetY} r="4" fill="#6366f1" />
-                            </g>
-                          )
-                        ))}
                         <defs>
                           <marker
-                            id="arrowhead"
+                            id="arrowhead-all"
+                            markerWidth="8"
+                            markerHeight="6"
+                            refX="7"
+                            refY="3"
+                            orient="auto"
+                          >
+                            <polygon points="0 0, 8 3, 0 6" fill="#94a3b8" />
+                          </marker>
+                          <marker
+                            id="arrowhead-highlight"
                             markerWidth="10"
                             markerHeight="7"
                             refX="9"
@@ -710,6 +758,30 @@ export default function Timeline() {
                             <polygon points="0 0, 10 3.5, 0 7" fill="#6366f1" />
                           </marker>
                         </defs>
+                        {getAllDependencyLines.map((line: any) => {
+                          const midX = (line.sourceX + line.targetX) / 2;
+                          const isHighlighted = showDependencyLine && getDependencyLines(showDependencyLine).some(
+                            (l: any) => l && l.sourceX === line.sourceX && l.targetX === line.targetX
+                          );
+                          return (
+                            <g key={line.id}>
+                              <path
+                                d={`M ${line.sourceX} ${line.sourceY} 
+                                    C ${midX} ${line.sourceY}, ${midX} ${line.targetY}, ${line.targetX} ${line.targetY}`}
+                                fill="none"
+                                stroke={isHighlighted ? "#6366f1" : "#cbd5e1"}
+                                strokeWidth={isHighlighted ? "2" : "1.5"}
+                                markerEnd={isHighlighted ? "url(#arrowhead-highlight)" : "url(#arrowhead-all)"}
+                              />
+                              <circle 
+                                cx={line.sourceX} 
+                                cy={line.sourceY} 
+                                r="3" 
+                                fill={isHighlighted ? "#6366f1" : "#94a3b8"} 
+                              />
+                            </g>
+                          );
+                        })}
                       </svg>
                     )}
 
