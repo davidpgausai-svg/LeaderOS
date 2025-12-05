@@ -59,7 +59,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen, TrendingUp, AlertTriangle, Users, Megaphone, Link2, ExternalLink, X, Clock, ListChecks } from "lucide-react";
+import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen, TrendingUp, AlertTriangle, Users, Megaphone, Link2, ExternalLink, X, Clock, ListChecks, StickyNote } from "lucide-react";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { useLocation } from "wouter";
 import {
@@ -118,6 +118,8 @@ export default function Strategies() {
   const [selectedStrategyIdForAction, setSelectedStrategyIdForAction] = useState<string | null>(null);
   const [actionFolderUrl, setActionFolderUrl] = useState("");
   const [newChecklistItem, setNewChecklistItem] = useState("");
+  const [notesModalAction, setNotesModalAction] = useState<any>(null);
+  const [actionNotes, setActionNotes] = useState("");
 
   const { data: strategies, isLoading: strategiesLoading } = useQuery<any[]>({
     queryKey: ["/api/strategies"],
@@ -685,6 +687,45 @@ export default function Strategies() {
       toast({
         title: "Error",
         description: "Failed to update folder link",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Action notes update mutation
+  const updateActionNotesMutation = useMutation({
+    mutationFn: async ({ action, notes }: { action: any; notes: string }) => {
+      const updateData: any = {
+        title: action.title,
+        description: action.description,
+        strategyId: action.strategyId,
+        status: action.status,
+        isArchived: action.isArchived,
+        createdBy: action.createdBy,
+        notes: notes || null,
+      };
+      if (action.projectId) updateData.projectId = action.projectId;
+      if (action.targetValue) updateData.targetValue = action.targetValue;
+      if (action.currentValue) updateData.currentValue = action.currentValue;
+      if (action.measurementUnit) updateData.measurementUnit = action.measurementUnit;
+      if (action.dueDate) updateData.dueDate = action.dueDate;
+      if (action.documentFolderUrl) updateData.documentFolderUrl = action.documentFolderUrl;
+      
+      return await apiRequest("PATCH", `/api/actions/${action.id}`, updateData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+      toast({
+        title: "Success",
+        description: "Notes updated",
+      });
+      setNotesModalAction(null);
+      setActionNotes("");
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update notes",
         variant: "destructive",
       });
     },
@@ -1506,6 +1547,22 @@ export default function Strategies() {
                                                   data-testid={`action-checklist-${action.id}`}
                                                 >
                                                   <ListChecks className={`w-3 h-3 ${actionHasIncompleteChecklist(action.id) ? 'text-yellow-500' : getActionChecklistItems(action.id).length > 0 ? 'text-green-500' : 'text-gray-400'}`} />
+                                                </Button>
+                                                
+                                                {/* Notes */}
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className="h-5 w-5 p-0"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setNotesModalAction(action);
+                                                    setActionNotes(action.notes || "");
+                                                  }}
+                                                  title={action.notes ? "View notes" : "Add notes"}
+                                                  data-testid={`action-notes-${action.id}`}
+                                                >
+                                                  <StickyNote className={`w-3 h-3 ${action.notes ? 'text-blue-500' : 'text-gray-400'}`} />
                                                 </Button>
                                                 
                                                 {/* Folder link */}
@@ -2529,6 +2586,73 @@ export default function Strategies() {
                   Save
                 </Button>
               </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Action Notes Modal */}
+      <Dialog 
+        open={!!notesModalAction} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setNotesModalAction(null);
+            setActionNotes("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <StickyNote className="h-5 w-5" />
+              Action Notes
+            </DialogTitle>
+          </DialogHeader>
+          {notesModalAction && (
+            <div className="space-y-4">
+              <div className="border-b pb-3">
+                <h3 className="font-semibold text-gray-900 dark:text-white">
+                  {notesModalAction.title}
+                </h3>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="action-notes">Notes</Label>
+                <textarea
+                  id="action-notes"
+                  placeholder="Add notes about this action..."
+                  value={actionNotes}
+                  onChange={(e) => setActionNotes(e.target.value)}
+                  rows={6}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                  disabled={!canEditAllStrategies()}
+                  data-testid="textarea-action-notes"
+                />
+              </div>
+              {canEditAllStrategies() && (
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setNotesModalAction(null);
+                      setActionNotes("");
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      updateActionNotesMutation.mutate({ 
+                        action: notesModalAction, 
+                        notes: actionNotes 
+                      });
+                    }}
+                    disabled={updateActionNotesMutation.isPending}
+                    data-testid="button-save-action-notes"
+                  >
+                    Save
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
