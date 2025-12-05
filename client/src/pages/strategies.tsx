@@ -1116,17 +1116,17 @@ export default function Strategies() {
                                                 )}
                                               </DropdownMenuContent>
                                             </DropdownMenu>
+                                            
+                                            {/* Progress ring - inline with icons */}
+                                            <div className="h-6 w-6 flex items-center justify-center ml-1">
+                                              <ProgressRing progress={projectProgress} size={24} strokeWidth={2.5} />
+                                            </div>
                                           </div>
                                         </div>
                                         <span className="text-xs text-gray-500 dark:text-gray-400">
                                           {projectActions.length} action{projectActions.length !== 1 ? 's' : ''}
                                         </span>
                                       </div>
-                                    </div>
-
-                                    <div className="flex items-center space-x-2 flex-shrink-0">
-                                      {/* Progress ring */}
-                                      <ProgressRing progress={projectProgress} size={28} strokeWidth={2.5} />
                                     </div>
                                   </div>
 
