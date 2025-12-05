@@ -86,7 +86,7 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
       queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
       toast({
         title: "Success",
-        description: "Strategy created successfully",
+        description: "Priority created successfully",
       });
       form.reset();
       onOpenChange(false);
@@ -94,7 +94,7 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
     onError: (error) => {
       toast({
         title: "Error",
-        description: "Failed to create strategy",
+        description: "Failed to create priority",
         variant: "destructive",
       });
     },
@@ -163,7 +163,7 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create New Strategy</DialogTitle>
+          <DialogTitle>Create New Strategic Priority</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -172,9 +172,9 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Strategy Title</FormLabel>
+                  <FormLabel>Priority Title</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter strategy title" {...field} />
+                    <Input placeholder="Enter priority title" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -190,7 +190,7 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
                   <FormControl>
                     <Textarea
                       rows={4}
-                      placeholder="Describe the strategy and its objectives"
+                      placeholder="Describe the priority and its objectives"
                       {...field}
                     />
                   </FormControl>
@@ -324,7 +324,7 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
               name="colorCode"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Strategy Color</FormLabel>
+                  <FormLabel>Priority Color</FormLabel>
                   <FormControl>
                     <div className="space-y-3">
                       <div className="flex flex-wrap gap-2">
@@ -368,7 +368,7 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
                 Change Continuum (Required)
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Complete all fields to define the change management framework for this strategy.
+                Complete all fields to define the change management framework for this priority.
               </p>
 
               <FormField
