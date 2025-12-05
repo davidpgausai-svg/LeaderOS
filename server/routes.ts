@@ -1715,12 +1715,16 @@ Respond ONLY with a valid JSON object in this exact format:
         }
       }
       
-      const validatedData = insertActionSchema.parse(req.body);
+      // Process the update data - support partial updates like the project endpoint
+      const updateData = { ...req.body };
+      if (updateData.dueDate) {
+        updateData.dueDate = new Date(updateData.dueDate);
+      }
       
       // Check if due date changed - if so, clear notification tracking and delete stale notifications
       // Normalize dates to compare: convert to timestamps or treat null/undefined as equivalent
       const oldDueTime = oldAction.dueDate ? new Date(oldAction.dueDate).getTime() : null;
-      const newDueTime = validatedData.dueDate ? new Date(validatedData.dueDate).getTime() : null;
+      const newDueTime = updateData.dueDate ? new Date(updateData.dueDate).getTime() : null;
       const dueDateChanged = oldDueTime !== newDueTime;
       if (dueDateChanged) {
         // Clear in-memory notification tracking so scheduler can send fresh notifications
@@ -1733,7 +1737,7 @@ Respond ONLY with a valid JSON object in this exact format:
         }
       }
       
-      const action = await storage.updateAction(req.params.id, validatedData);
+      const action = await storage.updateAction(req.params.id, updateData);
       if (!action) {
         return res.status(404).json({ message: "Action not found" });
       }
@@ -1775,10 +1779,6 @@ Respond ONLY with a valid JSON object in this exact format:
       
       res.json(action);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        logger.error("Action validation error", error.errors);
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
       logger.error("Action update failed", error);
       res.status(500).json({ message: "Unable to update action. Please check your inputs and try again." });
     }

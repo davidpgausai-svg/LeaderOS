@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ChevronDown, ChevronRight, AlertTriangle, GitBranch, Filter, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -753,57 +754,80 @@ export default function Timeline() {
                           ))}
 
                           {(barWidth > 0) && (
-                            <div
-                              className={`absolute top-2 h-8 rounded-md flex items-center group ${getStatusColor(row.status, row.type)}`}
-                              style={{
-                                left: `${barLeft}px`,
-                                width: `${Math.max(barWidth, 40)}px`,
-                                opacity: row.type === 'priority' ? 0.6 : 0.9,
-                              }}
-                            >
-                              {row.type === 'project' && row.barrierCount && row.barrierCount > 0 && (
-                                <button
-                                  onClick={() => handleBarrierClick(row.projectId!, row.title)}
-                                  className="absolute -left-1 top-1/2 -translate-y-1/2 flex items-center justify-center w-6 h-6 bg-red-500 rounded-full text-white text-xs font-bold shadow-md hover:bg-red-600 z-10"
-                                  data-testid={`button-barrier-${row.id}`}
-                                >
-                                  <AlertTriangle className="w-3 h-3" />
-                                  {row.barrierCount > 1 && (
-                                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-700 rounded-full text-[10px] flex items-center justify-center">
-                                      {row.barrierCount}
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div
+                                    className={`absolute top-2 h-8 rounded-md flex items-center group ${getStatusColor(row.status, row.type)}`}
+                                    style={{
+                                      left: `${barLeft}px`,
+                                      width: `${Math.max(barWidth, 40)}px`,
+                                      opacity: row.type === 'priority' ? 0.6 : 0.9,
+                                    }}
+                                  >
+                                    {canDrag && startPixels !== null && (
+                                      <div
+                                        className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-white/30 rounded-l-md z-10"
+                                        onMouseDown={(e) => handleMouseDown(e, row.id, 'start', row.startDate!)}
+                                      />
+                                    )}
+                                    
+                                    <span className="text-xs font-medium text-white truncate px-3 flex-1">
+                                      {row.type !== 'priority' && row.title}
                                     </span>
-                                  )}
-                                </button>
-                              )}
 
-                              {canDrag && startPixels !== null && (
-                                <div
-                                  className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-white/30 rounded-l-md"
-                                  onMouseDown={(e) => handleMouseDown(e, row.id, 'start', row.startDate!)}
-                                />
-                              )}
-                              
-                              <span className="text-xs font-medium text-white truncate px-3 flex-1">
-                                {row.type !== 'priority' && row.title}
-                              </span>
+                                    {row.hasDependencies && (
+                                      <button
+                                        onClick={() => handleDependencyClick(row.id)}
+                                        className={`mr-1 p-1 rounded hover:bg-white/20 ${showDependencyLine === row.id ? 'bg-white/30' : ''}`}
+                                        data-testid={`button-dependency-${row.id}`}
+                                      >
+                                        <GitBranch className="w-3 h-3 text-white" />
+                                      </button>
+                                    )}
 
-                              {row.hasDependencies && (
-                                <button
-                                  onClick={() => handleDependencyClick(row.id)}
-                                  className={`mr-1 p-1 rounded hover:bg-white/20 ${showDependencyLine === row.id ? 'bg-white/30' : ''}`}
-                                  data-testid={`button-dependency-${row.id}`}
-                                >
-                                  <GitBranch className="w-3 h-3 text-white" />
-                                </button>
-                              )}
+                                    {row.type === 'project' && row.barrierCount && row.barrierCount > 0 && (
+                                      <button
+                                        onClick={() => handleBarrierClick(row.projectId!, row.title)}
+                                        className="absolute -right-3 top-1/2 -translate-y-1/2 flex items-center justify-center w-6 h-6 bg-red-500 rounded-full text-white text-xs font-bold shadow-md hover:bg-red-600 z-10"
+                                        data-testid={`button-barrier-${row.id}`}
+                                      >
+                                        <AlertTriangle className="w-3 h-3" />
+                                        {row.barrierCount > 1 && (
+                                          <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-700 rounded-full text-[10px] flex items-center justify-center">
+                                            {row.barrierCount}
+                                          </span>
+                                        )}
+                                      </button>
+                                    )}
 
-                              {canDrag && (
-                                <div
-                                  className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-white/30 rounded-r-md"
-                                  onMouseDown={(e) => handleMouseDown(e, row.id, 'end', row.endDate!)}
-                                />
-                              )}
-                            </div>
+                                    {canDrag && (
+                                      <div
+                                        className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-white/30 rounded-r-md z-10"
+                                        onMouseDown={(e) => handleMouseDown(e, row.id, 'end', row.endDate!)}
+                                      />
+                                    )}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-xs">
+                                  <div className="text-sm">
+                                    <p className="font-medium">{row.title}</p>
+                                    {row.startDate && row.endDate ? (
+                                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        {format(row.startDate, 'MMM d, yyyy')} - {format(row.endDate, 'MMM d, yyyy')}
+                                      </p>
+                                    ) : row.endDate ? (
+                                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        Due: {format(row.endDate, 'MMM d, yyyy')}
+                                      </p>
+                                    ) : null}
+                                    <p className="text-xs mt-1 capitalize">
+                                      Status: {row.status.replace(/_/g, ' ')}
+                                    </p>
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           )}
                         </div>
                       );
