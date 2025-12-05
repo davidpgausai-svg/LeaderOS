@@ -6,7 +6,7 @@ import {
   users, strategies, projects, activities, actions, notifications,
   actionDocuments, actionChecklistItems, userStrategyAssignments,
   meetingNotes, aiChatConversations, barriers, dependencies, templateTypes,
-  organizations, passwordResetTokens, executiveGoals,
+  organizations, passwordResetTokens, executiveGoals, strategyExecutiveGoals,
   type User, type UpsertUser, type InsertUser,
   type Strategy, type InsertStrategy,
   type Project, type InsertProject,
@@ -23,7 +23,8 @@ import {
   type TemplateType, type InsertTemplateType,
   type Organization,
   type PasswordResetToken,
-  type ExecutiveGoal, type InsertExecutiveGoal
+  type ExecutiveGoal, type InsertExecutiveGoal,
+  type StrategyExecutiveGoal
 } from '@shared/schema';
 
 export class PostgresStorage implements IStorage {
@@ -695,6 +696,28 @@ export class PostgresStorage implements IStorage {
   async getExecutiveGoal(id: string): Promise<ExecutiveGoal | undefined> {
     const [goal] = await db.select().from(executiveGoals).where(eq(executiveGoals.id, id));
     return goal || undefined;
+  }
+
+  async getStrategyExecutiveGoals(strategyId: string): Promise<StrategyExecutiveGoal[]> {
+    return db.select().from(strategyExecutiveGoals)
+      .where(eq(strategyExecutiveGoals.strategyId, strategyId));
+  }
+
+  async setStrategyExecutiveGoals(strategyId: string, goalIds: string[], organizationId: string): Promise<StrategyExecutiveGoal[]> {
+    await db.delete(strategyExecutiveGoals).where(eq(strategyExecutiveGoals.strategyId, strategyId));
+    
+    if (goalIds.length === 0) {
+      return [];
+    }
+    
+    const values = goalIds.map(goalId => ({
+      id: randomUUID(),
+      strategyId,
+      executiveGoalId: goalId,
+      organizationId,
+    }));
+    
+    return db.insert(strategyExecutiveGoals).values(values).returning();
   }
 }
 

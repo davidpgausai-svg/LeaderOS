@@ -439,3 +439,22 @@ export const insertExecutiveGoalSchema = createInsertSchema(executiveGoals).omit
 
 export type InsertExecutiveGoal = z.infer<typeof insertExecutiveGoalSchema>;
 export type ExecutiveGoal = typeof executiveGoals.$inferSelect;
+
+// Strategy Executive Goals - Junction table for many-to-many relationship
+export const strategyExecutiveGoals = pgTable("strategy_executive_goals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  strategyId: varchar("strategy_id").notNull(),
+  executiveGoalId: varchar("executive_goal_id").notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  createdAt: timestamp("created_at").default(sql`now()`),
+}, (table) => ({
+  uniqueStrategyGoal: unique().on(table.strategyId, table.executiveGoalId),
+}));
+
+export const insertStrategyExecutiveGoalSchema = createInsertSchema(strategyExecutiveGoals).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertStrategyExecutiveGoal = z.infer<typeof insertStrategyExecutiveGoalSchema>;
+export type StrategyExecutiveGoal = typeof strategyExecutiveGoals.$inferSelect;
