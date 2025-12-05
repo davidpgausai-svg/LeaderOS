@@ -345,6 +345,7 @@ export default function Timeline() {
         colorCode: strategy.colorCode,
         styles: {
           backgroundColor: strategy.colorCode || "#1e3a8a",
+          backgroundSelectedColor: strategy.colorCode || "#1e3a8a",
           progressColor: strategy.colorCode || "#1e3a8a",
           progressSelectedColor: strategy.colorCode || "#1e3a8a",
         },
@@ -390,6 +391,7 @@ export default function Timeline() {
           hasChildren: hasActions,
           styles: {
             backgroundColor: projectColor,
+            backgroundSelectedColor: projectColor,
             progressColor: projectColor,
             progressSelectedColor: projectColor,
           },
@@ -418,6 +420,7 @@ export default function Timeline() {
             hasChildren: false,
             styles: {
               backgroundColor: actionColor,
+              backgroundSelectedColor: actionColor,
               progressColor: actionColor,
               progressSelectedColor: actionColor,
             },
@@ -622,18 +625,21 @@ export default function Timeline() {
           ) : (
             <div className="h-full gantt-container">
               <style>{`
+                /* Grid background */
                 .gantt-container ._2dZTy {
                   fill: #f9fafb;
                 }
                 .dark .gantt-container ._2dZTy {
                   fill: #111827;
                 }
+                /* Grid lines */
                 .gantt-container ._3_ygE {
                   stroke: #e5e7eb;
                 }
                 .dark .gantt-container ._3_ygE {
                   stroke: #374151;
                 }
+                /* Header text */
                 .gantt-container ._9w8d5 {
                   fill: #6b7280;
                   font-size: 11px;
@@ -641,12 +647,14 @@ export default function Timeline() {
                 .dark .gantt-container ._9w8d5 {
                   fill: #9ca3af;
                 }
+                /* Alternating row background */
                 .gantt-container ._3rUKi {
                   fill: #f3f4f6;
                 }
                 .dark .gantt-container ._3rUKi {
                   fill: #1f2937;
                 }
+                /* Row borders */
                 .gantt-container ._RuwuK {
                   stroke: #e5e7eb;
                 }
@@ -655,6 +663,35 @@ export default function Timeline() {
                 }
                 .gantt-container svg {
                   overflow: visible;
+                }
+                
+                /* === TASK BAR STYLING === */
+                /* All bars - flat modern look with subtle rounding */
+                .gantt-container g > rect {
+                  rx: 3px;
+                  ry: 3px;
+                }
+                
+                /* Prevent any opacity/filter changes on hover/click/selection */
+                .gantt-container g:hover > rect,
+                .gantt-container g:focus > rect,
+                .gantt-container g:active > rect,
+                .gantt-container g[class*="selected"] > rect,
+                .gantt-container g > rect:hover,
+                .gantt-container g > rect:focus {
+                  opacity: 1 !important;
+                  filter: none !important;
+                  transition: none !important;
+                }
+                
+                /* Ensure consistent bar appearance */
+                .gantt-container svg g rect {
+                  transition: none !important;
+                }
+                
+                /* Cursor for interactive bars */
+                .gantt-container g[cursor="pointer"] {
+                  cursor: pointer;
                 }
               `}</style>
               <Gantt
@@ -668,6 +705,9 @@ export default function Timeline() {
                 listCellWidth="180px"
                 columnWidth={columnWidth}
                 barBackgroundColor="#e5e7eb"
+                barBackgroundSelectedColor="#e5e7eb"
+                barProgressColor="#94a3b8"
+                barProgressSelectedColor="#94a3b8"
                 rowHeight={36}
                 fontSize="12px"
                 headerHeight={40}
