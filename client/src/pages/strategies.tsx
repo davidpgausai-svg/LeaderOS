@@ -470,50 +470,51 @@ export default function Strategies() {
                         {/* Spacer to push buttons right on larger screens */}
                         <div className="flex-1 min-w-0 hidden lg:block" />
                         
-                        {/* Metrics Button */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleViewStrategy(strategy);
-                          }}
-                          className="h-7 px-2 text-xs"
-                          data-testid={`button-metrics-${strategy.id}`}
-                        >
-                          <BarChart3 className="w-3.5 h-3.5 sm:mr-1" />
-                          <span className="hidden sm:inline">Metrics</span>
-                        </Button>
-                        
-                        {/* Continuum Button */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setExpandedContinuum(prev => ({ ...prev, [strategy.id]: !prev[strategy.id] }));
-                            if (isCollapsed) {
-                              toggleStrategyCollapse(strategy.id);
-                            }
-                          }}
-                          className="h-7 px-2 text-xs"
-                          data-testid={`button-continuum-${strategy.id}`}
-                        >
-                          <RefreshCw className="w-3.5 h-3.5 sm:mr-1" />
-                          <span className="hidden sm:inline">Continuum</span>
-                        </Button>
-                        
-                        {/* Navigate to Projects */}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => navigateToProjects(strategy.id, e)}
-                          className="h-7 w-7 p-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                          title="Go to Projects"
-                          data-testid={`button-nav-projects-${strategy.id}`}
-                        >
-                          <ArrowRight className="h-4 w-4" />
-                        </Button>
+                        {/* Action buttons wrapper - stops propagation to prevent CardHeader click */}
+                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                          {/* Objectives Button */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewStrategy(strategy)}
+                            className="h-7 px-2 text-xs"
+                            data-testid={`button-metrics-${strategy.id}`}
+                          >
+                            <BarChart3 className="w-3.5 h-3.5 sm:mr-1" />
+                            <span className="hidden sm:inline">Objectives</span>
+                          </Button>
+                          
+                          {/* Continuum Button */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              // Toggle the continuum expansion
+                              setExpandedContinuum(prev => ({ ...prev, [strategy.id]: !prev[strategy.id] }));
+                              // If card is collapsed, expand it first
+                              if (isCollapsed) {
+                                toggleStrategyCollapse(strategy.id);
+                              }
+                            }}
+                            className="h-7 px-2 text-xs"
+                            data-testid={`button-continuum-${strategy.id}`}
+                          >
+                            <RefreshCw className="w-3.5 h-3.5 sm:mr-1" />
+                            <span className="hidden sm:inline">Continuum</span>
+                          </Button>
+                          
+                          {/* Navigate to Projects */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => navigateToProjects(strategy.id, e)}
+                            className="h-7 w-7 p-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                            title="Go to Projects"
+                            data-testid={`button-nav-projects-${strategy.id}`}
+                          >
+                            <ArrowRight className="h-4 w-4" />
+                          </Button>
+                        </div>
                         
                         {/* Menu */}
                         <DropdownMenu>
