@@ -632,13 +632,13 @@ export default function Settings() {
       await apiRequest("DELETE", `/api/strategies/${strategyId}`);
       toast({
         title: "Success",
-        description: "Strategy deleted successfully",
+        description: "Priority deleted successfully",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to delete strategy",
+        description: "Failed to delete priority",
         variant: "destructive",
       });
     }
@@ -669,13 +669,13 @@ export default function Settings() {
       queryClient.invalidateQueries({ queryKey: [`/api/users/${variables.userId}/strategy-assignments`] });
       toast({
         title: "Success",
-        description: "Strategy assigned successfully",
+        description: "Priority assigned successfully",
       });
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to assign strategy",
+        description: "Failed to assign priority",
         variant: "destructive",
       });
     },
@@ -690,13 +690,13 @@ export default function Settings() {
       queryClient.invalidateQueries({ queryKey: [`/api/users/${variables.userId}/strategy-assignments`] });
       toast({
         title: "Success",
-        description: "Strategy unassigned successfully",
+        description: "Priority unassigned successfully",
       });
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to unassign strategy",
+        description: "Failed to unassign priority",
         variant: "destructive",
       });
     },
@@ -1512,9 +1512,9 @@ export default function Settings() {
                   <CardContent className="space-y-6">
                     <div className="space-y-4">
                       <div className="p-4 border rounded-lg">
-                        <h4 className="font-medium mb-2">Strategy Cleanup</h4>
+                        <h4 className="font-medium mb-2">Priority Cleanup</h4>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                          Remove completed or outdated strategies to keep the organization's workspace clean.
+                          Remove completed or outdated priorities to keep the organization's workspace clean.
                         </p>
                         <div className="space-y-2">
                           {(strategies as any[])?.filter((s: any) => s.status === 'completed').map((strategy: any) => (
@@ -1528,15 +1528,15 @@ export default function Settings() {
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                   <AlertDialogHeader>
-                                    <AlertDialogTitle>Delete Strategy</AlertDialogTitle>
+                                    <AlertDialogTitle>Delete Priority</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      Are you sure you want to delete "{strategy.title}"? This action cannot be undone and will affect all associated tactics.
+                                      Are you sure you want to delete "{strategy.title}"? This action cannot be undone and will affect all associated projects.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                                     <AlertDialogAction onClick={() => handleDeleteStrategy(strategy.id)}>
-                                      Delete Strategy
+                                      Delete Priority
                                     </AlertDialogAction>
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
@@ -1553,10 +1553,10 @@ export default function Settings() {
                         </p>
                         <div className="flex space-x-2">
                           <Button variant="outline" data-testid="button-admin-export-strategies">
-                            Export All Strategies
+                            Export All Priorities
                           </Button>
                           <Button variant="outline" data-testid="button-admin-export-tactics">
-                            Export All Tactics
+                            Export All Projects
                           </Button>
                           <Button variant="outline" data-testid="button-admin-export-everything">
                             Complete Data Export

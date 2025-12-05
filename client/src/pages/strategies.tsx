@@ -269,13 +269,13 @@ export default function Strategies() {
       queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
       toast({
         title: "Success",
-        description: "Strategy marked as completed",
+        description: "Priority marked as completed",
       });
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to complete strategy",
+        description: "Failed to complete priority",
         variant: "destructive",
       });
     },
@@ -292,13 +292,13 @@ export default function Strategies() {
       queryClient.invalidateQueries({ queryKey: ["/api/outcomes"] });
       toast({
         title: "Success",
-        description: "Strategy and related items archived successfully",
+        description: "Priority and related items archived successfully",
       });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to archive strategy",
+        description: error.message || "Failed to archive priority",
         variant: "destructive",
       });
     },
@@ -314,13 +314,13 @@ export default function Strategies() {
       queryClient.invalidateQueries({ queryKey: ["/api/tactics"] });
       toast({
         title: "Success",
-        description: "Strategy deleted successfully",
+        description: "Priority deleted successfully",
       });
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to delete strategy",
+        description: "Failed to delete priority",
         variant: "destructive",
       });
     },

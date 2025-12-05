@@ -128,7 +128,7 @@ export function EditStrategyModal({ open, onOpenChange, strategy }: EditStrategy
       queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
       toast({
         title: "Success",
-        description: "Strategy updated successfully",
+        description: "Priority updated successfully",
       });
       onOpenChange(false);
     },
@@ -136,7 +136,7 @@ export function EditStrategyModal({ open, onOpenChange, strategy }: EditStrategy
       console.error("Strategy update error:", error);
       toast({
         title: "Error", 
-        description: "Failed to update strategy",
+        description: "Failed to update priority",
         variant: "destructive",
       });
     },
@@ -152,7 +152,7 @@ export function EditStrategyModal({ open, onOpenChange, strategy }: EditStrategy
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Strategy</DialogTitle>
+          <DialogTitle>Edit Strategic Priority</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -166,9 +166,9 @@ export function EditStrategyModal({ open, onOpenChange, strategy }: EditStrategy
                   name="title"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Strategy Title *</FormLabel>
+                      <FormLabel>Priority Title *</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter strategy title..." {...field} data-testid="input-edit-strategy-title" />
+                        <Input placeholder="Enter priority title..." {...field} data-testid="input-edit-strategy-title" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -183,7 +183,7 @@ export function EditStrategyModal({ open, onOpenChange, strategy }: EditStrategy
                       <FormLabel>Description *</FormLabel>
                       <FormControl>
                         <Textarea 
-                          placeholder="Describe the strategy..." 
+                          placeholder="Describe the priority..." 
                           className="min-h-[100px]"
                           {...field} 
                           data-testid="textarea-edit-strategy-description"
@@ -381,7 +381,7 @@ export function EditStrategyModal({ open, onOpenChange, strategy }: EditStrategy
                   name="colorCode"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Strategy Color</FormLabel>
+                      <FormLabel>Priority Color</FormLabel>
                       <FormControl>
                         <div className="space-y-3">
                           <div className="flex flex-wrap gap-2">
@@ -425,7 +425,7 @@ export function EditStrategyModal({ open, onOpenChange, strategy }: EditStrategy
               <div className="space-y-4 border-t pt-6">
                 <h3 className="text-lg font-medium">Change Continuum (Required)</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Complete all fields to define the change management framework for this strategy.
+                  Complete all fields to define the change management framework for this priority.
                 </p>
 
                 <FormField
