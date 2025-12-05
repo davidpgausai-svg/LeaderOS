@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertStrategySchema, insertProjectSchema, insertActionSchema, insertActionDocumentSchema, insertActionChecklistItemSchema, insertMeetingNoteSchema, insertBarrierSchema, insertDependencySchema, insertTemplateTypeSchema } from "@shared/schema";
+import { insertStrategySchema, insertProjectSchema, insertActionSchema, insertActionDocumentSchema, insertActionChecklistItemSchema, insertMeetingNoteSchema, insertBarrierSchema, insertDependencySchema, insertTemplateTypeSchema, insertExecutiveGoalSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./jwtAuth";
 import { z } from "zod";
 import { logger } from "./logger";
@@ -3009,6 +3009,139 @@ Available navigation: Dashboard, Strategies, Projects, Actions, Timeline, Meetin
     } catch (error) {
       logger.error("Failed to delete template type", error);
       res.status(500).json({ message: "Failed to delete template type" });
+    }
+  });
+
+  // Executive Goal routes (organization-scoped, admin-only management)
+  app.get("/api/executive-goals", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      const goals = await storage.getExecutiveGoalsByOrganization(user.organizationId);
+      res.json(goals);
+    } catch (error) {
+      logger.error("Failed to fetch executive goals", error);
+      res.status(500).json({ message: "Failed to fetch executive goals" });
+    }
+  });
+
+  app.post("/api/executive-goals", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'administrator') {
+        return res.status(403).json({ message: "Only administrators can create executive goals" });
+      }
+
+      if (!user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      const validatedData = insertExecutiveGoalSchema.parse(req.body);
+
+      const goal = await storage.createExecutiveGoal({
+        ...validatedData,
+        organizationId: user.organizationId,
+        createdBy: userId
+      });
+      res.status(201).json(goal);
+    } catch (error) {
+      logger.error("Failed to create executive goal", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid executive goal data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create executive goal" });
+    }
+  });
+
+  app.patch("/api/executive-goals/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'administrator') {
+        return res.status(403).json({ message: "Only administrators can update executive goals" });
+      }
+
+      if (!user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      // Verify the goal belongs to the user's organization
+      const existingGoal = await storage.getExecutiveGoal(req.params.id);
+      if (!existingGoal) {
+        return res.status(404).json({ message: "Executive goal not found" });
+      }
+
+      if (existingGoal.organizationId !== user.organizationId) {
+        return res.status(403).json({ message: "Cannot update goals from other organizations" });
+      }
+
+      const validatedData = insertExecutiveGoalSchema.partial().parse(req.body);
+
+      const goal = await storage.updateExecutiveGoal(req.params.id, validatedData);
+      if (!goal) {
+        return res.status(404).json({ message: "Executive goal not found" });
+      }
+      res.json(goal);
+    } catch (error) {
+      logger.error("Failed to update executive goal", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid executive goal data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update executive goal" });
+    }
+  });
+
+  app.delete("/api/executive-goals/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'administrator') {
+        return res.status(403).json({ message: "Only administrators can delete executive goals" });
+      }
+
+      if (!user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      // Verify the goal belongs to the user's organization
+      const existingGoal = await storage.getExecutiveGoal(req.params.id);
+      if (!existingGoal) {
+        return res.status(404).json({ message: "Executive goal not found" });
+      }
+
+      if (existingGoal.organizationId !== user.organizationId) {
+        return res.status(403).json({ message: "Cannot delete goals from other organizations" });
+      }
+
+      const success = await storage.deleteExecutiveGoal(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Executive goal not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      logger.error("Failed to delete executive goal", error);
+      res.status(500).json({ message: "Failed to delete executive goal" });
     }
   });
 
