@@ -24,6 +24,7 @@ import {
   LayoutTemplate,
 } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import logoImage from "@assets/Strategy_Plan_Logo_2.0_-_dark_1764957298563.png";
 
 const coreNavigation = [
   { name: "Priorities", href: "/strategies", icon: Target, iconColor: "text-indigo-500" },
@@ -64,12 +65,14 @@ export function Sidebar() {
   return (
     <aside className={`${isCollapsed ? 'w-20' : 'w-64'} bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-300`}>
       {/* Header with Toggle */}
-      <div className={`${isCollapsed ? 'p-4' : 'p-6'} border-b border-gray-200 dark:border-gray-800 flex items-center justify-between`}>
-        {!isCollapsed && (
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Executive Planner</h1>
-          </div>
-        )}
+      <div className={`${isCollapsed ? 'p-3' : 'p-6'} flex items-center ${isCollapsed ? 'flex-col gap-2' : 'justify-between'}`}>
+        <div className={`flex items-center ${isCollapsed ? 'justify-center' : ''}`}>
+          <img 
+            src={logoImage} 
+            alt="Strategy Plan" 
+            className={isCollapsed ? "h-10 w-10 object-contain" : "h-10 w-auto"} 
+          />
+        </div>
         <Button
           onClick={toggleSidebar}
           variant="ghost"
