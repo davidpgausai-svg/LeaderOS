@@ -45,7 +45,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen, TrendingUp } from "lucide-react";
+import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen, TrendingUp, AlertTriangle } from "lucide-react";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { useLocation } from "wouter";
 import {
@@ -72,7 +72,7 @@ export default function Strategies() {
   const [metricsModalStrategy, setMetricsModalStrategy] = useState<any>(null);
   const [continuumModalStrategy, setContinuumModalStrategy] = useState<any>(null);
   const [collapsedStrategies, setCollapsedStrategies] = useState<Set<string>>(new Set());
-  const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
 
   const { data: strategies, isLoading: strategiesLoading } = useQuery({
     queryKey: ["/api/strategies"],
@@ -86,6 +86,24 @@ export default function Strategies() {
   const { data: actions } = useQuery<any[]>({
     queryKey: ["/api/actions"],
   });
+
+  // Fetch all barriers for barrier icons
+  const { data: barriers } = useQuery<any[]>({
+    queryKey: ["/api/barriers"],
+    queryFn: async () => {
+      const response = await fetch("/api/barriers", {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch barriers");
+      return response.json();
+    },
+  });
+
+  // Helper to check if a project has active barriers
+  const projectHasActiveBarriers = (projectId: string) => {
+    if (!barriers) return false;
+    return barriers.some((b: any) => b.projectId === projectId && b.status === 'active');
+  };
 
   // Check URL for strategyId param to auto-filter to that strategy
   // Note: wouter's location only includes pathname, so we use window.location.search for query params
@@ -149,10 +167,10 @@ export default function Strategies() {
     setLocation(`/actions?actionId=${actionId}`);
   };
 
-  // Toggle project collapse
+  // Toggle project expand/collapse (projects are collapsed by default)
   const toggleProjectCollapse = (projectId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setCollapsedProjects(prev => {
+    setExpandedProjects(prev => {
       const newSet = new Set(prev);
       if (newSet.has(projectId)) {
         newSet.delete(projectId);
@@ -653,7 +671,7 @@ export default function Strategies() {
                               })
                               .map((project: any) => {
                               const projectActions = getProjectActions(project.id);
-                              const isProjectExpanded = !collapsedProjects.has(project.id);
+                              const isProjectExpanded = expandedProjects.has(project.id);
                               const statusBadge = getProjectStatusBadge(project.status);
                               const projectProgress = project.progress || 0;
 
@@ -689,6 +707,12 @@ export default function Strategies() {
                                           >
                                             <Eye className="w-3.5 h-3.5 text-gray-500" />
                                           </Button>
+                                          {/* Barrier icon - shown when project has active barriers */}
+                                          {projectHasActiveBarriers(project.id) && (
+                                            <span title="This project has active barriers" data-testid={`icon-barrier-${project.id}`}>
+                                              <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+                                            </span>
+                                          )}
                                         </div>
                                         <span className="text-xs text-gray-500 dark:text-gray-400">
                                           {projectActions.length} action{projectActions.length !== 1 ? 's' : ''}
