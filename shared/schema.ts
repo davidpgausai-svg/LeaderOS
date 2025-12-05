@@ -419,3 +419,22 @@ export const insertAiChatConversationSchema = createInsertSchema(aiChatConversat
 
 export type InsertAiChatConversation = z.infer<typeof insertAiChatConversationSchema>;
 export type AiChatConversation = typeof aiChatConversations.$inferSelect;
+
+// Executive Goals - Organization-level tags for strategic planning
+export const executiveGoals = pgTable("executive_goals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  createdBy: varchar("created_by").notNull(),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+export const insertExecutiveGoalSchema = createInsertSchema(executiveGoals).omit({
+  id: true,
+  createdAt: true,
+  createdBy: true,
+  organizationId: true,
+});
+
+export type InsertExecutiveGoal = z.infer<typeof insertExecutiveGoalSchema>;
+export type ExecutiveGoal = typeof executiveGoals.$inferSelect;

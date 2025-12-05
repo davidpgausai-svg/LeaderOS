@@ -1,4 +1,4 @@
-import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Project, type InsertProject, type Activity, type InsertActivity, type Action, type InsertAction, type Notification, type InsertNotification, type ActionDocument, type InsertActionDocument, type ActionChecklistItem, type InsertActionChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, type AiChatConversation, type InsertAiChatConversation, type Barrier, type InsertBarrier, type Dependency, type InsertDependency, type TemplateType, type InsertTemplateType } from "@shared/schema";
+import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Project, type InsertProject, type Activity, type InsertActivity, type Action, type InsertAction, type Notification, type InsertNotification, type ActionDocument, type InsertActionDocument, type ActionChecklistItem, type InsertActionChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, type AiChatConversation, type InsertAiChatConversation, type Barrier, type InsertBarrier, type Dependency, type InsertDependency, type TemplateType, type InsertTemplateType, type ExecutiveGoal, type InsertExecutiveGoal } from "@shared/schema";
 
 export interface IStorage {
   // User methods
@@ -110,6 +110,13 @@ export interface IStorage {
   getAllTemplateTypes(): Promise<TemplateType[]>;
   createTemplateType(templateType: InsertTemplateType): Promise<TemplateType>;
   deleteTemplateType(id: string): Promise<boolean>;
+
+  // Executive Goal methods
+  getExecutiveGoalsByOrganization(organizationId: string): Promise<ExecutiveGoal[]>;
+  getExecutiveGoal(id: string): Promise<ExecutiveGoal | undefined>;
+  createExecutiveGoal(goal: InsertExecutiveGoal & { organizationId: string; createdBy: string }): Promise<ExecutiveGoal>;
+  updateExecutiveGoal(id: string, updates: Partial<InsertExecutiveGoal>): Promise<ExecutiveGoal | undefined>;
+  deleteExecutiveGoal(id: string): Promise<boolean>;
 }
 
 // Use PostgreSQL storage

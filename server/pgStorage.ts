@@ -6,7 +6,7 @@ import {
   users, strategies, projects, activities, actions, notifications,
   actionDocuments, actionChecklistItems, userStrategyAssignments,
   meetingNotes, aiChatConversations, barriers, dependencies, templateTypes,
-  organizations, passwordResetTokens,
+  organizations, passwordResetTokens, executiveGoals,
   type User, type UpsertUser, type InsertUser,
   type Strategy, type InsertStrategy,
   type Project, type InsertProject,
@@ -22,7 +22,8 @@ import {
   type Dependency, type InsertDependency,
   type TemplateType, type InsertTemplateType,
   type Organization,
-  type PasswordResetToken
+  type PasswordResetToken,
+  type ExecutiveGoal, type InsertExecutiveGoal
 } from '@shared/schema';
 
 export class PostgresStorage implements IStorage {
@@ -660,6 +661,40 @@ export class PostgresStorage implements IStorage {
   async deleteTemplateType(id: string): Promise<boolean> {
     const result = await db.delete(templateTypes).where(eq(templateTypes.id, id)).returning();
     return result.length > 0;
+  }
+
+  async getExecutiveGoalsByOrganization(organizationId: string): Promise<ExecutiveGoal[]> {
+    return db.select().from(executiveGoals)
+      .where(eq(executiveGoals.organizationId, organizationId))
+      .orderBy(executiveGoals.createdAt);
+  }
+
+  async createExecutiveGoal(goal: InsertExecutiveGoal & { organizationId: string; createdBy: string }): Promise<ExecutiveGoal> {
+    const [executiveGoal] = await db.insert(executiveGoals).values({
+      id: randomUUID(),
+      name: goal.name,
+      organizationId: goal.organizationId,
+      createdBy: goal.createdBy,
+    }).returning();
+    return executiveGoal;
+  }
+
+  async updateExecutiveGoal(id: string, updates: Partial<InsertExecutiveGoal>): Promise<ExecutiveGoal | undefined> {
+    const [executiveGoal] = await db.update(executiveGoals)
+      .set(updates)
+      .where(eq(executiveGoals.id, id))
+      .returning();
+    return executiveGoal || undefined;
+  }
+
+  async deleteExecutiveGoal(id: string): Promise<boolean> {
+    const result = await db.delete(executiveGoals).where(eq(executiveGoals.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getExecutiveGoal(id: string): Promise<ExecutiveGoal | undefined> {
+    const [goal] = await db.select().from(executiveGoals).where(eq(executiveGoals.id, id));
+    return goal || undefined;
   }
 }
 
