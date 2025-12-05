@@ -6,6 +6,9 @@ import { CreateStrategyModal } from "@/components/modals/create-strategy-modal";
 import { EditStrategyModal } from "@/components/modals/edit-strategy-modal";
 import { ViewStrategyModal } from "@/components/modals/view-strategy-modal";
 import { CreateProjectModal } from "@/components/modals/create-project-modal";
+import { EditProjectModal } from "@/components/modals/edit-project-modal";
+import { ViewProjectModal } from "@/components/modals/view-project-modal";
+import { ManageBarriersModal } from "@/components/modals/manage-barriers-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -45,7 +48,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen, TrendingUp, AlertTriangle, Users } from "lucide-react";
+import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen, TrendingUp, AlertTriangle, Users, Megaphone, Link2, ExternalLink } from "lucide-react";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { useLocation } from "wouter";
 import {
@@ -74,6 +77,19 @@ export default function Strategies() {
   const [leadersModalProject, setLeadersModalProject] = useState<any>(null);
   const [collapsedStrategies, setCollapsedStrategies] = useState<Set<string>>(new Set());
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  
+  // Project icon bar modal states
+  const [barriersProjectId, setBarriersProjectId] = useState<string | null>(null);
+  const [isManageBarriersOpen, setIsManageBarriersOpen] = useState(false);
+  const [timelineModalProject, setTimelineModalProject] = useState<any>(null);
+  const [kpiModalProject, setKpiModalProject] = useState<any>(null);
+  const [documentsModalProject, setDocumentsModalProject] = useState<any>(null);
+  const [communicationModalProject, setCommunicationModalProject] = useState<any>(null);
+  const [dependenciesModalProject, setDependenciesModalProject] = useState<any>(null);
+  const [editingProject, setEditingProject] = useState<any>(null);
+  const [viewingProject, setViewingProject] = useState<any>(null);
+  const [isEditProjectOpen, setIsEditProjectOpen] = useState(false);
+  const [isViewProjectOpen, setIsViewProjectOpen] = useState(false);
 
   const { data: strategies, isLoading: strategiesLoading } = useQuery({
     queryKey: ["/api/strategies"],
@@ -104,6 +120,61 @@ export default function Strategies() {
   const { data: users } = useQuery<any[]>({
     queryKey: ["/api/users"],
   });
+
+  // Fetch all dependencies for dependency icons
+  const { data: dependencies } = useQuery<any[]>({
+    queryKey: ["/api/dependencies"],
+    queryFn: async () => {
+      const response = await fetch("/api/dependencies", {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch dependencies");
+      return response.json();
+    },
+  });
+
+  // Helper to check if a project has dependencies
+  const projectHasDependencies = (projectId: string) => {
+    if (!dependencies) return false;
+    return dependencies.some(
+      (d: any) => 
+        (d.sourceType === 'project' && d.sourceId === projectId) ||
+        (d.targetType === 'project' && d.targetId === projectId)
+    );
+  };
+
+  // Helper to get project dependencies
+  const getProjectDependencies = (projectId: string) => {
+    if (!dependencies) return [];
+    return dependencies.filter(
+      (d: any) => 
+        (d.sourceType === 'project' && d.sourceId === projectId) ||
+        (d.targetType === 'project' && d.targetId === projectId)
+    );
+  };
+
+  // Helper to get timeline color based on due date
+  const getTimelineColor = (project: any) => {
+    if (!project?.dueDate) return 'gray';
+    const now = new Date();
+    const dueDate = new Date(project.dueDate);
+    const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysUntilDue < 0) return 'red'; // Past due
+    if (daysUntilDue <= 7) return 'yellow'; // Within 7 days
+    return 'green'; // On track
+  };
+
+  // Helper to get timeline icon classes
+  const getTimelineIconClass = (project: any) => {
+    const color = getTimelineColor(project);
+    switch (color) {
+      case 'red': return 'text-red-500';
+      case 'yellow': return 'text-yellow-500';
+      case 'green': return 'text-green-500';
+      default: return 'text-gray-400';
+    }
+  };
 
   // Helper to get leader names from project's accountableLeaders
   const getProjectLeaders = (project: any) => {
@@ -358,6 +429,48 @@ export default function Strategies() {
 
   const handleDeleteStrategy = (strategyId: string) => {
     deleteStrategyMutation.mutate(strategyId);
+  };
+
+  // Project action handlers
+  const deleteProjectMutation = useMutation({
+    mutationFn: async (projectId: string) => {
+      const response = await apiRequest("DELETE", `/api/projects/${projectId}`);
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      toast({
+        title: "Success",
+        description: "Project deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete project",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleEditProject = (project: any) => {
+    setEditingProject(project);
+    setIsEditProjectOpen(true);
+  };
+
+  const handleViewProject = (project: any) => {
+    setViewingProject(project);
+    setIsViewProjectOpen(true);
+  };
+
+  const handleDeleteProject = (projectId: string) => {
+    deleteProjectMutation.mutate(projectId);
+  };
+
+  const handleManageBarriers = (projectId: string) => {
+    setBarriersProjectId(projectId);
+    setIsManageBarriersOpen(true);
   };
 
   const toggleStrategyCollapse = (strategyId: string) => {
@@ -710,43 +823,214 @@ export default function Strategies() {
                                         <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
                                       )}
                                       
-                                      {/* Project title and action count */}
-                                      <div className="min-w-0">
-                                        <div className="flex items-center gap-1.5">
-                                          <span className="font-bold text-base text-gray-900 dark:text-white truncate">
+                                      {/* Project title, status badge, and action count */}
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          <span className="font-bold text-base text-gray-900 dark:text-white truncate max-w-[200px]">
                                             {project.title}
                                           </span>
-                                          {/* Navigate to project - immediately after title */}
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-6 w-6 p-0 flex-shrink-0"
-                                            onClick={(e) => navigateToProject(project.id, e)}
-                                            title="View project details"
-                                            data-testid={`button-view-project-${project.id}`}
-                                          >
-                                            <Eye className="w-3.5 h-3.5 text-gray-500" />
-                                          </Button>
-                                          {/* View project leaders */}
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-6 w-6 p-0 flex-shrink-0"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setLeadersModalProject(project);
-                                            }}
-                                            title="View project leaders"
-                                            data-testid={`button-view-leaders-${project.id}`}
-                                          >
-                                            <Users className="w-3.5 h-3.5 text-gray-500" />
-                                          </Button>
-                                          {/* Barrier icon - shown when project has active barriers */}
-                                          {projectHasActiveBarriers(project.id) && (
-                                            <span title="This project has active barriers" data-testid={`icon-barrier-${project.id}`}>
-                                              <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" />
-                                            </span>
-                                          )}
+                                          {/* Status badge - immediately after title */}
+                                          <Badge className={`text-xs px-1.5 py-0 ${statusBadge.color}`}>
+                                            {statusBadge.label}
+                                          </Badge>
+                                          
+                                          {/* Icon Bar */}
+                                          <div className="flex items-center gap-0.5 ml-1">
+                                            {/* View project */}
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              className="h-6 w-6 p-0"
+                                              onClick={(e) => navigateToProject(project.id, e)}
+                                              title="View project details"
+                                              data-testid={`button-view-project-${project.id}`}
+                                            >
+                                              <Eye className="w-3.5 h-3.5 text-gray-500" />
+                                            </Button>
+                                            
+                                            {/* Leaders */}
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              className="h-6 w-6 p-0"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setLeadersModalProject(project);
+                                              }}
+                                              title="View project leaders"
+                                              data-testid={`button-view-leaders-${project.id}`}
+                                            >
+                                              <Users className="w-3.5 h-3.5 text-gray-500" />
+                                            </Button>
+                                            
+                                            {/* Barriers - grey if none, red if active */}
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              className="h-6 w-6 p-0"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleManageBarriers(project.id);
+                                              }}
+                                              title={projectHasActiveBarriers(project.id) ? "Manage barriers" : "Add barrier"}
+                                              data-testid={`button-barriers-${project.id}`}
+                                            >
+                                              <AlertTriangle className={`w-3.5 h-3.5 ${projectHasActiveBarriers(project.id) ? 'text-red-500' : 'text-gray-400'}`} />
+                                            </Button>
+                                            
+                                            {/* Timeline - color coded */}
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              className="h-6 w-6 p-0"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setTimelineModalProject(project);
+                                              }}
+                                              title="View timeline"
+                                              data-testid={`button-timeline-${project.id}`}
+                                            >
+                                              <Calendar className={`w-3.5 h-3.5 ${getTimelineIconClass(project)}`} />
+                                            </Button>
+                                            
+                                            {/* KPI */}
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              className="h-6 w-6 p-0"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setKpiModalProject(project);
+                                              }}
+                                              title="View KPIs"
+                                              data-testid={`button-kpi-${project.id}`}
+                                            >
+                                              <Target className="w-3.5 h-3.5 text-gray-500" />
+                                            </Button>
+                                            
+                                            {/* Documents */}
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              className="h-6 w-6 p-0"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (project.documentFolderUrl) {
+                                                  window.open(project.documentFolderUrl, '_blank');
+                                                } else {
+                                                  setDocumentsModalProject(project);
+                                                }
+                                              }}
+                                              title={project.documentFolderUrl ? "Open project documents" : "No documents linked"}
+                                              data-testid={`button-documents-${project.id}`}
+                                            >
+                                              <FolderOpen className={`w-3.5 h-3.5 ${project.documentFolderUrl ? 'text-blue-500' : 'text-gray-400'}`} />
+                                            </Button>
+                                            
+                                            {/* Communication */}
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              className="h-6 w-6 p-0"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (project.communicationUrl) {
+                                                  window.open(project.communicationUrl, '_blank');
+                                                } else {
+                                                  setCommunicationModalProject(project);
+                                                }
+                                              }}
+                                              title={project.communicationUrl ? "Open communication plan" : "No communication plan linked"}
+                                              data-testid={`button-communication-${project.id}`}
+                                            >
+                                              <Megaphone className={`w-3.5 h-3.5 ${project.communicationUrl ? 'text-blue-500' : 'text-gray-400'}`} />
+                                            </Button>
+                                            
+                                            {/* Dependencies */}
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              className="h-6 w-6 p-0"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setDependenciesModalProject(project);
+                                              }}
+                                              title={projectHasDependencies(project.id) ? "View dependencies" : "No dependencies"}
+                                              data-testid={`button-dependencies-${project.id}`}
+                                            >
+                                              <Link2 className={`w-3.5 h-3.5 ${projectHasDependencies(project.id) ? 'text-blue-500' : 'text-gray-400'}`} />
+                                            </Button>
+                                            
+                                            {/* Three dots menu */}
+                                            <DropdownMenu>
+                                              <DropdownMenuTrigger asChild>
+                                                <Button 
+                                                  variant="ghost" 
+                                                  size="sm" 
+                                                  className="h-6 w-6 p-0"
+                                                  onClick={(e) => e.stopPropagation()}
+                                                  data-testid={`menu-project-${project.id}`}
+                                                >
+                                                  <MoreVertical className="w-3.5 h-3.5 text-gray-500" />
+                                                </Button>
+                                              </DropdownMenuTrigger>
+                                              <DropdownMenuContent align="end">
+                                                <DropdownMenuItem 
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleViewProject(project);
+                                                  }}
+                                                  data-testid={`menu-view-project-${project.id}`}
+                                                >
+                                                  <Eye className="w-4 h-4 mr-2" />
+                                                  View Details
+                                                </DropdownMenuItem>
+                                                {canEditAllStrategies() && (
+                                                  <>
+                                                    <DropdownMenuItem 
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleEditProject(project);
+                                                      }}
+                                                      data-testid={`menu-edit-project-${project.id}`}
+                                                    >
+                                                      <Edit className="w-4 h-4 mr-2" />
+                                                      Edit Project
+                                                    </DropdownMenuItem>
+                                                    <AlertDialog>
+                                                      <AlertDialogTrigger asChild>
+                                                        <DropdownMenuItem 
+                                                          onSelect={(e) => e.preventDefault()}
+                                                          className="text-red-600"
+                                                          data-testid={`menu-delete-project-${project.id}`}
+                                                        >
+                                                          <Trash2 className="w-4 h-4 mr-2" />
+                                                          Delete
+                                                        </DropdownMenuItem>
+                                                      </AlertDialogTrigger>
+                                                      <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                                                        <AlertDialogHeader>
+                                                          <AlertDialogTitle>Delete Project</AlertDialogTitle>
+                                                          <AlertDialogDescription>
+                                                            Are you sure you want to delete "{project.title}"? This action cannot be undone.
+                                                          </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                          <AlertDialogAction
+                                                            onClick={() => handleDeleteProject(project.id)}
+                                                            className="bg-red-600 hover:bg-red-700"
+                                                          >
+                                                            Delete
+                                                          </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                      </AlertDialogContent>
+                                                    </AlertDialog>
+                                                  </>
+                                                )}
+                                              </DropdownMenuContent>
+                                            </DropdownMenu>
+                                          </div>
                                         </div>
                                         <span className="text-xs text-gray-500 dark:text-gray-400">
                                           {projectActions.length} action{projectActions.length !== 1 ? 's' : ''}
@@ -755,11 +1039,6 @@ export default function Strategies() {
                                     </div>
 
                                     <div className="flex items-center space-x-2 flex-shrink-0">
-                                      {/* Status badge */}
-                                      <Badge className={`text-xs px-1.5 py-0 ${statusBadge.color}`}>
-                                        {statusBadge.label}
-                                      </Badge>
-
                                       {/* Progress ring */}
                                       <ProgressRing progress={projectProgress} size={28} strokeWidth={2.5} />
                                     </div>
@@ -1025,6 +1304,240 @@ export default function Strategies() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Timeline Modal */}
+      <Dialog open={!!timelineModalProject} onOpenChange={(open) => !open && setTimelineModalProject(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Project Timeline
+            </DialogTitle>
+          </DialogHeader>
+          {timelineModalProject && (
+            <div className="space-y-4">
+              <div className="border-b pb-3">
+                <h3 className="font-semibold text-gray-900 dark:text-white">
+                  {timelineModalProject.title}
+                </h3>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Start Date</span>
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {timelineModalProject.startDate 
+                      ? new Date(timelineModalProject.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                      : 'Not set'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Due Date</span>
+                  <span className={`font-medium ${getTimelineColor(timelineModalProject) === 'red' ? 'text-red-600' : getTimelineColor(timelineModalProject) === 'yellow' ? 'text-yellow-600' : 'text-green-600'}`}>
+                    {timelineModalProject.dueDate 
+                      ? new Date(timelineModalProject.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                      : 'Not set'}
+                  </span>
+                </div>
+                <div className={`p-3 rounded-lg ${
+                  getTimelineColor(timelineModalProject) === 'red' ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800' :
+                  getTimelineColor(timelineModalProject) === 'yellow' ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800' :
+                  'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+                }`}>
+                  <span className={`text-sm font-medium ${
+                    getTimelineColor(timelineModalProject) === 'red' ? 'text-red-700 dark:text-red-300' :
+                    getTimelineColor(timelineModalProject) === 'yellow' ? 'text-yellow-700 dark:text-yellow-300' :
+                    'text-green-700 dark:text-green-300'
+                  }`}>
+                    {getTimelineColor(timelineModalProject) === 'red' ? 'Past Due' :
+                     getTimelineColor(timelineModalProject) === 'yellow' ? 'Due Soon' :
+                     'On Track'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* KPI Modal */}
+      <Dialog open={!!kpiModalProject} onOpenChange={(open) => !open && setKpiModalProject(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              Project KPIs
+            </DialogTitle>
+          </DialogHeader>
+          {kpiModalProject && (
+            <div className="space-y-4">
+              <div className="border-b pb-3">
+                <h3 className="font-semibold text-gray-900 dark:text-white">
+                  {kpiModalProject.title}
+                </h3>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Key Performance Indicator</div>
+                  <p className="text-gray-900 dark:text-white">
+                    {kpiModalProject.kpi || 'No KPI defined'}
+                  </p>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">KPI Tracking</div>
+                  <p className="text-gray-900 dark:text-white">
+                    {kpiModalProject.kpiTracking || 'No tracking data'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Documents Modal (No folder linked) */}
+      <Dialog open={!!documentsModalProject} onOpenChange={(open) => !open && setDocumentsModalProject(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FolderOpen className="h-5 w-5" />
+              Project Documents
+            </DialogTitle>
+          </DialogHeader>
+          {documentsModalProject && (
+            <div className="space-y-4">
+              <div className="border-b pb-3">
+                <h3 className="font-semibold text-gray-900 dark:text-white">
+                  {documentsModalProject.title}
+                </h3>
+              </div>
+              
+              <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                <FolderOpen className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p className="text-sm font-medium">No document folder linked</p>
+                <p className="text-xs mt-1">Edit the project to add a document folder URL</p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Communication Modal (No plan linked) */}
+      <Dialog open={!!communicationModalProject} onOpenChange={(open) => !open && setCommunicationModalProject(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Megaphone className="h-5 w-5" />
+              Communication Plan
+            </DialogTitle>
+          </DialogHeader>
+          {communicationModalProject && (
+            <div className="space-y-4">
+              <div className="border-b pb-3">
+                <h3 className="font-semibold text-gray-900 dark:text-white">
+                  {communicationModalProject.title}
+                </h3>
+              </div>
+              
+              <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                <Megaphone className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p className="text-sm font-medium">No communication plan linked</p>
+                <p className="text-xs mt-1">Edit the project to add a communication plan URL</p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dependencies Modal */}
+      <Dialog open={!!dependenciesModalProject} onOpenChange={(open) => !open && setDependenciesModalProject(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Link2 className="h-5 w-5" />
+              Project Dependencies
+            </DialogTitle>
+          </DialogHeader>
+          {dependenciesModalProject && (
+            <div className="space-y-4">
+              <div className="border-b pb-3">
+                <h3 className="font-semibold text-gray-900 dark:text-white">
+                  {dependenciesModalProject.title}
+                </h3>
+              </div>
+              
+              <div className="space-y-2">
+                {getProjectDependencies(dependenciesModalProject.id).length > 0 ? (
+                  getProjectDependencies(dependenciesModalProject.id).map((dep: any) => {
+                    const isSource = dep.sourceType === 'project' && dep.sourceId === dependenciesModalProject.id;
+                    const targetType = isSource ? dep.targetType : dep.sourceType;
+                    const targetId = isSource ? dep.targetId : dep.sourceId;
+                    const direction = isSource ? 'Depends on' : 'Blocked by';
+                    
+                    return (
+                      <div
+                        key={dep.id}
+                        className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                      >
+                        <Link2 className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-gray-600 dark:text-gray-400">
+                            {direction} ({targetType})
+                          </div>
+                          <div className="text-xs text-gray-400 dark:text-gray-500">
+                            ID: {targetId.slice(0, 8)}...
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                    <Link2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No dependencies for this project</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Project Edit/View Modals */}
+      {editingProject && (
+        <EditProjectModal
+          isOpen={isEditProjectOpen}
+          onClose={() => {
+            setIsEditProjectOpen(false);
+            setEditingProject(null);
+          }}
+          project={editingProject}
+        />
+      )}
+      
+      {viewingProject && (
+        <ViewProjectModal
+          isOpen={isViewProjectOpen}
+          onClose={() => {
+            setIsViewProjectOpen(false);
+            setViewingProject(null);
+          }}
+          project={viewingProject}
+        />
+      )}
+
+      {/* Manage Barriers Modal */}
+      {barriersProjectId && (
+        <ManageBarriersModal
+          isOpen={isManageBarriersOpen}
+          onClose={() => {
+            setIsManageBarriersOpen(false);
+            setBarriersProjectId(null);
+          }}
+          projectId={barriersProjectId}
+        />
+      )}
     </div>
   );
 }
