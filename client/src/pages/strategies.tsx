@@ -671,36 +671,36 @@ export default function Strategies() {
                       </div>
                       
                       {/* Row 2: Meta info and actions */}
-                      <div className="flex flex-wrap items-center gap-2 pl-8">
-                        {/* Date range */}
-                        <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                          <Calendar className="w-3 h-3" />
-                          <span className="whitespace-nowrap">{formatDateShort(strategy.startDate)} - {formatDateShort(strategy.targetDate)}</span>
+                      <div className="flex items-center justify-between gap-2 pl-8">
+                        {/* Left side: meta info */}
+                        <div className="flex flex-wrap items-center gap-2">
+                          {/* Date range */}
+                          <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                            <Calendar className="w-3 h-3" />
+                            <span className="whitespace-nowrap">{formatDateShort(strategy.startDate)} - {formatDateShort(strategy.targetDate)}</span>
+                          </div>
+                          
+                          {/* Project count */}
+                          <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
+                            <FolderOpen className="w-3.5 h-3.5" />
+                            <span className="whitespace-nowrap">{strategy.projects.length} project{strategy.projects.length !== 1 ? 's' : ''}</span>
+                          </div>
+                          
+                          {/* Progress Ring */}
+                          <ProgressRing progress={strategyProgress} size={32} strokeWidth={3} />
+                          
+                          {/* Status Badge */}
+                          <Badge 
+                            variant="outline" 
+                            className="text-xs font-medium"
+                            style={{ color: strategy.colorCode, borderColor: strategy.colorCode }}
+                          >
+                            {strategy.status.toLowerCase()}
+                          </Badge>
                         </div>
                         
-                        {/* Project count */}
-                        <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
-                          <FolderOpen className="w-3.5 h-3.5" />
-                          <span className="whitespace-nowrap">{strategy.projects.length} project{strategy.projects.length !== 1 ? 's' : ''}</span>
-                        </div>
-                        
-                        {/* Progress Ring */}
-                        <ProgressRing progress={strategyProgress} size={32} strokeWidth={3} />
-                        
-                        {/* Status Badge */}
-                        <Badge 
-                          variant="outline" 
-                          className="text-xs font-medium"
-                          style={{ color: strategy.colorCode, borderColor: strategy.colorCode }}
-                        >
-                          {strategy.status.toLowerCase()}
-                        </Badge>
-                        
-                        {/* Spacer to push buttons right on larger screens */}
-                        <div className="flex-1 min-w-0 hidden lg:block" />
-                        
-                        {/* Action buttons wrapper - stops propagation to prevent CardHeader click */}
-                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        {/* Right side: Action buttons */}
+                        <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                           {/* Metrics Button - opens modal */}
                           <Button
                             variant="outline"
@@ -724,10 +724,9 @@ export default function Strategies() {
                             <RefreshCw className="w-3.5 h-3.5 sm:mr-1" />
                             <span className="hidden sm:inline">Continuum</span>
                           </Button>
-                        </div>
                         
-                        {/* Menu */}
-                        <DropdownMenu>
+                          {/* Menu */}
+                          <DropdownMenu>
                           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                             <Button variant="ghost" size="sm" className="h-7 w-7 p-0" data-testid={`button-strategy-menu-${strategy.id}`}>
                               <MoreVertical className="h-4 w-4" />
@@ -813,7 +812,8 @@ export default function Strategies() {
                               </>
                             )}
                           </DropdownMenuContent>
-                        </DropdownMenu>
+                          </DropdownMenu>
+                        </div>
                       </div>
                     </div>
                   </CardHeader>
