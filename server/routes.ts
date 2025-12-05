@@ -517,7 +517,8 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
       }
       
-      const validatedData = insertStrategySchema.parse(req.body);
+      // Use partial schema for PATCH to allow updating individual fields
+      const validatedData = insertStrategySchema.partial().parse(req.body);
       
       // Validate color code format
       if (validatedData.colorCode && !isValidHexColor(validatedData.colorCode)) {

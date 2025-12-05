@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRole } from "@/hooks/use-role";
 import { Sidebar } from "@/components/layout/sidebar";
+import type { ExecutiveGoal } from "@shared/schema";
 import { CreateStrategyModal } from "@/components/modals/create-strategy-modal";
 import { EditStrategyModal } from "@/components/modals/edit-strategy-modal";
 import { ViewStrategyModal } from "@/components/modals/view-strategy-modal";
@@ -59,7 +60,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen, TrendingUp, AlertTriangle, Users, Megaphone, Link2, ExternalLink, X, Clock, ListChecks, StickyNote } from "lucide-react";
+import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen, TrendingUp, AlertTriangle, Users, Megaphone, Link2, ExternalLink, X, Clock, ListChecks, StickyNote, Tag } from "lucide-react";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { useLocation } from "wouter";
 import {
@@ -120,6 +121,9 @@ export default function Strategies() {
   const [newChecklistItem, setNewChecklistItem] = useState("");
   const [notesModalAction, setNotesModalAction] = useState<any>(null);
   const [actionNotes, setActionNotes] = useState("");
+  
+  // Executive Goal tagging state
+  const [executiveGoalModalStrategy, setExecutiveGoalModalStrategy] = useState<any>(null);
 
   const { data: strategies, isLoading: strategiesLoading } = useQuery<any[]>({
     queryKey: ["/api/strategies"],
@@ -153,6 +157,17 @@ export default function Strategies() {
   const { data: checklistItems } = useQuery<any[]>({
     queryKey: ["/api/action-checklist-items"],
   });
+
+  // Fetch executive goals for strategy tagging
+  const { data: executiveGoals = [] } = useQuery<ExecutiveGoal[]>({
+    queryKey: ["/api/executive-goals"],
+  });
+
+  // Helper to get executive goal by ID
+  const getExecutiveGoalById = (goalId: string | null | undefined) => {
+    if (!goalId || !executiveGoals) return null;
+    return executiveGoals.find((g: ExecutiveGoal) => g.id === goalId);
+  };
 
   // Helper to check if an action has dependencies
   const actionHasDependencies = (actionId: string) => {
@@ -486,6 +501,28 @@ export default function Strategies() {
       toast({
         title: "Error",
         description: error.message || "Failed to archive priority",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateStrategyExecutiveGoalMutation = useMutation({
+    mutationFn: async ({ strategyId, executiveGoalId }: { strategyId: string; executiveGoalId: string | null }) => {
+      const response = await apiRequest("PATCH", `/api/strategies/${strategyId}`, { executiveGoalId });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
+      setExecutiveGoalModalStrategy(null);
+      toast({
+        title: "Success",
+        description: "Executive Goal updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update Executive Goal",
         variant: "destructive",
       });
     },
@@ -954,6 +991,18 @@ export default function Strategies() {
                     onClick={() => toggleStrategyCollapse(strategy.id)}
                   >
                     <div className="flex flex-col gap-2">
+                      {/* Executive Goal Tag - Above title */}
+                      {strategy.executiveGoalId && getExecutiveGoalById(strategy.executiveGoalId) && (
+                        <div className="flex items-center pl-8">
+                          <Badge 
+                            className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs font-medium px-2 py-0.5"
+                            data-testid={`executive-goal-tag-${strategy.id}`}
+                          >
+                            <Tag className="w-3 h-3 mr-1" />
+                            {getExecutiveGoalById(strategy.executiveGoalId)?.name}
+                          </Badge>
+                        </div>
+                      )}
                       {/* Row 1: Chevron, Status dot, Full Title */}
                       <div className="flex items-center gap-2">
                         {isCollapsed ? (
@@ -1054,6 +1103,16 @@ export default function Strategies() {
                                 >
                                   <Edit className="h-4 w-4 mr-2" />
                                   Edit Priority
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setExecutiveGoalModalStrategy(strategy);
+                                  }}
+                                  data-testid={`button-tag-executive-goal-${strategy.id}`}
+                                >
+                                  <Tag className="h-4 w-4 mr-2" />
+                                  Tag Executive Goal
                                 </DropdownMenuItem>
                                 {strategy.status === 'Active' && (
                                   <DropdownMenuItem
@@ -2846,6 +2905,85 @@ export default function Strategies() {
                       <p className="text-xs mt-1">Contact an administrator to add dependencies</p>
                     )}
                   </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Executive Goal Selection Modal */}
+      <Dialog open={!!executiveGoalModalStrategy} onOpenChange={(open) => !open && setExecutiveGoalModalStrategy(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Tag className="h-5 w-5" />
+              Tag Executive Goal
+            </DialogTitle>
+          </DialogHeader>
+          {executiveGoalModalStrategy && (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Select an Executive Goal to tag this priority, or remove the current tag.
+              </p>
+              
+              <div className="space-y-2">
+                {executiveGoals.length === 0 ? (
+                  <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                    <Target className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No Executive Goals available</p>
+                    <p className="text-xs mt-1">Create Executive Goals in Settings to tag priorities</p>
+                  </div>
+                ) : (
+                  <>
+                    {executiveGoals.map((goal: ExecutiveGoal) => (
+                      <div
+                        key={goal.id}
+                        className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+                          executiveGoalModalStrategy.executiveGoalId === goal.id
+                            ? 'bg-blue-100 dark:bg-blue-900/40 border-2 border-blue-500'
+                            : 'bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border-2 border-transparent'
+                        }`}
+                        onClick={() => {
+                          updateStrategyExecutiveGoalMutation.mutate({
+                            strategyId: executiveGoalModalStrategy.id,
+                            executiveGoalId: goal.id,
+                          });
+                        }}
+                        data-testid={`select-executive-goal-${goal.id}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Badge 
+                            className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-1"
+                          >
+                            <Tag className="w-3 h-3 mr-1" />
+                            {goal.name}
+                          </Badge>
+                        </div>
+                        {executiveGoalModalStrategy.executiveGoalId === goal.id && (
+                          <CheckCircle className="h-5 w-5 text-blue-500" />
+                        )}
+                      </div>
+                    ))}
+                    
+                    {/* Remove Tag Option */}
+                    {executiveGoalModalStrategy.executiveGoalId && (
+                      <Button
+                        variant="outline"
+                        className="w-full mt-4"
+                        onClick={() => {
+                          updateStrategyExecutiveGoalMutation.mutate({
+                            strategyId: executiveGoalModalStrategy.id,
+                            executiveGoalId: null,
+                          });
+                        }}
+                        data-testid="button-remove-executive-goal-tag"
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Remove Tag
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
             </div>
