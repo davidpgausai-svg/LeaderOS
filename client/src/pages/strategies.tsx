@@ -901,16 +901,19 @@ export default function Strategies() {
                                           
                                           {/* Icon Bar */}
                                           <div className="flex items-center gap-0.5 ml-1">
-                                            {/* View project */}
+                                            {/* Timeline - color coded (after status dropdown) */}
                                             <Button
                                               variant="ghost"
                                               size="sm"
                                               className="h-6 w-6 p-0"
-                                              onClick={(e) => navigateToProject(project.id, e)}
-                                              title="View project details"
-                                              data-testid={`button-view-project-${project.id}`}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setTimelineModalProject(project);
+                                              }}
+                                              title="View timeline"
+                                              data-testid={`button-timeline-${project.id}`}
                                             >
-                                              <Eye className="w-3.5 h-3.5 text-gray-500" />
+                                              <Calendar className={`w-3.5 h-3.5 ${getTimelineIconClass(project)}`} />
                                             </Button>
                                             
                                             {/* Leaders */}
@@ -943,19 +946,19 @@ export default function Strategies() {
                                               <AlertTriangle className={`w-3.5 h-3.5 ${projectHasActiveBarriers(project.id) ? 'text-red-500' : 'text-gray-400'}`} />
                                             </Button>
                                             
-                                            {/* Timeline - color coded */}
+                                            {/* Dependencies - right after Barriers */}
                                             <Button
                                               variant="ghost"
                                               size="sm"
                                               className="h-6 w-6 p-0"
                                               onClick={(e) => {
                                                 e.stopPropagation();
-                                                setTimelineModalProject(project);
+                                                setDependenciesModalProject(project);
                                               }}
-                                              title="View timeline"
-                                              data-testid={`button-timeline-${project.id}`}
+                                              title={projectHasDependencies(project.id) ? "View dependencies" : "No dependencies"}
+                                              data-testid={`button-dependencies-${project.id}`}
                                             >
-                                              <Calendar className={`w-3.5 h-3.5 ${getTimelineIconClass(project)}`} />
+                                              <Link2 className={`w-3.5 h-3.5 ${projectHasDependencies(project.id) ? 'text-blue-500' : 'text-gray-400'}`} />
                                             </Button>
                                             
                                             {/* KPI */}
@@ -1009,21 +1012,6 @@ export default function Strategies() {
                                               data-testid={`button-communication-${project.id}`}
                                             >
                                               <Megaphone className={`w-3.5 h-3.5 ${project.communicationUrl ? 'text-blue-500' : 'text-gray-400'}`} />
-                                            </Button>
-                                            
-                                            {/* Dependencies */}
-                                            <Button
-                                              variant="ghost"
-                                              size="sm"
-                                              className="h-6 w-6 p-0"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                setDependenciesModalProject(project);
-                                              }}
-                                              title={projectHasDependencies(project.id) ? "View dependencies" : "No dependencies"}
-                                              data-testid={`button-dependencies-${project.id}`}
-                                            >
-                                              <Link2 className={`w-3.5 h-3.5 ${projectHasDependencies(project.id) ? 'text-blue-500' : 'text-gray-400'}`} />
                                             </Button>
                                             
                                             {/* Three dots menu */}
@@ -1335,29 +1323,32 @@ export default function Strategies() {
               {/* Leaders List */}
               <div className="space-y-2">
                 {getProjectLeaders(leadersModalProject).length > 0 ? (
-                  getProjectLeaders(leadersModalProject).map((leader: any) => (
-                    <div
-                      key={leader.id}
-                      className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
-                    >
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <Users className="h-5 w-5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-gray-900 dark:text-white truncate">
-                          {leader.displayName || leader.email}
+                  getProjectLeaders(leadersModalProject).map((leader: any) => {
+                    const fullName = [leader.firstName, leader.lastName].filter(Boolean).join(' ');
+                    return (
+                      <div
+                        key={leader.id}
+                        className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                      >
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <Users className="h-5 w-5 text-primary" />
                         </div>
-                        {leader.displayName && (
-                          <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                            {leader.email}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-gray-900 dark:text-white truncate">
+                            {fullName || leader.email}
                           </div>
-                        )}
-                        <div className="text-xs text-gray-400 dark:text-gray-500 capitalize">
-                          {leader.role}
+                          {fullName && (
+                            <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                              {leader.email}
+                            </div>
+                          )}
+                          <div className="text-xs text-gray-400 dark:text-gray-500 capitalize">
+                            {leader.role?.replace('_', ' ')}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <div className="text-center py-6 text-gray-500 dark:text-gray-400">
                     <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -1526,10 +1517,23 @@ export default function Strategies() {
           </DialogHeader>
           {dependenciesModalProject && (
             <div className="space-y-4">
-              <div className="border-b pb-3">
+              <div className="border-b pb-3 flex items-center justify-between">
                 <h3 className="font-semibold text-gray-900 dark:text-white">
                   {dependenciesModalProject.title}
                 </h3>
+                {canEditAllStrategies() && (
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setDependenciesModalProject(null);
+                      setLocation(`/projects/${dependenciesModalProject.id}?tab=dependencies`);
+                    }}
+                    data-testid="button-add-dependency"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add Dependency
+                  </Button>
+                )}
               </div>
               
               <div className="space-y-2">
@@ -1561,6 +1565,21 @@ export default function Strategies() {
                   <div className="text-center py-6 text-gray-500 dark:text-gray-400">
                     <Link2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
                     <p className="text-sm">No dependencies for this project</p>
+                    {canEditAllStrategies() && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-3"
+                        onClick={() => {
+                          setDependenciesModalProject(null);
+                          setLocation(`/projects/${dependenciesModalProject.id}?tab=dependencies`);
+                        }}
+                        data-testid="button-add-first-dependency"
+                      >
+                        <Plus className="w-4 h-4 mr-1" />
+                        Add First Dependency
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>
