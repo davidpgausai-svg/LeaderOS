@@ -99,6 +99,7 @@ export const strategies = pgTable("strategies", {
   reinforcementPlan: text("reinforcement_plan").notNull().default("To be defined"),
   benefitsRealizationPlan: text("benefits_realization_plan").notNull().default("To be defined"),
   organizationId: varchar("organization_id"), // Foreign key to organizations table
+  executiveGoalId: varchar("executive_goal_id"), // Foreign key to executive_goals table for tagging
   createdBy: varchar("created_by").notNull(),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
