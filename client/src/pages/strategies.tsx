@@ -868,7 +868,7 @@ export default function Strategies() {
                               const projectProgress = project.progress || 0;
 
                               return (
-                                <div key={project.id} className="border border-gray-200 dark:border-gray-700 rounded-lg">
+                                <div key={project.id} className="border border-gray-300 dark:border-gray-600 rounded-lg">
                                   {/* Project Row */}
                                   <div
                                     className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
@@ -884,12 +884,14 @@ export default function Strategies() {
                                       
                                       {/* Project title, status badge, and action count */}
                                       <div className="min-w-0 flex-1">
-                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                          <span className="font-bold text-base text-gray-900 dark:text-white truncate max-w-[200px]">
-                                            {project.title}
-                                          </span>
-                                          {/* Status dropdown - immediately after title */}
-                                          {canEditAllStrategies() ? (
+                                        <div className="flex items-center gap-2">
+                                          {/* Title and Status - left side */}
+                                          <div className="flex items-center gap-1.5 min-w-0 flex-shrink">
+                                            <span className="font-medium text-base text-gray-900 dark:text-white truncate">
+                                              {project.title}
+                                            </span>
+                                            {/* Status dropdown - immediately after title */}
+                                            {canEditAllStrategies() ? (
                                             <DropdownMenu>
                                               <DropdownMenuTrigger asChild>
                                                 <Button
@@ -928,9 +930,10 @@ export default function Strategies() {
                                               {statusBadge.label}
                                             </Badge>
                                           )}
+                                          </div>
                                           
-                                          {/* Icon Bar */}
-                                          <div className="flex items-center gap-0.5 ml-1">
+                                          {/* Icon Bar - pushed to the right */}
+                                          <div className="flex items-center gap-0.5 ml-auto flex-shrink-0">
                                             {/* Timeline - color coded (after status dropdown) */}
                                             <Button
                                               variant="ghost"
