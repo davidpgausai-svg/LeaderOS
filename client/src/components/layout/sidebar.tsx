@@ -26,7 +26,7 @@ import {
 import { NotificationBell } from "@/components/notifications/notification-bell";
 
 const coreNavigation = [
-  { name: "Strategic Priority", href: "/strategies", icon: Target, iconColor: "text-indigo-500" },
+  { name: "Priorities", href: "/strategies", icon: Target, iconColor: "text-indigo-500" },
   { name: "Actions", href: "/actions", icon: TrendingUp, iconColor: "text-amber-500" },
 ];
 
