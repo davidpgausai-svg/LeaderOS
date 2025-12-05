@@ -107,13 +107,6 @@ export default function Strategies() {
   // Fetch all barriers for barrier icons
   const { data: barriers } = useQuery<any[]>({
     queryKey: ["/api/barriers"],
-    queryFn: async () => {
-      const response = await fetch("/api/barriers", {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to fetch barriers");
-      return response.json();
-    },
   });
 
   // Fetch all users for leader lookups
@@ -124,13 +117,6 @@ export default function Strategies() {
   // Fetch all dependencies for dependency icons
   const { data: dependencies } = useQuery<any[]>({
     queryKey: ["/api/dependencies"],
-    queryFn: async () => {
-      const response = await fetch("/api/dependencies", {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to fetch dependencies");
-      return response.json();
-    },
   });
 
   // Helper to check if a project has dependencies
@@ -316,6 +302,27 @@ export default function Strategies() {
     }
   };
 
+  // Get circle color for status dropdown
+  const getStatusCircleColor = (status: string) => {
+    switch (status) {
+      case 'C': return 'bg-green-500';
+      case 'OT': return 'bg-blue-500';
+      case 'OH': return 'bg-yellow-500';
+      case 'B': return 'bg-red-500';
+      case 'NYS': return 'bg-gray-400';
+      default: return 'bg-gray-400';
+    }
+  };
+
+  // Status options for dropdown
+  const projectStatusOptions = [
+    { value: 'NYS', label: 'Not Yet Started', shortLabel: 'NYS' },
+    { value: 'OT', label: 'On Track', shortLabel: 'OT' },
+    { value: 'OH', label: 'On Hold', shortLabel: 'OH' },
+    { value: 'B', label: 'Behind', shortLabel: 'B' },
+    { value: 'C', label: 'Completed', shortLabel: 'C' },
+  ];
+
   // Format date for display
   const formatDateShort = (dateString: string) => {
     const date = new Date(dateString);
@@ -449,6 +456,28 @@ export default function Strategies() {
       toast({
         title: "Error",
         description: "Failed to delete project",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateProjectStatusMutation = useMutation({
+    mutationFn: async ({ projectId, status }: { projectId: string; status: string }) => {
+      const response = await apiRequest("PATCH", `/api/projects/${projectId}`, { status });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      toast({
+        title: "Success",
+        description: "Project status updated",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update project status",
         variant: "destructive",
       });
     },
@@ -829,10 +858,46 @@ export default function Strategies() {
                                           <span className="font-bold text-base text-gray-900 dark:text-white truncate max-w-[200px]">
                                             {project.title}
                                           </span>
-                                          {/* Status badge - immediately after title */}
-                                          <Badge className={`text-xs px-1.5 py-0 ${statusBadge.color}`}>
-                                            {statusBadge.label}
-                                          </Badge>
+                                          {/* Status dropdown - immediately after title */}
+                                          {canEditAllStrategies() ? (
+                                            <DropdownMenu>
+                                              <DropdownMenuTrigger asChild>
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className="h-6 px-1.5 py-0 flex items-center gap-1"
+                                                  onClick={(e) => e.stopPropagation()}
+                                                  data-testid={`status-dropdown-${project.id}`}
+                                                >
+                                                  <div className={`w-3 h-3 rounded-full ${getStatusCircleColor(project.status)}`} />
+                                                  <ChevronDown className="w-3 h-3 text-gray-500" />
+                                                </Button>
+                                              </DropdownMenuTrigger>
+                                              <DropdownMenuContent align="start" onClick={(e) => e.stopPropagation()}>
+                                                {projectStatusOptions.map((option) => (
+                                                  <DropdownMenuItem
+                                                    key={option.value}
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      updateProjectStatusMutation.mutate({ projectId: project.id, status: option.value });
+                                                    }}
+                                                    className="flex items-center gap-2"
+                                                    data-testid={`status-option-${option.value}-${project.id}`}
+                                                  >
+                                                    <div className={`w-3 h-3 rounded-full ${getStatusCircleColor(option.value)}`} />
+                                                    <span>{option.label}</span>
+                                                    {project.status === option.value && (
+                                                      <CheckCircle className="w-3 h-3 ml-auto text-green-500" />
+                                                    )}
+                                                  </DropdownMenuItem>
+                                                ))}
+                                              </DropdownMenuContent>
+                                            </DropdownMenu>
+                                          ) : (
+                                            <Badge className={`text-xs px-1.5 py-0 ${statusBadge.color}`}>
+                                              {statusBadge.label}
+                                            </Badge>
+                                          )}
                                           
                                           {/* Icon Bar */}
                                           <div className="flex items-center gap-0.5 ml-1">
