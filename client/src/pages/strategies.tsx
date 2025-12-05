@@ -9,6 +9,9 @@ import { CreateProjectModal } from "@/components/modals/create-project-modal";
 import { EditProjectModal } from "@/components/modals/edit-project-modal";
 import { ViewProjectModal } from "@/components/modals/view-project-modal";
 import { ManageBarriersModal } from "@/components/modals/manage-barriers-modal";
+import { CreateActionModal } from "@/components/modals/create-action-modal";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -56,7 +59,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen, TrendingUp, AlertTriangle, Users, Megaphone, Link2, ExternalLink, X } from "lucide-react";
+import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen, TrendingUp, AlertTriangle, Users, Megaphone, Link2, ExternalLink, X, Clock, ListChecks } from "lucide-react";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { useLocation } from "wouter";
 import {
@@ -99,6 +102,22 @@ export default function Strategies() {
   const [viewingProject, setViewingProject] = useState<any>(null);
   const [isEditProjectOpen, setIsEditProjectOpen] = useState(false);
   const [isViewProjectOpen, setIsViewProjectOpen] = useState(false);
+  
+  // Action icon bar modal states
+  const [dueDateModalAction, setDueDateModalAction] = useState<any>(null);
+  const [checklistModalAction, setChecklistModalAction] = useState<any>(null);
+  const [folderUrlModalAction, setFolderUrlModalAction] = useState<any>(null);
+  const [dependenciesModalAction, setDependenciesModalAction] = useState<any>(null);
+  const [selectedActionDependencyType, setSelectedActionDependencyType] = useState<"project" | "action" | null>(null);
+  const [editingAction, setEditingAction] = useState<any>(null);
+  const [viewingAction, setViewingAction] = useState<any>(null);
+  const [isEditActionOpen, setIsEditActionOpen] = useState(false);
+  const [isViewActionOpen, setIsViewActionOpen] = useState(false);
+  const [isCreateActionOpen, setIsCreateActionOpen] = useState(false);
+  const [selectedProjectIdForAction, setSelectedProjectIdForAction] = useState<string | null>(null);
+  const [selectedStrategyIdForAction, setSelectedStrategyIdForAction] = useState<string | null>(null);
+  const [actionFolderUrl, setActionFolderUrl] = useState("");
+  const [newChecklistItem, setNewChecklistItem] = useState("");
 
   const { data: strategies, isLoading: strategiesLoading } = useQuery<any[]>({
     queryKey: ["/api/strategies"],
@@ -127,6 +146,76 @@ export default function Strategies() {
   const { data: dependencies } = useQuery<any[]>({
     queryKey: ["/api/dependencies"],
   });
+
+  // Fetch all checklist items for checklist icons
+  const { data: checklistItems } = useQuery<any[]>({
+    queryKey: ["/api/action-checklist-items"],
+  });
+
+  // Helper to check if an action has dependencies
+  const actionHasDependencies = (actionId: string) => {
+    if (!dependencies) return false;
+    return dependencies.some(
+      (d: any) => 
+        (d.sourceType === 'action' && d.sourceId === actionId) ||
+        (d.targetType === 'action' && d.targetId === actionId)
+    );
+  };
+
+  // Helper to get action dependencies
+  const getActionDependencies = (actionId: string) => {
+    if (!dependencies) return [];
+    return dependencies.filter(
+      (d: any) => 
+        (d.sourceType === 'action' && d.sourceId === actionId) ||
+        (d.targetType === 'action' && d.targetId === actionId)
+    );
+  };
+
+  // Helper to get action checklist items
+  const getActionChecklistItems = (actionId: string) => {
+    if (!checklistItems) return [];
+    return checklistItems.filter((item: any) => item.actionId === actionId);
+  };
+
+  // Helper to check if action has incomplete checklist items
+  const actionHasIncompleteChecklist = (actionId: string) => {
+    const items = getActionChecklistItems(actionId);
+    return items.length > 0 && items.some((item: any) => item.isCompleted !== 'true');
+  };
+
+  // Helper to calculate due date display for actions
+  const getActionDueDateDisplay = (action: any) => {
+    if (!action?.dueDate) return null;
+    const now = new Date();
+    const dueDate = new Date(action.dueDate);
+    const diffTime = dueDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return { text: 'Due today', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' };
+    if (diffDays === 1) return { text: 'Due tomorrow', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' };
+    if (diffDays < 0) return { text: `Overdue by ${Math.abs(diffDays)} day${Math.abs(diffDays) !== 1 ? 's' : ''}`, color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' };
+    if (diffDays <= 7) return { text: `Due in ${diffDays} day${diffDays !== 1 ? 's' : ''}`, color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' };
+    return { text: `Due in ${diffDays} days`, color: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' };
+  };
+
+  // Helper to get action status circle color
+  const getActionStatusCircleColor = (status: string) => {
+    switch (status) {
+      case 'achieved': return 'bg-green-500';
+      case 'in_progress': return 'bg-blue-500';
+      case 'at_risk': return 'bg-red-500';
+      default: return 'bg-gray-400';
+    }
+  };
+
+  // Action status options for dropdown
+  const actionStatusOptions = [
+    { value: 'achieved', label: 'Achieved' },
+    { value: 'in_progress', label: 'In Progress' },
+    { value: 'at_risk', label: 'At Risk' },
+    { value: 'not_started', label: 'Not Started' },
+  ];
 
   // Helper to check if a project has dependencies
   const projectHasDependencies = (projectId: string) => {
@@ -525,6 +614,176 @@ export default function Strategies() {
     },
   });
 
+  // Action status update mutation
+  const updateActionStatusMutation = useMutation({
+    mutationFn: async ({ action, status }: { action: any; status: string }) => {
+      const updateData: any = {
+        title: action.title,
+        description: action.description,
+        strategyId: action.strategyId,
+        status: status,
+        isArchived: action.isArchived,
+        createdBy: action.createdBy,
+      };
+      if (action.projectId) updateData.projectId = action.projectId;
+      if (action.targetValue) updateData.targetValue = action.targetValue;
+      if (action.currentValue) updateData.currentValue = action.currentValue;
+      if (action.measurementUnit) updateData.measurementUnit = action.measurementUnit;
+      if (action.dueDate) updateData.dueDate = action.dueDate;
+      if (action.documentFolderUrl) updateData.documentFolderUrl = action.documentFolderUrl;
+      
+      return await apiRequest("PATCH", `/api/actions/${action.id}`, updateData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
+      toast({
+        title: "Success",
+        description: "Action status updated",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update action status",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Action folder URL update mutation
+  const updateActionFolderUrlMutation = useMutation({
+    mutationFn: async ({ action, folderUrl }: { action: any; folderUrl: string }) => {
+      const updateData: any = {
+        title: action.title,
+        description: action.description,
+        strategyId: action.strategyId,
+        status: action.status,
+        isArchived: action.isArchived,
+        createdBy: action.createdBy,
+        documentFolderUrl: folderUrl || null,
+      };
+      if (action.projectId) updateData.projectId = action.projectId;
+      if (action.targetValue) updateData.targetValue = action.targetValue;
+      if (action.currentValue) updateData.currentValue = action.currentValue;
+      if (action.measurementUnit) updateData.measurementUnit = action.measurementUnit;
+      if (action.dueDate) updateData.dueDate = action.dueDate;
+      
+      return await apiRequest("PATCH", `/api/actions/${action.id}`, updateData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+      toast({
+        title: "Success",
+        description: "Folder link updated",
+      });
+      setFolderUrlModalAction(null);
+      setActionFolderUrl("");
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update folder link",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete action mutation
+  const deleteActionMutation = useMutation({
+    mutationFn: async (actionId: string) => {
+      await apiRequest("DELETE", `/api/actions/${actionId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
+      toast({
+        title: "Success",
+        description: "Action deleted",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete action",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Create checklist item mutation
+  const createChecklistItemMutation = useMutation({
+    mutationFn: async ({ actionId, title }: { actionId: string; title: string }) => {
+      const response = await apiRequest("POST", "/api/action-checklist-items", {
+        actionId,
+        title,
+        isCompleted: 'false',
+        orderIndex: 0,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/action-checklist-items"] });
+      setNewChecklistItem("");
+      toast({
+        title: "Success",
+        description: "Checklist item added",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add checklist item",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Toggle checklist item mutation
+  const toggleChecklistItemMutation = useMutation({
+    mutationFn: async ({ item, isCompleted }: { item: any; isCompleted: boolean }) => {
+      return await apiRequest("PATCH", `/api/action-checklist-items/${item.id}`, {
+        actionId: item.actionId,
+        title: item.title,
+        isCompleted: isCompleted ? 'true' : 'false',
+        orderIndex: item.orderIndex,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/action-checklist-items"] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update checklist item",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete checklist item mutation
+  const deleteChecklistItemMutation = useMutation({
+    mutationFn: async (itemId: string) => {
+      await apiRequest("DELETE", `/api/action-checklist-items/${itemId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/action-checklist-items"] });
+      toast({
+        title: "Success",
+        description: "Checklist item removed",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to remove checklist item",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleEditProject = (project: any) => {
     setEditingProject(project);
     setIsEditProjectOpen(true);
@@ -840,6 +1099,21 @@ export default function Strategies() {
                             <Plus className="w-3 h-3 mr-1" />
                             Add Project
                           </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedStrategyIdForAction(strategy.id);
+                              setSelectedProjectIdForAction(null);
+                              setIsCreateActionOpen(true);
+                            }}
+                            className="h-7 px-2 text-xs"
+                            data-testid={`button-add-action-${strategy.id}`}
+                          >
+                            <Plus className="w-3 h-3 mr-1" />
+                            Add Action
+                          </Button>
                         </div>
 
                         {/* Project List */}
@@ -1131,30 +1405,219 @@ export default function Strategies() {
                                   </div>
 
                                   {/* Expanded Actions */}
-                                  {isProjectExpanded && projectActions.length > 0 && (
+                                  {isProjectExpanded && (
                                     <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30 px-4 py-2">
                                       <div className="space-y-1.5">
-                                        {projectActions.map((action: any) => {
-                                          const actionBadge = getActionStatusBadge(action.status);
+                                        {projectActions.length > 0 ? projectActions.map((action: any) => {
+                                          const dueDateDisplay = getActionDueDateDisplay(action);
                                           return (
                                             <div
                                               key={action.id}
-                                              className="flex items-center justify-between py-1.5 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded px-2 -mx-2 transition-colors"
-                                              onClick={() => navigateToAction(action.id)}
+                                              className="flex items-center justify-between py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded px-2 -mx-2 transition-colors"
                                               data-testid={`action-row-${action.id}`}
                                             >
-                                              <div className="flex items-center space-x-2 flex-1 min-w-0">
-                                                <Circle className={`w-2.5 h-2.5 flex-shrink-0 ${getActionStatusColor(action.status)}`} />
-                                                <span className="text-sm text-gray-700 dark:text-gray-300 truncate hover:text-primary cursor-pointer">
+                                              {/* Left side: Status dropdown and title */}
+                                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                {/* Status dropdown */}
+                                                {canEditAllStrategies() ? (
+                                                  <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                      <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-5 px-1 py-0 flex items-center gap-0.5"
+                                                        data-testid={`action-status-dropdown-${action.id}`}
+                                                      >
+                                                        <div className={`w-2.5 h-2.5 rounded-full ${getActionStatusCircleColor(action.status)}`} />
+                                                        <ChevronDown className="w-2.5 h-2.5 text-gray-500" />
+                                                      </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="start">
+                                                      {actionStatusOptions.map((option) => (
+                                                        <DropdownMenuItem
+                                                          key={option.value}
+                                                          onClick={() => updateActionStatusMutation.mutate({ action, status: option.value })}
+                                                          className="flex items-center gap-2"
+                                                          data-testid={`action-status-option-${option.value}-${action.id}`}
+                                                        >
+                                                          <div className={`w-2.5 h-2.5 rounded-full ${getActionStatusCircleColor(option.value)}`} />
+                                                          <span>{option.label}</span>
+                                                          {action.status === option.value && (
+                                                            <CheckCircle className="w-3 h-3 ml-auto text-green-500" />
+                                                          )}
+                                                        </DropdownMenuItem>
+                                                      ))}
+                                                    </DropdownMenuContent>
+                                                  </DropdownMenu>
+                                                ) : (
+                                                  <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${getActionStatusCircleColor(action.status)}`} />
+                                                )}
+                                                
+                                                {/* Action title */}
+                                                <span 
+                                                  className="text-sm text-gray-700 dark:text-gray-300 truncate hover:text-primary cursor-pointer"
+                                                  onClick={() => navigateToAction(action.id)}
+                                                >
                                                   {action.title}
                                                 </span>
                                               </div>
-                                              <Badge className={`text-xs px-1.5 py-0 ml-2 flex-shrink-0 ${actionBadge.color}`}>
-                                                {actionBadge.label}
-                                              </Badge>
+                                              
+                                              {/* Right side: Icon bar */}
+                                              <div className="flex items-center gap-1 flex-shrink-0">
+                                                {/* Due date pill */}
+                                                {dueDateDisplay && (
+                                                  <Badge 
+                                                    className={`text-xs px-1.5 py-0 cursor-pointer ${dueDateDisplay.color}`}
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setDueDateModalAction(action);
+                                                    }}
+                                                    data-testid={`action-due-date-${action.id}`}
+                                                  >
+                                                    {dueDateDisplay.text}
+                                                  </Badge>
+                                                )}
+                                                
+                                                {/* Dependencies */}
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className="h-5 w-5 p-0"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setDependenciesModalAction(action);
+                                                  }}
+                                                  title={actionHasDependencies(action.id) ? "View dependencies" : "Add dependency"}
+                                                  data-testid={`action-dependencies-${action.id}`}
+                                                >
+                                                  <Link2 className={`w-3 h-3 ${actionHasDependencies(action.id) ? 'text-blue-500' : 'text-gray-400'}`} />
+                                                </Button>
+                                                
+                                                {/* Checklist */}
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className="h-5 w-5 p-0"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setChecklistModalAction(action);
+                                                  }}
+                                                  title="View checklist"
+                                                  data-testid={`action-checklist-${action.id}`}
+                                                >
+                                                  <ListChecks className={`w-3 h-3 ${actionHasIncompleteChecklist(action.id) ? 'text-yellow-500' : getActionChecklistItems(action.id).length > 0 ? 'text-green-500' : 'text-gray-400'}`} />
+                                                </Button>
+                                                
+                                                {/* Folder link */}
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className="h-5 w-5 p-0"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (action.documentFolderUrl) {
+                                                      window.open(action.documentFolderUrl, '_blank');
+                                                    } else {
+                                                      setFolderUrlModalAction(action);
+                                                      setActionFolderUrl(action.documentFolderUrl || "");
+                                                    }
+                                                  }}
+                                                  title={action.documentFolderUrl ? "Open folder" : "Add folder link"}
+                                                  data-testid={`action-folder-${action.id}`}
+                                                >
+                                                  <FolderOpen className={`w-3 h-3 ${action.documentFolderUrl ? 'text-blue-500' : 'text-gray-400'}`} />
+                                                </Button>
+                                                
+                                                {/* Three dots menu */}
+                                                <DropdownMenu>
+                                                  <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                      variant="ghost"
+                                                      size="sm"
+                                                      className="h-5 w-5 p-0"
+                                                      onClick={(e) => e.stopPropagation()}
+                                                      data-testid={`action-menu-${action.id}`}
+                                                    >
+                                                      <MoreVertical className="w-3 h-3 text-gray-500" />
+                                                    </Button>
+                                                  </DropdownMenuTrigger>
+                                                  <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem
+                                                      onClick={() => navigateToAction(action.id)}
+                                                      data-testid={`action-menu-view-${action.id}`}
+                                                    >
+                                                      <Eye className="w-3.5 h-3.5 mr-2" />
+                                                      View Details
+                                                    </DropdownMenuItem>
+                                                    {canEditAllStrategies() && (
+                                                      <>
+                                                        <DropdownMenuItem
+                                                          onClick={() => navigateToAction(action.id)}
+                                                          data-testid={`action-menu-edit-${action.id}`}
+                                                        >
+                                                          <Edit className="w-3.5 h-3.5 mr-2" />
+                                                          Edit Action
+                                                        </DropdownMenuItem>
+                                                        <AlertDialog>
+                                                          <AlertDialogTrigger asChild>
+                                                            <DropdownMenuItem
+                                                              onSelect={(e) => e.preventDefault()}
+                                                              className="text-red-600"
+                                                              data-testid={`action-menu-delete-${action.id}`}
+                                                            >
+                                                              <Trash2 className="w-3.5 h-3.5 mr-2" />
+                                                              Delete
+                                                            </DropdownMenuItem>
+                                                          </AlertDialogTrigger>
+                                                          <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                                                            <AlertDialogHeader>
+                                                              <AlertDialogTitle>Delete Action</AlertDialogTitle>
+                                                              <AlertDialogDescription>
+                                                                Are you sure you want to delete "{action.title}"? This action cannot be undone.
+                                                              </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                              <AlertDialogAction
+                                                                onClick={() => deleteActionMutation.mutate(action.id)}
+                                                                className="bg-red-600 hover:bg-red-700"
+                                                              >
+                                                                Delete
+                                                              </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                          </AlertDialogContent>
+                                                        </AlertDialog>
+                                                      </>
+                                                    )}
+                                                  </DropdownMenuContent>
+                                                </DropdownMenu>
+                                              </div>
                                             </div>
                                           );
-                                        })}
+                                        }) : (
+                                          <div className="text-center py-3 text-gray-500 dark:text-gray-400 text-sm">
+                                            No actions yet
+                                          </div>
+                                        )}
+                                        
+                                        {/* Add Action button inside project */}
+                                        {canEditAllStrategies() && (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="w-full h-7 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 justify-center"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setSelectedStrategyIdForAction(project.strategyId);
+                                              setSelectedProjectIdForAction(project.id);
+                                              setIsCreateActionOpen(true);
+                                            }}
+                                            data-testid={`button-add-action-in-project-${project.id}`}
+                                          >
+                                            <Plus className="w-3 h-3 mr-1" />
+                                            Add Action
+                                          </Button>
+                                        )}
                                       </div>
                                     </div>
                                   )}
@@ -1833,6 +2296,438 @@ export default function Strategies() {
           projectId={barriersProjectId}
         />
       )}
+
+      {/* Create Action Modal */}
+      <CreateActionModal
+        open={isCreateActionOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsCreateActionOpen(false);
+            setSelectedStrategyIdForAction(null);
+            setSelectedProjectIdForAction(null);
+          }
+        }}
+        strategyId={selectedStrategyIdForAction || undefined}
+        projectId={selectedProjectIdForAction || undefined}
+      />
+
+      {/* Action Due Date Modal */}
+      <Dialog open={!!dueDateModalAction} onOpenChange={(open) => !open && setDueDateModalAction(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Due Date
+            </DialogTitle>
+          </DialogHeader>
+          {dueDateModalAction && (
+            <div className="space-y-4">
+              <div className="border-b pb-3">
+                <h3 className="font-semibold text-gray-900 dark:text-white">
+                  {dueDateModalAction.title}
+                </h3>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mb-2">
+                  <Calendar className="h-4 w-4" />
+                  <span className="text-sm font-medium">Target Date</span>
+                </div>
+                {dueDateModalAction.dueDate ? (
+                  <div>
+                    <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                      {new Date(dueDateModalAction.dueDate).toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        month: 'long', 
+                        day: 'numeric', 
+                        year: 'numeric' 
+                      })}
+                    </p>
+                    {(() => {
+                      const display = getActionDueDateDisplay(dueDateModalAction);
+                      return display && (
+                        <Badge className={`mt-2 ${display.color}`}>
+                          {display.text}
+                        </Badge>
+                      );
+                    })()}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 dark:text-gray-400 italic">No due date set</p>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Action Checklist Modal */}
+      <Dialog open={!!checklistModalAction} onOpenChange={(open) => !open && setChecklistModalAction(null)}>
+        <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ListChecks className="h-5 w-5" />
+              Checklist
+            </DialogTitle>
+          </DialogHeader>
+          {checklistModalAction && (
+            <div className="space-y-4">
+              <div className="border-b pb-3">
+                <h3 className="font-semibold text-gray-900 dark:text-white">
+                  {checklistModalAction.title}
+                </h3>
+              </div>
+              
+              {/* Add new checklist item */}
+              {canEditAllStrategies() && (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Add checklist item..."
+                    value={newChecklistItem}
+                    onChange={(e) => setNewChecklistItem(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newChecklistItem.trim()) {
+                        createChecklistItemMutation.mutate({ 
+                          actionId: checklistModalAction.id, 
+                          title: newChecklistItem.trim() 
+                        });
+                      }
+                    }}
+                    data-testid="input-new-checklist-item"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      if (newChecklistItem.trim()) {
+                        createChecklistItemMutation.mutate({ 
+                          actionId: checklistModalAction.id, 
+                          title: newChecklistItem.trim() 
+                        });
+                      }
+                    }}
+                    disabled={!newChecklistItem.trim() || createChecklistItemMutation.isPending}
+                    data-testid="button-add-checklist-item"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
+              
+              {/* Checklist items */}
+              <div className="space-y-2">
+                {getActionChecklistItems(checklistModalAction.id).length > 0 ? (
+                  getActionChecklistItems(checklistModalAction.id)
+                    .sort((a: any, b: any) => a.orderIndex - b.orderIndex)
+                    .map((item: any) => (
+                      <div 
+                        key={item.id} 
+                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
+                      >
+                        <Checkbox
+                          id={`checklist-${item.id}`}
+                          checked={item.isCompleted === 'true'}
+                          onCheckedChange={(checked) => {
+                            toggleChecklistItemMutation.mutate({ item, isCompleted: !!checked });
+                          }}
+                          disabled={!canEditAllStrategies()}
+                          data-testid={`checkbox-checklist-${item.id}`}
+                        />
+                        <Label 
+                          htmlFor={`checklist-${item.id}`}
+                          className={`flex-1 text-sm cursor-pointer ${item.isCompleted === 'true' ? 'line-through text-gray-400' : 'text-gray-700 dark:text-gray-300'}`}
+                        >
+                          {item.title}
+                        </Label>
+                        {canEditAllStrategies() && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 text-gray-400 hover:text-red-500"
+                            onClick={() => deleteChecklistItemMutation.mutate(item.id)}
+                            data-testid={`button-delete-checklist-${item.id}`}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    ))
+                ) : (
+                  <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                    <ListChecks className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No checklist items yet</p>
+                    {canEditAllStrategies() && (
+                      <p className="text-xs mt-1">Add items above to track progress</p>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              {/* Progress summary */}
+              {getActionChecklistItems(checklistModalAction.id).length > 0 && (
+                <div className="border-t pt-3 text-sm text-gray-500 dark:text-gray-400">
+                  {getActionChecklistItems(checklistModalAction.id).filter((i: any) => i.isCompleted === 'true').length} of {getActionChecklistItems(checklistModalAction.id).length} completed
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Action Folder URL Modal */}
+      <Dialog 
+        open={!!folderUrlModalAction} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setFolderUrlModalAction(null);
+            setActionFolderUrl("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FolderOpen className="h-5 w-5" />
+              Action Folder Link
+            </DialogTitle>
+          </DialogHeader>
+          {folderUrlModalAction && (
+            <div className="space-y-4">
+              <div className="border-b pb-3">
+                <h3 className="font-semibold text-gray-900 dark:text-white">
+                  {folderUrlModalAction.title}
+                </h3>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="action-folder-url">Folder URL (ClickUp, OneDrive, etc.)</Label>
+                <Input
+                  id="action-folder-url"
+                  placeholder="https://..."
+                  value={actionFolderUrl}
+                  onChange={(e) => setActionFolderUrl(e.target.value)}
+                  data-testid="input-action-folder-url"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setFolderUrlModalAction(null);
+                    setActionFolderUrl("");
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    updateActionFolderUrlMutation.mutate({ 
+                      action: folderUrlModalAction, 
+                      folderUrl: actionFolderUrl 
+                    });
+                  }}
+                  disabled={updateActionFolderUrlMutation.isPending}
+                  data-testid="button-save-action-folder-url"
+                >
+                  Save
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Action Dependencies Modal */}
+      <Dialog 
+        open={!!dependenciesModalAction} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setDependenciesModalAction(null);
+            setSelectedActionDependencyType(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Link2 className="h-5 w-5" />
+              Action Dependencies
+            </DialogTitle>
+          </DialogHeader>
+          {dependenciesModalAction && (
+            <div className="space-y-4">
+              <div className="border-b pb-3">
+                <h3 className="font-semibold text-gray-900 dark:text-white">
+                  {dependenciesModalAction.title}
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Manage dependencies for this action
+                </p>
+              </div>
+              
+              {/* Add Dependency Section */}
+              {canEditAllStrategies() && (
+                <div className="border rounded-lg p-3 bg-gray-50 dark:bg-gray-800/50">
+                  {!selectedActionDependencyType ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Select dependency type
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => setSelectedActionDependencyType("project")}
+                          data-testid="button-action-dep-type-project"
+                        >
+                          Project
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => setSelectedActionDependencyType("action")}
+                          data-testid="button-action-dep-type-action"
+                        >
+                          Action
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Select {selectedActionDependencyType}
+                        </p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedActionDependencyType(null)}
+                          data-testid="button-action-dep-cancel-type"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <Command className="border rounded-md">
+                        <CommandInput placeholder={`Search ${selectedActionDependencyType}s...`} />
+                        <CommandList className="max-h-[200px]">
+                          <CommandEmpty>No {selectedActionDependencyType}s found</CommandEmpty>
+                          <CommandGroup>
+                            {selectedActionDependencyType === "project" ? (
+                              projects?.filter((p: any) => 
+                                p.isArchived !== 'true' &&
+                                !getActionDependencies(dependenciesModalAction.id).some(
+                                  (d: any) => d.targetType === 'project' && d.targetId === p.id
+                                )
+                              ).map((p: any) => (
+                                <CommandItem
+                                  key={p.id}
+                                  value={p.title}
+                                  onSelect={() => {
+                                    createDependencyMutation.mutate({
+                                      sourceType: 'action',
+                                      sourceId: dependenciesModalAction.id,
+                                      targetType: 'project',
+                                      targetId: p.id,
+                                    });
+                                    setSelectedActionDependencyType(null);
+                                  }}
+                                  data-testid={`action-dep-project-option-${p.id}`}
+                                >
+                                  <div className={`w-2 h-2 rounded-full mr-2 ${getStatusCircleColor(p.status)}`} />
+                                  {p.title}
+                                </CommandItem>
+                              ))
+                            ) : (
+                              actions?.filter((a: any) => 
+                                a.id !== dependenciesModalAction.id &&
+                                a.isArchived !== 'true' &&
+                                !getActionDependencies(dependenciesModalAction.id).some(
+                                  (d: any) => d.targetType === 'action' && d.targetId === a.id
+                                )
+                              ).map((a: any) => (
+                                <CommandItem
+                                  key={a.id}
+                                  value={a.title}
+                                  onSelect={() => {
+                                    createDependencyMutation.mutate({
+                                      sourceType: 'action',
+                                      sourceId: dependenciesModalAction.id,
+                                      targetType: 'action',
+                                      targetId: a.id,
+                                    });
+                                    setSelectedActionDependencyType(null);
+                                  }}
+                                  data-testid={`action-dep-action-option-${a.id}`}
+                                >
+                                  <div className={`w-2 h-2 rounded-full mr-2 ${getActionStatusCircleColor(a.status)}`} />
+                                  {a.title}
+                                </CommandItem>
+                              ))
+                            )}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Current Dependencies */}
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Current Dependencies ({getActionDependencies(dependenciesModalAction.id).length})
+                </p>
+                {getActionDependencies(dependenciesModalAction.id).length > 0 ? (
+                  <div className="space-y-2">
+                    {getActionDependencies(dependenciesModalAction.id).map((dep: any) => {
+                      const isSource = dep.sourceType === 'action' && dep.sourceId === dependenciesModalAction.id;
+                      const targetType = isSource ? dep.targetType : dep.sourceType;
+                      const targetId = isSource ? dep.targetId : dep.sourceId;
+                      const targetItem = targetType === 'project' 
+                        ? projects?.find((p: any) => p.id === targetId)
+                        : actions?.find((a: any) => a.id === targetId);
+                      
+                      return (
+                        <div 
+                          key={dep.id}
+                          className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              {targetType}
+                            </Badge>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              {targetItem?.title || 'Unknown'}
+                            </span>
+                          </div>
+                          {canEditAllStrategies() && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-gray-400 hover:text-red-500"
+                              onClick={() => deleteDependencyMutation.mutate(dep.id)}
+                              data-testid={`button-remove-action-dep-${dep.id}`}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                    <Link2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No dependencies for this action</p>
+                    {!canEditAllStrategies() && (
+                      <p className="text-xs mt-1">Contact an administrator to add dependencies</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

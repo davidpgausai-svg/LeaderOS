@@ -166,6 +166,7 @@ export const actions = pgTable("actions", {
   status: text("status").notNull().default('in_progress'), // 'in_progress', 'achieved', 'at_risk', 'not_started'
   dueDate: timestamp("due_date"),
   isArchived: text("is_archived").notNull().default('false'), // 'true' or 'false' for cascade archival
+  documentFolderUrl: text("document_folder_url"), // External folder URL (ClickUp, OneDrive, etc.)
   organizationId: varchar("organization_id"), // Foreign key to organizations table
   createdBy: varchar("created_by").notNull(),
   createdAt: timestamp("created_at").default(sql`now()`),
@@ -276,6 +277,7 @@ export const insertActionSchema = createInsertSchema(actions).omit({
   createdAt: true,
 }).extend({
   dueDate: z.coerce.date().optional(),
+  documentFolderUrl: z.string().nullable().optional(),
 });
 
 export const insertNotificationSchema = createInsertSchema(notifications).omit({
