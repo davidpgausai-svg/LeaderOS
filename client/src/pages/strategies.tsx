@@ -544,7 +544,7 @@ export default function Strategies() {
                                   data-testid={`button-edit-strategy-${strategy.id}`}
                                 >
                                   <Edit className="h-4 w-4 mr-2" />
-                                  Edit Strategy
+                                  Edit Priority
                                 </DropdownMenuItem>
                                 {strategy.status === 'Active' && (
                                   <DropdownMenuItem
@@ -578,12 +578,12 @@ export default function Strategies() {
                                       data-testid={`button-delete-strategy-${strategy.id}`}
                                     >
                                       <Trash2 className="h-4 w-4 mr-2" />
-                                      Delete Strategy
+                                      Delete Priority
                                     </DropdownMenuItem>
                                   </AlertDialogTrigger>
                                   <AlertDialogContent>
                                     <AlertDialogHeader>
-                                      <AlertDialogTitle>Delete Strategy</AlertDialogTitle>
+                                      <AlertDialogTitle>Delete Priority</AlertDialogTitle>
                                       <AlertDialogDescription>
                                         Are you sure you want to delete "{strategy.title}"? This action cannot be undone and will also delete all associated projects.
                                       </AlertDialogDescription>
