@@ -39,7 +39,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen, TrendingUp } from "lucide-react";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { useLocation } from "wouter";
 import {
@@ -63,7 +69,8 @@ export default function Strategies() {
   const [selectedStrategy, setSelectedStrategy] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [strategyFilter, setStrategyFilter] = useState("all");
-  const [expandedContinuum, setExpandedContinuum] = useState<Record<string, boolean>>({});
+  const [metricsModalStrategy, setMetricsModalStrategy] = useState<any>(null);
+  const [continuumModalStrategy, setContinuumModalStrategy] = useState<any>(null);
   const [collapsedStrategies, setCollapsedStrategies] = useState<Set<string>>(new Set());
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
 
@@ -347,7 +354,7 @@ export default function Strategies() {
         <header className="bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800 px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Strategy</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Strategic Priority</h2>
               <p className="text-gray-600 dark:text-gray-400 mt-1">
                 Manage and track strategic initiatives
               </p>
@@ -355,7 +362,7 @@ export default function Strategies() {
             {canCreateStrategies() && (
               <Button onClick={() => setIsCreateStrategyOpen(true)} data-testid="button-create-strategy">
                 <Plus className="mr-2 h-4 w-4" />
-                New Strategy
+                New Strategic Priority
               </Button>
             )}
           </div>
@@ -398,16 +405,16 @@ export default function Strategies() {
               <div className="w-12 h-12 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
                 <Search className="h-6 w-6 text-gray-400" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No strategies found</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No strategic priorities found</h3>
               <p className="text-gray-500 mb-4">
                 {searchTerm || strategyFilter !== "all"
                   ? "Try adjusting your search or filters"
-                  : "Get started by creating your first strategy"}
+                  : "Get started by creating your first strategic priority"}
               </p>
               {canCreateStrategies() && !searchTerm && strategyFilter === "all" && (
                 <Button onClick={() => setIsCreateStrategyOpen(true)} data-testid="button-create-first-strategy">
                   <Plus className="mr-2 h-4 w-4" />
-                  Create Strategy
+                  New Strategic Priority
                 </Button>
               )}
             </div>
@@ -472,30 +479,23 @@ export default function Strategies() {
                         
                         {/* Action buttons wrapper - stops propagation to prevent CardHeader click */}
                         <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                          {/* Objectives Button */}
+                          {/* Metrics Button - opens modal */}
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleViewStrategy(strategy)}
+                            onClick={() => setMetricsModalStrategy(strategy)}
                             className="h-7 px-2 text-xs"
                             data-testid={`button-metrics-${strategy.id}`}
                           >
                             <BarChart3 className="w-3.5 h-3.5 sm:mr-1" />
-                            <span className="hidden sm:inline">Objectives</span>
+                            <span className="hidden sm:inline">Metrics</span>
                           </Button>
                           
-                          {/* Continuum Button */}
+                          {/* Continuum Button - opens modal */}
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => {
-                              // Toggle the continuum expansion
-                              setExpandedContinuum(prev => ({ ...prev, [strategy.id]: !prev[strategy.id] }));
-                              // If card is collapsed, expand it first
-                              if (isCollapsed) {
-                                toggleStrategyCollapse(strategy.id);
-                              }
-                            }}
+                            onClick={() => setContinuumModalStrategy(strategy)}
                             className="h-7 px-2 text-xs"
                             data-testid={`button-continuum-${strategy.id}`}
                           >
@@ -742,50 +742,6 @@ export default function Strategies() {
                         </div>
                       </div>
 
-                      {/* Change Continuum Section - Collapsible */}
-                      {expandedContinuum[strategy.id] && (
-                        <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
-                          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Change Continuum</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
-                            <div className="bg-gray-50 dark:bg-gray-800 p-2.5 rounded">
-                              <div className="font-medium text-gray-700 dark:text-gray-300 text-xs mb-0.5">Case for Change</div>
-                              <div className="text-gray-600 dark:text-gray-400 text-xs">{strategy.caseForChange || "To be defined"}</div>
-                            </div>
-                            <div className="bg-gray-50 dark:bg-gray-800 p-2.5 rounded">
-                              <div className="font-medium text-gray-700 dark:text-gray-300 text-xs mb-0.5">Vision Statement</div>
-                              <div className="text-gray-600 dark:text-gray-400 text-xs">{strategy.visionStatement || "To be defined"}</div>
-                            </div>
-                            <div className="bg-gray-50 dark:bg-gray-800 p-2.5 rounded">
-                              <div className="font-medium text-gray-700 dark:text-gray-300 text-xs mb-0.5">Success Metrics</div>
-                              <div className="text-gray-600 dark:text-gray-400 text-xs">{strategy.successMetrics || "To be defined"}</div>
-                            </div>
-                            <div className="bg-gray-50 dark:bg-gray-800 p-2.5 rounded">
-                              <div className="font-medium text-gray-700 dark:text-gray-300 text-xs mb-0.5">Stakeholder Map</div>
-                              <div className="text-gray-600 dark:text-gray-400 text-xs">{strategy.stakeholderMap || "To be defined"}</div>
-                            </div>
-                            <div className="bg-gray-50 dark:bg-gray-800 p-2.5 rounded">
-                              <div className="font-medium text-gray-700 dark:text-gray-300 text-xs mb-0.5">Readiness Rating (RAG)</div>
-                              <div className="text-gray-600 dark:text-gray-400 text-xs">{strategy.readinessRating || "To be defined"}</div>
-                            </div>
-                            <div className="bg-gray-50 dark:bg-gray-800 p-2.5 rounded">
-                              <div className="font-medium text-gray-700 dark:text-gray-300 text-xs mb-0.5">Risk Exposure Rating</div>
-                              <div className="text-gray-600 dark:text-gray-400 text-xs">{strategy.riskExposureRating || "To be defined"}</div>
-                            </div>
-                            <div className="bg-gray-50 dark:bg-gray-800 p-2.5 rounded">
-                              <div className="font-medium text-gray-700 dark:text-gray-300 text-xs mb-0.5">Change Champion</div>
-                              <div className="text-gray-600 dark:text-gray-400 text-xs">{strategy.changeChampionAssignment || "To be defined"}</div>
-                            </div>
-                            <div className="bg-gray-50 dark:bg-gray-800 p-2.5 rounded">
-                              <div className="font-medium text-gray-700 dark:text-gray-300 text-xs mb-0.5">Reinforcement Plan</div>
-                              <div className="text-gray-600 dark:text-gray-400 text-xs">{strategy.reinforcementPlan || "To be defined"}</div>
-                            </div>
-                            <div className="bg-gray-50 dark:bg-gray-800 p-2.5 rounded">
-                              <div className="font-medium text-gray-700 dark:text-gray-300 text-xs mb-0.5">Benefits Realization</div>
-                              <div className="text-gray-600 dark:text-gray-400 text-xs">{strategy.benefitsRealizationPlan || "To be defined"}</div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
                     </CardContent>
                   )}
                 </Card>
@@ -815,6 +771,145 @@ export default function Strategies() {
         onClose={() => setIsCreateProjectOpen(false)}
         strategyId={selectedStrategyId}
       />
+
+      {/* Key Metrics Modal */}
+      <Dialog open={!!metricsModalStrategy} onOpenChange={(open) => !open && setMetricsModalStrategy(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Key Metrics
+            </DialogTitle>
+          </DialogHeader>
+          {metricsModalStrategy && (
+            <div className="space-y-4">
+              {/* Strategy Title and Status */}
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">
+                    {metricsModalStrategy.title}
+                  </h3>
+                  <Badge 
+                    variant="outline" 
+                    className="mt-1 text-xs"
+                    style={{ color: metricsModalStrategy.colorCode, borderColor: metricsModalStrategy.colorCode }}
+                  >
+                    {metricsModalStrategy.status?.toLowerCase()}
+                  </Badge>
+                </div>
+                <ProgressRing progress={metricsModalStrategy.progress || 0} size={48} strokeWidth={4} />
+              </div>
+
+              {/* Timeline and Projects Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mb-2">
+                    <Calendar className="h-4 w-4" />
+                    <span className="text-sm font-medium">Timeline</span>
+                  </div>
+                  <div className="text-sm">
+                    <div>Start: <span className="font-medium">{metricsModalStrategy.startDate ? new Date(metricsModalStrategy.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Not set'}</span></div>
+                    <div>Target: <span className="font-medium">{metricsModalStrategy.targetDate ? new Date(metricsModalStrategy.targetDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Not set'}</span></div>
+                  </div>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mb-2">
+                    <TrendingUp className="h-4 w-4" />
+                    <span className="text-sm font-medium">Projects</span>
+                  </div>
+                  <div className="text-2xl font-bold">
+                    {metricsModalStrategy.projects?.filter((p: any) => p.status === 'C').length || 0}/{metricsModalStrategy.projects?.length || 0}
+                  </div>
+                  <div className="text-sm text-gray-500">{metricsModalStrategy.progress || 0}% complete</div>
+                </div>
+              </div>
+
+              {/* Success Metrics */}
+              <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mb-2">
+                  <Target className="h-4 w-4" />
+                  <span className="text-sm font-medium">Success Metrics</span>
+                </div>
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  {metricsModalStrategy.successMetrics || "No metrics defined"}
+                </p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Continuum Modal */}
+      <Dialog open={!!continuumModalStrategy} onOpenChange={(open) => !open && setContinuumModalStrategy(null)}>
+        <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5" />
+              Change Continuum
+            </DialogTitle>
+          </DialogHeader>
+          {continuumModalStrategy && (
+            <div className="space-y-4">
+              {/* Strategy Title and Status */}
+              <div className="flex items-center justify-between border-b pb-3">
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">
+                    {continuumModalStrategy.title}
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Change management framework</p>
+                </div>
+                <Badge 
+                  variant="outline" 
+                  className="text-xs"
+                  style={{ color: continuumModalStrategy.colorCode, borderColor: continuumModalStrategy.colorCode }}
+                >
+                  {continuumModalStrategy.status?.toLowerCase()}
+                </Badge>
+              </div>
+
+              {/* Numbered Continuum Fields */}
+              <div className="space-y-3">
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                  <div className="font-medium text-gray-700 dark:text-gray-300 text-sm">1. Case for Change</div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{continuumModalStrategy.caseForChange || "To be defined"}</p>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                  <div className="font-medium text-gray-700 dark:text-gray-300 text-sm">2. Vision Statement</div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{continuumModalStrategy.visionStatement || "To be defined"}</p>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                  <div className="font-medium text-gray-700 dark:text-gray-300 text-sm">3. Success Metrics</div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{continuumModalStrategy.successMetrics || "To be defined"}</p>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                  <div className="font-medium text-gray-700 dark:text-gray-300 text-sm">4. Stakeholder Map</div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{continuumModalStrategy.stakeholderMap || "To be defined"}</p>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                  <div className="font-medium text-gray-700 dark:text-gray-300 text-sm">5. Readiness Rating (RAG)</div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{continuumModalStrategy.readinessRating || "To be defined"}</p>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                  <div className="font-medium text-gray-700 dark:text-gray-300 text-sm">6. Risk Exposure Rating</div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{continuumModalStrategy.riskExposureRating || "To be defined"}</p>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                  <div className="font-medium text-gray-700 dark:text-gray-300 text-sm">7. Change Champion</div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{continuumModalStrategy.changeChampionAssignment || "To be defined"}</p>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                  <div className="font-medium text-gray-700 dark:text-gray-300 text-sm">8. Reinforcement Plan</div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{continuumModalStrategy.reinforcementPlan || "To be defined"}</p>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                  <div className="font-medium text-gray-700 dark:text-gray-300 text-sm">9. Benefits Realization</div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{continuumModalStrategy.benefitsRealizationPlan || "To be defined"}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
