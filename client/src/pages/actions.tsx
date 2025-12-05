@@ -873,8 +873,8 @@ export default function Actions() {
                                             : 'border-gray-200 dark:border-gray-700'
                                         }`}
                                       >
-                                        <CardContent className={isActionCollapsed ? "p-4" : "p-6"}>
-                                          <div className={`flex items-start justify-between ${isActionCollapsed ? "" : "mb-4"}`}>
+                                        <CardContent className={isActionCollapsed ? "p-3" : "p-4"}>
+                                          <div className={`flex items-start justify-between ${isActionCollapsed ? "" : "mb-2"}`}>
                                             <div className="flex-1">
                                               <div className={`flex items-center space-x-3 ${isActionCollapsed ? "" : "mb-2"}`}>
                                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -896,17 +896,22 @@ export default function Actions() {
                                                     <SelectItem value="not_started">Not Started</SelectItem>
                                                   </SelectContent>
                                                 </Select>
-                                                {dueDateInfo && (
-                                                  <Badge 
-                                                    className={`${dueDateInfo.bgColor} ${dueDateInfo.textColor}`}
-                                                    data-testid={`badge-due-date-${action.id}`}
-                                                  >
-                                                    {dueDateInfo.label}
-                                                  </Badge>
+                                                {dueDateInfo && action.dueDate && (
+                                                  <div className="flex items-center gap-2">
+                                                    <Badge 
+                                                      className={`${dueDateInfo.bgColor} ${dueDateInfo.textColor}`}
+                                                      data-testid={`badge-due-date-${action.id}`}
+                                                    >
+                                                      {dueDateInfo.label}
+                                                    </Badge>
+                                                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                                                      {new Date(action.dueDate).toLocaleDateString()}
+                                                    </span>
+                                                  </div>
                                                 )}
                                               </div>
-                                              {!isActionCollapsed && (
-                                                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                                              {!isActionCollapsed && action.description && (
+                                                <p className="text-gray-600 dark:text-gray-400 mb-3 text-sm">
                                                   {action.description}
                                                 </p>
                                               )}
@@ -959,73 +964,36 @@ export default function Actions() {
                                             </DropdownMenu>
                                           </div>
 
-                                          {/* Action Details Grid - hidden when collapsed */}
+                                          {/* Action Details - hidden when collapsed */}
                                           {!isActionCollapsed && (
                                             <>
-                                              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-                                                {/* Target vs Current */}
-                                                {(action.targetValue || action.currentValue) && (
-                                                  <div className="space-y-2">
-                                                    <div className="flex items-center space-x-2">
-                                                      <TrendingUp className="w-4 h-4 text-green-500" />
-                                                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                        Performance
-                                                      </span>
-                                                    </div>
-                                                    {action.targetValue && (
-                                                      <div className="text-sm">
-                                                        <span className="text-gray-600 dark:text-gray-400">Target: </span>
-                                                        <span className="font-medium">{action.targetValue}</span>
-                                                        {action.measurementUnit && (
-                                                          <span className="text-gray-500"> {action.measurementUnit}</span>
-                                                        )}
-                                                      </div>
-                                                    )}
-                                                    {action.currentValue && (
-                                                      <div className="text-sm">
-                                                        <span className="text-gray-600 dark:text-gray-400">Current: </span>
-                                                        <span className="font-medium">{action.currentValue}</span>
-                                                        {action.measurementUnit && (
-                                                          <span className="text-gray-500"> {action.measurementUnit}</span>
-                                                        )}
-                                                      </div>
-                                                    )}
-                                                  </div>
-                                                )}
-
-                                                {/* Linked Project */}
-                                                {action.project && (
-                                                  <div className="space-y-2">
-                                                    <div className="flex items-center space-x-2">
-                                                      <Target className="w-4 h-4 text-blue-500" />
-                                                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                        Linked Project
-                                                      </span>
-                                                    </div>
-                                                    <p className="text-sm text-gray-900 dark:text-white">
-                                                      {action.project.title}
-                                                    </p>
-                                                  </div>
-                                                )}
-
-                                                {/* Due Date */}
-                                                {action.dueDate && (
-                                                  <div className="space-y-2">
-                                                    <div className="flex items-center space-x-2">
-                                                      <Calendar className="w-4 h-4 text-orange-500" />
-                                                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                        Due Date
-                                                      </span>
-                                                    </div>
-                                                    <p className="text-sm text-gray-900 dark:text-white">
-                                                      {new Date(action.dueDate).toLocaleDateString()}
-                                                    </p>
-                                                  </div>
-                                                )}
-                                              </div>
+                                              {/* Performance Section - only show if has values */}
+                                              {(action.targetValue || action.currentValue) && (
+                                                <div className="flex items-center gap-4 mb-3 text-sm">
+                                                  <TrendingUp className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                                  {action.targetValue && (
+                                                    <span>
+                                                      <span className="text-gray-600 dark:text-gray-400">Target: </span>
+                                                      <span className="font-medium">{action.targetValue}</span>
+                                                      {action.measurementUnit && (
+                                                        <span className="text-gray-500"> {action.measurementUnit}</span>
+                                                      )}
+                                                    </span>
+                                                  )}
+                                                  {action.currentValue && (
+                                                    <span>
+                                                      <span className="text-gray-600 dark:text-gray-400">Current: </span>
+                                                      <span className="font-medium">{action.currentValue}</span>
+                                                      {action.measurementUnit && (
+                                                        <span className="text-gray-500"> {action.measurementUnit}</span>
+                                                      )}
+                                                    </span>
+                                                  )}
+                                                </div>
+                                              )}
 
                                               {/* Dependencies Section */}
-                                              <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg">
+                                              <div className="p-2 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg">
                                                 <DependencyTags
                                                   sourceType="action"
                                                   sourceId={action.id}
