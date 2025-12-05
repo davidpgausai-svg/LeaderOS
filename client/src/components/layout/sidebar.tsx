@@ -11,7 +11,6 @@ import {
 import {
   ChartLine,
   Target,
-  CheckSquare,
   TrendingUp,
   BarChart3,
   Settings,
@@ -28,7 +27,6 @@ import { NotificationBell } from "@/components/notifications/notification-bell";
 
 const coreNavigation = [
   { name: "Strategic Priority", href: "/strategies", icon: Target, iconColor: "text-indigo-500" },
-  { name: "Projects", href: "/projects", icon: CheckSquare, iconColor: "text-emerald-500" },
   { name: "Actions", href: "/actions", icon: TrendingUp, iconColor: "text-amber-500" },
 ];
 

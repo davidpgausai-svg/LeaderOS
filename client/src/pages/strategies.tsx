@@ -48,7 +48,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen, TrendingUp, AlertTriangle, Users, Megaphone, Link2, ExternalLink } from "lucide-react";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen, TrendingUp, AlertTriangle, Users, Megaphone, Link2, ExternalLink, X } from "lucide-react";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { useLocation } from "wouter";
 import {
@@ -86,16 +94,17 @@ export default function Strategies() {
   const [documentsModalProject, setDocumentsModalProject] = useState<any>(null);
   const [communicationModalProject, setCommunicationModalProject] = useState<any>(null);
   const [dependenciesModalProject, setDependenciesModalProject] = useState<any>(null);
+  const [selectedDependencyType, setSelectedDependencyType] = useState<"project" | "action" | null>(null);
   const [editingProject, setEditingProject] = useState<any>(null);
   const [viewingProject, setViewingProject] = useState<any>(null);
   const [isEditProjectOpen, setIsEditProjectOpen] = useState(false);
   const [isViewProjectOpen, setIsViewProjectOpen] = useState(false);
 
-  const { data: strategies, isLoading: strategiesLoading } = useQuery({
+  const { data: strategies, isLoading: strategiesLoading } = useQuery<any[]>({
     queryKey: ["/api/strategies"],
   });
 
-  const { data: projects } = useQuery({
+  const { data: projects } = useQuery<any[]>({
     queryKey: ["/api/projects"],
   });
 
@@ -227,17 +236,6 @@ export default function Strategies() {
       setCollapsedStrategies(new Set());
     }
   }, [strategies, strategyFilter]);
-
-  const navigateToProjects = (strategyId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setLocation(`/projects?strategyId=${strategyId}`);
-  };
-
-  // Navigate to Projects page with deep-link to specific project
-  const navigateToProject = (projectId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setLocation(`/projects?projectId=${projectId}`);
-  };
 
   // Navigate to Actions page with deep-link to specific action
   const navigateToAction = (actionId: string) => {
@@ -483,6 +481,50 @@ export default function Strategies() {
     },
   });
 
+  const createDependencyMutation = useMutation({
+    mutationFn: async (data: { sourceType: string; sourceId: string; targetType: string; targetId: string }) => {
+      const response = await apiRequest("POST", "/api/dependencies", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/dependencies"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
+      toast({
+        title: "Success",
+        description: "Dependency added successfully",
+      });
+      setSelectedDependencyType(null);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add dependency",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteDependencyMutation = useMutation({
+    mutationFn: async (dependencyId: string) => {
+      await apiRequest("DELETE", `/api/dependencies/${dependencyId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/dependencies"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
+      toast({
+        title: "Success",
+        description: "Dependency removed",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to remove dependency",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleEditProject = (project: any) => {
     setEditingProject(project);
     setIsEditProjectOpen(true);
@@ -681,18 +723,6 @@ export default function Strategies() {
                           >
                             <RefreshCw className="w-3.5 h-3.5 sm:mr-1" />
                             <span className="hidden sm:inline">Continuum</span>
-                          </Button>
-                          
-                          {/* Navigate to Projects */}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => navigateToProjects(strategy.id, e)}
-                            className="h-7 w-7 p-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                            title="Go to Projects"
-                            data-testid={`button-nav-projects-${strategy.id}`}
-                          >
-                            <ArrowRight className="h-4 w-4" />
                           </Button>
                         </div>
                         
@@ -1507,8 +1537,16 @@ export default function Strategies() {
       </Dialog>
 
       {/* Dependencies Modal */}
-      <Dialog open={!!dependenciesModalProject} onOpenChange={(open) => !open && setDependenciesModalProject(null)}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog 
+        open={!!dependenciesModalProject} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setDependenciesModalProject(null);
+            setSelectedDependencyType(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Link2 className="h-5 w-5" />
@@ -1517,68 +1555,238 @@ export default function Strategies() {
           </DialogHeader>
           {dependenciesModalProject && (
             <div className="space-y-4">
-              <div className="border-b pb-3 flex items-center justify-between">
+              <div className="border-b pb-3">
                 <h3 className="font-semibold text-gray-900 dark:text-white">
                   {dependenciesModalProject.title}
                 </h3>
-                {canEditAllStrategies() && (
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      setDependenciesModalProject(null);
-                      setLocation(`/projects/${dependenciesModalProject.id}?tab=dependencies`);
-                    }}
-                    data-testid="button-add-dependency"
-                  >
-                    <Plus className="w-4 h-4 mr-1" />
-                    Add Dependency
-                  </Button>
-                )}
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Manage dependencies for this project
+                </p>
               </div>
               
-              <div className="space-y-2">
-                {getProjectDependencies(dependenciesModalProject.id).length > 0 ? (
-                  getProjectDependencies(dependenciesModalProject.id).map((dep: any) => {
-                    const isSource = dep.sourceType === 'project' && dep.sourceId === dependenciesModalProject.id;
-                    const targetType = isSource ? dep.targetType : dep.sourceType;
-                    const targetId = isSource ? dep.targetId : dep.sourceId;
-                    const direction = isSource ? 'Depends on' : 'Blocked by';
-                    
-                    return (
-                      <div
-                        key={dep.id}
-                        className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
-                      >
-                        <Link2 className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm text-gray-600 dark:text-gray-400">
-                            {direction} ({targetType})
-                          </div>
-                          <div className="text-xs text-gray-400 dark:text-gray-500">
-                            ID: {targetId.slice(0, 8)}...
-                          </div>
-                        </div>
+              {/* Add Dependency Section */}
+              {canEditAllStrategies() && (
+                <div className="border rounded-lg p-3 bg-gray-50 dark:bg-gray-800/50">
+                  {!selectedDependencyType ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Select dependency type
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => setSelectedDependencyType("project")}
+                          data-testid="button-select-project-type"
+                        >
+                          Project
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => setSelectedDependencyType("action")}
+                          data-testid="button-select-action-type"
+                        >
+                          Action
+                        </Button>
                       </div>
-                    );
-                  })
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedDependencyType(null)}
+                          className="text-xs h-7 px-2"
+                          data-testid="button-back-dependency-type"
+                        >
+                          <ArrowRight className="w-3 h-3 mr-1 rotate-180" />
+                          Back
+                        </Button>
+                        <span className="text-xs text-gray-500">
+                          Select {selectedDependencyType}
+                        </span>
+                      </div>
+                      <Command className="border rounded-lg">
+                        <CommandInput
+                          placeholder={`Search ${selectedDependencyType}s...`}
+                          data-testid="input-search-dependency-target"
+                        />
+                        <CommandList className="max-h-48">
+                          <CommandEmpty>No {selectedDependencyType}s found.</CommandEmpty>
+                          <CommandGroup heading={`Available ${selectedDependencyType}s`}>
+                            {selectedDependencyType === "project" && (projects || [])
+                              .filter((p: any) => 
+                                p.id !== dependenciesModalProject.id &&
+                                p.isArchived !== 'true' &&
+                                !getProjectDependencies(dependenciesModalProject.id).some(
+                                  (d: any) => d.targetType === 'project' && d.targetId === p.id
+                                )
+                              )
+                              .map((project: any) => {
+                                const strategy = (strategies || []).find((s: any) => s.id === project.strategyId);
+                                return (
+                                  <CommandItem
+                                    key={project.id}
+                                    value={project.title}
+                                    onSelect={() => {
+                                      createDependencyMutation.mutate({
+                                        sourceType: 'project',
+                                        sourceId: dependenciesModalProject.id,
+                                        targetType: 'project',
+                                        targetId: project.id,
+                                      });
+                                    }}
+                                    className="flex items-center gap-2 cursor-pointer"
+                                    data-testid={`option-project-${project.id}`}
+                                  >
+                                    <div
+                                      className="w-2 h-2 rounded-full flex-shrink-0"
+                                      style={{ backgroundColor: strategy?.colorCode || '#3B82F6' }}
+                                    />
+                                    <span className="flex-1 truncate">{project.title}</span>
+                                    {strategy && (
+                                      <span className="text-xs text-gray-400 truncate max-w-24">
+                                        {strategy.title}
+                                      </span>
+                                    )}
+                                  </CommandItem>
+                                );
+                              })}
+                            {selectedDependencyType === "action" && (actions || [])
+                              .filter((a: any) => 
+                                a.isArchived !== 'true' &&
+                                !getProjectDependencies(dependenciesModalProject.id).some(
+                                  (d: any) => d.targetType === 'action' && d.targetId === a.id
+                                )
+                              )
+                              .map((action: any) => {
+                                const strategy = (strategies || []).find((s: any) => s.id === action.strategyId);
+                                return (
+                                  <CommandItem
+                                    key={action.id}
+                                    value={action.title}
+                                    onSelect={() => {
+                                      createDependencyMutation.mutate({
+                                        sourceType: 'project',
+                                        sourceId: dependenciesModalProject.id,
+                                        targetType: 'action',
+                                        targetId: action.id,
+                                      });
+                                    }}
+                                    className="flex items-center gap-2 cursor-pointer"
+                                    data-testid={`option-action-${action.id}`}
+                                  >
+                                    <div
+                                      className="w-2 h-2 rounded-full flex-shrink-0"
+                                      style={{ backgroundColor: strategy?.colorCode || '#3B82F6' }}
+                                    />
+                                    <span className="flex-1 truncate">{action.title}</span>
+                                    {strategy && (
+                                      <span className="text-xs text-gray-400 truncate max-w-24">
+                                        {strategy.title}
+                                      </span>
+                                    )}
+                                  </CommandItem>
+                                );
+                              })}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Existing Dependencies List */}
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  Current Dependencies ({getProjectDependencies(dependenciesModalProject.id).length})
+                </p>
+                {getProjectDependencies(dependenciesModalProject.id).length > 0 ? (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {getProjectDependencies(dependenciesModalProject.id).map((dep: any) => {
+                      const isSource = dep.sourceType === 'project' && dep.sourceId === dependenciesModalProject.id;
+                      const targetType = isSource ? dep.targetType : dep.sourceType;
+                      const targetId = isSource ? dep.targetId : dep.sourceId;
+                      const direction = isSource ? 'Depends on' : 'Blocked by';
+                      
+                      const getTargetTitle = () => {
+                        if (targetType === 'project') {
+                          const project = (projects || []).find((p: any) => p.id === targetId);
+                          return project?.title || 'Unknown Project';
+                        } else {
+                          const action = (actions || []).find((a: any) => a.id === targetId);
+                          return action?.title || 'Unknown Action';
+                        }
+                      };
+
+                      const getTargetStrategy = () => {
+                        if (targetType === 'project') {
+                          const project = (projects || []).find((p: any) => p.id === targetId);
+                          return (strategies || []).find((s: any) => s.id === project?.strategyId);
+                        } else {
+                          const action = (actions || []).find((a: any) => a.id === targetId);
+                          return (strategies || []).find((s: any) => s.id === action?.strategyId);
+                        }
+                      };
+
+                      const targetStrategy = getTargetStrategy();
+                      
+                      return (
+                        <div
+                          key={dep.id}
+                          className={`flex items-center gap-3 p-3 rounded-lg border ${
+                            isSource 
+                              ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800' 
+                              : 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800'
+                          }`}
+                        >
+                          <div
+                            className="w-2 h-2 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: targetStrategy?.colorCode || '#3B82F6' }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                              {getTargetTitle()}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                              <span className={isSource ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}>
+                                {direction}
+                              </span>
+                              <span>({targetType})</span>
+                              {targetStrategy && (
+                                <>
+                                  <span className="mx-1">•</span>
+                                  <span className="truncate max-w-24">{targetStrategy.title}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          {canEditAllStrategies() && isSource && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0 text-gray-400 hover:text-red-600"
+                              onClick={() => deleteDependencyMutation.mutate(dep.id)}
+                              data-testid={`button-remove-dep-${dep.id}`}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 ) : (
                   <div className="text-center py-6 text-gray-500 dark:text-gray-400">
                     <Link2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
                     <p className="text-sm">No dependencies for this project</p>
-                    {canEditAllStrategies() && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-3"
-                        onClick={() => {
-                          setDependenciesModalProject(null);
-                          setLocation(`/projects/${dependenciesModalProject.id}?tab=dependencies`);
-                        }}
-                        data-testid="button-add-first-dependency"
-                      >
-                        <Plus className="w-4 h-4 mr-1" />
-                        Add First Dependency
-                      </Button>
+                    {!canEditAllStrategies() && (
+                      <p className="text-xs mt-1">Contact an administrator to add dependencies</p>
                     )}
                   </div>
                 )}

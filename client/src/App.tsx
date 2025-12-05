@@ -8,7 +8,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { AiChatAssistant } from "@/components/ai-chat/ai-chat-assistant";
 import Dashboard from "@/pages/dashboard";
 import Strategies from "@/pages/strategies";
-import Projects from "@/pages/projects";
 import Actions from "@/pages/actions";
 import MeetingNotes from "@/pages/meeting-notes";
 import Reports from "@/pages/reports";
@@ -54,7 +53,6 @@ function Router() {
       <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/strategies" component={Strategies} />
-        <Route path="/projects" component={Projects} />
         <Route path="/timeline" component={Timeline} />
         <Route path="/graph" component={Graph} />
         <Route path="/actions" component={Actions} />
