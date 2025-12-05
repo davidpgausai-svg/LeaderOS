@@ -1,0 +1,196 @@
+To teach Replit Agent v3 (which typically builds in React/Next.js with Tailwind CSS) how to build a Strategy Management Gantt chart with a specific 3-tier hierarchy (**Priority $\rightarrow$ Project $\rightarrow$ Actions**), you need to provide it with a strict data structure and a library recommendation to avoid it trying to build the rendering engine from scratch.
+
+Here is the complete guide, separating the **Visual Design** (what it should look like) from the **Code Implementation** (how to build it).
+
+-----
+
+### Phase 1: The Visual & UX Blueprint
+
+Before coding, you must establish the visual hierarchy. Standard Gantt charts usually only have "Project" and "Task." Your requirement adds a "Priority" layer on top.
+
+[Image of modern software gantt chart UI with nested rows and dependency lines]
+
+**The Visual Specification:**
+
+  * **Tier 1 (Priority):** A bold, distinct colored bar (spanning the total time of all projects beneath it). It acts as a collapsible container.
+  * **Tier 2 (Project):** Indented beneath Priority. Represents specific initiatives.
+  * **Tier 3 (Actions):** The actual executable bars. These are the leaves of the tree.
+  * **Timeline:** A sticky header at the top (Months/Weeks).
+  * **Interactivity:** Clicking a Priority should collapse/expand the Projects. Hovering over an Action shows the owner and status.
+
+-----
+
+### Phase 2: The Instruction & Code
+
+You can copy and paste the following prompt and code block directly into Replit Agent.
+
+#### 1\. The Prompt
+
+> "I need a Gantt Chart component for my Strategy Management dashboard. It must visualize a 3-level hierarchy: **Priority \> Project \> Actions**.
+>
+> Please use the library `gantt-task-react` for the visualization.
+> Use Tailwind CSS for the container styling.
+>
+> **Requirements:**
+>
+> 1.  The data should be structured so that 'Priorities' contain 'Projects', and 'Projects' contain 'Actions'.
+> 2.  In the Gantt view, render Priorities as the top-level grouping, Projects as sub-groups, and Actions as the timeline bars.
+> 3.  Include a toggle to switch between 'Month' and 'Year' views.
+> 4.  Here is the reference code structure I want you to use:"
+
+#### 2\. The Reference Code
+
+Providing this code to the Agent ensures it uses the correct props for the library and sets up the data hierarchy correctly.
+
+```tsx
+import React, { useState } from "react";
+import { Gantt, Task, ViewMode, TaskType } from "gantt-task-react";
+import "gantt-task-react/dist/index.css";
+
+// 1. Define the Types to handle the Hierarchy
+interface StrategyItem {
+  id: string;
+  name: string;
+  start: Date;
+  end: Date;
+  type: "priority" | "project" | "action";
+  progress: number;
+  parentId?: string;
+}
+
+const StrategyGantt = () => {
+  const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Month);
+  const [isChecked, setIsChecked] = useState(true);
+
+  // 2. Mock Data: Priority -> Project -> Action
+  // Note: specific dates are required for the library
+  const tasks: Task[] = [
+    // --- PRIORITY 1: Market Expansion ---
+    {
+      start: new Date(2023, 0, 1),
+      end: new Date(2023, 2, 31),
+      name: "Strategy: Global Market Expansion",
+      id: "Priority-1",
+      progress: 45,
+      type: "project", // Library uses 'project' for groups
+      hideChildren: false,
+      styles: { backgroundColor: "#1e3a8a", progressColor: "#1e3a8a" }, // Dark Blue
+    },
+    // --- PROJECT 1.1 (Under Priority 1) ---
+    {
+      start: new Date(2023, 0, 1),
+      end: new Date(2023, 1, 28),
+      name: "Project: EMEA Launch",
+      id: "Project-1-1",
+      progress: 60,
+      type: "project", 
+      project: "Priority-1", // Nesting: This belongs to Priority 1
+      hideChildren: false,
+      styles: { backgroundColor: "#3b82f6", progressColor: "#3b82f6" }, // Medium Blue
+    },
+    // --- ACTIONS (Under Project 1.1) ---
+    {
+      start: new Date(2023, 0, 5),
+      end: new Date(2023, 0, 20),
+      name: "Hire Regional VP",
+      id: "Action-1",
+      progress: 100,
+      type: "task",
+      project: "Project-1-1", // Nesting: This belongs to Project 1.1
+      styles: { backgroundColor: "#93c5fd", progressColor: "#2563eb" }, // Light Blue
+    },
+    {
+      start: new Date(2023, 0, 21),
+      end: new Date(2023, 1, 15),
+      name: "Secure Office Space in London",
+      id: "Action-2",
+      progress: 40,
+      type: "task",
+      project: "Project-1-1",
+      styles: { backgroundColor: "#93c5fd", progressColor: "#2563eb" },
+    },
+    
+    // --- PRIORITY 2: Operational Efficiency ---
+    {
+        start: new Date(2023, 3, 1),
+        end: new Date(2023, 5, 30),
+        name: "Strategy: Ops Efficiency",
+        id: "Priority-2",
+        progress: 10,
+        type: "project",
+        hideChildren: false,
+        styles: { backgroundColor: "#064e3b", progressColor: "#064e3b" }, // Dark Green
+    },
+     // --- PROJECT 2.1 ---
+    {
+        start: new Date(2023, 3, 1),
+        end: new Date(2023, 4, 15),
+        name: "Project: Automate Payroll",
+        id: "Project-2-1",
+        progress: 20,
+        type: "task", // Treated as task if it has no children, or project if it does
+        project: "Priority-2",
+        styles: { backgroundColor: "#10b981", progressColor: "#10b981" }, // Green
+    }
+  ];
+
+  return (
+    <div className="p-6 bg-white rounded-xl shadow-lg w-full overflow-hidden">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-bold text-gray-800">Strategic Roadmap</h2>
+        
+        {/* View Switcher Controls */}
+        <div className="space-x-2">
+          <button 
+            onClick={() => setViewMode(ViewMode.Month)}
+            className={`px-4 py-2 rounded ${viewMode === ViewMode.Month ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+          >
+            Month
+          </button>
+          <button 
+            onClick={() => setViewMode(ViewMode.Year)}
+            className={`px-4 py-2 rounded ${viewMode === ViewMode.Year ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+          >
+            Year
+          </button>
+        </div>
+      </div>
+
+      <div className="w-full overflow-x-auto">
+        <Gantt
+          tasks={tasks}
+          viewMode={viewMode}
+          listCellWidth="155px" // Width of the list column
+          columnWidth={viewMode === ViewMode.Month ? 300 : 100}
+          barBackgroundColor="#d1d5db"
+          rowHeight={50}
+          fontSize="12px"
+          // Custom Tooltip (Optional but good for Strategy Context)
+          TooltipContent={({ task, fontSize, fontFamily }) => {
+            return (
+              <div className="bg-white p-4 shadow-xl border rounded text-sm z-50">
+                <b style={{ fontSize, fontFamily }}>{task.name}</b>
+                <p>Status: {task.progress}% Complete</p>
+                <p className="text-gray-500 text-xs mt-1">
+                  {task.start.toLocaleDateString()} - {task.end.toLocaleDateString()}
+                </p>
+              </div>
+            );
+          }}
+        />
+      </div>
+    </div>
+  );
+};
+
+export default StrategyGantt;
+```
+
+-----
+
+### Why this works for "Strategy" specifically:
+
+1.  **Nesting (`project` prop):** The key in the code above is assigning the `project` ID of the *child* to match the `id` of the *parent*. The library reads this and creates the collapsible arrow UI automatically.
+2.  **Visual Distinction:** I added a `styles` object to the data. This visually separates the high-level **Strategy (Dark Colors)** from the actionable **Tasks (Light Colors)**, allowing executives to scan the big picture while managers track the details.
+
+**Would you like me to refine the code to include "Milestones" (diamonds) which are often critical in Strategy Management?**
