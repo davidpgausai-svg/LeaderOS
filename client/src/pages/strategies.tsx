@@ -675,7 +675,7 @@ export default function Strategies() {
                                       {/* Project title and action count */}
                                       <div className="min-w-0">
                                         <div className="flex items-center gap-1.5">
-                                          <span className="font-medium text-sm text-gray-900 dark:text-white truncate">
+                                          <span className="font-bold text-base text-gray-900 dark:text-white truncate">
                                             {project.title}
                                           </span>
                                           {/* Navigate to project - immediately after title */}
