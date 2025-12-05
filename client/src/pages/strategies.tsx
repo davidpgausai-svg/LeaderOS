@@ -45,7 +45,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen, TrendingUp, AlertTriangle } from "lucide-react";
+import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen, TrendingUp, AlertTriangle, Users } from "lucide-react";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { useLocation } from "wouter";
 import {
@@ -71,6 +71,7 @@ export default function Strategies() {
   const [strategyFilter, setStrategyFilter] = useState("all");
   const [metricsModalStrategy, setMetricsModalStrategy] = useState<any>(null);
   const [continuumModalStrategy, setContinuumModalStrategy] = useState<any>(null);
+  const [leadersModalProject, setLeadersModalProject] = useState<any>(null);
   const [collapsedStrategies, setCollapsedStrategies] = useState<Set<string>>(new Set());
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
 
@@ -98,6 +99,25 @@ export default function Strategies() {
       return response.json();
     },
   });
+
+  // Fetch all users for leader lookups
+  const { data: users } = useQuery<any[]>({
+    queryKey: ["/api/users"],
+  });
+
+  // Helper to get leader names from project's accountableLeaders
+  const getProjectLeaders = (project: any) => {
+    if (!project?.accountableLeaders || !users) return [];
+    try {
+      const leaderIds = JSON.parse(project.accountableLeaders);
+      if (!Array.isArray(leaderIds)) return [];
+      return leaderIds
+        .map((id: string) => users.find((u: any) => u.id === id))
+        .filter(Boolean);
+    } catch {
+      return [];
+    }
+  };
 
   // Helper to check if a project has active barriers
   const projectHasActiveBarriers = (projectId: string) => {
@@ -707,6 +727,20 @@ export default function Strategies() {
                                           >
                                             <Eye className="w-3.5 h-3.5 text-gray-500" />
                                           </Button>
+                                          {/* View project leaders */}
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-6 w-6 p-0 flex-shrink-0"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setLeadersModalProject(project);
+                                            }}
+                                            title="View project leaders"
+                                            data-testid={`button-view-leaders-${project.id}`}
+                                          >
+                                            <Users className="w-3.5 h-3.5 text-gray-500" />
+                                          </Button>
                                           {/* Barrier icon - shown when project has active barriers */}
                                           {projectHasActiveBarriers(project.id) && (
                                             <span title="This project has active barriers" data-testid={`icon-barrier-${project.id}`}>
@@ -929,6 +963,63 @@ export default function Strategies() {
                   <div className="font-medium text-gray-700 dark:text-gray-300 text-sm">9. Benefits Realization</div>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{continuumModalStrategy.benefitsRealizationPlan || "To be defined"}</p>
                 </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Project Leaders Modal */}
+      <Dialog open={!!leadersModalProject} onOpenChange={(open) => !open && setLeadersModalProject(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Project Leaders
+            </DialogTitle>
+          </DialogHeader>
+          {leadersModalProject && (
+            <div className="space-y-4">
+              {/* Project Title */}
+              <div className="border-b pb-3">
+                <h3 className="font-semibold text-gray-900 dark:text-white">
+                  {leadersModalProject.title}
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Accountable leaders for this project</p>
+              </div>
+
+              {/* Leaders List */}
+              <div className="space-y-2">
+                {getProjectLeaders(leadersModalProject).length > 0 ? (
+                  getProjectLeaders(leadersModalProject).map((leader: any) => (
+                    <div
+                      key={leader.id}
+                      className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                    >
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <Users className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-gray-900 dark:text-white truncate">
+                          {leader.displayName || leader.email}
+                        </div>
+                        {leader.displayName && (
+                          <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                            {leader.email}
+                          </div>
+                        )}
+                        <div className="text-xs text-gray-400 dark:text-gray-500 capitalize">
+                          {leader.role}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                    <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No leaders assigned to this project</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
