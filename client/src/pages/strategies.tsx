@@ -1186,34 +1186,36 @@ export default function Strategies() {
                           <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                             Projects ({strategy.projects.length})
                           </h4>
-                          <Button
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCreateProject(strategy.id);
-                            }}
-                            className="h-7 px-2 text-xs"
-                            style={{ backgroundColor: strategy.colorCode, borderColor: strategy.colorCode }}
-                            data-testid={`button-add-project-${strategy.id}`}
-                          >
-                            <Plus className="w-3 h-3 mr-1" />
-                            Add Project
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedStrategyIdForAction(strategy.id);
-                              setSelectedProjectIdForAction(null);
-                              setIsCreateActionOpen(true);
-                            }}
-                            className="h-7 px-2 text-xs"
-                            data-testid={`button-add-action-${strategy.id}`}
-                          >
-                            <Plus className="w-3 h-3 mr-1" />
-                            Add Action
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCreateProject(strategy.id);
+                              }}
+                              className="h-7 px-2 text-xs"
+                              style={{ backgroundColor: strategy.colorCode, borderColor: strategy.colorCode }}
+                              data-testid={`button-add-project-${strategy.id}`}
+                            >
+                              <Plus className="w-3 h-3 mr-1" />
+                              Add Project
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedStrategyIdForAction(strategy.id);
+                                setSelectedProjectIdForAction(null);
+                                setIsCreateActionOpen(true);
+                              }}
+                              className="h-7 px-2 text-xs"
+                              data-testid={`button-add-action-${strategy.id}`}
+                            >
+                              <Plus className="w-3 h-3 mr-1" />
+                              Add Action
+                            </Button>
+                          </div>
                         </div>
 
                         {/* Project List */}
