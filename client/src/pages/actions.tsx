@@ -140,7 +140,7 @@ export default function Actions() {
 
   const navigateToProjects = (strategyId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setLocation(`/projects?strategyId=${strategyId}`);
+    setLocation(`/projects`);
   };
 
   // Navigate to Projects page with deep-link to specific project

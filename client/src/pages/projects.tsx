@@ -307,7 +307,7 @@ export default function Projects() {
 
   const navigateToStrategies = (strategyId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setLocation(`/strategies?strategyId=${strategyId}`);
+    setLocation(`/strategies`);
   };
 
   const navigateToActions = (strategyId: string, e: React.MouseEvent) => {
