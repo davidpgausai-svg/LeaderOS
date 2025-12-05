@@ -1,63 +1,34 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Sidebar } from "@/components/layout/sidebar";
-import { useMemo, useRef, useEffect, useState, useCallback } from "react";
-import { format, min, max, differenceInDays, eachMonthOfInterval, eachWeekOfInterval, eachDayOfInterval, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isToday, isBefore, startOfDay, addMonths, subMonths } from "date-fns";
-import { toZonedTime } from "date-fns-tz";
+import { useMemo, useState, useEffect } from "react";
+import { Gantt, Task, ViewMode } from "gantt-task-react";
+import "gantt-task-react/dist/index.css";
 import type { Strategy, Project, Action, Barrier, Dependency } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ChevronDown, ChevronRight, AlertTriangle, GitBranch, Filter, Calendar } from "lucide-react";
+import { Filter, Calendar, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
-type TimeScale = "days" | "weeks" | "months";
-
-type GanttRow = {
-  id: string;
-  type: "priority" | "project" | "action";
-  title: string;
-  parentId?: string;
-  startDate?: Date;
-  endDate?: Date;
-  status: string;
-  colorCode: string;
-  barrierCount?: number;
-  hasDependencies?: boolean;
-  level: number;
-  projectId?: string;
-  strategyId?: string;
-};
-
 export default function Timeline() {
-  const ganttContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
-  const [timeScale, setTimeScale] = useState<TimeScale>("weeks");
+  const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Month);
   const [selectedPriorityIds, setSelectedPriorityIds] = useState<string[]>([]);
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(() => {
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
     const stored = localStorage.getItem('gantt-expanded-rows');
     return stored ? new Set(JSON.parse(stored)) : new Set();
   });
-  const [showDependencyLine, setShowDependencyLine] = useState<string | null>(null);
   const [barrierDialogOpen, setBarrierDialogOpen] = useState(false);
   const [selectedProjectBarriers, setSelectedProjectBarriers] = useState<Barrier[]>([]);
   const [selectedProjectTitle, setSelectedProjectTitle] = useState("");
-  
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragInfo, setDragInfo] = useState<{
-    rowId: string;
-    type: "start" | "end";
-    originalDate: Date;
-    currentDate: Date;
-  } | null>(null);
 
   useEffect(() => {
-    localStorage.setItem('gantt-expanded-rows', JSON.stringify(Array.from(expandedRows)));
-  }, [expandedRows]);
+    localStorage.setItem('gantt-expanded-rows', JSON.stringify(Array.from(expandedIds)));
+  }, [expandedIds]);
 
   const { data: strategies, isLoading: strategiesLoading } = useQuery<Strategy[]>({
     queryKey: ["/api/strategies"],
@@ -77,10 +48,6 @@ export default function Timeline() {
 
   const { data: dependencies } = useQuery<Dependency[]>({
     queryKey: ["/api/dependencies"],
-  });
-
-  const { data: currentUser } = useQuery({
-    queryKey: ["/api/auth/user"],
   });
 
   const updateProjectMutation = useMutation({
@@ -117,13 +84,28 @@ export default function Timeline() {
     return activeStrategies.filter(s => selectedPriorityIds.includes(s.id));
   }, [strategies, selectedPriorityIds]);
 
-  const { ganttRows, dateRange, timeColumns } = useMemo(() => {
-    if (!filteredStrategies || !projects || !actions) {
-      return { ganttRows: [], dateRange: { min: new Date(), max: new Date(), totalDays: 1 }, timeColumns: [] };
-    }
+  const dependencyMap = useMemo(() => {
+    if (!dependencies) return new Map<string, string[]>();
+    
+    const map = new Map<string, string[]>();
+    
+    dependencies.forEach(dep => {
+      const targetId = `${dep.targetType}-${dep.targetId}`;
+      const sourceId = `${dep.sourceType}-${dep.sourceId}`;
+      
+      if (!map.has(targetId)) {
+        map.set(targetId, []);
+      }
+      map.get(targetId)!.push(sourceId);
+    });
+    
+    return map;
+  }, [dependencies]);
 
-    const rows: GanttRow[] = [];
-    const allDates: Date[] = [];
+  const tasks: Task[] = useMemo(() => {
+    if (!filteredStrategies || !projects || !actions) return [];
+
+    const result: Task[] = [];
 
     filteredStrategies.forEach(strategy => {
       const strategyProjects = projects
@@ -134,164 +116,172 @@ export default function Timeline() {
           if (dateA !== dateB) return dateA - dateB;
           return a.id.localeCompare(b.id);
         });
-      const hasProjects = strategyProjects.length > 0;
-      
-      if (!hasProjects) return;
 
-      allDates.push(new Date(strategy.startDate), new Date(strategy.targetDate));
+      if (strategyProjects.length === 0) return;
 
-      rows.push({
-        id: `priority-${strategy.id}`,
-        type: "priority",
-        title: strategy.title,
-        startDate: new Date(strategy.startDate),
-        endDate: new Date(strategy.targetDate),
-        status: strategy.status,
-        colorCode: strategy.colorCode,
-        level: 0,
-        strategyId: strategy.id,
+      const strategyStartDates: Date[] = [];
+      const strategyEndDates: Date[] = [];
+
+      strategyProjects.forEach(p => {
+        if (p.startDate) strategyStartDates.push(new Date(p.startDate));
+        if (p.dueDate) strategyEndDates.push(new Date(p.dueDate));
       });
 
-      if (expandedRows.has(`priority-${strategy.id}`)) {
-        strategyProjects.forEach(project => {
-          const projectActions = actions
-            .filter(a => a.projectId === project.id && a.dueDate)
-            .sort((a, b) => {
-              const dateA = new Date(a.dueDate!).getTime();
-              const dateB = new Date(b.dueDate!).getTime();
-              if (dateA !== dateB) return dateA - dateB;
-              return a.id.localeCompare(b.id);
-            });
-          const hasActions = projectActions.length > 0;
-          
-          if (!hasActions && !project.startDate && !project.dueDate) return;
+      if (strategyStartDates.length === 0 && strategyEndDates.length === 0) return;
 
-          const projectBarriers = barriers?.filter(b => b.projectId === project.id && b.status !== 'resolved' && b.status !== 'closed') || [];
-          const projectDependencies = dependencies?.filter(d => 
-            (d.sourceType === 'project' && d.sourceId === project.id) ||
-            (d.targetType === 'project' && d.targetId === project.id)
-          ) || [];
+      const strategyStart = strategyStartDates.length > 0 
+        ? new Date(Math.min(...strategyStartDates.map(d => d.getTime())))
+        : strategyEndDates[0];
+      const strategyEnd = strategyEndDates.length > 0
+        ? new Date(Math.max(...strategyEndDates.map(d => d.getTime())))
+        : strategyStartDates[0];
 
-          allDates.push(new Date(project.startDate), new Date(project.dueDate));
+      const isStrategyExpanded = expandedIds.has(`strategy-${strategy.id}`);
 
-          rows.push({
-            id: `project-${project.id}`,
-            type: "project",
-            title: project.title,
-            parentId: `priority-${strategy.id}`,
-            startDate: new Date(project.startDate),
-            endDate: new Date(project.dueDate),
-            status: project.status,
-            colorCode: strategy.colorCode,
-            barrierCount: projectBarriers.length,
-            hasDependencies: projectDependencies.length > 0,
-            level: 1,
-            projectId: project.id,
-            strategyId: strategy.id,
+      const strategyTaskId = `strategy-${strategy.id}`;
+      result.push({
+        start: strategyStart,
+        end: strategyEnd,
+        name: strategy.title,
+        id: strategyTaskId,
+        progress: strategy.progress || 0,
+        type: "project",
+        hideChildren: !isStrategyExpanded,
+        dependencies: dependencyMap.get(strategyTaskId) || [],
+        styles: {
+          backgroundColor: strategy.colorCode || "#1e3a8a",
+          progressColor: strategy.colorCode || "#1e3a8a",
+          progressSelectedColor: strategy.colorCode || "#1e3a8a",
+        },
+      });
+
+      strategyProjects.forEach(project => {
+        if (!project.startDate || !project.dueDate) return;
+
+        const projectStart = new Date(project.startDate);
+        const projectEnd = new Date(project.dueDate);
+
+        const projectActions = actions
+          .filter(a => a.projectId === project.id && a.dueDate)
+          .sort((a, b) => {
+            const dateA = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+            const dateB = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+            if (dateA !== dateB) return dateA - dateB;
+            return a.id.localeCompare(b.id);
           });
 
-          if (expandedRows.has(`project-${project.id}`)) {
-            projectActions.forEach(action => {
-              if (action.dueDate) {
-                allDates.push(new Date(action.dueDate));
-                
-                const actionDependencies = dependencies?.filter(d =>
-                  (d.sourceType === 'action' && d.sourceId === action.id) ||
-                  (d.targetType === 'action' && d.targetId === action.id)
-                ) || [];
+        const hasActions = projectActions.length > 0;
+        const isProjectExpanded = expandedIds.has(`project-${project.id}`);
 
-                rows.push({
-                  id: `action-${action.id}`,
-                  type: "action",
-                  title: action.title,
-                  parentId: `project-${project.id}`,
-                  endDate: new Date(action.dueDate),
-                  status: action.status,
-                  colorCode: strategy.colorCode,
-                  hasDependencies: actionDependencies.length > 0,
-                  level: 2,
-                  projectId: project.id,
-                  strategyId: strategy.id,
-                });
-              }
-            });
+        const projectBarriers = barriers?.filter(b => 
+          b.projectId === project.id && b.status !== 'resolved' && b.status !== 'closed'
+        ) || [];
+        const hasBarriers = projectBarriers.length > 0;
+
+        const getProjectStatusColor = (status: string) => {
+          switch (status) {
+            case "C": return "#22c55e";
+            case "OT": return "#eab308";
+            case "OH": return "#ef4444";
+            case "B": return "#f97316";
+            case "NYS": return "#9ca3af";
+            default: return "#6b7280";
           }
+        };
+
+        const projectColor = getProjectStatusColor(project.status);
+        const projectTaskId = `project-${project.id}`;
+
+        result.push({
+          start: projectStart,
+          end: projectEnd,
+          name: hasBarriers ? `⚠️ ${project.title}` : project.title,
+          id: projectTaskId,
+          progress: project.progress || 0,
+          type: hasActions ? "project" : "task",
+          project: `strategy-${strategy.id}`,
+          hideChildren: !isProjectExpanded,
+          dependencies: dependencyMap.get(projectTaskId) || [],
+          styles: {
+            backgroundColor: projectColor,
+            progressColor: projectColor,
+            progressSelectedColor: projectColor,
+          },
         });
-      }
+
+        if (hasActions && isProjectExpanded) {
+          projectActions.forEach(action => {
+            if (!action.dueDate) return;
+
+            const actionEnd = new Date(action.dueDate);
+            const actionStart = new Date(actionEnd);
+            actionStart.setDate(actionStart.getDate() - 7);
+
+            const getActionStatusColor = (status: string) => {
+              switch (status) {
+                case "achieved": return "#86efac";
+                case "in_progress": return "#93c5fd";
+                case "at_risk": return "#fca5a5";
+                case "not_started": return "#d1d5db";
+                default: return "#e5e7eb";
+              }
+            };
+
+            const actionColor = getActionStatusColor(action.status);
+            const actionTaskId = `action-${action.id}`;
+
+            result.push({
+              start: actionStart,
+              end: actionEnd,
+              name: action.title,
+              id: actionTaskId,
+              progress: action.status === "achieved" ? 100 : action.status === "in_progress" ? 50 : 0,
+              type: "task",
+              project: `project-${project.id}`,
+              dependencies: dependencyMap.get(actionTaskId) || [],
+              styles: {
+                backgroundColor: actionColor,
+                progressColor: actionColor,
+                progressSelectedColor: actionColor,
+              },
+            });
+          });
+        }
+      });
     });
 
-    const minDate = allDates.length > 0 ? startOfMonth(subMonths(min(allDates), 1)) : startOfMonth(new Date());
-    const maxDate = allDates.length > 0 ? endOfMonth(addMonths(max(allDates), 1)) : endOfMonth(new Date());
-    const totalDays = differenceInDays(maxDate, minDate) + 1;
+    return result;
+  }, [filteredStrategies, projects, actions, barriers, expandedIds, dependencyMap]);
 
-    let columns: { date: Date; label: string; width: number }[] = [];
-    
-    if (timeScale === "days") {
-      const days = eachDayOfInterval({ start: minDate, end: maxDate });
-      columns = days.map(day => ({
-        date: day,
-        label: format(day, 'd'),
-        width: 30,
-      }));
-    } else if (timeScale === "weeks") {
-      const weeks = eachWeekOfInterval({ start: minDate, end: maxDate });
-      columns = weeks.map(week => ({
-        date: week,
-        label: format(week, 'MMM d'),
-        width: 80,
-      }));
-    } else {
-      const months = eachMonthOfInterval({ start: minDate, end: maxDate });
-      columns = months.map(month => ({
-        date: month,
-        label: format(month, 'MMM yyyy'),
-        width: 120,
-      }));
-    }
-
-    return {
-      ganttRows: rows,
-      dateRange: { min: minDate, max: maxDate, totalDays },
-      timeColumns: columns,
-    };
-  }, [filteredStrategies, projects, actions, barriers, dependencies, expandedRows, timeScale]);
-
-  const totalWidth = timeColumns.reduce((sum, col) => sum + col.width, 0);
-
-  const getPositionPixels = useCallback((date: Date) => {
-    const daysSinceStart = differenceInDays(date, dateRange.min);
-    const pixelsPerDay = totalWidth / dateRange.totalDays;
-    return daysSinceStart * pixelsPerDay;
-  }, [dateRange, totalWidth]);
-
-  const getDateFromPixels = useCallback((pixels: number) => {
-    const pixelsPerDay = totalWidth / dateRange.totalDays;
-    const daysSinceStart = Math.round(pixels / pixelsPerDay);
-    return addDays(dateRange.min, daysSinceStart);
-  }, [dateRange, totalWidth]);
-
-  const todayPosition = useMemo(() => {
-    const userTimezone = (currentUser as any)?.timezone || 'America/Chicago';
-    const now = new Date();
-    const todayInTimezone = toZonedTime(now, userTimezone);
-    
-    if (todayInTimezone < dateRange.min || todayInTimezone > dateRange.max) {
-      return null;
-    }
-    
-    return getPositionPixels(todayInTimezone);
-  }, [currentUser, dateRange, getPositionPixels]);
-
-  const toggleExpand = (rowId: string) => {
-    setExpandedRows(prev => {
+  const handleExpanderClick = (task: Task) => {
+    setExpandedIds(prev => {
       const next = new Set(prev);
-      if (next.has(rowId)) {
-        next.delete(rowId);
+      if (next.has(task.id)) {
+        next.delete(task.id);
       } else {
-        next.add(rowId);
+        next.add(task.id);
       }
       return next;
     });
+  };
+
+  const handleDateChange = (task: Task) => {
+    const parts = task.id.split('-');
+    const type = parts[0];
+    const id = parts.slice(1).join('-');
+
+    if (type === 'project') {
+      updateProjectMutation.mutate({
+        id,
+        startDate: task.start,
+        dueDate: task.end,
+      });
+    } else if (type === 'action') {
+      updateActionMutation.mutate({
+        id,
+        dueDate: task.end,
+      });
+    }
   };
 
   const handlePriorityFilterChange = (priorityId: string, checked: boolean) => {
@@ -304,233 +294,24 @@ export default function Timeline() {
     });
   };
 
-  const getStatusColor = (status: string, type: "priority" | "project" | "action") => {
-    if (type === "action") {
-      switch (status) {
-        case "achieved": return "bg-green-500";
-        case "in_progress": return "bg-blue-500";
-        case "at_risk": return "bg-red-500";
-        case "not_started": return "bg-gray-400";
-        default: return "bg-gray-400";
-      }
-    } else if (type === "project") {
-      switch (status) {
-        case "C": return "bg-green-500";
-        case "OT": return "bg-yellow-500";
-        case "OH": return "bg-red-500";
-        case "B": return "bg-orange-500";
-        case "NYS": return "bg-gray-400";
-        default: return "bg-gray-400";
-      }
-    } else {
-      switch (status) {
-        case "Active": return "bg-blue-500";
-        case "Completed": return "bg-green-500";
-        default: return "bg-gray-400";
-      }
-    }
-  };
-
-  const handleBarrierClick = (projectId: string, projectTitle: string) => {
-    const projectBarriers = barriers?.filter(b => 
-      b.projectId === projectId && b.status !== 'resolved' && b.status !== 'closed'
-    ) || [];
-    setSelectedProjectBarriers(projectBarriers);
-    setSelectedProjectTitle(projectTitle);
-    setBarrierDialogOpen(true);
-  };
-
-  const handleDependencyClick = (rowId: string) => {
-    setShowDependencyLine(prev => prev === rowId ? null : rowId);
-  };
-
-  const getDependencyLines = useCallback((rowId: string) => {
-    if (!dependencies || !ganttRows) return [];
-    
-    const parts = rowId.split('-');
+  const handleTaskClick = (task: Task) => {
+    const parts = task.id.split('-');
     const type = parts[0];
     const id = parts.slice(1).join('-');
-    
-    const relevantDeps = dependencies.filter(d =>
-      (d.sourceType === type && d.sourceId === id) ||
-      (d.targetType === type && d.targetId === id)
-    );
 
-    return relevantDeps.map(dep => {
-      const sourceRowId = `${dep.sourceType}-${dep.sourceId}`;
-      const targetRowId = `${dep.targetType}-${dep.targetId}`;
-      
-      const sourceRow = ganttRows.find(r => r.id === sourceRowId);
-      const targetRow = ganttRows.find(r => r.id === targetRowId);
-      
-      if (!sourceRow || !targetRow) return null;
-      
-      const sourceEndDate = sourceRow.endDate || sourceRow.startDate;
-      const targetStartDate = targetRow.startDate || targetRow.endDate;
-      
-      if (!sourceEndDate || !targetStartDate) return null;
-      
-      const sourceRowIndex = ganttRows.findIndex(r => r.id === sourceRowId);
-      const targetRowIndex = ganttRows.findIndex(r => r.id === targetRowId);
-      
-      return {
-        sourceX: getPositionPixels(sourceEndDate),
-        sourceY: sourceRowIndex * 48 + 24,
-        targetX: getPositionPixels(targetStartDate),
-        targetY: targetRowIndex * 48 + 24,
-        targetDate: targetStartDate,
-      };
-    }).filter(Boolean);
-  }, [dependencies, ganttRows, getPositionPixels]);
-
-  const getAllDependencyLines = useMemo(() => {
-    if (!dependencies || !ganttRows || ganttRows.length === 0) return [];
-    
-    const visibleRowIds = new Set(ganttRows.map(r => r.id));
-    
-    return dependencies.map(dep => {
-      const sourceRowId = `${dep.sourceType}-${dep.sourceId}`;
-      const targetRowId = `${dep.targetType}-${dep.targetId}`;
-      
-      if (!visibleRowIds.has(sourceRowId) || !visibleRowIds.has(targetRowId)) return null;
-      
-      const sourceRow = ganttRows.find(r => r.id === sourceRowId);
-      const targetRow = ganttRows.find(r => r.id === targetRowId);
-      
-      if (!sourceRow || !targetRow) return null;
-      
-      const sourceEndDate = sourceRow.endDate || sourceRow.startDate;
-      const targetStartDate = targetRow.startDate || targetRow.endDate;
-      
-      if (!sourceEndDate || !targetStartDate) return null;
-      
-      const sourceRowIndex = ganttRows.findIndex(r => r.id === sourceRowId);
-      const targetRowIndex = ganttRows.findIndex(r => r.id === targetRowId);
-      
-      return {
-        id: dep.id,
-        sourceX: getPositionPixels(sourceEndDate),
-        sourceY: sourceRowIndex * 48 + 24,
-        targetX: getPositionPixels(targetStartDate),
-        targetY: targetRowIndex * 48 + 24,
-      };
-    }).filter(Boolean);
-  }, [dependencies, ganttRows, getPositionPixels]);
-
-  const handleMouseDown = (e: React.MouseEvent, rowId: string, type: "start" | "end", currentDate: Date) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-    setDragInfo({
-      rowId,
-      type,
-      originalDate: currentDate,
-      currentDate: currentDate,
-    });
-  };
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging || !dragInfo || !ganttContainerRef.current) return;
-    
-    const container = ganttContainerRef.current;
-    const rect = container.getBoundingClientRect();
-    const scrollLeft = container.scrollLeft;
-    const leftColumnWidth = 280;
-    const relativeX = e.clientX - rect.left - leftColumnWidth + scrollLeft;
-    
-    let newDate = getDateFromPixels(Math.max(0, relativeX));
-    
-    newDate = newDate < dateRange.min ? dateRange.min : newDate > dateRange.max ? dateRange.max : newDate;
-    
-    const parts = dragInfo.rowId.split('-');
-    const type = parts[0];
-    const id = parts.slice(1).join('-');
-    
     if (type === 'project') {
-      const project = projects?.find(p => p.id === id);
-      if (project) {
-        if (dragInfo.type === 'start') {
-          const endDate = new Date(project.dueDate);
-          if (newDate > endDate) newDate = endDate;
-        } else {
-          const startDate = new Date(project.startDate);
-          if (newDate < startDate) newDate = startDate;
-        }
+      const projectBarriers = barriers?.filter(b => 
+        b.projectId === id && b.status !== 'resolved' && b.status !== 'closed'
+      ) || [];
+      
+      if (projectBarriers.length > 0) {
+        const project = projects?.find(p => p.id === id);
+        setSelectedProjectBarriers(projectBarriers);
+        setSelectedProjectTitle(project?.title || "Project");
+        setBarrierDialogOpen(true);
       }
     }
-    
-    setDragInfo(prev => prev ? { ...prev, currentDate: newDate } : null);
-  }, [isDragging, dragInfo, getDateFromPixels, dateRange, projects]);
-
-  const handleMouseUp = useCallback(() => {
-    if (!isDragging || !dragInfo) return;
-    
-    const parts = dragInfo.rowId.split('-');
-    const type = parts[0];
-    const id = parts.slice(1).join('-');
-    
-    let finalDate = dragInfo.currentDate;
-    finalDate = finalDate < dateRange.min ? dateRange.min : finalDate > dateRange.max ? dateRange.max : finalDate;
-    
-    if (type === 'project') {
-      const project = projects?.find(p => p.id === id);
-      if (project) {
-        let newStartDate = new Date(project.startDate);
-        let newDueDate = new Date(project.dueDate);
-        
-        if (dragInfo.type === 'start') {
-          newStartDate = finalDate;
-          if (newStartDate > newDueDate) {
-            toast({ title: "Invalid date", description: "Start date cannot be after end date", variant: "destructive" });
-            setIsDragging(false);
-            setDragInfo(null);
-            return;
-          }
-        } else {
-          newDueDate = finalDate;
-          if (newDueDate < newStartDate) {
-            toast({ title: "Invalid date", description: "End date cannot be before start date", variant: "destructive" });
-            setIsDragging(false);
-            setDragInfo(null);
-            return;
-          }
-        }
-        
-        updateProjectMutation.mutate({
-          id,
-          startDate: newStartDate,
-          dueDate: newDueDate,
-        });
-      }
-    } else if (type === 'action') {
-      updateActionMutation.mutate({
-        id,
-        dueDate: finalDate,
-      });
-    }
-    
-    setIsDragging(false);
-    setDragInfo(null);
-  }, [isDragging, dragInfo, projects, updateProjectMutation, updateActionMutation, dateRange, toast]);
-
-  useEffect(() => {
-    if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-      return () => {
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseup', handleMouseUp);
-      };
-    }
-  }, [isDragging, handleMouseMove, handleMouseUp]);
-
-  useEffect(() => {
-    if (ganttContainerRef.current && todayPosition !== null) {
-      const container = ganttContainerRef.current;
-      const scrollPosition = todayPosition - container.clientWidth / 2;
-      container.scrollLeft = Math.max(0, scrollPosition);
-    }
-  }, [todayPosition, timeColumns]);
+  };
 
   if (strategiesLoading || projectsLoading || actionsLoading) {
     return (
@@ -549,13 +330,13 @@ export default function Timeline() {
   const activeStrategies = strategies?.filter(s => s.status !== 'Archived') || [];
 
   return (
-    <div className="min-h-screen flex bg-white dark:bg-black">
+    <div className="min-h-screen flex bg-white dark:bg-gray-950">
       <Sidebar />
       <main className="flex-1 overflow-hidden flex flex-col">
-        <header className="bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800 px-6 py-4">
+        <header className="bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 px-6 py-4">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Gantt Chart</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Strategic Roadmap</h2>
               <p className="text-gray-600 dark:text-gray-400 mt-1">
                 Interactive timeline showing Priorities, Projects, and Actions
               </p>
@@ -612,25 +393,25 @@ export default function Timeline() {
 
               <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
                 <Button
-                  variant={timeScale === "days" ? "default" : "ghost"}
+                  variant={viewMode === ViewMode.Day ? "default" : "ghost"}
                   size="sm"
-                  onClick={() => setTimeScale("days")}
+                  onClick={() => setViewMode(ViewMode.Day)}
                   data-testid="button-scale-days"
                 >
                   Days
                 </Button>
                 <Button
-                  variant={timeScale === "weeks" ? "default" : "ghost"}
+                  variant={viewMode === ViewMode.Week ? "default" : "ghost"}
                   size="sm"
-                  onClick={() => setTimeScale("weeks")}
+                  onClick={() => setViewMode(ViewMode.Week)}
                   data-testid="button-scale-weeks"
                 >
                   Weeks
                 </Button>
                 <Button
-                  variant={timeScale === "months" ? "default" : "ghost"}
+                  variant={viewMode === ViewMode.Month ? "default" : "ghost"}
                   size="sm"
-                  onClick={() => setTimeScale("months")}
+                  onClick={() => setViewMode(ViewMode.Month)}
                   data-testid="button-scale-months"
                 >
                   Months
@@ -640,8 +421,8 @@ export default function Timeline() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-hidden">
-          {ganttRows.length === 0 ? (
+        <div className="flex-1 overflow-auto p-6">
+          {tasks.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center py-12">
                 <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -657,340 +438,77 @@ export default function Timeline() {
               </div>
             </div>
           ) : (
-            <div className="h-full flex flex-col">
-              <div 
-                ref={ganttContainerRef}
-                className="flex-1 overflow-auto relative"
-                style={{ cursor: isDragging ? 'ew-resize' : 'default' }}
-              >
-                <div className="inline-flex min-w-full">
-                  <div className="sticky left-0 z-20 bg-white dark:bg-black border-r border-gray-200 dark:border-gray-800">
-                    <div className="h-12 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 flex items-center px-4 w-[280px]">
-                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Name</span>
-                    </div>
-                    {ganttRows.map((row) => (
-                      <div
-                        key={row.id}
-                        className={`h-12 border-b border-gray-200 dark:border-gray-800 flex items-center px-4 w-[280px] ${
-                          row.type === 'priority' ? 'bg-gray-50 dark:bg-gray-900' : 'bg-white dark:bg-black'
-                        }`}
-                        style={{ paddingLeft: `${16 + row.level * 20}px` }}
-                      >
-                        {((row.type === 'priority' && projects?.some(p => p.strategyId === row.strategyId)) ||
-                          (row.type === 'project' && actions?.some(a => a.projectId === row.projectId && a.dueDate))) && (
-                          <button
-                            onClick={() => toggleExpand(row.id)}
-                            className="mr-2 p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
-                            data-testid={`button-expand-${row.id}`}
-                          >
-                            {expandedRows.has(row.id) ? (
-                              <ChevronDown className="w-4 h-4 text-gray-500" />
-                            ) : (
-                              <ChevronRight className="w-4 h-4 text-gray-500" />
-                            )}
-                          </button>
-                        )}
-                        {row.type === 'priority' && (
+            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
+              <Gantt
+                tasks={tasks}
+                viewMode={viewMode}
+                onExpanderClick={handleExpanderClick}
+                onDateChange={handleDateChange}
+                onClick={handleTaskClick}
+                listCellWidth="200px"
+                columnWidth={viewMode === ViewMode.Day ? 60 : viewMode === ViewMode.Week ? 120 : 200}
+                barBackgroundColor="#e5e7eb"
+                rowHeight={45}
+                fontSize="13px"
+                headerHeight={50}
+                todayColor="rgba(239, 68, 68, 0.15)"
+                TooltipContent={({ task }) => {
+                  const parts = task.id.split('-');
+                  const type = parts[0];
+                  
+                  return (
+                    <div className="bg-white dark:bg-gray-800 p-3 shadow-xl border border-gray-200 dark:border-gray-700 rounded-lg text-sm max-w-xs">
+                      <p className="font-semibold text-gray-900 dark:text-white mb-1">{task.name}</p>
+                      <p className="text-gray-600 dark:text-gray-400 text-xs mb-1 capitalize">{type}</p>
+                      <p className="text-gray-500 dark:text-gray-400 text-xs">
+                        {task.start.toLocaleDateString()} - {task.end.toLocaleDateString()}
+                      </p>
+                      <div className="mt-2 flex items-center gap-2">
+                        <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                           <div 
-                            className="w-3 h-3 rounded-full mr-2 flex-shrink-0" 
-                            style={{ backgroundColor: row.colorCode }}
+                            className="bg-blue-500 h-2 rounded-full" 
+                            style={{ width: `${task.progress}%` }}
                           />
-                        )}
-                        <span className={`text-sm truncate ${
-                          row.type === 'priority' ? 'font-semibold text-gray-900 dark:text-white' :
-                          row.type === 'project' ? 'font-medium text-gray-800 dark:text-gray-200' :
-                          'text-gray-700 dark:text-gray-300'
-                        }`}>
-                          {row.title}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="relative" style={{ width: `${totalWidth}px` }}>
-                    <div className="h-12 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 flex sticky top-0 z-10">
-                      {timeColumns.map((col, idx) => (
-                        <div
-                          key={idx}
-                          className="border-r border-gray-200 dark:border-gray-800 flex items-center justify-center text-xs font-medium text-gray-600 dark:text-gray-400"
-                          style={{ width: `${col.width}px` }}
-                        >
-                          {col.label}
                         </div>
-                      ))}
+                        <span className="text-xs text-gray-500">{task.progress}%</span>
+                      </div>
                     </div>
-
-                    {todayPosition !== null && (
-                      <div
-                        className="absolute top-0 bottom-0 w-0.5 bg-red-500 dark:bg-orange-400 z-30 pointer-events-none"
-                        style={{ left: `${todayPosition}px` }}
-                      >
-                        <div className="absolute -top-1 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-red-500 dark:bg-orange-400 text-white text-xs font-medium rounded whitespace-nowrap">
-                          Today
-                        </div>
-                      </div>
-                    )}
-
-                    {getAllDependencyLines.length > 0 && (
-                      <svg 
-                        className="absolute top-12 left-0 pointer-events-none z-[5]" 
-                        style={{ width: `${totalWidth}px`, height: `${ganttRows.length * 48}px` }}
-                      >
-                        <defs>
-                          <marker
-                            id="arrowhead-all"
-                            markerWidth="8"
-                            markerHeight="6"
-                            refX="7"
-                            refY="3"
-                            orient="auto"
-                          >
-                            <polygon points="0 0, 8 3, 0 6" fill="#94a3b8" />
-                          </marker>
-                          <marker
-                            id="arrowhead-highlight"
-                            markerWidth="10"
-                            markerHeight="7"
-                            refX="9"
-                            refY="3.5"
-                            orient="auto"
-                          >
-                            <polygon points="0 0, 10 3.5, 0 7" fill="#6366f1" />
-                          </marker>
-                        </defs>
-                        {getAllDependencyLines.map((line: any) => {
-                          const midX = (line.sourceX + line.targetX) / 2;
-                          const isHighlighted = showDependencyLine && getDependencyLines(showDependencyLine).some(
-                            (l: any) => l && l.sourceX === line.sourceX && l.targetX === line.targetX
-                          );
-                          return (
-                            <g key={line.id}>
-                              <path
-                                d={`M ${line.sourceX} ${line.sourceY} 
-                                    C ${midX} ${line.sourceY}, ${midX} ${line.targetY}, ${line.targetX} ${line.targetY}`}
-                                fill="none"
-                                stroke={isHighlighted ? "#6366f1" : "#cbd5e1"}
-                                strokeWidth={isHighlighted ? "2" : "1.5"}
-                                markerEnd={isHighlighted ? "url(#arrowhead-highlight)" : "url(#arrowhead-all)"}
-                              />
-                              <circle 
-                                cx={line.sourceX} 
-                                cy={line.sourceY} 
-                                r="3" 
-                                fill={isHighlighted ? "#6366f1" : "#94a3b8"} 
-                              />
-                            </g>
-                          );
-                        })}
-                      </svg>
-                    )}
-
-                    {ganttRows.map((row, rowIndex) => {
-                      const rowStartDate = dragInfo?.rowId === row.id && dragInfo.type === 'start' 
-                        ? dragInfo.currentDate 
-                        : row.startDate;
-                      const rowEndDate = dragInfo?.rowId === row.id && dragInfo.type === 'end'
-                        ? dragInfo.currentDate
-                        : row.endDate;
-                      
-                      const startPixels = rowStartDate ? getPositionPixels(rowStartDate) : null;
-                      const endPixels = rowEndDate ? getPositionPixels(rowEndDate) : null;
-                      
-                      let barLeft = 0;
-                      let barWidth = 0;
-                      
-                      if (startPixels !== null && endPixels !== null) {
-                        barLeft = Math.min(startPixels, endPixels);
-                        barWidth = Math.abs(endPixels - startPixels) + (timeScale === 'days' ? 30 : timeScale === 'weeks' ? 11 : 4);
-                      } else if (endPixels !== null) {
-                        barLeft = endPixels - 20;
-                        barWidth = 40;
-                      }
-
-                      const canDrag = row.type === 'project' || row.type === 'action';
-
-                      return (
-                        <div
-                          key={row.id}
-                          className={`h-12 border-b border-gray-200 dark:border-gray-800 relative ${
-                            row.type === 'priority' ? 'bg-gray-50/50 dark:bg-gray-900/50' : ''
-                          }`}
-                          data-testid={`gantt-row-${row.id}`}
-                        >
-                          {timeColumns.map((col, idx) => (
-                            <div
-                              key={idx}
-                              className="absolute top-0 bottom-0 border-r border-gray-100 dark:border-gray-800/50"
-                              style={{ left: `${timeColumns.slice(0, idx).reduce((sum, c) => sum + c.width, 0)}px`, width: `${col.width}px` }}
-                            />
-                          ))}
-
-                          {(barWidth > 0) && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div
-                                    className={`absolute top-2 h-8 rounded-md flex items-center group ${getStatusColor(row.status, row.type)}`}
-                                    style={{
-                                      left: `${barLeft}px`,
-                                      width: `${Math.max(barWidth, 40)}px`,
-                                      opacity: row.type === 'priority' ? 0.6 : 0.9,
-                                    }}
-                                  >
-                                    {canDrag && startPixels !== null && (
-                                      <div
-                                        className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-white/30 rounded-l-md z-10"
-                                        onMouseDown={(e) => handleMouseDown(e, row.id, 'start', row.startDate!)}
-                                      />
-                                    )}
-                                    
-                                    <span className="text-xs font-medium text-white truncate px-3 flex-1">
-                                      {row.type !== 'priority' && row.title}
-                                    </span>
-
-                                    {row.hasDependencies && (
-                                      <button
-                                        onClick={() => handleDependencyClick(row.id)}
-                                        className={`mr-1 p-1 rounded hover:bg-white/20 ${showDependencyLine === row.id ? 'bg-white/30' : ''}`}
-                                        data-testid={`button-dependency-${row.id}`}
-                                      >
-                                        <GitBranch className="w-3 h-3 text-white" />
-                                      </button>
-                                    )}
-
-                                    {row.type === 'project' && row.barrierCount && row.barrierCount > 0 && (
-                                      <button
-                                        onClick={() => handleBarrierClick(row.projectId!, row.title)}
-                                        className="absolute -right-3 top-1/2 -translate-y-1/2 flex items-center justify-center w-6 h-6 bg-red-500 rounded-full text-white text-xs font-bold shadow-md hover:bg-red-600 z-10"
-                                        data-testid={`button-barrier-${row.id}`}
-                                      >
-                                        <AlertTriangle className="w-3 h-3" />
-                                        {row.barrierCount > 1 && (
-                                          <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-700 rounded-full text-[10px] flex items-center justify-center">
-                                            {row.barrierCount}
-                                          </span>
-                                        )}
-                                      </button>
-                                    )}
-
-                                    {canDrag && (
-                                      <div
-                                        className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-white/30 rounded-r-md z-10"
-                                        onMouseDown={(e) => handleMouseDown(e, row.id, 'end', row.endDate!)}
-                                      />
-                                    )}
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent side="top" className="max-w-xs">
-                                  <div className="text-sm">
-                                    <p className="font-medium">{row.title}</p>
-                                    {row.startDate && row.endDate ? (
-                                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                        {format(row.startDate, 'MMM d, yyyy')} - {format(row.endDate, 'MMM d, yyyy')}
-                                      </p>
-                                    ) : row.endDate ? (
-                                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                        Due: {format(row.endDate, 'MMM d, yyyy')}
-                                      </p>
-                                    ) : null}
-                                    <p className="text-xs mt-1 capitalize">
-                                      Status: {row.status.replace(/_/g, ' ')}
-                                    </p>
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 p-3">
-                <div className="flex flex-wrap items-center gap-4 text-xs">
-                  <span className="font-medium text-gray-700 dark:text-gray-300">Legend:</span>
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 rounded bg-green-500"></div>
-                    <span className="text-gray-600 dark:text-gray-400">Completed/Achieved</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 rounded bg-blue-500"></div>
-                    <span className="text-gray-600 dark:text-gray-400">Active/In Progress</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 rounded bg-yellow-500"></div>
-                    <span className="text-gray-600 dark:text-gray-400">On Track</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 rounded bg-orange-500"></div>
-                    <span className="text-gray-600 dark:text-gray-400">Behind</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 rounded bg-red-500"></div>
-                    <span className="text-gray-600 dark:text-gray-400">At Risk/On Hold</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 rounded bg-gray-400"></div>
-                    <span className="text-gray-600 dark:text-gray-400">Not Started</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <AlertTriangle className="w-3 h-3 text-red-500" />
-                    <span className="text-gray-600 dark:text-gray-400">Has Barriers</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <GitBranch className="w-3 h-3 text-indigo-500" />
-                    <span className="text-gray-600 dark:text-gray-400">Has Dependencies</span>
-                  </div>
-                </div>
-              </div>
+                  );
+                }}
+              />
             </div>
           )}
         </div>
-
-        <Dialog open={barrierDialogOpen} onOpenChange={setBarrierDialogOpen}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-red-500" />
-                Barriers for {selectedProjectTitle}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3 max-h-[400px] overflow-y-auto">
-              {selectedProjectBarriers.map(barrier => (
-                <div
-                  key={barrier.id}
-                  className="p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge className={
-                      barrier.severity === 'high' ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' :
-                      barrier.severity === 'medium' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300' :
-                      'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                    }>
-                      {barrier.severity}
-                    </Badge>
-                    <Badge variant="outline">{barrier.status}</Badge>
-                  </div>
-                  <h4 className="font-medium text-gray-900 dark:text-white mb-1">{barrier.title}</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{barrier.description}</p>
-                  {barrier.targetResolutionDate && (
-                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
-                      Target resolution: {format(new Date(barrier.targetResolutionDate), 'MMM dd, yyyy')}
-                    </p>
-                  )}
-                </div>
-              ))}
-              {selectedProjectBarriers.length === 0 && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
-                  No active barriers for this project
-                </p>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
       </main>
+
+      <Dialog open={barrierDialogOpen} onOpenChange={setBarrierDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-orange-500" />
+              Barriers for {selectedProjectTitle}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 max-h-80 overflow-y-auto">
+            {selectedProjectBarriers.map(barrier => (
+              <div key={barrier.id} className="p-3 bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-lg">
+                <div className="flex items-start justify-between">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">{barrier.description}</p>
+                  <Badge variant={barrier.severity === 'high' ? 'destructive' : barrier.severity === 'medium' ? 'default' : 'secondary'}>
+                    {barrier.severity}
+                  </Badge>
+                </div>
+                {barrier.ownerId && (
+                  <p className="text-xs text-gray-500 mt-1">Owner ID: {barrier.ownerId}</p>
+                )}
+              </div>
+            ))}
+            {selectedProjectBarriers.length === 0 && (
+              <p className="text-sm text-gray-500 text-center py-4">No active barriers</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
