@@ -677,7 +677,7 @@ export default function Timeline() {
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-64" align="end">
+                <PopoverContent className="w-auto min-w-[200px] max-w-[400px]" align="end">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-medium text-sm">Filter Priorities</span>
@@ -705,7 +705,7 @@ export default function Timeline() {
                             className="w-2.5 h-2.5 rounded-full flex-shrink-0" 
                             style={{ backgroundColor: strategy.colorCode }}
                           />
-                          <span className="truncate text-sm">{strategy.title}</span>
+                          <span className="text-sm whitespace-nowrap">{strategy.title}</span>
                         </label>
                       </div>
                     ))}
@@ -897,6 +897,8 @@ export default function Timeline() {
                 todayColor="rgba(239, 68, 68, 0.1)"
                 arrowColor="#94a3b8"
                 arrowIndent={15}
+                barBackgroundColor="transparent"
+                barBackgroundSelectedColor="transparent"
                 TooltipContent={({ task }) => {
                   const parts = task.id.split('-');
                   const type = parts[0];
