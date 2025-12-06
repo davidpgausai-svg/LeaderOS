@@ -429,24 +429,35 @@ export default function Timeline() {
           return a.id.localeCompare(b.id);
         });
 
-      if (strategyProjects.length === 0) return;
+      // Use strategy's own dates if available, otherwise fall back to project dates
+      let strategyStart: Date | null = strategy.startDate ? new Date(strategy.startDate) : null;
+      let strategyEnd: Date | null = strategy.targetDate ? new Date(strategy.targetDate) : null;
 
-      const strategyStartDates: Date[] = [];
-      const strategyEndDates: Date[] = [];
+      // If strategy doesn't have dates, calculate from projects
+      if (!strategyStart || !strategyEnd) {
+        const strategyStartDates: Date[] = [];
+        const strategyEndDates: Date[] = [];
 
-      strategyProjects.forEach(p => {
-        if (p.startDate) strategyStartDates.push(new Date(p.startDate));
-        if (p.dueDate) strategyEndDates.push(new Date(p.dueDate));
-      });
+        strategyProjects.forEach(p => {
+          if (p.startDate) strategyStartDates.push(new Date(p.startDate));
+          if (p.dueDate) strategyEndDates.push(new Date(p.dueDate));
+        });
 
-      if (strategyStartDates.length === 0 && strategyEndDates.length === 0) return;
+        if (!strategyStart && strategyStartDates.length > 0) {
+          strategyStart = new Date(Math.min(...strategyStartDates.map(d => d.getTime())));
+        }
+        if (!strategyEnd && strategyEndDates.length > 0) {
+          strategyEnd = new Date(Math.max(...strategyEndDates.map(d => d.getTime())));
+        }
+      }
 
-      const strategyStart = strategyStartDates.length > 0 
-        ? new Date(Math.min(...strategyStartDates.map(d => d.getTime())))
-        : strategyEndDates[0];
-      const strategyEnd = strategyEndDates.length > 0
-        ? new Date(Math.max(...strategyEndDates.map(d => d.getTime())))
-        : strategyStartDates[0];
+      // Skip if we still don't have valid dates
+      if (!strategyStart || !strategyEnd) {
+        if (strategyProjects.length === 0) return;
+        // Use today as fallback
+        strategyStart = strategyStart || new Date();
+        strategyEnd = strategyEnd || new Date();
+      }
 
       const isStrategyExpanded = expandedIds.has(`strategy-${strategy.id}`);
       const strategyTaskId = `strategy-${strategy.id}`;
