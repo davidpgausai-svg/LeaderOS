@@ -161,6 +161,7 @@ function mapActionChecklistItem(row: any): ActionChecklistItem {
     title: row.title,
     isCompleted: row.is_completed,
     orderIndex: row.order_index,
+    indentLevel: row.indent_level ?? 1,
     createdAt: parseDate(row.created_at),
   };
 }
@@ -872,9 +873,9 @@ export class SQLiteStorage implements IStorage {
     const now = new Date().toISOString();
 
     sqlite.prepare(`
-      INSERT INTO action_checklist_items (id, action_id, title, is_completed, order_index, created_at)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(id, item.actionId, item.title, item.isCompleted || 'false', item.orderIndex ?? 0, now);
+      INSERT INTO action_checklist_items (id, action_id, title, is_completed, order_index, indent_level, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(id, item.actionId, item.title, item.isCompleted || 'false', item.orderIndex ?? 0, item.indentLevel ?? 1, now);
 
     const row = sqlite.prepare('SELECT * FROM action_checklist_items WHERE id = ?').get(id);
     return mapActionChecklistItem(row);
@@ -887,6 +888,7 @@ export class SQLiteStorage implements IStorage {
     if (updates.title !== undefined) { fields.push('title = ?'); values.push(updates.title); }
     if (updates.isCompleted !== undefined) { fields.push('is_completed = ?'); values.push(updates.isCompleted); }
     if (updates.orderIndex !== undefined) { fields.push('order_index = ?'); values.push(updates.orderIndex); }
+    if (updates.indentLevel !== undefined) { fields.push('indent_level = ?'); values.push(updates.indentLevel); }
 
     if (fields.length > 0) {
       values.push(id);

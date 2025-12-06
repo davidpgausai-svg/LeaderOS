@@ -190,6 +190,7 @@ export const actionChecklistItems = pgTable("action_checklist_items", {
   title: text("title").notNull(), // Checklist item description
   isCompleted: text("is_completed").notNull().default('false'), // 'true' or 'false'
   orderIndex: integer("order_index").notNull().default(0), // For sorting items
+  indentLevel: integer("indent_level").notNull().default(1), // 1 = bold, 2 = regular, 3 = lowercase
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 

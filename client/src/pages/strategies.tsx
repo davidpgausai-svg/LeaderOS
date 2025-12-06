@@ -60,7 +60,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen, TrendingUp, AlertTriangle, Users, Megaphone, Link2, ExternalLink, X, Clock, ListChecks, StickyNote, Tag } from "lucide-react";
+import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ChevronLeft, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen, TrendingUp, AlertTriangle, Users, Megaphone, Link2, ExternalLink, X, Clock, ListChecks, StickyNote, Tag, Indent, Outdent } from "lucide-react";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { useLocation } from "wouter";
 import {
@@ -878,6 +878,25 @@ export default function Strategies() {
       toast({
         title: "Error",
         description: "Failed to remove checklist item",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update checklist item indent level mutation
+  const updateChecklistIndentMutation = useMutation({
+    mutationFn: async ({ item, indentLevel }: { item: any; indentLevel: number }) => {
+      return await apiRequest("PATCH", `/api/actions/${item.actionId}/checklist/${item.id}`, {
+        indentLevel,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/action-checklist-items"] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update indent level",
         variant: "destructive",
       });
     },
@@ -2557,43 +2576,80 @@ export default function Strategies() {
               )}
               
               {/* Checklist items */}
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {getActionChecklistItems(checklistModalAction.id).length > 0 ? (
                   getActionChecklistItems(checklistModalAction.id)
                     .sort((a: any, b: any) => a.orderIndex - b.orderIndex)
-                    .map((item: any) => (
-                      <div 
-                        key={item.id} 
-                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
-                      >
-                        <Checkbox
-                          id={`checklist-${item.id}`}
-                          checked={item.isCompleted === 'true'}
-                          onCheckedChange={(checked) => {
-                            toggleChecklistItemMutation.mutate({ item, isCompleted: !!checked });
-                          }}
-                          disabled={!canEditAllStrategies()}
-                          data-testid={`checkbox-checklist-${item.id}`}
-                        />
-                        <Label 
-                          htmlFor={`checklist-${item.id}`}
-                          className={`flex-1 text-sm cursor-pointer ${item.isCompleted === 'true' ? 'line-through text-gray-400' : 'text-gray-700 dark:text-gray-300'}`}
+                    .map((item: any) => {
+                      const indentLevel = item.indentLevel || 1;
+                      const indentPadding = (indentLevel - 1) * 24;
+                      const getTextStyle = () => {
+                        if (item.isCompleted === 'true') return 'line-through text-gray-400';
+                        if (indentLevel === 1) return 'font-bold text-gray-900 dark:text-white';
+                        if (indentLevel === 2) return 'font-normal text-gray-700 dark:text-gray-300';
+                        return 'font-normal text-gray-600 dark:text-gray-400 text-xs';
+                      };
+                      const displayTitle = indentLevel === 3 ? item.title.toLowerCase() : item.title;
+                      
+                      return (
+                        <div 
+                          key={item.id} 
+                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
+                          style={{ paddingLeft: `${8 + indentPadding}px` }}
                         >
-                          {item.title}
-                        </Label>
-                        {canEditAllStrategies() && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 text-gray-400 hover:text-red-500"
-                            onClick={() => deleteChecklistItemMutation.mutate({ itemId: item.id, actionId: item.actionId })}
-                            data-testid={`button-delete-checklist-${item.id}`}
+                          <Checkbox
+                            id={`checklist-${item.id}`}
+                            checked={item.isCompleted === 'true'}
+                            onCheckedChange={(checked) => {
+                              toggleChecklistItemMutation.mutate({ item, isCompleted: !!checked });
+                            }}
+                            disabled={!canEditAllStrategies()}
+                            data-testid={`checkbox-checklist-${item.id}`}
+                          />
+                          <Label 
+                            htmlFor={`checklist-${item.id}`}
+                            className={`flex-1 text-sm cursor-pointer ${getTextStyle()}`}
                           >
-                            <X className="w-3.5 h-3.5" />
-                          </Button>
-                        )}
-                      </div>
-                    ))
+                            {displayTitle}
+                          </Label>
+                          {canEditAllStrategies() && (
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600 disabled:opacity-30"
+                                onClick={() => updateChecklistIndentMutation.mutate({ item, indentLevel: Math.max(1, indentLevel - 1) })}
+                                disabled={indentLevel <= 1}
+                                title="Decrease indent"
+                                data-testid={`button-outdent-${item.id}`}
+                              >
+                                <Outdent className="w-3.5 h-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600 disabled:opacity-30"
+                                onClick={() => updateChecklistIndentMutation.mutate({ item, indentLevel: Math.min(3, indentLevel + 1) })}
+                                disabled={indentLevel >= 3}
+                                title="Increase indent"
+                                data-testid={`button-indent-${item.id}`}
+                              >
+                                <Indent className="w-3.5 h-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 text-gray-400 hover:text-red-500"
+                                onClick={() => deleteChecklistItemMutation.mutate({ itemId: item.id, actionId: item.actionId })}
+                                data-testid={`button-delete-checklist-${item.id}`}
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
                 ) : (
                   <div className="text-center py-6 text-gray-500 dark:text-gray-400">
                     <ListChecks className="h-8 w-8 mx-auto mb-2 opacity-50" />
