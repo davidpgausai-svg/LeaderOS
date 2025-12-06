@@ -119,6 +119,8 @@ export default function Strategies() {
   const [selectedStrategyIdForAction, setSelectedStrategyIdForAction] = useState<string | null>(null);
   const [actionFolderUrl, setActionFolderUrl] = useState("");
   const [newChecklistItem, setNewChecklistItem] = useState("");
+  const [editingChecklistItemId, setEditingChecklistItemId] = useState<string | null>(null);
+  const [editingChecklistItemTitle, setEditingChecklistItemTitle] = useState("");
   const [notesModalAction, setNotesModalAction] = useState<any>(null);
   const [actionNotes, setActionNotes] = useState("");
   
@@ -897,6 +899,27 @@ export default function Strategies() {
       toast({
         title: "Error",
         description: "Failed to update indent level",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update checklist item title mutation
+  const updateChecklistTitleMutation = useMutation({
+    mutationFn: async ({ item, title }: { item: any; title: string }) => {
+      return await apiRequest("PATCH", `/api/actions/${item.actionId}/checklist/${item.id}`, {
+        title,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/action-checklist-items"] });
+      setEditingChecklistItemId(null);
+      setEditingChecklistItemTitle("");
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update checklist item",
         variant: "destructive",
       });
     },
@@ -2589,6 +2612,7 @@ export default function Strategies() {
                     .map((item: any) => {
                       const indentLevel = item.indentLevel || 1;
                       const indentPadding = (indentLevel - 1) * 24;
+                      const isEditing = editingChecklistItemId === item.id;
                       const getTextStyle = () => {
                         if (item.isCompleted === 'true') return 'line-through text-gray-400';
                         if (indentLevel === 1) return 'font-bold text-gray-900 dark:text-white';
@@ -2609,17 +2633,62 @@ export default function Strategies() {
                             onCheckedChange={(checked) => {
                               toggleChecklistItemMutation.mutate({ item, isCompleted: !!checked });
                             }}
-                            disabled={!canEditAllStrategies()}
+                            disabled={!canEditAllStrategies() || isEditing}
                             data-testid={`checkbox-checklist-${item.id}`}
                           />
-                          <Label 
-                            htmlFor={`checklist-${item.id}`}
-                            className={`flex-1 text-sm cursor-pointer ${getTextStyle()}`}
-                          >
-                            {displayTitle}
-                          </Label>
-                          {canEditAllStrategies() && (
+                          {isEditing ? (
+                            <Input
+                              value={editingChecklistItemTitle}
+                              onChange={(e) => setEditingChecklistItemTitle(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && editingChecklistItemTitle.trim()) {
+                                  updateChecklistTitleMutation.mutate({ item, title: editingChecklistItemTitle.trim() });
+                                } else if (e.key === 'Escape') {
+                                  setEditingChecklistItemId(null);
+                                  setEditingChecklistItemTitle("");
+                                }
+                              }}
+                              onBlur={() => {
+                                if (editingChecklistItemTitle.trim() && editingChecklistItemTitle !== item.title) {
+                                  updateChecklistTitleMutation.mutate({ item, title: editingChecklistItemTitle.trim() });
+                                } else {
+                                  setEditingChecklistItemId(null);
+                                  setEditingChecklistItemTitle("");
+                                }
+                              }}
+                              className="flex-1 h-7 text-sm"
+                              autoFocus
+                              data-testid={`input-edit-checklist-${item.id}`}
+                            />
+                          ) : (
+                            <span 
+                              className={`flex-1 text-sm cursor-pointer ${getTextStyle()}`}
+                              onDoubleClick={() => {
+                                if (canEditAllStrategies()) {
+                                  setEditingChecklistItemId(item.id);
+                                  setEditingChecklistItemTitle(item.title);
+                                }
+                              }}
+                              title={canEditAllStrategies() ? "Double-click to edit" : undefined}
+                            >
+                              {displayTitle}
+                            </span>
+                          )}
+                          {canEditAllStrategies() && !isEditing && (
                             <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
+                                onClick={() => {
+                                  setEditingChecklistItemId(item.id);
+                                  setEditingChecklistItemTitle(item.title);
+                                }}
+                                title="Edit item"
+                                data-testid={`button-edit-checklist-${item.id}`}
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
