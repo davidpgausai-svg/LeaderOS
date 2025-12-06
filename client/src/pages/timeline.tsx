@@ -859,6 +859,19 @@ export default function Timeline() {
                   ry: 3px;
                 }
                 
+                /* Hide the background bar rect (first rect in each bar group) */
+                .gantt-container svg g[cursor="pointer"] > rect:first-child {
+                  fill: transparent !important;
+                  stroke: none !important;
+                  opacity: 0 !important;
+                }
+                
+                /* Keep the progress/main bar visible */
+                .gantt-container svg g[cursor="pointer"] > rect:not(:first-child) {
+                  opacity: 1 !important;
+                  filter: none !important;
+                }
+                
                 /* Remove ALL hover/focus/active filters from bar wrapper groups */
                 .gantt-container g,
                 .gantt-container g:hover,
@@ -883,7 +896,6 @@ export default function Timeline() {
                 .gantt-container g[class*="selected"] > rect,
                 .gantt-container g > rect:hover,
                 .gantt-container g > rect:focus {
-                  opacity: 1 !important;
                   filter: none !important;
                   transition: none !important;
                 }
@@ -893,6 +905,11 @@ export default function Timeline() {
                 .gantt-container svg g rect {
                   transition: none !important;
                   filter: none !important;
+                }
+                
+                /* Remove any strokes/borders from bars */
+                .gantt-container svg g rect {
+                  stroke: none !important;
                 }
                 
                 /* Cursor for interactive bars */

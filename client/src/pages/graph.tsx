@@ -16,7 +16,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { GitBranch, Target, Layers, Zap, ZoomIn, ZoomOut } from "lucide-react";
+import { GitBranch, Target, Layers, Zap, ZoomIn, ZoomOut, Link2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 type Strategy = {
   id: string;
@@ -72,6 +73,7 @@ export default function Graph() {
   const [lockedItem, setLockedItem] = useState<{ type: string; id: string } | null>(null);
   const [strategyFilter, setStrategyFilter] = useState<string>("all");
   const [scale, setScale] = useState(1);
+  const [showDependencies, setShowDependencies] = useState(true);
   
   const activeItem = lockedItem || hoveredItem;
 
@@ -514,14 +516,25 @@ export default function Graph() {
         </header>
 
         <div className="bg-white dark:bg-gray-800 border-b px-6 py-3">
-          <div className="flex items-center gap-6 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-0.5 border-t-2 border-dashed border-gray-400" />
-              <span className="text-gray-600 dark:text-gray-400">Hierarchy (parent-child)</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-6 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-0.5 border-t-2 border-dashed border-gray-400" />
+                <span className="text-gray-600 dark:text-gray-400">Hierarchy (parent-child)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-0.5 bg-blue-500" />
+                <span className="text-gray-600 dark:text-gray-400">Dependency (depends on)</span>
+              </div>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-0.5 bg-blue-500" />
-              <span className="text-gray-600 dark:text-gray-400">Dependency (depends on)</span>
+              <Link2 className="w-4 h-4 text-gray-500" />
+              <span className="text-sm text-gray-600 dark:text-gray-400">Dependencies</span>
+              <Switch
+                checked={showDependencies}
+                onCheckedChange={setShowDependencies}
+                data-testid="switch-show-dependencies"
+              />
             </div>
           </div>
         </div>
@@ -544,13 +557,14 @@ export default function Graph() {
             <defs>
               <marker
                 id="arrowhead"
-                markerWidth="10"
-                markerHeight="7"
-                refX="9"
-                refY="3.5"
+                markerWidth="8"
+                markerHeight="6"
+                refX="7"
+                refY="3"
                 orient="auto"
+                markerUnits="strokeWidth"
               >
-                <polygon points="0 0, 10 3.5, 0 7" fill="#6B7280" />
+                <path d="M0,0 L0,6 L8,3 z" fill="#6B7280" />
               </marker>
             </defs>
 
