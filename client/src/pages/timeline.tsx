@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Filter, Calendar, AlertTriangle, ChevronRight, ChevronDown } from "lucide-react";
+import { Filter, Calendar, AlertTriangle, ChevronRight, ChevronDown, ChevronLeft, LayoutGrid, GanttChart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -30,8 +30,7 @@ const CustomTaskListHeader: React.FC<{
       className="flex items-center border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 font-medium text-[11px] text-gray-500 dark:text-gray-400 uppercase tracking-wider"
       style={{ height: headerHeight, width: rowWidth }}
     >
-      <div className="w-10 text-center shrink-0">#</div>
-      <div className="flex-1 px-2">Task Name</div>
+      <div className="flex-1 px-3">Task Name</div>
     </div>
   );
 };
@@ -62,36 +61,6 @@ const CustomTaskListTable: React.FC<{
     return true;
   });
 
-  const strategyCounters = new Map<string, number>();
-  const projectCounters = new Map<string, number>();
-  let currentStrategyNum = 0;
-  
-  const getWBS = (task: TaskWithMeta): string => {
-    const isStrategy = task.id.startsWith('strategy-');
-    const isProject = task.id.startsWith('project-');
-    const isAction = task.id.startsWith('action-');
-    
-    if (isStrategy) {
-      currentStrategyNum++;
-      strategyCounters.set(task.id, currentStrategyNum);
-      return `${currentStrategyNum}`;
-    } else if (isProject && task.project) {
-      const parentNum = strategyCounters.get(task.project) || 0;
-      const count = (projectCounters.get(task.project) || 0) + 1;
-      projectCounters.set(task.project, count);
-      projectCounters.set(task.id, count);
-      return `${parentNum}.${count}`;
-    } else if (isAction && task.project) {
-      const parentWbs = projectCounters.get(task.project) || 0;
-      const strategyId = visibleTasks.find(t => t.id === task.project)?.project;
-      const strategyNum = strategyId ? strategyCounters.get(strategyId) || 0 : 0;
-      const actionCount = (projectCounters.get(`${task.project}-actions`) || 0) + 1;
-      projectCounters.set(`${task.project}-actions`, actionCount);
-      return `${strategyNum}.${parentWbs}.${actionCount}`;
-    }
-    return '';
-  };
-
   return (
     <div style={{ width: rowWidth }} className="bg-white dark:bg-gray-900">
       {visibleTasks.map((task) => {
@@ -102,7 +71,6 @@ const CustomTaskListTable: React.FC<{
         const isStrategy = task.id.startsWith('strategy-');
         const isProject = task.id.startsWith('project-');
         const isAction = task.id.startsWith('action-');
-        const wbs = getWBS(task);
         
         return (
           <div
@@ -116,13 +84,9 @@ const CustomTaskListTable: React.FC<{
             onClick={() => setSelectedTask(task.id)}
             data-testid={`task-row-${task.id}`}
           >
-            <div className="w-10 text-center shrink-0 text-[11px] text-gray-400 dark:text-gray-500 font-mono">
-              {wbs}
-            </div>
-            
             <div 
-              className="flex items-center flex-1 min-w-0 pr-2"
-              style={{ paddingLeft: `${level * 12}px` }}
+              className="flex items-center flex-1 min-w-0 px-3"
+              style={{ paddingLeft: `${12 + level * 16}px` }}
             >
               {hasChildren ? (
                 <button
@@ -184,9 +148,149 @@ const CustomTaskListTable: React.FC<{
   );
 };
 
+const CalendarView: React.FC<{
+  projects: Project[];
+  actions: Action[];
+  strategies: Strategy[];
+  calendarMonth: Date;
+}> = ({ projects, actions, strategies, calendarMonth }) => {
+  const year = calendarMonth.getFullYear();
+  const month = calendarMonth.getMonth();
+  
+  const firstDayOfMonth = new Date(year, month, 1);
+  const lastDayOfMonth = new Date(year, month + 1, 0);
+  const startDay = firstDayOfMonth.getDay();
+  const daysInMonth = lastDayOfMonth.getDate();
+  
+  const calendarDays: (number | null)[] = [];
+  for (let i = 0; i < startDay; i++) {
+    calendarDays.push(null);
+  }
+  for (let day = 1; day <= daysInMonth; day++) {
+    calendarDays.push(day);
+  }
+  while (calendarDays.length % 7 !== 0) {
+    calendarDays.push(null);
+  }
+
+  const strategyMap = new Map(strategies.map(s => [s.id, s]));
+
+  const getItemsForDate = (day: number) => {
+    const date = new Date(year, month, day);
+    const dateStr = date.toISOString().split('T')[0];
+    
+    const projectsOnDate = projects.filter(p => {
+      if (!p.dueDate) return false;
+      const dueDate = new Date(p.dueDate).toISOString().split('T')[0];
+      return dueDate === dateStr;
+    });
+    
+    const actionsOnDate = actions.filter(a => {
+      if (!a.dueDate) return false;
+      const dueDate = new Date(a.dueDate).toISOString().split('T')[0];
+      return dueDate === dateStr;
+    });
+    
+    return { projects: projectsOnDate, actions: actionsOnDate };
+  };
+
+  const today = new Date();
+  const isToday = (day: number) => 
+    today.getDate() === day && 
+    today.getMonth() === month && 
+    today.getFullYear() === year;
+
+  return (
+    <div className="h-full overflow-auto p-4 bg-white dark:bg-gray-900">
+      <div className="grid grid-cols-7 gap-px bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden">
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+          <div 
+            key={day} 
+            className="bg-gray-50 dark:bg-gray-800 p-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400"
+          >
+            {day}
+          </div>
+        ))}
+        
+        {calendarDays.map((day, index) => {
+          if (day === null) {
+            return (
+              <div 
+                key={`empty-${index}`} 
+                className="bg-gray-50 dark:bg-gray-800/50 min-h-[100px]"
+              />
+            );
+          }
+          
+          const items = getItemsForDate(day);
+          const hasItems = items.projects.length > 0 || items.actions.length > 0;
+          
+          return (
+            <div
+              key={day}
+              className={`bg-white dark:bg-gray-900 min-h-[100px] p-1.5 ${
+                isToday(day) ? 'ring-2 ring-inset ring-blue-500' : ''
+              }`}
+            >
+              <div className={`text-xs font-medium mb-1 ${
+                isToday(day) 
+                  ? 'text-blue-600 dark:text-blue-400' 
+                  : 'text-gray-700 dark:text-gray-300'
+              }`}>
+                {day}
+              </div>
+              
+              <div className="space-y-0.5 overflow-y-auto max-h-[80px]">
+                {items.projects.map(project => {
+                  const strategy = strategyMap.get(project.strategyId);
+                  return (
+                    <div 
+                      key={`p-${project.id}`}
+                      className="text-[10px] px-1 py-0.5 rounded truncate cursor-pointer hover:opacity-80"
+                      style={{ 
+                        backgroundColor: strategy?.colorCode ? `${strategy.colorCode}20` : '#e5e7eb',
+                        color: strategy?.colorCode || '#374151',
+                        borderLeft: `2px solid ${strategy?.colorCode || '#6b7280'}`
+                      }}
+                      title={project.title}
+                    >
+                      [P] {project.title}
+                    </div>
+                  );
+                })}
+                
+                {items.actions.map(action => {
+                  const project = projects.find(p => p.id === action.projectId);
+                  const strategy = project ? strategyMap.get(project.strategyId) : undefined;
+                  return (
+                    <div 
+                      key={`a-${action.id}`}
+                      className="text-[10px] px-1 py-0.5 rounded truncate cursor-pointer hover:opacity-80"
+                      style={{ 
+                        backgroundColor: strategy?.colorCode ? `${strategy.colorCode}15` : '#f3f4f6',
+                        color: strategy?.colorCode || '#4b5563',
+                        borderLeft: `2px solid ${strategy?.colorCode || '#9ca3af'}`
+                      }}
+                      title={action.title}
+                    >
+                      [A] {action.title}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 export default function Timeline() {
   const { toast } = useToast();
   
+  const [viewType, setViewType] = useState<'timeline' | 'calendar'>('timeline');
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Month);
   const [selectedPriorityIds, setSelectedPriorityIds] = useState<string[]>([]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
@@ -254,6 +358,22 @@ export default function Timeline() {
     if (selectedPriorityIds.length === 0) return activeStrategies;
     return activeStrategies.filter(s => selectedPriorityIds.includes(s.id));
   }, [strategies, selectedPriorityIds]);
+
+  const filteredStrategyIds = useMemo(() => 
+    new Set(filteredStrategies.map(s => s.id)), 
+    [filteredStrategies]
+  );
+
+  const filteredProjects = useMemo(() => {
+    if (!projects) return [];
+    return projects.filter(p => filteredStrategyIds.has(p.strategyId));
+  }, [projects, filteredStrategyIds]);
+
+  const filteredActions = useMemo(() => {
+    if (!actions) return [];
+    const projectIds = new Set(filteredProjects.map(p => p.id));
+    return actions.filter(a => a.projectId && projectIds.has(a.projectId));
+  }, [actions, filteredProjects]);
 
   const dependencyMap = useMemo(() => {
     if (!dependencies) return new Map<string, string[]>();
@@ -524,6 +644,29 @@ export default function Timeline() {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-md p-0.5">
+                <Button
+                  variant={viewType === 'timeline' ? "default" : "ghost"}
+                  size="sm"
+                  className="h-7 px-2.5 text-xs gap-1.5"
+                  onClick={() => setViewType('timeline')}
+                  data-testid="button-view-timeline"
+                >
+                  <GanttChart className="w-3.5 h-3.5" />
+                  Timeline
+                </Button>
+                <Button
+                  variant={viewType === 'calendar' ? "default" : "ghost"}
+                  size="sm"
+                  className="h-7 px-2.5 text-xs gap-1.5"
+                  onClick={() => setViewType('calendar')}
+                  data-testid="button-view-calendar"
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                  Calendar
+                </Button>
+              </div>
+
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-2 h-8" data-testid="button-priority-filter">
@@ -573,41 +716,85 @@ export default function Timeline() {
                 </PopoverContent>
               </Popover>
 
-              <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-md p-0.5">
-                <Button
-                  variant={viewMode === ViewMode.Day ? "default" : "ghost"}
-                  size="sm"
-                  className="h-7 px-2.5 text-xs"
-                  onClick={() => setViewMode(ViewMode.Day)}
-                  data-testid="button-scale-days"
-                >
-                  Day
-                </Button>
-                <Button
-                  variant={viewMode === ViewMode.Week ? "default" : "ghost"}
-                  size="sm"
-                  className="h-7 px-2.5 text-xs"
-                  onClick={() => setViewMode(ViewMode.Week)}
-                  data-testid="button-scale-weeks"
-                >
-                  Week
-                </Button>
-                <Button
-                  variant={viewMode === ViewMode.Month ? "default" : "ghost"}
-                  size="sm"
-                  className="h-7 px-2.5 text-xs"
-                  onClick={() => setViewMode(ViewMode.Month)}
-                  data-testid="button-scale-months"
-                >
-                  Month
-                </Button>
-              </div>
+              {viewType === 'timeline' && (
+                <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-md p-0.5">
+                  <Button
+                    variant={viewMode === ViewMode.Day ? "default" : "ghost"}
+                    size="sm"
+                    className="h-7 px-2.5 text-xs"
+                    onClick={() => setViewMode(ViewMode.Day)}
+                    data-testid="button-scale-days"
+                  >
+                    Day
+                  </Button>
+                  <Button
+                    variant={viewMode === ViewMode.Week ? "default" : "ghost"}
+                    size="sm"
+                    className="h-7 px-2.5 text-xs"
+                    onClick={() => setViewMode(ViewMode.Week)}
+                    data-testid="button-scale-weeks"
+                  >
+                    Week
+                  </Button>
+                  <Button
+                    variant={viewMode === ViewMode.Month ? "default" : "ghost"}
+                    size="sm"
+                    className="h-7 px-2.5 text-xs"
+                    onClick={() => setViewMode(ViewMode.Month)}
+                    data-testid="button-scale-months"
+                  >
+                    Month
+                  </Button>
+                </div>
+              )}
+
+              {viewType === 'calendar' && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    onClick={() => setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
+                    data-testid="button-calendar-prev"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <span className="text-sm font-medium min-w-[120px] text-center">
+                    {calendarMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    onClick={() => setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
+                    data-testid="button-calendar-next"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => setCalendarMonth(new Date())}
+                    data-testid="button-calendar-today"
+                  >
+                    Today
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </header>
 
         <div className="flex-1 overflow-hidden">
-          {allTasks.length === 0 ? (
+          {viewType === 'calendar' ? (
+            <CalendarView 
+              projects={filteredProjects} 
+              actions={filteredActions} 
+              strategies={filteredStrategies}
+              calendarMonth={calendarMonth}
+            />
+          ) : allTasks.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center py-12">
                 <Calendar className="w-10 h-10 text-gray-400 mx-auto mb-3" />
@@ -702,12 +889,8 @@ export default function Timeline() {
                 onClick={handleTaskClick}
                 TaskListHeader={CustomTaskListHeader}
                 TaskListTable={CustomTaskListTable}
-                listCellWidth="180px"
+                listCellWidth="230px"
                 columnWidth={columnWidth}
-                barBackgroundColor="#e5e7eb"
-                barBackgroundSelectedColor="#e5e7eb"
-                barProgressColor="#94a3b8"
-                barProgressSelectedColor="#94a3b8"
                 rowHeight={36}
                 fontSize="12px"
                 headerHeight={40}
