@@ -1729,21 +1729,33 @@ export default function Strategies() {
                                                   </DropdownMenuTrigger>
                                                   <DropdownMenuContent align="end">
                                                     <DropdownMenuItem
-                                                      onClick={() => setNotesModalAction(action)}
-                                                      data-testid={`action-menu-view-${action.id}`}
+                                                      onClick={() => {
+                                                        setDueDateModalAction(action);
+                                                      }}
+                                                      data-testid={`action-menu-due-date-${action.id}`}
                                                     >
-                                                      <Eye className="w-3.5 h-3.5 mr-2" />
-                                                      View Details
+                                                      <Calendar className="w-3.5 h-3.5 mr-2" />
+                                                      Edit Due Date
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                      onClick={() => {
+                                                        setFolderUrlModalAction(action);
+                                                        setActionFolderUrl(action.documentFolderUrl || "");
+                                                      }}
+                                                      data-testid={`action-menu-folder-${action.id}`}
+                                                    >
+                                                      <FolderOpen className="w-3.5 h-3.5 mr-2" />
+                                                      Edit Folder Link
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                      onClick={() => setNotesModalAction(action)}
+                                                      data-testid={`action-menu-notes-${action.id}`}
+                                                    >
+                                                      <StickyNote className="w-3.5 h-3.5 mr-2" />
+                                                      View Notes
                                                     </DropdownMenuItem>
                                                     {canEditAllStrategies() && (
                                                       <>
-                                                        <DropdownMenuItem
-                                                          onClick={() => setNotesModalAction(action)}
-                                                          data-testid={`action-menu-edit-${action.id}`}
-                                                        >
-                                                          <Edit className="w-3.5 h-3.5 mr-2" />
-                                                          Edit Action
-                                                        </DropdownMenuItem>
                                                         <AlertDialog>
                                                           <AlertDialogTrigger asChild>
                                                             <DropdownMenuItem
