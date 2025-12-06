@@ -1967,6 +1967,17 @@ Respond ONLY with a valid JSON object in this exact format:
   });
 
   // Action Checklist Item routes
+  // Get all checklist items across all actions (for dashboard view)
+  app.get("/api/action-checklist-items", async (req, res) => {
+    try {
+      const items = await storage.getAllActionChecklistItems();
+      res.json(items);
+    } catch (error) {
+      logger.error("Failed to fetch all checklist items", error);
+      res.status(500).json({ message: "Failed to fetch checklist items" });
+    }
+  });
+
   app.get("/api/actions/:actionId/checklist", async (req, res) => {
     try {
       const items = await storage.getActionChecklistItems(req.params.actionId);

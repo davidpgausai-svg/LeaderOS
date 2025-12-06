@@ -430,6 +430,10 @@ export class PostgresStorage implements IStorage {
     return result.length > 0;
   }
 
+  async getAllActionChecklistItems(): Promise<ActionChecklistItem[]> {
+    return db.select().from(actionChecklistItems).orderBy(actionChecklistItems.orderIndex);
+  }
+
   async getActionChecklistItems(actionId: string): Promise<ActionChecklistItem[]> {
     return db.select().from(actionChecklistItems)
       .where(eq(actionChecklistItems.actionId, actionId))

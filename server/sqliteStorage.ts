@@ -857,6 +857,11 @@ export class SQLiteStorage implements IStorage {
     return result.changes > 0;
   }
 
+  async getAllActionChecklistItems(): Promise<ActionChecklistItem[]> {
+    const rows = sqlite.prepare('SELECT * FROM action_checklist_items ORDER BY order_index ASC').all();
+    return rows.map(mapActionChecklistItem);
+  }
+
   async getActionChecklistItems(actionId: string): Promise<ActionChecklistItem[]> {
     const rows = sqlite.prepare('SELECT * FROM action_checklist_items WHERE action_id = ? ORDER BY order_index ASC').all(actionId);
     return rows.map(mapActionChecklistItem);

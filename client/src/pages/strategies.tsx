@@ -817,8 +817,7 @@ export default function Strategies() {
   // Create checklist item mutation
   const createChecklistItemMutation = useMutation({
     mutationFn: async ({ actionId, title }: { actionId: string; title: string }) => {
-      const response = await apiRequest("POST", "/api/action-checklist-items", {
-        actionId,
+      const response = await apiRequest("POST", `/api/actions/${actionId}/checklist`, {
         title,
         isCompleted: 'false',
         orderIndex: 0,
@@ -845,8 +844,7 @@ export default function Strategies() {
   // Toggle checklist item mutation
   const toggleChecklistItemMutation = useMutation({
     mutationFn: async ({ item, isCompleted }: { item: any; isCompleted: boolean }) => {
-      return await apiRequest("PATCH", `/api/action-checklist-items/${item.id}`, {
-        actionId: item.actionId,
+      return await apiRequest("PATCH", `/api/actions/${item.actionId}/checklist/${item.id}`, {
         title: item.title,
         isCompleted: isCompleted ? 'true' : 'false',
         orderIndex: item.orderIndex,
@@ -866,8 +864,8 @@ export default function Strategies() {
 
   // Delete checklist item mutation
   const deleteChecklistItemMutation = useMutation({
-    mutationFn: async (itemId: string) => {
-      await apiRequest("DELETE", `/api/action-checklist-items/${itemId}`);
+    mutationFn: async ({ itemId, actionId }: { itemId: string; actionId: string }) => {
+      await apiRequest("DELETE", `/api/actions/${actionId}/checklist/${itemId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/action-checklist-items"] });
@@ -2588,7 +2586,7 @@ export default function Strategies() {
                             variant="ghost"
                             size="sm"
                             className="h-6 w-6 p-0 text-gray-400 hover:text-red-500"
-                            onClick={() => deleteChecklistItemMutation.mutate(item.id)}
+                            onClick={() => deleteChecklistItemMutation.mutate({ itemId: item.id, actionId: item.actionId })}
                             data-testid={`button-delete-checklist-${item.id}`}
                           >
                             <X className="w-3.5 h-3.5" />

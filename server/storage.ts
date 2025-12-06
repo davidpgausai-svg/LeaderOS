@@ -66,6 +66,7 @@ export interface IStorage {
   deleteActionDocument(id: string): Promise<boolean>;
 
   // Action Checklist Item methods
+  getAllActionChecklistItems(): Promise<ActionChecklistItem[]>;
   getActionChecklistItems(actionId: string): Promise<ActionChecklistItem[]>;
   createActionChecklistItem(item: InsertActionChecklistItem): Promise<ActionChecklistItem>;
   updateActionChecklistItem(id: string, updates: Partial<ActionChecklistItem>): Promise<ActionChecklistItem | undefined>;
