@@ -859,55 +859,44 @@ export default function Timeline() {
                   ry: 3px;
                 }
                 
-                /* Hide the background bar rect (first rect in each bar group) */
-                .gantt-container svg g[cursor="pointer"] > rect:first-child {
+                /* Hide ALL grey background rects - target by fill color */
+                .gantt-container svg rect[fill="#b8c2cc"],
+                .gantt-container svg rect[fill="rgb(184, 194, 204)"],
+                .gantt-container svg rect[fill="#aeb8c2"],
+                .gantt-container svg rect[fill="rgb(174, 184, 194)"] {
                   fill: transparent !important;
-                  stroke: none !important;
                   opacity: 0 !important;
                 }
                 
-                /* Keep the progress/main bar visible */
-                .gantt-container svg g[cursor="pointer"] > rect:not(:first-child) {
-                  opacity: 1 !important;
-                  filter: none !important;
+                /* Universal: hide first rect in any bar group (background rect) */
+                .gantt-container svg g[cursor="pointer"] > rect:first-of-type {
+                  fill: transparent !important;
+                  stroke: none !important;
+                  opacity: 0 !important;
+                  visibility: hidden !important;
                 }
                 
-                /* Remove ALL hover/focus/active filters from bar wrapper groups */
-                .gantt-container g,
-                .gantt-container g:hover,
-                .gantt-container g:focus,
-                .gantt-container g:active,
-                .gantt-container g[class*="Wrapper"],
-                .gantt-container g[class*="Wrapper"]:hover,
-                .gantt-container g[class*="Wrapper"]:focus,
-                .gantt-container g[class*="Wrapper"]:active,
-                .gantt-container [class*="barWrapper"],
-                .gantt-container [class*="barWrapper"]:hover,
-                .gantt-container [class*="barWrapper"]:focus,
-                .gantt-container [class*="barWrapper"]:active {
-                  filter: none !important;
-                  opacity: 1 !important;
-                }
-                
-                /* Prevent any opacity/filter changes on rect elements */
-                .gantt-container g:hover > rect,
-                .gantt-container g:focus > rect,
-                .gantt-container g:active > rect,
-                .gantt-container g[class*="selected"] > rect,
-                .gantt-container g > rect:hover,
-                .gantt-container g > rect:focus {
-                  filter: none !important;
-                  transition: none !important;
-                }
-                
-                /* Ensure consistent bar appearance */
+                /* Remove ALL filters and opacity changes globally */
                 .gantt-container svg g,
-                .gantt-container svg g rect {
-                  transition: none !important;
+                .gantt-container svg g *,
+                .gantt-container svg g:hover,
+                .gantt-container svg g:hover *,
+                .gantt-container svg g:focus,
+                .gantt-container svg g:focus *,
+                .gantt-container svg g:active,
+                .gantt-container svg g:active * {
                   filter: none !important;
+                  opacity: 1 !important;
+                  transition: none !important;
                 }
                 
-                /* Remove any strokes/borders from bars */
+                /* Override first-of-type to ensure background is hidden */
+                .gantt-container svg g[cursor="pointer"] > rect:first-of-type {
+                  opacity: 0 !important;
+                  visibility: hidden !important;
+                }
+                
+                /* Remove any strokes/borders from all rects */
                 .gantt-container svg g rect {
                   stroke: none !important;
                 }

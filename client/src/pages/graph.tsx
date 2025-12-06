@@ -73,7 +73,7 @@ export default function Graph() {
   const [lockedItem, setLockedItem] = useState<{ type: string; id: string } | null>(null);
   const [strategyFilter, setStrategyFilter] = useState<string>("all");
   const [scale, setScale] = useState(1);
-  const [showDependencies, setShowDependencies] = useState(true);
+  const [showDependencies, setShowDependencies] = useState(false);
   
   const activeItem = lockedItem || hoveredItem;
 
@@ -404,25 +404,49 @@ export default function Graph() {
                 Q ${startX - curveOffset} ${(startY + endY) / 2}, ${endX} ${endY}`;
       }
 
+      const color = getStrategyColor(sourceStrategy || "");
+      
+      let arrowEndX: number, arrowEndY: number, arrowAngle: number;
+      if (sameColumn) {
+        arrowEndX = targetPos.x + targetPos.width;
+        arrowEndY = targetPos.y + targetPos.height / 2;
+        arrowAngle = 0;
+      } else if (sourcePos.x < targetPos.x) {
+        arrowEndX = targetPos.x;
+        arrowEndY = targetPos.y + targetPos.height / 2;
+        arrowAngle = 180;
+      } else {
+        arrowEndX = targetPos.x + targetPos.width;
+        arrowEndY = targetPos.y + targetPos.height / 2;
+        arrowAngle = 0;
+      }
+      
+      const arrowSize = 6;
+      const arrowPath = `M ${arrowEndX} ${arrowEndY} l ${arrowAngle === 180 ? arrowSize : -arrowSize} ${-arrowSize/2} l 0 ${arrowSize} z`;
+
       return (
         <g key={`dep-${dep.id}`}>
-          <path
-            d={path}
-            fill="none"
-            stroke={getStrategyColor(sourceStrategy || "")}
-            strokeWidth={isHighlighted ? 3 : 2}
-            strokeOpacity={isHighlighted ? 1 : 0.7}
-            markerEnd="url(#arrowhead)"
-          />
           {isHighlighted && (
             <path
               d={path}
               fill="none"
-              stroke={getStrategyColor(sourceStrategy || "")}
+              stroke={color}
               strokeWidth={6}
               strokeOpacity={0.2}
             />
           )}
+          <path
+            d={path}
+            fill="none"
+            stroke={color}
+            strokeWidth={isHighlighted ? 2.5 : 1.5}
+            strokeOpacity={isHighlighted ? 1 : 0.7}
+          />
+          <path
+            d={arrowPath}
+            fill={color}
+            fillOpacity={isHighlighted ? 1 : 0.7}
+          />
         </g>
       );
     });
@@ -554,19 +578,6 @@ export default function Graph() {
               minHeight: `${(svgHeight + 50) * scale}px`,
             }}
           >
-            <defs>
-              <marker
-                id="arrowhead"
-                markerWidth="8"
-                markerHeight="6"
-                refX="7"
-                refY="3"
-                orient="auto"
-                markerUnits="strokeWidth"
-              >
-                <path d="M0,0 L0,6 L8,3 z" fill="#6B7280" />
-              </marker>
-            </defs>
 
             <text x={COLUMN_PADDING} y={40} className="text-lg font-bold fill-gray-700 dark:fill-gray-300">
               Strategies
@@ -582,7 +593,7 @@ export default function Graph() {
             <line x1={COLUMN_WIDTH * 2} y1={0} x2={COLUMN_WIDTH * 2} y2={svgHeight} stroke="#E5E7EB" strokeWidth="1" />
 
             {renderHierarchyLines()}
-            {renderDependencyLines()}
+            {showDependencies && renderDependencyLines()}
 
             <TooltipProvider>
               {filteredStrategies.map((strategy) => {
