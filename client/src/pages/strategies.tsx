@@ -2579,7 +2579,13 @@ export default function Strategies() {
               <div className="space-y-1">
                 {getActionChecklistItems(checklistModalAction.id).length > 0 ? (
                   getActionChecklistItems(checklistModalAction.id)
-                    .sort((a: any, b: any) => a.orderIndex - b.orderIndex)
+                    .sort((a: any, b: any) => {
+                      // Primary sort by orderIndex, secondary by createdAt for stable ordering
+                      if (a.orderIndex !== b.orderIndex) return a.orderIndex - b.orderIndex;
+                      const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                      const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                      return aTime - bTime;
+                    })
                     .map((item: any) => {
                       const indentLevel = item.indentLevel || 1;
                       const indentPadding = (indentLevel - 1) * 24;
