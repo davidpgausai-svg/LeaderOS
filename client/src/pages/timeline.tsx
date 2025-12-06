@@ -859,7 +859,24 @@ export default function Timeline() {
                   ry: 3px;
                 }
                 
-                /* Prevent any opacity/filter changes on hover/click/selection */
+                /* Remove ALL hover/focus/active filters from bar wrapper groups */
+                .gantt-container g,
+                .gantt-container g:hover,
+                .gantt-container g:focus,
+                .gantt-container g:active,
+                .gantt-container g[class*="Wrapper"],
+                .gantt-container g[class*="Wrapper"]:hover,
+                .gantt-container g[class*="Wrapper"]:focus,
+                .gantt-container g[class*="Wrapper"]:active,
+                .gantt-container [class*="barWrapper"],
+                .gantt-container [class*="barWrapper"]:hover,
+                .gantt-container [class*="barWrapper"]:focus,
+                .gantt-container [class*="barWrapper"]:active {
+                  filter: none !important;
+                  opacity: 1 !important;
+                }
+                
+                /* Prevent any opacity/filter changes on rect elements */
                 .gantt-container g:hover > rect,
                 .gantt-container g:focus > rect,
                 .gantt-container g:active > rect,
@@ -872,8 +889,10 @@ export default function Timeline() {
                 }
                 
                 /* Ensure consistent bar appearance */
+                .gantt-container svg g,
                 .gantt-container svg g rect {
                   transition: none !important;
+                  filter: none !important;
                 }
                 
                 /* Cursor for interactive bars */
