@@ -793,6 +793,43 @@ export default function Strategies() {
     },
   });
 
+  // Action due date update mutation
+  const updateActionDueDateMutation = useMutation({
+    mutationFn: async ({ action, dueDate }: { action: any; dueDate: string | null }) => {
+      const updateData: any = {
+        title: action.title,
+        description: action.description,
+        strategyId: action.strategyId,
+        status: action.status,
+        isArchived: action.isArchived,
+        createdBy: action.createdBy,
+        dueDate: dueDate,
+      };
+      if (action.projectId) updateData.projectId = action.projectId;
+      if (action.targetValue) updateData.targetValue = action.targetValue;
+      if (action.currentValue) updateData.currentValue = action.currentValue;
+      if (action.measurementUnit) updateData.measurementUnit = action.measurementUnit;
+      if (action.documentFolderUrl) updateData.documentFolderUrl = action.documentFolderUrl;
+      if (action.notes) updateData.notes = action.notes;
+      
+      return await apiRequest("PATCH", `/api/actions/${action.id}`, updateData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+      toast({
+        title: "Success",
+        description: "Due date updated",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update due date",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Delete action mutation
   const deleteActionMutation = useMutation({
     mutationFn: async (actionId: string) => {
@@ -1747,13 +1784,6 @@ export default function Strategies() {
                                                       <FolderOpen className="w-3.5 h-3.5 mr-2" />
                                                       Edit Folder Link
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                      onClick={() => setNotesModalAction(action)}
-                                                      data-testid={`action-menu-notes-${action.id}`}
-                                                    >
-                                                      <StickyNote className="w-3.5 h-3.5 mr-2" />
-                                                      View Notes
-                                                    </DropdownMenuItem>
                                                     {canEditAllStrategies() && (
                                                       <>
                                                         <AlertDialog>
@@ -2515,7 +2545,7 @@ export default function Strategies() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
-              Due Date
+              Edit Due Date
             </DialogTitle>
           </DialogHeader>
           {dueDateModalAction && (
@@ -2525,32 +2555,51 @@ export default function Strategies() {
                   {dueDateModalAction.title}
                 </h3>
               </div>
-              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mb-2">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                   <Calendar className="h-4 w-4" />
-                  <span className="text-sm font-medium">Target Date</span>
+                  <span className="text-sm font-medium">Select Due Date</span>
                 </div>
-                {dueDateModalAction.dueDate ? (
-                  <div>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                <Input
+                  type="date"
+                  value={dueDateModalAction.dueDate ? new Date(dueDateModalAction.dueDate).toISOString().split('T')[0] : ''}
+                  onChange={(e) => {
+                    const newDate = e.target.value ? new Date(e.target.value).toISOString() : null;
+                    updateActionDueDateMutation.mutate({
+                      action: dueDateModalAction,
+                      dueDate: newDate
+                    });
+                    setDueDateModalAction({ ...dueDateModalAction, dueDate: newDate });
+                  }}
+                  className="w-full"
+                  data-testid="input-action-due-date"
+                />
+                {dueDateModalAction.dueDate && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">
                       {new Date(dueDateModalAction.dueDate).toLocaleDateString('en-US', { 
                         weekday: 'long', 
                         month: 'long', 
                         day: 'numeric', 
                         year: 'numeric' 
                       })}
-                    </p>
-                    {(() => {
-                      const display = getActionDueDateDisplay(dueDateModalAction);
-                      return display && (
-                        <Badge className={`mt-2 ${display.color}`}>
-                          {display.text}
-                        </Badge>
-                      );
-                    })()}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-500 hover:text-red-700"
+                      onClick={() => {
+                        updateActionDueDateMutation.mutate({
+                          action: dueDateModalAction,
+                          dueDate: null
+                        });
+                        setDueDateModalAction({ ...dueDateModalAction, dueDate: null });
+                      }}
+                      data-testid="button-clear-due-date"
+                    >
+                      Clear
+                    </Button>
                   </div>
-                ) : (
-                  <p className="text-gray-500 dark:text-gray-400 italic">No due date set</p>
                 )}
               </div>
             </div>
