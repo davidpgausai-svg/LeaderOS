@@ -1626,7 +1626,7 @@ export default function Strategies() {
                                                 {/* Action title */}
                                                 <span 
                                                   className="text-sm text-gray-700 dark:text-gray-300 truncate hover:text-primary cursor-pointer"
-                                                  onClick={() => setNotesModalAction(action)}
+                                                  onClick={() => setChecklistModalAction(action)}
                                                 >
                                                   {action.title}
                                                 </span>
