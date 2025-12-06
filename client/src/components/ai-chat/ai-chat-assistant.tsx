@@ -29,8 +29,8 @@ export function AiChatAssistant() {
     if (location === '/') return 'Dashboard';
     if (location.startsWith('/strategies')) return 'Strategies';
     if (location.startsWith('/projects')) return 'Projects';
-    if (location.startsWith('/actions')) return 'Actions';
     if (location.startsWith('/timeline')) return 'Timeline';
+    if (location.startsWith('/graph')) return 'Graph';
     if (location.startsWith('/meeting-notes')) return 'Meeting Notes';
     if (location.startsWith('/reports')) return 'Reports';
     if (location.startsWith('/settings')) return 'Settings';

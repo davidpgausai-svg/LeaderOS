@@ -8,7 +8,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { AiChatAssistant } from "@/components/ai-chat/ai-chat-assistant";
 import Dashboard from "@/pages/dashboard";
 import Strategies from "@/pages/strategies";
-import Actions from "@/pages/actions";
 import MeetingNotes from "@/pages/meeting-notes";
 import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
@@ -55,7 +54,6 @@ function Router() {
         <Route path="/strategies" component={Strategies} />
         <Route path="/timeline" component={Timeline} />
         <Route path="/graph" component={Graph} />
-        <Route path="/actions" component={Actions} />
         <Route path="/meeting-notes" component={MeetingNotes} />
         <Route path="/reports" component={Reports} />
         <Route path="/templates" component={Templates} />

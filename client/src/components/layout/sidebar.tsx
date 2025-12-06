@@ -11,7 +11,6 @@ import {
 import {
   ChartLine,
   Target,
-  TrendingUp,
   BarChart3,
   Settings,
   LogOut,
@@ -28,7 +27,6 @@ import logoImage from "@assets/Strategy_Plan_Logo_2.0_-_dark_1764957298563.png";
 
 const coreNavigation = [
   { name: "Priorities", href: "/strategies", icon: Target, iconColor: "text-indigo-500" },
-  { name: "Actions", href: "/actions", icon: TrendingUp, iconColor: "text-amber-500" },
 ];
 
 const secondaryNavigation = [

@@ -316,21 +316,10 @@ export function FrameworkCard({
 
         {/* Action Buttons */}
         <div className="flex space-x-2 pt-2">
-          <Link href={`/projects?strategyId=${strategyId}`}>
+          <Link href={`/strategies?strategyId=${strategyId}`}>
             <Button variant="outline" size="sm" className="flex-1">
-              View Projects
+              View Strategy
               <ChevronRight className="w-3 h-3 ml-1" />
-            </Button>
-          </Link>
-          <Link href={`/actions?strategyId=${strategyId}`}>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="flex-1"
-              style={{ color: colorCode, borderColor: colorCode }}
-            >
-              Track Actions
-              <TrendingUp className="w-3 h-3 ml-1" />
             </Button>
           </Link>
         </div>

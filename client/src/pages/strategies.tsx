@@ -369,11 +369,6 @@ export default function Strategies() {
     }
   }, [strategies, strategyFilter]);
 
-  // Navigate to Actions page with deep-link to specific action
-  const navigateToAction = (actionId: string) => {
-    setLocation(`/actions?actionId=${actionId}`);
-  };
-
   // Toggle project expand/collapse (projects are collapsed by default)
   const toggleProjectCollapse = (projectId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -1591,7 +1586,7 @@ export default function Strategies() {
                                                 {/* Action title */}
                                                 <span 
                                                   className="text-sm text-gray-700 dark:text-gray-300 truncate hover:text-primary cursor-pointer"
-                                                  onClick={() => navigateToAction(action.id)}
+                                                  onClick={() => setNotesModalAction(action)}
                                                 >
                                                   {action.title}
                                                 </span>
@@ -1694,7 +1689,7 @@ export default function Strategies() {
                                                   </DropdownMenuTrigger>
                                                   <DropdownMenuContent align="end">
                                                     <DropdownMenuItem
-                                                      onClick={() => navigateToAction(action.id)}
+                                                      onClick={() => setNotesModalAction(action)}
                                                       data-testid={`action-menu-view-${action.id}`}
                                                     >
                                                       <Eye className="w-3.5 h-3.5 mr-2" />
@@ -1703,7 +1698,7 @@ export default function Strategies() {
                                                     {canEditAllStrategies() && (
                                                       <>
                                                         <DropdownMenuItem
-                                                          onClick={() => navigateToAction(action.id)}
+                                                          onClick={() => setNotesModalAction(action)}
                                                           data-testid={`action-menu-edit-${action.id}`}
                                                         >
                                                           <Edit className="w-3.5 h-3.5 mr-2" />
