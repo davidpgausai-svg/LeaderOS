@@ -139,9 +139,10 @@ export function Sidebar() {
                 <div
                   className={`flex items-center ${isCollapsed ? 'justify-center px-2' : 'px-2'} py-2 text-sm font-medium rounded-md transition-colors ${
                     isActive
-                      ? "bg-white dark:bg-slate-700 shadow-md ring-2 ring-amber-400 dark:ring-amber-500 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-800"
+                      ? "bg-white dark:bg-slate-700 shadow-md ring-2 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-800"
                       : "text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm"
                   }`}
+                  style={isActive ? { '--tw-ring-color': '#0A0E27' } as React.CSSProperties : undefined}
                 >
                   <Icon className={`${isCollapsed ? '' : 'mr-3'} h-5 w-5 ${item.iconColor}`} />
                   {!isCollapsed && <span className={`font-semibold ${isActive ? 'text-gray-900 dark:text-white' : ''}`}>{item.name}</span>}
