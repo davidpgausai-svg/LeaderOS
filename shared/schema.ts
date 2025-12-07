@@ -426,6 +426,7 @@ export type AiChatConversation = typeof aiChatConversations.$inferSelect;
 export const executiveGoals = pgTable("executive_goals", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
+  description: text("description"),
   organizationId: varchar("organization_id").notNull(),
   createdBy: varchar("created_by").notNull(),
   createdAt: timestamp("created_at").default(sql`now()`),

@@ -678,6 +678,7 @@ export class PostgresStorage implements IStorage {
     const [executiveGoal] = await db.insert(executiveGoals).values({
       id: randomUUID(),
       name: goal.name,
+      description: goal.description,
       organizationId: goal.organizationId,
       createdBy: goal.createdBy,
     }).returning();

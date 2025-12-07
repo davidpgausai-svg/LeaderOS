@@ -68,6 +68,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -1094,16 +1100,26 @@ export default function Strategies() {
                       {/* Executive Goal Tags - Above title (supports multiple) */}
                       {getStrategyExecutiveGoals(strategy.id).length > 0 && (
                         <div className="flex items-center gap-2 pl-8 flex-wrap">
-                          {getStrategyExecutiveGoals(strategy.id).map((goal: ExecutiveGoal) => (
-                            <Badge 
-                              key={goal.id}
-                              className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs font-medium px-2 py-0.5"
-                              data-testid={`executive-goal-tag-${strategy.id}-${goal.id}`}
-                            >
-                              <Tag className="w-3 h-3 mr-1" />
-                              {goal.name}
-                            </Badge>
-                          ))}
+                          <TooltipProvider>
+                            {getStrategyExecutiveGoals(strategy.id).map((goal: ExecutiveGoal) => (
+                              <Tooltip key={goal.id}>
+                                <TooltipTrigger asChild>
+                                  <Badge 
+                                    className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs font-medium px-2 py-0.5 cursor-help"
+                                    data-testid={`executive-goal-tag-${strategy.id}-${goal.id}`}
+                                  >
+                                    <Tag className="w-3 h-3 mr-1" />
+                                    {goal.name}
+                                  </Badge>
+                                </TooltipTrigger>
+                                {goal.description && (
+                                  <TooltipContent side="bottom" className="max-w-xs">
+                                    <p className="text-sm">{goal.description}</p>
+                                  </TooltipContent>
+                                )}
+                              </Tooltip>
+                            ))}
+                          </TooltipProvider>
                         </div>
                       )}
                       {/* Row 1: Chevron, Status dot, Full Title */}
@@ -3180,16 +3196,21 @@ export default function Strategies() {
                           }}
                           data-testid={`select-executive-goal-${goal.id}`}
                         >
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-col gap-1">
                             <Badge 
-                              className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-1"
+                              className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-1 w-fit"
                             >
                               <Tag className="w-3 h-3 mr-1" />
                               {goal.name}
                             </Badge>
+                            {goal.description && (
+                              <span className="text-xs text-gray-500 dark:text-gray-400 pl-1">
+                                {goal.description}
+                              </span>
+                            )}
                           </div>
                           {isSelected && (
-                            <CheckCircle className="h-5 w-5 text-blue-500" />
+                            <CheckCircle className="h-5 w-5 text-blue-500 flex-shrink-0" />
                           )}
                         </div>
                       );

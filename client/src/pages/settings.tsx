@@ -283,8 +283,10 @@ export default function Settings() {
   });
   const [newTemplateTypeName, setNewTemplateTypeName] = useState("");
   const [newExecutiveGoalName, setNewExecutiveGoalName] = useState("");
+  const [newExecutiveGoalDescription, setNewExecutiveGoalDescription] = useState("");
   const [editingExecutiveGoal, setEditingExecutiveGoal] = useState<ExecutiveGoal | null>(null);
   const [editedGoalName, setEditedGoalName] = useState("");
+  const [editedGoalDescription, setEditedGoalDescription] = useState("");
   const [registrationToken, setRegistrationToken] = useState("");
   const [isLoadingToken, setIsLoadingToken] = useState(false);
   const [isRotatingToken, setIsRotatingToken] = useState(false);
@@ -486,8 +488,8 @@ export default function Settings() {
   });
 
   const createExecutiveGoalMutation = useMutation({
-    mutationFn: async (name: string) => {
-      const response = await apiRequest("POST", "/api/executive-goals", { name });
+    mutationFn: async ({ name, description }: { name: string; description?: string }) => {
+      const response = await apiRequest("POST", "/api/executive-goals", { name, description });
       return await response.json();
     },
     onSuccess: () => {
@@ -497,6 +499,7 @@ export default function Settings() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/executive-goals"] });
       setNewExecutiveGoalName("");
+      setNewExecutiveGoalDescription("");
     },
     onError: (error: any) => {
       toast({
@@ -508,8 +511,8 @@ export default function Settings() {
   });
 
   const updateExecutiveGoalMutation = useMutation({
-    mutationFn: async ({ id, name }: { id: string; name: string }) => {
-      const response = await apiRequest("PATCH", `/api/executive-goals/${id}`, { name });
+    mutationFn: async ({ id, name, description }: { id: string; name: string; description?: string }) => {
+      const response = await apiRequest("PATCH", `/api/executive-goals/${id}`, { name, description });
       return await response.json();
     },
     onSuccess: () => {
@@ -520,6 +523,7 @@ export default function Settings() {
       queryClient.invalidateQueries({ queryKey: ["/api/executive-goals"] });
       setEditingExecutiveGoal(null);
       setEditedGoalName("");
+      setEditedGoalDescription("");
     },
     onError: (error: any) => {
       toast({
@@ -664,7 +668,7 @@ export default function Settings() {
     if (!trimmedName) {
       toast({
         title: "Error",
-        description: "Please enter a goal name",
+        description: "Please enter a goal tag",
         variant: "destructive",
       });
       return;
@@ -675,18 +679,22 @@ export default function Settings() {
     if (existingNames.includes(trimmedName.toLowerCase())) {
       toast({
         title: "Error",
-        description: "An Executive Goal with this name already exists",
+        description: "An Executive Goal with this tag already exists",
         variant: "destructive",
       });
       return;
     }
     
-    createExecutiveGoalMutation.mutate(trimmedName);
+    createExecutiveGoalMutation.mutate({ 
+      name: trimmedName, 
+      description: newExecutiveGoalDescription.trim() || undefined 
+    });
   };
 
   const handleEditExecutiveGoal = (goal: ExecutiveGoal) => {
     setEditingExecutiveGoal(goal);
     setEditedGoalName(goal.name);
+    setEditedGoalDescription(goal.description || "");
   };
 
   const handleSaveExecutiveGoalEdit = () => {
@@ -696,7 +704,7 @@ export default function Settings() {
     if (!trimmedName) {
       toast({
         title: "Error",
-        description: "Goal name cannot be empty",
+        description: "Goal tag cannot be empty",
         variant: "destructive",
       });
       return;
@@ -709,13 +717,17 @@ export default function Settings() {
     if (existingNames.includes(trimmedName.toLowerCase())) {
       toast({
         title: "Error",
-        description: "An Executive Goal with this name already exists",
+        description: "An Executive Goal with this tag already exists",
         variant: "destructive",
       });
       return;
     }
     
-    updateExecutiveGoalMutation.mutate({ id: editingExecutiveGoal.id, name: trimmedName });
+    updateExecutiveGoalMutation.mutate({ 
+      id: editingExecutiveGoal.id, 
+      name: trimmedName,
+      description: editedGoalDescription.trim() || undefined
+    });
   };
 
   const isOrgAdministrator = () => {
@@ -1715,23 +1727,39 @@ export default function Settings() {
                             </div>
                           </div>
                           
-                          <div className="flex gap-2 mb-4">
-                            <Input
-                              value={newExecutiveGoalName}
-                              onChange={(e) => setNewExecutiveGoalName(e.target.value)}
-                              placeholder="New goal name..."
-                              className="max-w-xs"
-                              onKeyDown={(e) => e.key === "Enter" && handleAddExecutiveGoal()}
-                              data-testid="input-new-executive-goal"
-                            />
-                            <Button
-                              onClick={handleAddExecutiveGoal}
-                              disabled={createExecutiveGoalMutation.isPending}
-                              data-testid="button-add-executive-goal"
-                            >
-                              <Plus className="w-4 h-4 mr-2" />
-                              {createExecutiveGoalMutation.isPending ? "Adding..." : "Add Goal"}
-                            </Button>
+                          <div className="space-y-3 mb-4">
+                            <div className="flex gap-2">
+                              <div className="flex-1 max-w-xs">
+                                <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Goal Tag *</label>
+                                <Input
+                                  value={newExecutiveGoalName}
+                                  onChange={(e) => setNewExecutiveGoalName(e.target.value)}
+                                  placeholder="Short tag (e.g., Growth)"
+                                  onKeyDown={(e) => e.key === "Enter" && handleAddExecutiveGoal()}
+                                  data-testid="input-new-executive-goal"
+                                />
+                              </div>
+                              <div className="flex-1">
+                                <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Goal Description</label>
+                                <Input
+                                  value={newExecutiveGoalDescription}
+                                  onChange={(e) => setNewExecutiveGoalDescription(e.target.value)}
+                                  placeholder="Full description (shown on hover)"
+                                  onKeyDown={(e) => e.key === "Enter" && handleAddExecutiveGoal()}
+                                  data-testid="input-new-executive-goal-description"
+                                />
+                              </div>
+                              <div className="flex items-end">
+                                <Button
+                                  onClick={handleAddExecutiveGoal}
+                                  disabled={createExecutiveGoalMutation.isPending}
+                                  data-testid="button-add-executive-goal"
+                                >
+                                  <Plus className="w-4 h-4 mr-2" />
+                                  {createExecutiveGoalMutation.isPending ? "Adding..." : "Add Goal"}
+                                </Button>
+                              </div>
+                            </div>
                           </div>
 
                           <div className="space-y-2">
@@ -1747,40 +1775,66 @@ export default function Settings() {
                                   data-testid={`executive-goal-item-${goal.id}`}
                                 >
                                   {editingExecutiveGoal?.id === goal.id ? (
-                                    <div className="flex items-center gap-2 flex-1">
-                                      <Input
-                                        value={editedGoalName}
-                                        onChange={(e) => setEditedGoalName(e.target.value)}
-                                        className="max-w-xs"
-                                        onKeyDown={(e) => {
-                                          if (e.key === "Enter") handleSaveExecutiveGoalEdit();
-                                          if (e.key === "Escape") {
-                                            setEditingExecutiveGoal(null);
-                                            setEditedGoalName("");
-                                          }
-                                        }}
-                                        autoFocus
-                                        data-testid={`input-edit-executive-goal-${goal.id}`}
-                                      />
-                                      <Button
-                                        size="sm"
-                                        onClick={handleSaveExecutiveGoalEdit}
-                                        disabled={updateExecutiveGoalMutation.isPending}
-                                        data-testid={`button-save-executive-goal-${goal.id}`}
-                                      >
-                                        <Save className="h-4 w-4" />
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() => {
-                                          setEditingExecutiveGoal(null);
-                                          setEditedGoalName("");
-                                        }}
-                                        data-testid={`button-cancel-edit-executive-goal-${goal.id}`}
-                                      >
-                                        <X className="h-4 w-4" />
-                                      </Button>
+                                    <div className="flex flex-col gap-2 flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <div className="flex-1">
+                                          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Goal Tag *</label>
+                                          <Input
+                                            value={editedGoalName}
+                                            onChange={(e) => setEditedGoalName(e.target.value)}
+                                            placeholder="Short tag"
+                                            onKeyDown={(e) => {
+                                              if (e.key === "Enter") handleSaveExecutiveGoalEdit();
+                                              if (e.key === "Escape") {
+                                                setEditingExecutiveGoal(null);
+                                                setEditedGoalName("");
+                                                setEditedGoalDescription("");
+                                              }
+                                            }}
+                                            autoFocus
+                                            data-testid={`input-edit-executive-goal-${goal.id}`}
+                                          />
+                                        </div>
+                                        <div className="flex-1">
+                                          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Goal Description</label>
+                                          <Input
+                                            value={editedGoalDescription}
+                                            onChange={(e) => setEditedGoalDescription(e.target.value)}
+                                            placeholder="Full description (shown on hover)"
+                                            onKeyDown={(e) => {
+                                              if (e.key === "Enter") handleSaveExecutiveGoalEdit();
+                                              if (e.key === "Escape") {
+                                                setEditingExecutiveGoal(null);
+                                                setEditedGoalName("");
+                                                setEditedGoalDescription("");
+                                              }
+                                            }}
+                                            data-testid={`input-edit-executive-goal-description-${goal.id}`}
+                                          />
+                                        </div>
+                                        <div className="flex items-end gap-1">
+                                          <Button
+                                            size="sm"
+                                            onClick={handleSaveExecutiveGoalEdit}
+                                            disabled={updateExecutiveGoalMutation.isPending}
+                                            data-testid={`button-save-executive-goal-${goal.id}`}
+                                          >
+                                            <Save className="h-4 w-4" />
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => {
+                                              setEditingExecutiveGoal(null);
+                                              setEditedGoalName("");
+                                              setEditedGoalDescription("");
+                                            }}
+                                            data-testid={`button-cancel-edit-executive-goal-${goal.id}`}
+                                          >
+                                            <X className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                      </div>
                                     </div>
                                   ) : (
                                     <>
@@ -1791,6 +1845,11 @@ export default function Settings() {
                                         >
                                           {goal.name}
                                         </Badge>
+                                        {goal.description && (
+                                          <span className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-xs">
+                                            {goal.description}
+                                          </span>
+                                        )}
                                       </div>
                                       <div className="flex items-center gap-1">
                                         <Button
