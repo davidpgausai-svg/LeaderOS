@@ -25,7 +25,20 @@ import {
   Calendar,
   TrendingUp,
   BarChart3,
+  Tag,
+  Award,
+  Briefcase,
+  ListChecks,
+  ArrowUpRight,
+  ArrowDownRight,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { format, differenceInDays, isPast, isBefore } from "date-fns";
 
 type Strategy = {
@@ -67,6 +80,22 @@ type User = {
   role: string;
 };
 
+type ExecutiveGoal = {
+  id: string;
+  name: string;
+  description: string | null;
+  organizationId: string;
+  createdBy: string;
+  createdAt: string;
+};
+
+type StrategyExecutiveGoal = {
+  id: string;
+  strategyId: string;
+  executiveGoalId: string;
+  organizationId: string;
+};
+
 export default function Reports() {
   const [activeTab, setActiveTab] = useState("health");
   const reportRef = useRef<HTMLDivElement>(null);
@@ -85,6 +114,14 @@ export default function Reports() {
 
   const { data: users = [] } = useQuery<User[]>({
     queryKey: ["/api/users"],
+  });
+
+  const { data: executiveGoals = [] } = useQuery<ExecutiveGoal[]>({
+    queryKey: ["/api/executive-goals"],
+  });
+
+  const { data: strategyExecutiveGoalMappings = [] } = useQuery<StrategyExecutiveGoal[]>({
+    queryKey: ["/api/strategy-executive-goals"],
   });
 
   const handlePrint = useReactToPrint({
@@ -336,6 +373,10 @@ export default function Reports() {
                 <Users className="w-4 h-4 mr-2" />
                 Ownership
               </TabsTrigger>
+              <TabsTrigger value="executive-goals" data-testid="tab-executive-goals">
+                <Tag className="w-4 h-4 mr-2" />
+                Executive Goals
+              </TabsTrigger>
             </TabsList>
 
             {/* Strategy Health Overview */}
@@ -369,6 +410,18 @@ export default function Reports() {
                 actions={actions}
                 users={users}
                 strategies={strategies}
+                safeDate={safeDate}
+              />
+            </TabsContent>
+
+            {/* Executive Goals Report */}
+            <TabsContent value="executive-goals" className="space-y-4">
+              <ExecutiveGoalsReport
+                executiveGoals={executiveGoals}
+                strategyExecutiveGoalMappings={strategyExecutiveGoalMappings}
+                strategies={strategies}
+                projects={projects}
+                actions={actions}
                 safeDate={safeDate}
               />
             </TabsContent>
@@ -406,6 +459,18 @@ export default function Reports() {
                 users={users}
                 strategies={strategies}
                 safeDate={safeDate}
+              />
+            </div>
+            <div className="page-break">
+              <h2 className="text-xl font-bold mb-4">Executive Goals Briefing</h2>
+              <ExecutiveGoalsReport
+                executiveGoals={executiveGoals}
+                strategyExecutiveGoalMappings={strategyExecutiveGoalMappings}
+                strategies={strategies}
+                projects={projects}
+                actions={actions}
+                safeDate={safeDate}
+                isPrintView={true}
               />
             </div>
           </div>
@@ -869,6 +934,472 @@ function OwnershipReport({ projects, actions, users, strategies, safeDate }: any
           <CardContent className="text-center py-12">
             <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-500">No project assignments found</p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// Executive Goals Report Component - Executive Briefing Format
+function ExecutiveGoalsReport({ 
+  executiveGoals, 
+  strategyExecutiveGoalMappings, 
+  strategies, 
+  projects, 
+  actions, 
+  safeDate,
+  isPrintView = false 
+}: any) {
+  const [lookbackMonths, setLookbackMonths] = useState<string>("3");
+  const [selectedGoalId, setSelectedGoalId] = useState<string>("all");
+
+  const today = new Date();
+  const lookbackDate = new Date(today);
+  lookbackDate.setMonth(lookbackDate.getMonth() - parseInt(lookbackMonths));
+
+  const getStrategiesForGoal = (goalId: string) => {
+    if (goalId === "all") {
+      const allMappedStrategyIds = strategyExecutiveGoalMappings.map((m: any) => m.strategyId);
+      return strategies.filter((s: any) => allMappedStrategyIds.includes(s.id));
+    }
+    const mappings = strategyExecutiveGoalMappings.filter((m: any) => m.executiveGoalId === goalId);
+    const strategyIds = mappings.map((m: any) => m.strategyId);
+    return strategies.filter((s: any) => strategyIds.includes(s.id));
+  };
+
+  const getProjectsForStrategies = (strategyList: any[]) => {
+    const strategyIds = strategyList.map((s: any) => s.id);
+    return projects.filter((p: any) => strategyIds.includes(p.strategyId));
+  };
+
+  const getActionsForProjects = (projectList: any[]) => {
+    const projectIds = projectList.map((p: any) => p.id);
+    return actions.filter((a: any) => projectIds.includes(a.projectId));
+  };
+
+  const isWithinLookback = (dateStr: string | null) => {
+    if (!dateStr) return false;
+    const date = safeDate(dateStr);
+    if (!date) return false;
+    return date >= lookbackDate && date <= today;
+  };
+
+  const alignedStrategies = getStrategiesForGoal(selectedGoalId);
+  const alignedProjects = getProjectsForStrategies(alignedStrategies);
+  const alignedActions = getActionsForProjects(alignedProjects);
+
+  const completedActions = alignedActions.filter((a: any) => a.status === 'achieved');
+  const recentCompletions = completedActions.filter((a: any) => {
+    const targetDate = safeDate(a.targetDate);
+    return targetDate && isWithinLookback(a.targetDate);
+  });
+
+  const overdueActions = alignedActions.filter((a: any) => {
+    if (a.status === 'achieved') return false;
+    const targetDate = safeDate(a.targetDate);
+    return targetDate && isPast(targetDate);
+  });
+
+  const blockedActions = alignedActions.filter((a: any) => a.status === 'blocked');
+
+  const atRiskItems = [...overdueActions, ...blockedActions.filter((a: any) => !overdueActions.find((o: any) => o.id === a.id))];
+
+  const overallProgress = alignedStrategies.length > 0
+    ? Math.round(alignedStrategies.reduce((sum: number, s: any) => sum + (s.progress || 0), 0) / alignedStrategies.length)
+    : 0;
+
+  const completedProjects = alignedProjects.filter((p: any) => p.progress >= 100);
+  
+  const recentlyCompletedProjects = completedProjects.filter((p: any) => {
+    const dueDate = safeDate(p.dueDate);
+    return dueDate && isWithinLookback(p.dueDate);
+  });
+
+  const progressDistribution = {
+    notStarted: alignedStrategies.filter((s: any) => (s.progress || 0) === 0).length,
+    early: alignedStrategies.filter((s: any) => (s.progress || 0) > 0 && (s.progress || 0) < 25).length,
+    inProgress: alignedStrategies.filter((s: any) => (s.progress || 0) >= 25 && (s.progress || 0) < 75).length,
+    nearComplete: alignedStrategies.filter((s: any) => (s.progress || 0) >= 75 && (s.progress || 0) < 100).length,
+    complete: alignedStrategies.filter((s: any) => (s.progress || 0) >= 100).length,
+  };
+
+  const upcomingMilestones = alignedActions.filter((a: any) => {
+    if (a.status === 'achieved') return false;
+    const targetDate = safeDate(a.targetDate);
+    if (!targetDate) return false;
+    const daysUntil = differenceInDays(targetDate, today);
+    return daysUntil >= 0 && daysUntil <= 30;
+  }).sort((a: any, b: any) => {
+    const dateA = safeDate(a.targetDate);
+    const dateB = safeDate(b.targetDate);
+    if (!dateA || !dateB) return 0;
+    return dateA.getTime() - dateB.getTime();
+  }).slice(0, 5);
+
+  const selectedGoal = executiveGoals.find((g: any) => g.id === selectedGoalId);
+
+  return (
+    <div className="space-y-6" data-testid="executive-goals-report">
+      {isPrintView ? (
+        <div className="mb-4 pb-4 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold">Executive Goals Briefing</h3>
+              <p className="text-sm text-gray-600">
+                {selectedGoalId === "all" ? "All Executive Goals" : selectedGoal?.name || "All Goals"} • {lookbackMonths} Month Lookback
+              </p>
+            </div>
+            <div className="text-right text-sm text-gray-500">
+              <p>Generated: {format(today, 'MMM dd, yyyy')}</p>
+              <p>Period: {format(lookbackDate, 'MMM yyyy')} - {format(today, 'MMM yyyy')}</p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <Card>
+          <CardHeader className="pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <CardTitle className="flex items-center">
+                  <Tag className="w-5 h-5 mr-2 text-primary" />
+                  Executive Goals Briefing
+                </CardTitle>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  Strategic alignment and progress report for executive review
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Select value={selectedGoalId} onValueChange={setSelectedGoalId}>
+                  <SelectTrigger className="w-[200px]" data-testid="select-executive-goal">
+                    <SelectValue placeholder="Select Goal" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Executive Goals</SelectItem>
+                    {executiveGoals.map((goal: any) => (
+                      <SelectItem key={goal.id} value={goal.id}>{goal.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={lookbackMonths} onValueChange={setLookbackMonths}>
+                  <SelectTrigger className="w-[160px]" data-testid="select-lookback">
+                    <SelectValue placeholder="Lookback Period" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="3">3 Month Lookback</SelectItem>
+                    <SelectItem value="6">6 Month Lookback</SelectItem>
+                    <SelectItem value="9">9 Month Lookback</SelectItem>
+                    <SelectItem value="12">12 Month Lookback</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+      )}
+
+      {selectedGoalId !== "all" && selectedGoal && (
+        <Card className="border-l-4 border-l-primary">
+          <CardContent className="py-4">
+            <div className="flex items-start gap-3">
+              <Award className="w-6 h-6 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-bold text-lg">{selectedGoal.name}</h3>
+                {selectedGoal.description && (
+                  <p className="text-gray-600 dark:text-gray-400 mt-1">{selectedGoal.description}</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card data-testid="metric-strategies">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Aligned Priorities</p>
+                <p className="text-3xl font-bold text-primary">{alignedStrategies.length}</p>
+              </div>
+              <Target className="w-8 h-8 text-primary/30" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="metric-projects">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Projects Complete</p>
+                <p className="text-3xl font-bold text-green-600">{completedProjects.length}<span className="text-lg text-gray-400">/{alignedProjects.length}</span></p>
+              </div>
+              <Briefcase className="w-8 h-8 text-green-600/30" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="metric-actions">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Actions Achieved</p>
+                <p className="text-3xl font-bold text-blue-600">{completedActions.length}<span className="text-lg text-gray-400">/{alignedActions.length}</span></p>
+              </div>
+              <ListChecks className="w-8 h-8 text-blue-600/30" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="metric-progress">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Overall Progress</p>
+                <p className="text-3xl font-bold">{overallProgress}%</p>
+              </div>
+              <TrendingUp className="w-8 h-8 text-gray-400/30" />
+            </div>
+            <Progress value={overallProgress} className="mt-3 h-2" />
+          </CardContent>
+        </Card>
+      </div>
+
+      {alignedStrategies.length > 0 && (
+        <Card data-testid="card-progress-distribution">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center">
+              <TrendingUp className="w-4 h-4 mr-2" />
+              Progress Distribution ({lookbackMonths}mo View)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-end gap-1 h-24 mb-3">
+              {[
+                { label: 'Not Started', value: progressDistribution.notStarted, color: 'bg-gray-300 dark:bg-gray-600' },
+                { label: '1-24%', value: progressDistribution.early, color: 'bg-red-400' },
+                { label: '25-74%', value: progressDistribution.inProgress, color: 'bg-amber-400' },
+                { label: '75-99%', value: progressDistribution.nearComplete, color: 'bg-blue-400' },
+                { label: 'Complete', value: progressDistribution.complete, color: 'bg-green-500' },
+              ].map((bar, index) => {
+                const maxVal = Math.max(
+                  progressDistribution.notStarted,
+                  progressDistribution.early,
+                  progressDistribution.inProgress,
+                  progressDistribution.nearComplete,
+                  progressDistribution.complete,
+                  1
+                );
+                const heightPercent = (bar.value / maxVal) * 100;
+                return (
+                  <div key={index} className="flex-1 flex flex-col items-center gap-1">
+                    <span className="text-xs font-medium">{bar.value}</span>
+                    <div 
+                      className={`w-full ${bar.color} rounded-t transition-all`}
+                      style={{ height: `${Math.max(heightPercent, 4)}%`, minHeight: bar.value > 0 ? '8px' : '4px' }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex gap-1 text-[10px] text-gray-500">
+              {['Not Started', '1-24%', '25-74%', '75-99%', 'Complete'].map((label, i) => (
+                <div key={i} className="flex-1 text-center truncate">{label}</div>
+              ))}
+            </div>
+            <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 flex justify-between text-sm">
+              <span className="text-gray-500">Recent Completions ({lookbackMonths}mo):</span>
+              <span className="font-medium">{recentCompletions.length} actions, {recentlyCompletedProjects.length} projects</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card data-testid="card-aligned-priorities">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center">
+              <Target className="w-4 h-4 mr-2" />
+              Aligned Strategic Priorities
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {alignedStrategies.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Target className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                <p>No strategies aligned to {selectedGoalId === "all" ? "any executive goals" : "this goal"}</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {alignedStrategies.map((strategy: any) => {
+                  const strategyProjects = projects.filter((p: any) => p.strategyId === strategy.id);
+                  const progress = strategy.progress || 0;
+                  const trend = progress >= 50 ? "up" : "down";
+                  
+                  return (
+                    <div key={strategy.id} className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: strategy.colorCode }} 
+                          />
+                          <span className="font-medium text-sm">{strategy.title}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {trend === "up" ? (
+                            <ArrowUpRight className="w-4 h-4 text-green-500" />
+                          ) : (
+                            <ArrowDownRight className="w-4 h-4 text-amber-500" />
+                          )}
+                          <span className="font-bold text-sm">{progress}%</span>
+                        </div>
+                      </div>
+                      <Progress value={progress} className="h-1.5" />
+                      <p className="text-xs text-gray-500 mt-2">
+                        {strategyProjects.length} project{strategyProjects.length !== 1 ? 's' : ''} • 
+                        Target: {format(new Date(strategy.targetDate), 'MMM yyyy')}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <div className="space-y-6">
+          <Card data-testid="card-recent-completions">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center text-green-600">
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Recent Completions ({lookbackMonths}mo)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {recentCompletions.length === 0 ? (
+                <p className="text-sm text-gray-500 py-4 text-center">No completions in this period</p>
+              ) : (
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {recentCompletions.slice(0, 5).map((action: any) => {
+                    const project = projects.find((p: any) => p.id === action.projectId);
+                    return (
+                      <div key={action.id} className="flex items-center gap-2 text-sm">
+                        <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                        <span className="truncate">{action.title}</span>
+                        {project && (
+                          <span className="text-xs text-gray-400 flex-shrink-0">({project.title})</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {recentCompletions.length > 5 && (
+                    <p className="text-xs text-gray-400 mt-1">+{recentCompletions.length - 5} more</p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card data-testid="card-at-risk">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center text-red-600">
+                <AlertTriangle className="w-4 h-4 mr-2" />
+                At-Risk Items ({atRiskItems.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {atRiskItems.length === 0 ? (
+                <div className="text-center py-4">
+                  <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">No items at risk</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {atRiskItems.slice(0, 5).map((action: any) => {
+                    const project = projects.find((p: any) => p.id === action.projectId);
+                    const isOverdue = action.status !== 'blocked' && safeDate(action.targetDate) && isPast(safeDate(action.targetDate));
+                    
+                    return (
+                      <div key={action.id} className="flex items-center gap-2 text-sm">
+                        {action.status === 'blocked' ? (
+                          <XCircle className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />
+                        ) : (
+                          <Clock className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
+                        )}
+                        <span className="truncate">{action.title}</span>
+                        <Badge className={`text-xs flex-shrink-0 ${
+                          action.status === 'blocked' 
+                            ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300'
+                            : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                        }`}>
+                          {action.status === 'blocked' ? 'Blocked' : 'Overdue'}
+                        </Badge>
+                      </div>
+                    );
+                  })}
+                  {atRiskItems.length > 5 && (
+                    <p className="text-xs text-gray-400 mt-1">+{atRiskItems.length - 5} more items need attention</p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <Card data-testid="card-upcoming-milestones">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center">
+            <Calendar className="w-4 h-4 mr-2" />
+            Upcoming Milestones (Next 30 Days)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {upcomingMilestones.length === 0 ? (
+            <p className="text-sm text-gray-500 py-4 text-center">No milestones in the next 30 days</p>
+          ) : (
+            <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+              {upcomingMilestones.map((action: any) => {
+                const project = projects.find((p: any) => p.id === action.projectId);
+                const strategy = strategies.find((s: any) => s.id === action.strategyId);
+                const targetDate = safeDate(action.targetDate);
+                const daysUntil = targetDate ? differenceInDays(targetDate, today) : 0;
+                
+                return (
+                  <div 
+                    key={action.id} 
+                    className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      {strategy && (
+                        <div 
+                          className="w-2 h-2 rounded-full flex-shrink-0" 
+                          style={{ backgroundColor: strategy.colorCode }} 
+                        />
+                      )}
+                      <span className="text-xs font-medium text-gray-500">
+                        {daysUntil === 0 ? 'Today' : `${daysUntil} day${daysUntil !== 1 ? 's' : ''}`}
+                      </span>
+                    </div>
+                    <p className="text-sm font-medium line-clamp-2">{action.title}</p>
+                    {targetDate && (
+                      <p className="text-xs text-gray-500 mt-1">{format(targetDate, 'MMM dd')}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {executiveGoals.length === 0 && (
+        <Card>
+          <CardContent className="text-center py-12">
+            <Tag className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-500 mb-2">No Executive Goals Defined</p>
+            <p className="text-sm text-gray-400">Create executive goals in Settings to see alignment reports</p>
           </CardContent>
         </Card>
       )}
