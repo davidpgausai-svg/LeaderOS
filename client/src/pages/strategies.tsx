@@ -1100,23 +1100,23 @@ export default function Strategies() {
                       {/* Executive Goal Tags - Above title (supports multiple) */}
                       {getStrategyExecutiveGoals(strategy.id).length > 0 && (
                         <div className="flex items-center gap-2 pl-8 flex-wrap">
-                          <TooltipProvider>
+                          <TooltipProvider delayDuration={100}>
                             {getStrategyExecutiveGoals(strategy.id).map((goal: ExecutiveGoal) => (
                               <Tooltip key={goal.id}>
                                 <TooltipTrigger asChild>
                                   <Badge 
                                     className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs font-medium px-2 py-0.5 cursor-help"
                                     data-testid={`executive-goal-tag-${strategy.id}-${goal.id}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    onMouseDown={(e) => e.stopPropagation()}
                                   >
                                     <Tag className="w-3 h-3 mr-1" />
                                     {goal.name}
                                   </Badge>
                                 </TooltipTrigger>
-                                {goal.description && (
-                                  <TooltipContent side="bottom" className="max-w-xs">
-                                    <p className="text-sm">{goal.description}</p>
-                                  </TooltipContent>
-                                )}
+                                <TooltipContent side="bottom" className="max-w-xs">
+                                  <p className="text-sm">{goal.description || "No description"}</p>
+                                </TooltipContent>
                               </Tooltip>
                             ))}
                           </TooltipProvider>
