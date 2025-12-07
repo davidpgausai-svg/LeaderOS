@@ -1114,64 +1114,65 @@ function ExecutiveGoalsReport({
         </Card>
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card data-testid="metric-strategies">
-          <CardContent className="pt-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:grid-cols-4 print:gap-2">
+        <Card data-testid="metric-strategies" className="print:shadow-none print:border">
+          <CardContent className="pt-6 print:pt-3 print:pb-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Aligned Priorities</p>
-                <p className="text-3xl font-bold text-primary">{alignedStrategies.length}</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 print:text-xs">Aligned Priorities</p>
+                <p className="text-3xl font-bold text-primary print:text-xl">{alignedStrategies.length}</p>
               </div>
-              <Target className="w-8 h-8 text-primary/30" />
+              <Target className="w-8 h-8 text-primary/30 print:hidden" />
             </div>
           </CardContent>
         </Card>
 
-        <Card data-testid="metric-projects">
-          <CardContent className="pt-6">
+        <Card data-testid="metric-projects" className="print:shadow-none print:border">
+          <CardContent className="pt-6 print:pt-3 print:pb-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Projects Complete</p>
-                <p className="text-3xl font-bold text-green-600">{completedProjects.length}<span className="text-lg text-gray-400">/{alignedProjects.length}</span></p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 print:text-xs">Projects Complete</p>
+                <p className="text-3xl font-bold text-green-600 print:text-xl">{completedProjects.length}<span className="text-lg text-gray-400 print:text-sm">/{alignedProjects.length}</span></p>
               </div>
-              <Briefcase className="w-8 h-8 text-green-600/30" />
+              <Briefcase className="w-8 h-8 text-green-600/30 print:hidden" />
             </div>
           </CardContent>
         </Card>
 
-        <Card data-testid="metric-actions">
-          <CardContent className="pt-6">
+        <Card data-testid="metric-actions" className="print:shadow-none print:border">
+          <CardContent className="pt-6 print:pt-3 print:pb-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Actions Achieved</p>
-                <p className="text-3xl font-bold text-blue-600">{completedActions.length}<span className="text-lg text-gray-400">/{alignedActions.length}</span></p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 print:text-xs">Actions Achieved</p>
+                <p className="text-3xl font-bold text-blue-600 print:text-xl">{completedActions.length}<span className="text-lg text-gray-400 print:text-sm">/{alignedActions.length}</span></p>
               </div>
-              <ListChecks className="w-8 h-8 text-blue-600/30" />
+              <ListChecks className="w-8 h-8 text-blue-600/30 print:hidden" />
             </div>
           </CardContent>
         </Card>
 
-        <Card data-testid="metric-progress">
-          <CardContent className="pt-6">
+        <Card data-testid="metric-progress" className="print:shadow-none print:border">
+          <CardContent className="pt-6 print:pt-3 print:pb-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Overall Progress</p>
-                <p className="text-3xl font-bold">{overallProgress}%</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 print:text-xs">Overall Progress</p>
+                <p className="text-3xl font-bold print:text-xl">{overallProgress}%</p>
               </div>
-              <TrendingUp className="w-8 h-8 text-gray-400/30" />
+              <TrendingUp className="w-8 h-8 text-gray-400/30 print:hidden" />
             </div>
-            <Progress value={overallProgress} className="mt-3 h-2" />
+            <Progress value={overallProgress} className="mt-3 h-2 print:mt-1" />
           </CardContent>
         </Card>
       </div>
 
       {alignedStrategies.length > 0 && (
-        <Card data-testid="card-progress-distribution">
+        <Card data-testid="card-progress-distribution" className="print:break-inside-avoid">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center">
               <TrendingUp className="w-4 h-4 mr-2" />
-              Progress Distribution ({lookbackMonths}mo View)
+              Current Progress Snapshot
             </CardTitle>
+            <p className="text-xs text-gray-500 mt-1">Strategy distribution by completion stage</p>
           </CardHeader>
           <CardContent>
             <div className="flex items-end gap-1 h-24 mb-3">
@@ -1207,19 +1208,22 @@ function ExecutiveGoalsReport({
                 <div key={i} className="flex-1 text-center truncate">{label}</div>
               ))}
             </div>
-            <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 flex justify-between text-sm">
-              <span className="text-gray-500">Recent Completions ({lookbackMonths}mo):</span>
-              <span className="font-medium">{recentCompletions.length} actions, {recentlyCompletedProjects.length} projects</span>
+            <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Completed in last {lookbackMonths} months:</span>
+                <span className="font-medium text-green-600">{recentCompletions.length} actions, {recentlyCompletedProjects.length} projects</span>
+              </div>
+              <p className="text-[10px] text-gray-400 mt-1">Based on target dates within the lookback period</p>
             </div>
           </CardContent>
         </Card>
       )}
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card data-testid="card-aligned-priorities">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center">
-              <Target className="w-4 h-4 mr-2" />
+      <div className="grid md:grid-cols-2 gap-6 print:gap-3 print:grid-cols-2">
+        <Card data-testid="card-aligned-priorities" className="print:shadow-none print:border print:break-inside-avoid">
+          <CardHeader className="pb-3 print:pb-2">
+            <CardTitle className="text-base flex items-center print:text-sm">
+              <Target className="w-4 h-4 mr-2 print:w-3 print:h-3" />
               Aligned Strategic Priorities
             </CardTitle>
           </CardHeader>
@@ -1268,19 +1272,19 @@ function ExecutiveGoalsReport({
           </CardContent>
         </Card>
 
-        <div className="space-y-6">
-          <Card data-testid="card-recent-completions">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center text-green-600">
-                <CheckCircle className="w-4 h-4 mr-2" />
+        <div className="space-y-6 print:space-y-3">
+          <Card data-testid="card-recent-completions" className="print:shadow-none print:border print:break-inside-avoid">
+            <CardHeader className="pb-3 print:pb-2">
+              <CardTitle className="text-base flex items-center text-green-600 print:text-sm">
+                <CheckCircle className="w-4 h-4 mr-2 print:w-3 print:h-3" />
                 Recent Completions ({lookbackMonths}mo)
               </CardTitle>
             </CardHeader>
             <CardContent>
               {recentCompletions.length === 0 ? (
-                <p className="text-sm text-gray-500 py-4 text-center">No completions in this period</p>
+                <p className="text-sm text-gray-500 py-4 text-center print:py-2">No completions in this period</p>
               ) : (
-                <div className="space-y-2 max-h-32 overflow-y-auto">
+                <div className="space-y-2 max-h-32 overflow-y-auto print:max-h-none print:overflow-visible">
                   {recentCompletions.slice(0, 5).map((action: any) => {
                     const project = projects.find((p: any) => p.id === action.projectId);
                     return (
@@ -1301,10 +1305,10 @@ function ExecutiveGoalsReport({
             </CardContent>
           </Card>
 
-          <Card data-testid="card-at-risk">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center text-red-600">
-                <AlertTriangle className="w-4 h-4 mr-2" />
+          <Card data-testid="card-at-risk" className="print:shadow-none print:border print:break-inside-avoid">
+            <CardHeader className="pb-3 print:pb-2">
+              <CardTitle className="text-base flex items-center text-red-600 print:text-sm">
+                <AlertTriangle className="w-4 h-4 mr-2 print:w-3 print:h-3" />
                 At-Risk Items ({atRiskItems.length})
               </CardTitle>
             </CardHeader>
@@ -1348,10 +1352,10 @@ function ExecutiveGoalsReport({
         </div>
       </div>
 
-      <Card data-testid="card-upcoming-milestones">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center">
-            <Calendar className="w-4 h-4 mr-2" />
+      <Card data-testid="card-upcoming-milestones" className="print:shadow-none print:border print:break-inside-avoid">
+        <CardHeader className="pb-3 print:pb-2">
+          <CardTitle className="text-base flex items-center print:text-sm">
+            <Calendar className="w-4 h-4 mr-2 print:w-3 print:h-3" />
             Upcoming Milestones (Next 30 Days)
           </CardTitle>
         </CardHeader>
