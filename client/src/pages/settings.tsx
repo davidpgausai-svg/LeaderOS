@@ -60,8 +60,8 @@ import {
   Check,
   Building2,
 } from "lucide-react";
-import type { TemplateType, Organization, ExecutiveGoal } from "@shared/schema";
-import { Pencil, X } from "lucide-react";
+import type { TemplateType, Organization, ExecutiveGoal, TeamTag } from "@shared/schema";
+import { Pencil, X, Hash } from "lucide-react";
 
 interface UserStrategyRowProps {
   user: any;
@@ -287,6 +287,11 @@ export default function Settings() {
   const [editingExecutiveGoal, setEditingExecutiveGoal] = useState<ExecutiveGoal | null>(null);
   const [editedGoalName, setEditedGoalName] = useState("");
   const [editedGoalDescription, setEditedGoalDescription] = useState("");
+  const [newTeamTagName, setNewTeamTagName] = useState("");
+  const [newTeamTagColor, setNewTeamTagColor] = useState("#3B82F6");
+  const [editingTeamTag, setEditingTeamTag] = useState<TeamTag | null>(null);
+  const [editedTagName, setEditedTagName] = useState("");
+  const [editedTagColor, setEditedTagColor] = useState("");
   const [registrationToken, setRegistrationToken] = useState("");
   const [isLoadingToken, setIsLoadingToken] = useState(false);
   const [isRotatingToken, setIsRotatingToken] = useState(false);
@@ -308,6 +313,11 @@ export default function Settings() {
 
   const { data: executiveGoals = [] } = useQuery<ExecutiveGoal[]>({
     queryKey: ["/api/executive-goals"],
+    enabled: currentUser?.role === 'administrator',
+  });
+
+  const { data: teamTags = [] } = useQuery<TeamTag[]>({
+    queryKey: ["/api/team-tags"],
     enabled: currentUser?.role === 'administrator',
   });
 
@@ -554,6 +564,73 @@ export default function Settings() {
     },
   });
 
+  const createTeamTagMutation = useMutation({
+    mutationFn: async ({ name, colorHex }: { name: string; colorHex: string }) => {
+      const response = await apiRequest("POST", "/api/team-tags", { name, colorHex });
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Team Tag created successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/team-tags"] });
+      setNewTeamTagName("");
+      setNewTeamTagColor("#3B82F6");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create Team Tag",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateTeamTagMutation = useMutation({
+    mutationFn: async ({ id, name, colorHex }: { id: string; name: string; colorHex: string }) => {
+      const response = await apiRequest("PATCH", `/api/team-tags/${id}`, { name, colorHex });
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Team Tag updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/team-tags"] });
+      setEditingTeamTag(null);
+      setEditedTagName("");
+      setEditedTagColor("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update Team Tag",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteTeamTagMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/team-tags/${id}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Team Tag deleted successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/team-tags"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete Team Tag",
+        variant: "destructive",
+      });
+    },
+  });
+
   const createOrganizationMutation = useMutation({
     mutationFn: async (name: string) => {
       const response = await apiRequest("POST", "/api/super-admin/organizations", { name });
@@ -727,6 +804,73 @@ export default function Settings() {
       id: editingExecutiveGoal.id, 
       name: trimmedName,
       description: editedGoalDescription.trim() || undefined
+    });
+  };
+
+  const handleAddTeamTag = () => {
+    const trimmedName = newTeamTagName.trim();
+    if (!trimmedName) {
+      toast({
+        title: "Error",
+        description: "Team tag name cannot be empty",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const existingNames = teamTags.map(t => t.name.toLowerCase());
+    
+    if (existingNames.includes(trimmedName.toLowerCase())) {
+      toast({
+        title: "Error",
+        description: "A Team Tag with this name already exists",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    createTeamTagMutation.mutate({ 
+      name: trimmedName, 
+      colorHex: newTeamTagColor 
+    });
+  };
+
+  const handleEditTeamTag = (tag: TeamTag) => {
+    setEditingTeamTag(tag);
+    setEditedTagName(tag.name);
+    setEditedTagColor(tag.colorHex);
+  };
+
+  const handleSaveTeamTagEdit = () => {
+    if (!editingTeamTag) return;
+    
+    const trimmedName = editedTagName.trim();
+    if (!trimmedName) {
+      toast({
+        title: "Error",
+        description: "Team tag name cannot be empty",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const existingNames = teamTags
+      .filter(t => t.id !== editingTeamTag.id)
+      .map(t => t.name.toLowerCase());
+    
+    if (existingNames.includes(trimmedName.toLowerCase())) {
+      toast({
+        title: "Error",
+        description: "A Team Tag with this name already exists",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    updateTeamTagMutation.mutate({ 
+      id: editingTeamTag.id, 
+      name: trimmedName,
+      colorHex: editedTagColor
     });
   };
 
@@ -1899,6 +2043,181 @@ export default function Settings() {
                           </div>
                         </div>
                       )}
+
+                      <div className="p-4 border rounded-lg">
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <h4 className="font-medium flex items-center gap-2">
+                              <Hash className="w-4 h-4" />
+                              Team Tags
+                            </h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                              Create team tags that can be applied to projects for organization and reporting.
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3 mb-4">
+                          <div className="flex gap-2 items-end">
+                            <div className="flex-1 max-w-xs">
+                              <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Team Name *</label>
+                              <Input
+                                value={newTeamTagName}
+                                onChange={(e) => setNewTeamTagName(e.target.value)}
+                                placeholder="e.g., Engineering, Marketing"
+                                onKeyDown={(e) => e.key === "Enter" && handleAddTeamTag()}
+                                data-testid="input-new-team-tag"
+                              />
+                            </div>
+                            <div className="w-24">
+                              <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Color</label>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="color"
+                                  value={newTeamTagColor}
+                                  onChange={(e) => setNewTeamTagColor(e.target.value)}
+                                  className="w-10 h-10 rounded cursor-pointer border border-gray-300 dark:border-gray-600"
+                                  data-testid="input-team-tag-color"
+                                />
+                              </div>
+                            </div>
+                            <div className="flex items-end">
+                              <Button
+                                onClick={handleAddTeamTag}
+                                disabled={createTeamTagMutation.isPending}
+                                data-testid="button-add-team-tag"
+                              >
+                                <Plus className="w-4 h-4 mr-2" />
+                                {createTeamTagMutation.isPending ? "Adding..." : "Add Tag"}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          {teamTags.length === 0 ? (
+                            <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
+                              No Team Tags yet. Add one above.
+                            </p>
+                          ) : (
+                            teamTags.map((tag: TeamTag) => (
+                              <div
+                                key={tag.id}
+                                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                                data-testid={`team-tag-item-${tag.id}`}
+                              >
+                                {editingTeamTag?.id === tag.id ? (
+                                  <div className="flex items-center gap-2 flex-1">
+                                    <Input
+                                      value={editedTagName}
+                                      onChange={(e) => setEditedTagName(e.target.value)}
+                                      placeholder="Team name"
+                                      className="max-w-xs"
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") handleSaveTeamTagEdit();
+                                        if (e.key === "Escape") {
+                                          setEditingTeamTag(null);
+                                          setEditedTagName("");
+                                          setEditedTagColor("");
+                                        }
+                                      }}
+                                      autoFocus
+                                      data-testid={`input-edit-team-tag-${tag.id}`}
+                                    />
+                                    <input
+                                      type="color"
+                                      value={editedTagColor}
+                                      onChange={(e) => setEditedTagColor(e.target.value)}
+                                      className="w-10 h-10 rounded cursor-pointer border border-gray-300 dark:border-gray-600"
+                                      data-testid={`input-edit-team-tag-color-${tag.id}`}
+                                    />
+                                    <Button
+                                      size="sm"
+                                      onClick={handleSaveTeamTagEdit}
+                                      disabled={updateTeamTagMutation.isPending}
+                                      data-testid={`button-save-team-tag-${tag.id}`}
+                                    >
+                                      <Save className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => {
+                                        setEditingTeamTag(null);
+                                        setEditedTagName("");
+                                        setEditedTagColor("");
+                                      }}
+                                      data-testid={`button-cancel-edit-team-tag-${tag.id}`}
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <div className="flex items-center gap-2">
+                                      <div 
+                                        className="w-4 h-4 rounded-full" 
+                                        style={{ backgroundColor: tag.colorHex }}
+                                      />
+                                      <Badge 
+                                        variant="secondary" 
+                                        className="px-3 py-1"
+                                        style={{ 
+                                          backgroundColor: `${tag.colorHex}20`,
+                                          color: tag.colorHex,
+                                          borderColor: tag.colorHex
+                                        }}
+                                      >
+                                        #{tag.name}
+                                      </Badge>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleEditTeamTag(tag)}
+                                        className="text-gray-600 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-700"
+                                        data-testid={`button-edit-team-tag-${tag.id}`}
+                                      >
+                                        <Pencil className="h-4 w-4" />
+                                      </Button>
+                                      <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950"
+                                            data-testid={`button-delete-team-tag-${tag.id}`}
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                            <AlertDialogTitle>Delete Team Tag</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                              Are you sure you want to delete the "#{tag.name}" tag? This will remove it from all projects. This action cannot be undone.
+                                            </AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction
+                                              onClick={() => deleteTeamTagMutation.mutate(tag.id)}
+                                              className="bg-red-600 hover:bg-red-700"
+                                            >
+                                              Delete
+                                            </AlertDialogAction>
+                                          </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
 
                       <div className="p-4 border rounded-lg">
                         <div className="flex items-center justify-between mb-4">

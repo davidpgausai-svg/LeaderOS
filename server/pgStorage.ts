@@ -7,6 +7,7 @@ import {
   actionDocuments, actionChecklistItems, userStrategyAssignments,
   meetingNotes, aiChatConversations, barriers, dependencies, templateTypes,
   organizations, passwordResetTokens, executiveGoals, strategyExecutiveGoals,
+  teamTags, projectTeamTags,
   type User, type UpsertUser, type InsertUser,
   type Strategy, type InsertStrategy,
   type Project, type InsertProject,
@@ -24,7 +25,9 @@ import {
   type Organization,
   type PasswordResetToken,
   type ExecutiveGoal, type InsertExecutiveGoal,
-  type StrategyExecutiveGoal
+  type StrategyExecutiveGoal,
+  type TeamTag, type InsertTeamTag,
+  type ProjectTeamTag
 } from '@shared/schema';
 
 export class PostgresStorage implements IStorage {
@@ -723,6 +726,79 @@ export class PostgresStorage implements IStorage {
     }));
     
     return db.insert(strategyExecutiveGoals).values(values).returning();
+  }
+
+  async getTeamTagsByOrganization(organizationId: string): Promise<TeamTag[]> {
+    return db.select().from(teamTags)
+      .where(eq(teamTags.organizationId, organizationId))
+      .orderBy(teamTags.name);
+  }
+
+  async getTeamTag(id: string): Promise<TeamTag | undefined> {
+    const [tag] = await db.select().from(teamTags).where(eq(teamTags.id, id));
+    return tag || undefined;
+  }
+
+  async createTeamTag(tag: InsertTeamTag & { organizationId: string; createdBy: string }): Promise<TeamTag> {
+    const [teamTag] = await db.insert(teamTags).values({
+      id: randomUUID(),
+      name: tag.name,
+      colorHex: tag.colorHex || '#3B82F6',
+      organizationId: tag.organizationId,
+      createdBy: tag.createdBy,
+    }).returning();
+    return teamTag;
+  }
+
+  async updateTeamTag(id: string, updates: Partial<InsertTeamTag>): Promise<TeamTag | undefined> {
+    const [teamTag] = await db.update(teamTags)
+      .set(updates)
+      .where(eq(teamTags.id, id))
+      .returning();
+    return teamTag || undefined;
+  }
+
+  async deleteTeamTag(id: string): Promise<boolean> {
+    await db.delete(projectTeamTags).where(eq(projectTeamTags.teamTagId, id));
+    const result = await db.delete(teamTags).where(eq(teamTags.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getProjectTeamTags(projectId: string): Promise<ProjectTeamTag[]> {
+    return db.select().from(projectTeamTags)
+      .where(eq(projectTeamTags.projectId, projectId));
+  }
+
+  async setProjectTeamTags(projectId: string, tagIds: string[], organizationId: string): Promise<ProjectTeamTag[]> {
+    await db.delete(projectTeamTags).where(eq(projectTeamTags.projectId, projectId));
+    
+    if (tagIds.length === 0) {
+      return [];
+    }
+    
+    const values = tagIds.map(tagId => ({
+      id: randomUUID(),
+      projectId,
+      teamTagId: tagId,
+      organizationId,
+    }));
+    
+    return db.insert(projectTeamTags).values(values).returning();
+  }
+
+  async getProjectsByTeamTag(teamTagId: string, organizationId: string): Promise<Project[]> {
+    const assignments = await db.select().from(projectTeamTags)
+      .where(and(
+        eq(projectTeamTags.teamTagId, teamTagId),
+        eq(projectTeamTags.organizationId, organizationId)
+      ));
+    
+    if (assignments.length === 0) {
+      return [];
+    }
+    
+    const projectIds = assignments.map(a => a.projectId);
+    return db.select().from(projects).where(inArray(projects.id, projectIds));
   }
 }
 

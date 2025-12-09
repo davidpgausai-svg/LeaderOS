@@ -31,6 +31,7 @@ import {
   ListChecks,
   ArrowUpRight,
   ArrowDownRight,
+  Hash,
 } from "lucide-react";
 import {
   Select,
@@ -96,6 +97,20 @@ type StrategyExecutiveGoal = {
   organizationId: string;
 };
 
+type TeamTag = {
+  id: string;
+  name: string;
+  colorHex: string;
+  organizationId: string;
+};
+
+type ProjectTeamTag = {
+  id: string;
+  projectId: string;
+  teamTagId: string;
+  organizationId: string;
+};
+
 export default function Reports() {
   const [activeTab, setActiveTab] = useState("health");
   const reportRef = useRef<HTMLDivElement>(null);
@@ -122,6 +137,14 @@ export default function Reports() {
 
   const { data: strategyExecutiveGoalMappings = [] } = useQuery<StrategyExecutiveGoal[]>({
     queryKey: ["/api/strategy-executive-goals"],
+  });
+
+  const { data: teamTags = [] } = useQuery<TeamTag[]>({
+    queryKey: ["/api/team-tags"],
+  });
+
+  const { data: projectTeamTags = [] } = useQuery<ProjectTeamTag[]>({
+    queryKey: ["/api/project-team-tags"],
   });
 
   const handlePrint = useReactToPrint({
@@ -377,6 +400,10 @@ export default function Reports() {
                 <Tag className="w-4 h-4 mr-2" />
                 Executive Goals
               </TabsTrigger>
+              <TabsTrigger value="team-tags" data-testid="tab-team-tags">
+                <Hash className="w-4 h-4 mr-2" />
+                Team Tags
+              </TabsTrigger>
             </TabsList>
 
             {/* Strategy Health Overview */}
@@ -425,6 +452,18 @@ export default function Reports() {
                 safeDate={safeDate}
               />
             </TabsContent>
+
+            {/* Team Tags Report */}
+            <TabsContent value="team-tags" className="space-y-4">
+              <TeamTagsReport
+                teamTags={teamTags}
+                projectTeamTags={projectTeamTags}
+                projects={projects}
+                strategies={strategies}
+                actions={actions}
+                safeDate={safeDate}
+              />
+            </TabsContent>
           </Tabs>
 
           {/* Print view - show all reports */}
@@ -468,6 +507,18 @@ export default function Reports() {
                 strategyExecutiveGoalMappings={strategyExecutiveGoalMappings}
                 strategies={strategies}
                 projects={projects}
+                actions={actions}
+                safeDate={safeDate}
+                isPrintView={true}
+              />
+            </div>
+            <div className="page-break">
+              <h2 className="text-xl font-bold mb-4">Team Tags Report</h2>
+              <TeamTagsReport
+                teamTags={teamTags}
+                projectTeamTags={projectTeamTags}
+                projects={projects}
+                strategies={strategies}
                 actions={actions}
                 safeDate={safeDate}
                 isPrintView={true}
@@ -1404,6 +1455,327 @@ function ExecutiveGoalsReport({
             <Tag className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-500 mb-2">No Executive Goals Defined</p>
             <p className="text-sm text-gray-400">Create executive goals in Settings to see alignment reports</p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// Team Tags Report Component
+function TeamTagsReport({ 
+  teamTags, 
+  projectTeamTags, 
+  projects, 
+  strategies,
+  actions, 
+  safeDate,
+  isPrintView = false 
+}: any) {
+  const [selectedTagId, setSelectedTagId] = useState<string>("all");
+  const today = new Date();
+
+  // Get projects for a specific tag
+  const getProjectsForTag = (tagId: string): any[] => {
+    if (tagId === "all") {
+      const allMappedProjectIds = projectTeamTags.map((m: any) => m.projectId);
+      return projects.filter((p: any) => allMappedProjectIds.includes(p.id));
+    }
+    const mappings = projectTeamTags.filter((m: any) => m.teamTagId === tagId);
+    const projectIds = mappings.map((m: any) => m.projectId);
+    return projects.filter((p: any) => projectIds.includes(p.id));
+  };
+
+  // Get tags for a specific project
+  const getTagsForProject = (projectId: string): any[] => {
+    const tagIds = projectTeamTags
+      .filter((m: any) => m.projectId === projectId)
+      .map((m: any) => m.teamTagId);
+    return teamTags.filter((t: any) => tagIds.includes(t.id));
+  };
+
+  // Get actions for projects
+  const getActionsForProjects = (projectList: any[]) => {
+    const projectIds = projectList.map((p: any) => p.id);
+    return actions.filter((a: any) => projectIds.includes(a.projectId));
+  };
+
+  // Stats for selected tag(s)
+  const taggedProjects = getProjectsForTag(selectedTagId);
+  const taggedActions = getActionsForProjects(taggedProjects);
+  
+  const completedActions = taggedActions.filter((a: any) => a.status === 'achieved');
+  const overdueActions = taggedActions.filter((a: any) => {
+    if (a.status === 'achieved') return false;
+    const targetDate = safeDate(a.targetDate);
+    return targetDate && isPast(targetDate);
+  });
+  const blockedActions = taggedActions.filter((a: any) => a.status === 'blocked');
+  
+  const overallProgress = taggedProjects.length > 0
+    ? Math.round(taggedProjects.reduce((sum: number, p: any) => sum + (p.progress || 0), 0) / taggedProjects.length)
+    : 0;
+
+  const completedProjects = taggedProjects.filter((p: any) => p.progress >= 100);
+  const inProgressProjects = taggedProjects.filter((p: any) => p.progress > 0 && p.progress < 100);
+  const notStartedProjects = taggedProjects.filter((p: any) => (p.progress || 0) === 0);
+
+  // Tag utilization stats
+  const tagStats = teamTags.map((tag: any) => {
+    const tagProjects = getProjectsForTag(tag.id);
+    const tagActions = getActionsForProjects(tagProjects);
+    const completedTagActions = tagActions.filter((a: any) => a.status === 'achieved');
+    const avgProgress = tagProjects.length > 0
+      ? Math.round(tagProjects.reduce((sum: number, p: any) => sum + (p.progress || 0), 0) / tagProjects.length)
+      : 0;
+    
+    return {
+      ...tag,
+      projectCount: tagProjects.length,
+      actionCount: tagActions.length,
+      completedActions: completedTagActions.length,
+      avgProgress,
+    };
+  }).sort((a: any, b: any) => b.projectCount - a.projectCount);
+
+  const selectedTag = teamTags.find((t: any) => t.id === selectedTagId);
+
+  return (
+    <div className="space-y-6" data-testid="team-tags-report">
+      {isPrintView ? (
+        <div className="mb-4 pb-4 border-b border-gray-200">
+          <div className="flex items-center gap-2 mb-2">
+            <Hash className="h-6 w-6" />
+            <h2 className="text-xl font-bold">Team Tags Report</h2>
+          </div>
+        </div>
+      ) : (
+        <Card data-testid="card-tag-selector">
+          <CardContent className="pt-6">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Hash className="h-5 w-5 text-purple-600" />
+                <span className="font-medium">Team Tag:</span>
+              </div>
+              <Select value={selectedTagId} onValueChange={setSelectedTagId}>
+                <SelectTrigger className="w-[240px]" data-testid="select-team-tag-filter">
+                  <SelectValue placeholder="Select a team tag" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Tagged Projects</SelectItem>
+                  {teamTags.map((tag: any) => (
+                    <SelectItem key={tag.id} value={tag.id}>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: tag.colorHex }}
+                        />
+                        #{tag.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedTag && (
+                <Badge 
+                  className="px-3 py-1"
+                  style={{ 
+                    backgroundColor: `${selectedTag.colorHex}20`,
+                    color: selectedTag.colorHex,
+                    borderColor: selectedTag.colorHex
+                  }}
+                >
+                  #{selectedTag.name}
+                </Badge>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Summary Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card data-testid="stat-tagged-projects">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
+              <Briefcase className="w-4 h-4 mr-2 text-purple-600" />
+              Tagged Projects
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-purple-600">{taggedProjects.length}</div>
+            <div className="text-xs text-gray-500 mt-1">
+              {completedProjects.length} complete
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="stat-avg-progress">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
+              <TrendingUp className="w-4 h-4 mr-2 text-blue-600" />
+              Avg Progress
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-blue-600">{overallProgress}%</div>
+            <Progress value={overallProgress} className="h-2 mt-2" />
+          </CardContent>
+        </Card>
+
+        <Card data-testid="stat-actions-complete">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
+              <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+              Actions Complete
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-green-600">
+              {taggedActions.length > 0 ? Math.round((completedActions.length / taggedActions.length) * 100) : 0}%
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              {completedActions.length} of {taggedActions.length}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="stat-at-risk">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
+              <AlertTriangle className="w-4 h-4 mr-2 text-red-600" />
+              At Risk
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-red-600">{overdueActions.length + blockedActions.length}</div>
+            <div className="text-xs text-gray-500 mt-1">
+              {overdueActions.length} overdue, {blockedActions.length} blocked
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tag Utilization Overview */}
+      <Card data-testid="card-tag-utilization">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center">
+            <BarChart3 className="w-4 h-4 mr-2" />
+            Team Tag Utilization
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {tagStats.length === 0 ? (
+            <p className="text-sm text-gray-500 py-4 text-center">No team tags created yet</p>
+          ) : (
+            <div className="space-y-4">
+              {tagStats.map((tag: any) => (
+                <div key={tag.id} className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 w-32 flex-shrink-0">
+                    <div 
+                      className="w-3 h-3 rounded-full" 
+                      style={{ backgroundColor: tag.colorHex }}
+                    />
+                    <span className="text-sm font-medium truncate">#{tag.name}</span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <Progress value={tag.avgProgress} className="h-2 flex-1" />
+                      <span className="text-xs text-gray-500 w-10">{tag.avgProgress}%</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 text-xs text-gray-500 flex-shrink-0">
+                    <span>{tag.projectCount} projects</span>
+                    <span>{tag.completedActions}/{tag.actionCount} actions</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Projects List by Tag */}
+      <Card data-testid="card-tagged-projects-list">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center">
+            <ListChecks className="w-4 h-4 mr-2" />
+            Projects by Tag {selectedTag ? `- #${selectedTag.name}` : '(All)'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {taggedProjects.length === 0 ? (
+            <p className="text-sm text-gray-500 py-4 text-center">
+              {teamTags.length === 0 
+                ? "No team tags created yet. Create tags in Settings to start organizing projects."
+                : "No projects have been tagged yet. Assign tags to projects on the Strategies page."
+              }
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {taggedProjects.map((project: any) => {
+                const strategy = strategies.find((s: any) => s.id === project.strategyId);
+                const projectTags = getTagsForProject(project.id);
+                const projectActions = actions.filter((a: any) => a.projectId === project.id);
+                const projectCompletedActions = projectActions.filter((a: any) => a.status === 'achieved');
+                
+                return (
+                  <div 
+                    key={project.id}
+                    className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg"
+                    data-testid={`project-row-${project.id}`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        {strategy && (
+                          <div 
+                            className="w-2 h-2 rounded-full flex-shrink-0" 
+                            style={{ backgroundColor: strategy.colorCode }}
+                          />
+                        )}
+                        <span className="font-medium truncate">{project.title}</span>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {strategy && (
+                          <span className="text-xs text-gray-500">{strategy.title}</span>
+                        )}
+                        {projectTags.map((tag: any) => (
+                          <Badge
+                            key={tag.id}
+                            className="text-xs px-1.5 py-0"
+                            style={{
+                              backgroundColor: `${tag.colorHex}20`,
+                              color: tag.colorHex,
+                            }}
+                          >
+                            #{tag.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 flex-shrink-0">
+                      <div className="text-right">
+                        <div className="text-sm font-medium">{project.progress || 0}%</div>
+                        <div className="text-xs text-gray-500">
+                          {projectCompletedActions.length}/{projectActions.length} actions
+                        </div>
+                      </div>
+                      <Progress value={project.progress || 0} className="w-24 h-2" />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {teamTags.length === 0 && (
+        <Card>
+          <CardContent className="text-center py-12">
+            <Hash className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-500 mb-2">No Team Tags Defined</p>
+            <p className="text-sm text-gray-400">Create team tags in Settings to see utilization reports</p>
           </CardContent>
         </Card>
       )}

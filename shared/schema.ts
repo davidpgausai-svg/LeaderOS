@@ -460,3 +460,42 @@ export const insertStrategyExecutiveGoalSchema = createInsertSchema(strategyExec
 
 export type InsertStrategyExecutiveGoal = z.infer<typeof insertStrategyExecutiveGoalSchema>;
 export type StrategyExecutiveGoal = typeof strategyExecutiveGoals.$inferSelect;
+
+// Team Tags - Organization-level team labels for projects
+export const teamTags = pgTable("team_tags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  colorHex: text("color_hex").notNull().default('#3B82F6'),
+  organizationId: varchar("organization_id").notNull(),
+  createdBy: varchar("created_by").notNull(),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+export const insertTeamTagSchema = createInsertSchema(teamTags).omit({
+  id: true,
+  createdAt: true,
+  createdBy: true,
+  organizationId: true,
+});
+
+export type InsertTeamTag = z.infer<typeof insertTeamTagSchema>;
+export type TeamTag = typeof teamTags.$inferSelect;
+
+// Project Team Tags - Junction table for many-to-many relationship between projects and team tags
+export const projectTeamTags = pgTable("project_team_tags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull(),
+  teamTagId: varchar("team_tag_id").notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  createdAt: timestamp("created_at").default(sql`now()`),
+}, (table) => ({
+  uniqueProjectTag: unique().on(table.projectId, table.teamTagId),
+}));
+
+export const insertProjectTeamTagSchema = createInsertSchema(projectTeamTags).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertProjectTeamTag = z.infer<typeof insertProjectTeamTagSchema>;
+export type ProjectTeamTag = typeof projectTeamTags.$inferSelect;

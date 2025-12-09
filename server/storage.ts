@@ -1,4 +1,4 @@
-import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Project, type InsertProject, type Activity, type InsertActivity, type Action, type InsertAction, type Notification, type InsertNotification, type ActionDocument, type InsertActionDocument, type ActionChecklistItem, type InsertActionChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, type AiChatConversation, type InsertAiChatConversation, type Barrier, type InsertBarrier, type Dependency, type InsertDependency, type TemplateType, type InsertTemplateType, type ExecutiveGoal, type InsertExecutiveGoal, type StrategyExecutiveGoal } from "@shared/schema";
+import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Project, type InsertProject, type Activity, type InsertActivity, type Action, type InsertAction, type Notification, type InsertNotification, type ActionDocument, type InsertActionDocument, type ActionChecklistItem, type InsertActionChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, type AiChatConversation, type InsertAiChatConversation, type Barrier, type InsertBarrier, type Dependency, type InsertDependency, type TemplateType, type InsertTemplateType, type ExecutiveGoal, type InsertExecutiveGoal, type StrategyExecutiveGoal, type TeamTag, type InsertTeamTag, type ProjectTeamTag } from "@shared/schema";
 
 export interface IStorage {
   // User methods
@@ -122,6 +122,18 @@ export interface IStorage {
   // Strategy Executive Goal (many-to-many) methods
   getStrategyExecutiveGoals(strategyId: string): Promise<StrategyExecutiveGoal[]>;
   setStrategyExecutiveGoals(strategyId: string, goalIds: string[], organizationId: string): Promise<StrategyExecutiveGoal[]>;
+
+  // Team Tag methods
+  getTeamTagsByOrganization(organizationId: string): Promise<TeamTag[]>;
+  getTeamTag(id: string): Promise<TeamTag | undefined>;
+  createTeamTag(tag: InsertTeamTag & { organizationId: string; createdBy: string }): Promise<TeamTag>;
+  updateTeamTag(id: string, updates: Partial<InsertTeamTag>): Promise<TeamTag | undefined>;
+  deleteTeamTag(id: string): Promise<boolean>;
+
+  // Project Team Tag (many-to-many) methods
+  getProjectTeamTags(projectId: string): Promise<ProjectTeamTag[]>;
+  setProjectTeamTags(projectId: string, tagIds: string[], organizationId: string): Promise<ProjectTeamTag[]>;
+  getProjectsByTeamTag(teamTagId: string, organizationId: string): Promise<Project[]>;
 }
 
 // Use PostgreSQL storage

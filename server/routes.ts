@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertStrategySchema, insertProjectSchema, insertActionSchema, insertActionDocumentSchema, insertActionChecklistItemSchema, insertMeetingNoteSchema, insertBarrierSchema, insertDependencySchema, insertTemplateTypeSchema, insertExecutiveGoalSchema } from "@shared/schema";
+import { insertStrategySchema, insertProjectSchema, insertActionSchema, insertActionDocumentSchema, insertActionChecklistItemSchema, insertMeetingNoteSchema, insertBarrierSchema, insertDependencySchema, insertTemplateTypeSchema, insertExecutiveGoalSchema, insertTeamTagSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./jwtAuth";
 import { z } from "zod";
 import { logger } from "./logger";
@@ -3270,6 +3270,231 @@ Available navigation: Dashboard, Strategies, Projects, Actions, Timeline, Meetin
     } catch (error) {
       logger.error("Failed to fetch all strategy executive goal mappings", error);
       res.status(500).json({ message: "Failed to fetch strategy executive goal mappings" });
+    }
+  });
+
+  // Team Tag routes (organization-scoped, admin-only management)
+  app.get("/api/team-tags", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      const tags = await storage.getTeamTagsByOrganization(user.organizationId);
+      res.json(tags);
+    } catch (error) {
+      logger.error("Failed to fetch team tags", error);
+      res.status(500).json({ message: "Failed to fetch team tags" });
+    }
+  });
+
+  app.post("/api/team-tags", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'administrator') {
+        return res.status(403).json({ message: "Only administrators can create team tags" });
+      }
+
+      if (!user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      const validatedData = insertTeamTagSchema.parse(req.body);
+
+      const tag = await storage.createTeamTag({
+        ...validatedData,
+        organizationId: user.organizationId,
+        createdBy: userId,
+      });
+
+      res.status(201).json(tag);
+    } catch (error) {
+      logger.error("Failed to create team tag", error);
+      res.status(500).json({ message: "Failed to create team tag" });
+    }
+  });
+
+  app.patch("/api/team-tags/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'administrator') {
+        return res.status(403).json({ message: "Only administrators can update team tags" });
+      }
+
+      if (!user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      const existingTag = await storage.getTeamTag(req.params.id);
+      if (!existingTag) {
+        return res.status(404).json({ message: "Team tag not found" });
+      }
+
+      if (existingTag.organizationId !== user.organizationId) {
+        return res.status(403).json({ message: "Cannot update team tags from other organizations" });
+      }
+
+      const validatedData = insertTeamTagSchema.partial().parse(req.body);
+
+      const tag = await storage.updateTeamTag(req.params.id, validatedData);
+      res.json(tag);
+    } catch (error) {
+      logger.error("Failed to update team tag", error);
+      res.status(500).json({ message: "Failed to update team tag" });
+    }
+  });
+
+  app.delete("/api/team-tags/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'administrator') {
+        return res.status(403).json({ message: "Only administrators can delete team tags" });
+      }
+
+      if (!user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      const existingTag = await storage.getTeamTag(req.params.id);
+      if (!existingTag) {
+        return res.status(404).json({ message: "Team tag not found" });
+      }
+
+      if (existingTag.organizationId !== user.organizationId) {
+        return res.status(403).json({ message: "Cannot delete team tags from other organizations" });
+      }
+
+      await storage.deleteTeamTag(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      logger.error("Failed to delete team tag", error);
+      res.status(500).json({ message: "Failed to delete team tag" });
+    }
+  });
+
+  // Project Team Tags (many-to-many relationship)
+  app.get("/api/projects/:id/team-tags", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      const project = await storage.getProject(req.params.id);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      if (project.organizationId !== user.organizationId) {
+        return res.status(403).json({ message: "Cannot access projects from other organizations" });
+      }
+
+      const projectTeamTags = await storage.getProjectTeamTags(req.params.id);
+      res.json(projectTeamTags);
+    } catch (error) {
+      logger.error("Failed to fetch project team tags", error);
+      res.status(500).json({ message: "Failed to fetch project team tags" });
+    }
+  });
+
+  app.put("/api/projects/:id/team-tags", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      // Administrators and co-leads can assign team tags
+      if (user.role !== 'administrator' && user.role !== 'co_lead') {
+        return res.status(403).json({ message: "Only administrators and co-leads can assign team tags" });
+      }
+
+      const project = await storage.getProject(req.params.id);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      if (project.organizationId !== user.organizationId) {
+        return res.status(403).json({ message: "Cannot update projects from other organizations" });
+      }
+
+      const { tagIds } = req.body;
+      if (!Array.isArray(tagIds)) {
+        return res.status(400).json({ message: "tagIds must be an array" });
+      }
+
+      // Verify all tags belong to the same organization
+      for (const tagId of tagIds) {
+        const tag = await storage.getTeamTag(tagId);
+        if (!tag || tag.organizationId !== user.organizationId) {
+          return res.status(400).json({ message: "Invalid tag ID or tag from another organization" });
+        }
+      }
+
+      const assignments = await storage.setProjectTeamTags(req.params.id, tagIds, user.organizationId);
+      res.json(assignments);
+    } catch (error) {
+      logger.error("Failed to set project team tags", error);
+      res.status(500).json({ message: "Failed to set project team tags" });
+    }
+  });
+
+  // Get all project-team-tag mappings for the organization
+  app.get("/api/project-team-tags", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      const projects = await storage.getProjectsByOrganization(user.organizationId);
+      const allMappings = [];
+      
+      for (const project of projects) {
+        const mappings = await storage.getProjectTeamTags(project.id);
+        allMappings.push(...mappings);
+      }
+      
+      res.json(allMappings);
+    } catch (error) {
+      logger.error("Failed to fetch all project team tag mappings", error);
+      res.status(500).json({ message: "Failed to fetch project team tag mappings" });
     }
   });
 

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRole } from "@/hooks/use-role";
 import { Sidebar } from "@/components/layout/sidebar";
-import type { ExecutiveGoal } from "@shared/schema";
+import type { ExecutiveGoal, TeamTag } from "@shared/schema";
 import { CreateStrategyModal } from "@/components/modals/create-strategy-modal";
 import { EditStrategyModal } from "@/components/modals/edit-strategy-modal";
 import { ViewStrategyModal } from "@/components/modals/view-strategy-modal";
@@ -60,7 +60,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ChevronLeft, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen, TrendingUp, AlertTriangle, Users, Megaphone, Link2, ExternalLink, X, Clock, ListChecks, StickyNote, Tag, Indent, Outdent } from "lucide-react";
+import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ChevronLeft, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen, TrendingUp, AlertTriangle, Users, Megaphone, Link2, ExternalLink, X, Clock, ListChecks, StickyNote, Tag, Indent, Outdent, Hash } from "lucide-react";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { useLocation } from "wouter";
 import {
@@ -133,6 +133,10 @@ export default function Strategies() {
   // Executive Goal tagging state
   const [executiveGoalModalStrategy, setExecutiveGoalModalStrategy] = useState<any>(null);
   const [selectedGoalIds, setSelectedGoalIds] = useState<string[]>([]);
+  
+  // Team Tags state
+  const [teamTagsModalProject, setTeamTagsModalProject] = useState<any>(null);
+  const [selectedTeamTagIds, setSelectedTeamTagIds] = useState<string[]>([]);
 
   const { data: strategies, isLoading: strategiesLoading } = useQuery<any[]>({
     queryKey: ["/api/strategies"],
@@ -172,6 +176,14 @@ export default function Strategies() {
     queryKey: ["/api/executive-goals"],
   });
 
+  const { data: teamTags = [] } = useQuery<TeamTag[]>({
+    queryKey: ["/api/team-tags"],
+  });
+
+  const { data: projectTeamTags = [] } = useQuery<any[]>({
+    queryKey: ["/api/project-team-tags"],
+  });
+
   // Fetch strategy-executive-goal mappings for multiple goals per strategy
   const { data: strategyExecutiveGoalMappings = [] } = useQuery<any[]>({
     queryKey: ["/api/strategy-executive-goals"],
@@ -181,6 +193,17 @@ export default function Strategies() {
   const getExecutiveGoalById = (goalId: string | null | undefined) => {
     if (!goalId || !executiveGoals) return null;
     return executiveGoals.find((g: ExecutiveGoal) => g.id === goalId);
+  };
+
+  // Helper to get team tags for a project
+  const getProjectTeamTags = (projectId: string): TeamTag[] => {
+    if (!teamTags || !projectTeamTags) return [];
+    
+    const projectTagIds = (projectTeamTags || [])
+      .filter((m: any) => m.projectId === projectId)
+      .map((m: any) => m.teamTagId);
+    
+    return teamTags.filter((tag: TeamTag) => projectTagIds.includes(tag.id));
   };
 
   // Helper to get all executive goals for a strategy (using junction table + legacy field)
@@ -554,6 +577,30 @@ export default function Strategies() {
       toast({
         title: "Error",
         description: "Failed to update Executive Goals",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateProjectTeamTagsMutation = useMutation({
+    mutationFn: async ({ projectId, tagIds }: { projectId: string; tagIds: string[] }) => {
+      const response = await apiRequest("PUT", `/api/projects/${projectId}/team-tags`, { tagIds });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/project-team-tags"] });
+      setTeamTagsModalProject(null);
+      setSelectedTeamTagIds([]);
+      toast({
+        title: "Success",
+        description: "Team Tags updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update Team Tags",
         variant: "destructive",
       });
     },
@@ -1547,6 +1594,25 @@ export default function Strategies() {
                                               <Megaphone className={`w-3.5 h-3.5 ${project.communicationUrl ? 'text-blue-500' : 'text-gray-400'}`} />
                                             </Button>
                                             
+                                            {/* Team Tags - only admin/co-lead can assign */}
+                                            {canEditAllStrategies() && (
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-6 w-6 p-0"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  const currentTagIds = getProjectTeamTags(project.id).map(t => t.id);
+                                                  setSelectedTeamTagIds(currentTagIds);
+                                                  setTeamTagsModalProject(project);
+                                                }}
+                                                title={getProjectTeamTags(project.id).length > 0 ? "Manage team tags" : "Add team tags"}
+                                                data-testid={`button-team-tags-${project.id}`}
+                                              >
+                                                <Hash className={`w-3.5 h-3.5 ${getProjectTeamTags(project.id).length > 0 ? 'text-purple-500' : 'text-gray-400'}`} />
+                                              </Button>
+                                            )}
+                                            
                                             {/* Three dots menu */}
                                             <DropdownMenu>
                                               <DropdownMenuTrigger asChild>
@@ -1623,9 +1689,30 @@ export default function Strategies() {
                                             </div>
                                           </div>
                                         </div>
-                                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                                          {projectActions.length} action{projectActions.length !== 1 ? 's' : ''}
-                                        </span>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                                            {projectActions.length} action{projectActions.length !== 1 ? 's' : ''}
+                                          </span>
+                                          {/* Team Tags */}
+                                          {getProjectTeamTags(project.id).length > 0 && (
+                                            <div className="flex items-center gap-1 flex-wrap">
+                                              {getProjectTeamTags(project.id).map((tag: TeamTag) => (
+                                                <Badge
+                                                  key={tag.id}
+                                                  className="text-xs px-1.5 py-0 font-normal"
+                                                  style={{
+                                                    backgroundColor: `${tag.colorHex}20`,
+                                                    color: tag.colorHex,
+                                                    borderColor: tag.colorHex
+                                                  }}
+                                                  data-testid={`team-tag-badge-${project.id}-${tag.id}`}
+                                                >
+                                                  #{tag.name}
+                                                </Badge>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </div>
                                       </div>
                                     </div>
                                   </div>
@@ -3239,6 +3326,112 @@ export default function Strategies() {
                           variant="outline"
                           onClick={() => setSelectedGoalIds([])}
                           data-testid="button-clear-executive-goals"
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          Clear All
+                        </Button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Team Tags Selection Modal (Multi-select) */}
+      <Dialog open={!!teamTagsModalProject} onOpenChange={(open) => {
+        if (!open) {
+          setTeamTagsModalProject(null);
+          setSelectedTeamTagIds([]);
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Hash className="h-5 w-5" />
+              Assign Team Tags
+            </DialogTitle>
+          </DialogHeader>
+          {teamTagsModalProject && (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Select one or more Team Tags to assign to "{teamTagsModalProject.title}".
+              </p>
+              
+              <div className="space-y-2">
+                {teamTags.length === 0 ? (
+                  <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                    <Hash className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No Team Tags available</p>
+                    <p className="text-xs mt-1">Create Team Tags in Settings to assign to projects</p>
+                  </div>
+                ) : (
+                  <>
+                    {teamTags.map((tag: TeamTag) => {
+                      const isSelected = selectedTeamTagIds.includes(tag.id);
+                      return (
+                        <div
+                          key={tag.id}
+                          className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+                            isSelected
+                              ? 'bg-purple-100 dark:bg-purple-900/40 border-2'
+                              : 'bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border-2 border-transparent'
+                          }`}
+                          style={isSelected ? { borderColor: tag.colorHex } : undefined}
+                          onClick={() => {
+                            if (isSelected) {
+                              setSelectedTeamTagIds(selectedTeamTagIds.filter(id => id !== tag.id));
+                            } else {
+                              setSelectedTeamTagIds([...selectedTeamTagIds, tag.id]);
+                            }
+                          }}
+                          data-testid={`select-team-tag-${tag.id}`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-4 h-4 rounded-full flex-shrink-0" 
+                              style={{ backgroundColor: tag.colorHex }}
+                            />
+                            <Badge 
+                              className="px-2 py-1"
+                              style={{ 
+                                backgroundColor: `${tag.colorHex}20`,
+                                color: tag.colorHex,
+                                borderColor: tag.colorHex
+                              }}
+                            >
+                              #{tag.name}
+                            </Badge>
+                          </div>
+                          {isSelected && (
+                            <CheckCircle className="h-5 w-5 flex-shrink-0" style={{ color: tag.colorHex }} />
+                          )}
+                        </div>
+                      );
+                    })}
+                    
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 mt-4">
+                      <Button
+                        className="flex-1"
+                        onClick={() => {
+                          updateProjectTeamTagsMutation.mutate({
+                            projectId: teamTagsModalProject.id,
+                            tagIds: selectedTeamTagIds,
+                          });
+                        }}
+                        disabled={updateProjectTeamTagsMutation.isPending}
+                        data-testid="button-save-team-tags"
+                      >
+                        {updateProjectTeamTagsMutation.isPending ? "Saving..." : "Save Tags"}
+                      </Button>
+                      {selectedTeamTagIds.length > 0 && (
+                        <Button
+                          variant="outline"
+                          onClick={() => setSelectedTeamTagIds([])}
+                          data-testid="button-clear-team-tags"
                         >
                           <X className="h-4 w-4 mr-2" />
                           Clear All
