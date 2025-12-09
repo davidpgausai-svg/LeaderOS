@@ -138,6 +138,11 @@ export default function Strategies() {
   const [teamTagsModalProject, setTeamTagsModalProject] = useState<any>(null);
   const [selectedTeamTagIds, setSelectedTeamTagIds] = useState<string[]>([]);
 
+  // Highlight state for navigation from calendar
+  const [highlightedProjectId, setHighlightedProjectId] = useState<string | null>(null);
+  const [highlightedActionId, setHighlightedActionId] = useState<string | null>(null);
+  const projectRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
   const { data: strategies, isLoading: strategiesLoading } = useQuery<any[]>({
     queryKey: ["/api/strategies"],
   });
@@ -399,6 +404,102 @@ export default function Strategies() {
       setCollapsedStrategies(new Set());
     }
   }, [strategies, strategyFilter]);
+
+  // Handle highlight parameter from calendar navigation
+  const highlightParam = useMemo(() => 
+    new URLSearchParams(window.location.search).get('highlight'),
+    [location]
+  );
+  const highlightProjectParam = useMemo(() => 
+    new URLSearchParams(window.location.search).get('project'),
+    [location]
+  );
+
+  useEffect(() => {
+    if (!highlightParam || !projects || !strategies) return;
+
+    // Parse highlight param (format: "project-{id}" or "action-{id}")
+    const parts = highlightParam.split('-');
+    const type = parts[0];
+    const id = parts.slice(1).join('-');
+
+    // Helper to clear only highlight params from URL while preserving others
+    const clearHighlightParams = () => {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('highlight');
+      url.searchParams.delete('project');
+      const newPath = url.pathname + (url.searchParams.toString() ? '?' + url.searchParams.toString() : '');
+      window.history.replaceState({}, '', newPath);
+    };
+
+    if (type === 'project') {
+      const project = (projects as any[]).find((p: any) => p.id === id);
+      if (project) {
+        // Find the strategy containing this project
+        const strategy = (strategies as any[]).find((s: any) => s.id === project.strategyId);
+        if (strategy) {
+          // Filter to only show this strategy to ensure visibility
+          setStrategyFilter(strategy.id);
+          // Clear all collapsed strategies to ensure the target is visible
+          setCollapsedStrategies(new Set());
+          // Set highlight
+          setHighlightedProjectId(id);
+          // Clear only the highlight params from URL after a short delay
+          setTimeout(() => {
+            clearHighlightParams();
+          }, 100);
+          // Scroll to the project after render
+          setTimeout(() => {
+            const element = projectRefs.current.get(id);
+            if (element) {
+              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }, 300);
+          // Clear highlight after animation
+          setTimeout(() => {
+            setHighlightedProjectId(null);
+          }, 2500);
+        }
+      }
+    } else if (type === 'action' && highlightProjectParam) {
+      const project = (projects as any[]).find((p: any) => p.id === highlightProjectParam);
+      if (project) {
+        // Find the strategy containing this project
+        const strategy = (strategies as any[]).find((s: any) => s.id === project.strategyId);
+        if (strategy) {
+          // Filter to only show this strategy to ensure visibility
+          setStrategyFilter(strategy.id);
+          // Clear all collapsed strategies to ensure the target is visible
+          setCollapsedStrategies(new Set());
+          // Expand the project to show actions
+          setExpandedProjects(prev => {
+            const newSet = new Set(prev);
+            newSet.add(highlightProjectParam);
+            return newSet;
+          });
+          // Set highlights
+          setHighlightedProjectId(highlightProjectParam);
+          setHighlightedActionId(id);
+          // Clear only the highlight params from URL after a short delay
+          setTimeout(() => {
+            clearHighlightParams();
+          }, 100);
+          // Scroll to the project after render
+          setTimeout(() => {
+            const element = projectRefs.current.get(highlightProjectParam);
+            if (element) {
+              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }, 300);
+          // Clear highlights after animation
+          setTimeout(() => {
+            setHighlightedProjectId(null);
+            setHighlightedActionId(null);
+          }, 2500);
+        }
+      }
+    }
+  }, [highlightParam, highlightProjectParam, projects, strategies]);
 
   // Toggle project expand/collapse (projects are collapsed by default)
   const toggleProjectCollapse = (projectId: string, e: React.MouseEvent) => {
@@ -1415,7 +1516,17 @@ export default function Strategies() {
                               const projectProgress = project.progress || 0;
 
                               return (
-                                <div key={project.id} className="border border-gray-300 dark:border-gray-600 rounded-lg">
+                                <div 
+                                  key={project.id} 
+                                  ref={(el) => {
+                                    if (el) projectRefs.current.set(project.id, el);
+                                  }}
+                                  className={`border border-gray-300 dark:border-gray-600 rounded-lg transition-all duration-300 ${
+                                    highlightedProjectId === project.id 
+                                      ? 'ring-2 ring-blue-500 ring-offset-2 bg-blue-50 dark:bg-blue-950/30 animate-pulse' 
+                                      : ''
+                                  }`}
+                                >
                                   {/* Project Row */}
                                   <div
                                     className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
@@ -1726,7 +1837,11 @@ export default function Strategies() {
                                           return (
                                             <div
                                               key={action.id}
-                                              className="flex items-center justify-between py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded px-2 -mx-2 transition-colors"
+                                              className={`flex items-center justify-between py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded px-2 -mx-2 transition-all duration-300 ${
+                                                highlightedActionId === action.id 
+                                                  ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950/30 animate-pulse' 
+                                                  : ''
+                                              }`}
                                               data-testid={`action-row-${action.id}`}
                                             >
                                               {/* Left side: Status dropdown and title */}

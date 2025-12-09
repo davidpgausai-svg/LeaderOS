@@ -9,9 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Filter, Calendar, AlertTriangle, ChevronRight, ChevronDown, ChevronLeft, LayoutGrid, GanttChart } from "lucide-react";
+import { Filter, Calendar, AlertTriangle, ChevronRight, ChevronDown, ChevronLeft, LayoutGrid, GanttChart, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 
 interface TaskWithMeta extends Task {
   level?: number;
@@ -314,6 +315,7 @@ const CalendarView: React.FC<{
 
 export default function Timeline() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   
   const [viewType, setViewType] = useState<'timeline' | 'calendar'>('timeline');
   const [calendarMonth, setCalendarMonth] = useState(new Date());
@@ -328,6 +330,16 @@ export default function Timeline() {
   const [selectedProjectTitle, setSelectedProjectTitle] = useState("");
   const [dayDetailsDialogOpen, setDayDetailsDialogOpen] = useState(false);
   const [selectedDayItems, setSelectedDayItems] = useState<DayItems | null>(null);
+
+  const navigateToProject = (projectId: string) => {
+    setDayDetailsDialogOpen(false);
+    setLocation(`/strategies?highlight=project-${projectId}`);
+  };
+
+  const navigateToAction = (actionId: string, projectId: string) => {
+    setDayDetailsDialogOpen(false);
+    setLocation(`/strategies?highlight=action-${actionId}&project=${projectId}`);
+  };
 
   useEffect(() => {
     localStorage.setItem('gantt-expanded-rows', JSON.stringify(Array.from(expandedIds)));
@@ -1056,13 +1068,17 @@ export default function Timeline() {
                     return (
                       <div 
                         key={project.id}
-                        className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
+                        className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group"
                         style={{ borderLeft: `4px solid ${strategy?.colorCode || '#6b7280'}` }}
+                        onClick={() => navigateToProject(project.id)}
                         data-testid={`day-project-${project.id}`}
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-gray-900 dark:text-white">{project.title}</p>
+                            <p className="font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 flex items-center gap-1.5">
+                              {project.title}
+                              <ExternalLink className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </p>
                             {strategy && (
                               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                 {strategy.title}
@@ -1106,13 +1122,17 @@ export default function Timeline() {
                     return (
                       <div 
                         key={action.id}
-                        className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
+                        className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group"
                         style={{ borderLeft: `4px solid ${strategy?.colorCode || '#9ca3af'}` }}
+                        onClick={() => project && navigateToAction(action.id, project.id)}
                         data-testid={`day-action-${action.id}`}
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-gray-900 dark:text-white">{action.title}</p>
+                            <p className="font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 flex items-center gap-1.5">
+                              {action.title}
+                              <ExternalLink className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </p>
                             {project && (
                               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                 {project.title}
