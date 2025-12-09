@@ -1542,55 +1542,13 @@ function TeamTagsReport({
 
   return (
     <div className="space-y-6" data-testid="team-tags-report">
-      {isPrintView ? (
+      {isPrintView && (
         <div className="mb-4 pb-4 border-b border-gray-200">
           <div className="flex items-center gap-2 mb-2">
             <Hash className="h-6 w-6" />
             <h2 className="text-xl font-bold">Team Tags Report</h2>
           </div>
         </div>
-      ) : (
-        <Card data-testid="card-tag-selector">
-          <CardContent className="pt-6">
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Hash className="h-5 w-5 text-purple-600" />
-                <span className="font-medium">Team Tag:</span>
-              </div>
-              <Select value={selectedTagId} onValueChange={setSelectedTagId}>
-                <SelectTrigger className="w-[240px]" data-testid="select-team-tag-filter">
-                  <SelectValue placeholder="Select a team tag" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Tagged Projects</SelectItem>
-                  {teamTags.map((tag: any) => (
-                    <SelectItem key={tag.id} value={tag.id}>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: tag.colorHex }}
-                        />
-                        #{tag.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {selectedTag && (
-                <Badge 
-                  className="px-3 py-1"
-                  style={{ 
-                    backgroundColor: `${selectedTag.colorHex}20`,
-                    color: selectedTag.colorHex,
-                    borderColor: selectedTag.colorHex
-                  }}
-                >
-                  #{selectedTag.name}
-                </Badge>
-              )}
-            </div>
-          </CardContent>
-        </Card>
       )}
 
       {/* Summary Stats */}
@@ -1655,45 +1613,6 @@ function TeamTagsReport({
           </CardContent>
         </Card>
       </div>
-
-      {/* Tag Utilization Overview */}
-      <Card data-testid="card-tag-utilization">
-        <CardHeader>
-          <CardTitle className="text-base flex items-center">
-            <BarChart3 className="w-4 h-4 mr-2" />
-            Team Tag Utilization
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {tagStats.length === 0 ? (
-            <p className="text-sm text-gray-500 py-4 text-center">No team tags created yet</p>
-          ) : (
-            <div className="space-y-4">
-              {tagStats.map((tag: any) => (
-                <div key={tag.id} className="flex items-center gap-4">
-                  <div className="flex items-center gap-2 w-32 flex-shrink-0">
-                    <div 
-                      className="w-3 h-3 rounded-full" 
-                      style={{ backgroundColor: tag.colorHex }}
-                    />
-                    <span className="text-sm font-medium truncate">#{tag.name}</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <Progress value={tag.avgProgress} className="h-2 flex-1" />
-                      <span className="text-xs text-gray-500 w-10">{tag.avgProgress}%</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-gray-500 flex-shrink-0">
-                    <span>{tag.projectCount} projects</span>
-                    <span>{tag.completedActions}/{tag.actionCount} actions</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Projects Grouped by Team Tag (Collapsible Hierarchy) */}
       <Card data-testid="card-projects-by-team-tag">
