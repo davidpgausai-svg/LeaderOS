@@ -1472,26 +1472,17 @@ function TeamTagsReport({
   safeDate,
   isPrintView = false 
 }: any) {
-  const [selectedTagId, setSelectedTagId] = useState<string>("all");
-  const today = new Date();
-
   // Get projects for a specific tag
   const getProjectsForTag = (tagId: string): any[] => {
-    if (tagId === "all") {
-      const allMappedProjectIds = projectTeamTags.map((m: any) => m.projectId);
-      return projects.filter((p: any) => allMappedProjectIds.includes(p.id));
-    }
     const mappings = projectTeamTags.filter((m: any) => m.teamTagId === tagId);
     const projectIds = mappings.map((m: any) => m.projectId);
     return projects.filter((p: any) => projectIds.includes(p.id));
   };
 
-  // Get tags for a specific project
-  const getTagsForProject = (projectId: string): any[] => {
-    const tagIds = projectTeamTags
-      .filter((m: any) => m.projectId === projectId)
-      .map((m: any) => m.teamTagId);
-    return teamTags.filter((t: any) => tagIds.includes(t.id));
+  // Get all tagged projects (for summary stats)
+  const getAllTaggedProjects = (): any[] => {
+    const allMappedProjectIds = Array.from(new Set(projectTeamTags.map((m: any) => m.projectId)));
+    return projects.filter((p: any) => allMappedProjectIds.includes(p.id));
   };
 
   // Get actions for projects
@@ -1500,27 +1491,25 @@ function TeamTagsReport({
     return actions.filter((a: any) => projectIds.includes(a.projectId));
   };
 
-  // Stats for selected tag(s)
-  const taggedProjects = getProjectsForTag(selectedTagId);
-  const taggedActions = getActionsForProjects(taggedProjects);
+  // Summary stats for all tagged projects
+  const allTaggedProjects = getAllTaggedProjects();
+  const allTaggedActions = getActionsForProjects(allTaggedProjects);
   
-  const completedActions = taggedActions.filter((a: any) => a.status === 'achieved');
-  const overdueActions = taggedActions.filter((a: any) => {
+  const completedActions = allTaggedActions.filter((a: any) => a.status === 'achieved');
+  const overdueActions = allTaggedActions.filter((a: any) => {
     if (a.status === 'achieved') return false;
     const targetDate = safeDate(a.targetDate);
     return targetDate && isPast(targetDate);
   });
-  const blockedActions = taggedActions.filter((a: any) => a.status === 'blocked');
+  const blockedActions = allTaggedActions.filter((a: any) => a.status === 'blocked');
   
-  const overallProgress = taggedProjects.length > 0
-    ? Math.round(taggedProjects.reduce((sum: number, p: any) => sum + (p.progress || 0), 0) / taggedProjects.length)
+  const overallProgress = allTaggedProjects.length > 0
+    ? Math.round(allTaggedProjects.reduce((sum: number, p: any) => sum + (p.progress || 0), 0) / allTaggedProjects.length)
     : 0;
 
-  const completedProjects = taggedProjects.filter((p: any) => p.progress >= 100);
-  const inProgressProjects = taggedProjects.filter((p: any) => p.progress > 0 && p.progress < 100);
-  const notStartedProjects = taggedProjects.filter((p: any) => (p.progress || 0) === 0);
+  const completedProjects = allTaggedProjects.filter((p: any) => p.progress >= 100);
 
-  // Tag utilization stats
+  // Tag stats for collapsible hierarchy
   const tagStats = teamTags.map((tag: any) => {
     const tagProjects = getProjectsForTag(tag.id);
     const tagActions = getActionsForProjects(tagProjects);
@@ -1537,8 +1526,6 @@ function TeamTagsReport({
       avgProgress,
     };
   }).sort((a: any, b: any) => b.projectCount - a.projectCount);
-
-  const selectedTag = teamTags.find((t: any) => t.id === selectedTagId);
 
   return (
     <div className="space-y-6" data-testid="team-tags-report">
@@ -1561,7 +1548,7 @@ function TeamTagsReport({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-purple-600">{taggedProjects.length}</div>
+            <div className="text-3xl font-bold text-purple-600">{allTaggedProjects.length}</div>
             <div className="text-xs text-gray-500 mt-1">
               {completedProjects.length} complete
             </div>
@@ -1590,10 +1577,10 @@ function TeamTagsReport({
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-green-600">
-              {taggedActions.length > 0 ? Math.round((completedActions.length / taggedActions.length) * 100) : 0}%
+              {allTaggedActions.length > 0 ? Math.round((completedActions.length / allTaggedActions.length) * 100) : 0}%
             </div>
             <div className="text-xs text-gray-500 mt-1">
-              {completedActions.length} of {taggedActions.length}
+              {completedActions.length} of {allTaggedActions.length}
             </div>
           </CardContent>
         </Card>
