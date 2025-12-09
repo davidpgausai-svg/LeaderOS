@@ -1804,25 +1804,6 @@ export default function Strategies() {
                                           <span className="text-xs text-gray-500 dark:text-gray-400">
                                             {projectActions.length} action{projectActions.length !== 1 ? 's' : ''}
                                           </span>
-                                          {/* Team Tags */}
-                                          {getProjectTeamTags(project.id).length > 0 && (
-                                            <div className="flex items-center gap-1 flex-wrap">
-                                              {getProjectTeamTags(project.id).map((tag: TeamTag) => (
-                                                <Badge
-                                                  key={tag.id}
-                                                  className="text-xs px-1.5 py-0 font-normal"
-                                                  style={{
-                                                    backgroundColor: `${tag.colorHex}20`,
-                                                    color: tag.colorHex,
-                                                    borderColor: tag.colorHex
-                                                  }}
-                                                  data-testid={`team-tag-badge-${project.id}-${tag.id}`}
-                                                >
-                                                  #{tag.name}
-                                                </Badge>
-                                              ))}
-                                            </div>
-                                          )}
                                         </div>
                                       </div>
                                     </div>
