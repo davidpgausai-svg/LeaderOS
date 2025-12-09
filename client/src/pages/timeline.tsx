@@ -148,12 +148,19 @@ const CustomTaskListTable: React.FC<{
   );
 };
 
+interface DayItems {
+  date: Date;
+  projects: Project[];
+  actions: Action[];
+}
+
 const CalendarView: React.FC<{
   projects: Project[];
   actions: Action[];
   strategies: Strategy[];
   calendarMonth: Date;
-}> = ({ projects, actions, strategies, calendarMonth }) => {
+  onDaySelect?: (dayItems: DayItems) => void;
+}> = ({ projects, actions, strategies, calendarMonth, onDaySelect }) => {
   const year = calendarMonth.getFullYear();
   const month = calendarMonth.getMonth();
   
@@ -225,19 +232,38 @@ const CalendarView: React.FC<{
           const items = getItemsForDate(day);
           const hasItems = items.projects.length > 0 || items.actions.length > 0;
           
+          const handleDayClick = () => {
+            if (onDaySelect && hasItems) {
+              onDaySelect({
+                date: new Date(year, month, day),
+                projects: items.projects,
+                actions: items.actions,
+              });
+            }
+          };
+
           return (
             <div
               key={day}
               className={`bg-white dark:bg-gray-900 min-h-[100px] p-1.5 ${
                 isToday(day) ? 'ring-2 ring-inset ring-blue-500' : ''
-              }`}
+              } ${hasItems ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors' : ''}`}
+              onClick={handleDayClick}
+              data-testid={`calendar-day-${year}-${month + 1}-${day}`}
             >
-              <div className={`text-xs font-medium mb-1 ${
-                isToday(day) 
-                  ? 'text-blue-600 dark:text-blue-400' 
-                  : 'text-gray-700 dark:text-gray-300'
-              }`}>
-                {day}
+              <div className="flex items-center justify-between mb-1">
+                <span className={`text-xs font-medium ${
+                  isToday(day) 
+                    ? 'text-blue-600 dark:text-blue-400' 
+                    : 'text-gray-700 dark:text-gray-300'
+                }`}>
+                  {day}
+                </span>
+                {hasItems && (
+                  <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
+                    {items.projects.length + items.actions.length}
+                  </Badge>
+                )}
               </div>
               
               <div className="space-y-0.5 overflow-y-auto max-h-[80px]">
@@ -246,7 +272,7 @@ const CalendarView: React.FC<{
                   return (
                     <div 
                       key={`p-${project.id}`}
-                      className="text-[10px] px-1 py-0.5 rounded truncate cursor-pointer hover:opacity-80"
+                      className="text-[10px] px-1 py-0.5 rounded truncate"
                       style={{ 
                         backgroundColor: strategy?.colorCode ? `${strategy.colorCode}20` : '#e5e7eb',
                         color: strategy?.colorCode || '#374151',
@@ -265,7 +291,7 @@ const CalendarView: React.FC<{
                   return (
                     <div 
                       key={`a-${action.id}`}
-                      className="text-[10px] px-1 py-0.5 rounded truncate cursor-pointer hover:opacity-80"
+                      className="text-[10px] px-1 py-0.5 rounded truncate"
                       style={{ 
                         backgroundColor: strategy?.colorCode ? `${strategy.colorCode}15` : '#f3f4f6',
                         color: strategy?.colorCode || '#4b5563',
@@ -300,6 +326,8 @@ export default function Timeline() {
   const [barrierDialogOpen, setBarrierDialogOpen] = useState(false);
   const [selectedProjectBarriers, setSelectedProjectBarriers] = useState<Barrier[]>([]);
   const [selectedProjectTitle, setSelectedProjectTitle] = useState("");
+  const [dayDetailsDialogOpen, setDayDetailsDialogOpen] = useState(false);
+  const [selectedDayItems, setSelectedDayItems] = useState<DayItems | null>(null);
 
   useEffect(() => {
     localStorage.setItem('gantt-expanded-rows', JSON.stringify(Array.from(expandedIds)));
@@ -804,6 +832,10 @@ export default function Timeline() {
               actions={filteredActions} 
               strategies={filteredStrategies}
               calendarMonth={calendarMonth}
+              onDaySelect={(dayItems) => {
+                setSelectedDayItems(dayItems);
+                setDayDetailsDialogOpen(true);
+              }}
             />
           ) : allTasks.length === 0 ? (
             <div className="flex items-center justify-center h-full">
@@ -991,6 +1023,129 @@ export default function Timeline() {
             ))}
             {selectedProjectBarriers.length === 0 && (
               <p className="text-sm text-gray-500 text-center py-3">No active barriers</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Day Details Dialog */}
+      <Dialog open={dayDetailsDialogOpen} onOpenChange={setDayDetailsDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden flex flex-col" data-testid="day-details-dialog">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Calendar className="w-4 h-4 text-blue-500" />
+              Due on {selectedDayItems?.date ? selectedDayItems.date.toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              }) : ''}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+            {/* Projects Section */}
+            {selectedDayItems && selectedDayItems.projects.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                  <div className="w-3 h-3 bg-blue-500 rounded-sm" />
+                  Projects ({selectedDayItems.projects.length})
+                </h4>
+                <div className="space-y-2">
+                  {selectedDayItems.projects.map(project => {
+                    const strategy = strategies?.find(s => s.id === project.strategyId);
+                    return (
+                      <div 
+                        key={project.id}
+                        className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
+                        style={{ borderLeft: `4px solid ${strategy?.colorCode || '#6b7280'}` }}
+                        data-testid={`day-project-${project.id}`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 dark:text-white">{project.title}</p>
+                            {strategy && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                {strategy.title}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <Badge 
+                              variant={project.status === 'completed' ? 'default' : project.status === 'on_hold' ? 'secondary' : 'outline'}
+                              className="text-xs capitalize"
+                            >
+                              {project.status === 'on_hold' ? 'On Hold' : 
+                               project.status === 'completed' ? 'Completed' : 
+                               project.status === 'in_progress' ? 'In Progress' : 'Active'}
+                            </Badge>
+                            <div className="text-right">
+                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                {project.progress || 0}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Actions Section */}
+            {selectedDayItems && selectedDayItems.actions.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                  <div className="w-3 h-3 bg-green-500 rounded-full" />
+                  Actions ({selectedDayItems.actions.length})
+                </h4>
+                <div className="space-y-2">
+                  {selectedDayItems.actions.map(action => {
+                    const project = projects?.find(p => p.id === action.projectId);
+                    const strategy = project ? strategies?.find(s => s.id === project.strategyId) : undefined;
+                    return (
+                      <div 
+                        key={action.id}
+                        className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
+                        style={{ borderLeft: `4px solid ${strategy?.colorCode || '#9ca3af'}` }}
+                        data-testid={`day-action-${action.id}`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 dark:text-white">{action.title}</p>
+                            {project && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                {project.title}
+                                {strategy && ` • ${strategy.title}`}
+                              </p>
+                            )}
+                          </div>
+                          <Badge 
+                            variant={
+                              action.status === 'achieved' ? 'default' : 
+                              action.status === 'blocked' ? 'destructive' : 
+                              action.status === 'off_track' ? 'destructive' :
+                              'outline'
+                            }
+                            className="text-xs flex-shrink-0"
+                          >
+                            {action.status === 'achieved' ? 'Achieved' :
+                             action.status === 'on_track' ? 'On Track' :
+                             action.status === 'off_track' ? 'Off Track' :
+                             action.status === 'blocked' ? 'Blocked' :
+                             action.status === 'not_started' ? 'Not Started' : 'Not Started'}
+                          </Badge>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Empty state */}
+            {selectedDayItems && selectedDayItems.projects.length === 0 && selectedDayItems.actions.length === 0 && (
+              <p className="text-sm text-gray-500 text-center py-6">No items due on this date</p>
             )}
           </div>
         </DialogContent>
