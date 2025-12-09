@@ -1695,74 +1695,160 @@ function TeamTagsReport({
         </CardContent>
       </Card>
 
-      {/* Projects List by Tag */}
-      <Card data-testid="card-tagged-projects-list">
+      {/* Projects Grouped by Team Tag (Collapsible Hierarchy) */}
+      <Card data-testid="card-projects-by-team-tag">
         <CardHeader>
           <CardTitle className="text-base flex items-center">
             <ListChecks className="w-4 h-4 mr-2" />
-            Projects by Tag {selectedTag ? `- #${selectedTag.name}` : '(All)'}
+            Projects by Team Tag
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {taggedProjects.length === 0 ? (
+          {teamTags.length === 0 ? (
             <p className="text-sm text-gray-500 py-4 text-center">
-              {teamTags.length === 0 
-                ? "No team tags created yet. Create tags in Settings to start organizing projects."
-                : "No projects have been tagged yet. Assign tags to projects on the Strategies page."
-              }
+              No team tags created yet. Create tags in Settings to start organizing projects.
             </p>
           ) : (
             <div className="space-y-3">
-              {taggedProjects.map((project: any) => {
-                const strategy = strategies.find((s: any) => s.id === project.strategyId);
-                const projectTags = getTagsForProject(project.id);
-                const projectActions = actions.filter((a: any) => a.projectId === project.id);
-                const projectCompletedActions = projectActions.filter((a: any) => a.status === 'achieved');
+              {tagStats.map((tag: any) => {
+                const tagProjects = getProjectsForTag(tag.id);
                 
-                return (
-                  <div 
-                    key={project.id}
-                    className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg"
-                    data-testid={`project-row-${project.id}`}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        {strategy && (
+                if (isPrintView) {
+                  // Print view: always expanded
+                  return (
+                    <div key={tag.id} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                      <div 
+                        className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800"
+                        style={{ borderLeft: `4px solid ${tag.colorHex}` }}
+                      >
+                        <div className="flex items-center gap-3">
                           <div 
-                            className="w-2 h-2 rounded-full flex-shrink-0" 
-                            style={{ backgroundColor: strategy.colorCode }}
+                            className="w-4 h-4 rounded-full" 
+                            style={{ backgroundColor: tag.colorHex }}
                           />
-                        )}
-                        <span className="font-medium truncate">{project.title}</span>
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {strategy && (
-                          <span className="text-xs text-gray-500">{strategy.title}</span>
-                        )}
-                        {projectTags.map((tag: any) => (
-                          <Badge
-                            key={tag.id}
-                            className="text-xs px-1.5 py-0"
-                            style={{
-                              backgroundColor: `${tag.colorHex}20`,
-                              color: tag.colorHex,
-                            }}
-                          >
-                            #{tag.name}
+                          <span className="font-medium">#{tag.name}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {tagProjects.length} project{tagProjects.length !== 1 ? 's' : ''}
                           </Badge>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4 flex-shrink-0">
-                      <div className="text-right">
-                        <div className="text-sm font-medium">{project.progress || 0}%</div>
-                        <div className="text-xs text-gray-500">
-                          {projectCompletedActions.length}/{projectActions.length} actions
+                        </div>
+                        <div className="flex items-center gap-3 text-sm text-gray-500">
+                          <span>{tag.avgProgress}% avg</span>
                         </div>
                       </div>
-                      <Progress value={project.progress || 0} className="w-24 h-2" />
+                      {tagProjects.length > 0 && (
+                        <div className="p-3 space-y-2 bg-white dark:bg-gray-900">
+                          {tagProjects.map((project: any) => {
+                            const strategy = strategies.find((s: any) => s.id === project.strategyId);
+                            const projectActions = actions.filter((a: any) => a.projectId === project.id);
+                            const projectCompletedActions = projectActions.filter((a: any) => a.status === 'achieved');
+                            
+                            return (
+                              <div 
+                                key={project.id}
+                                className="flex items-center justify-between p-2 border border-gray-100 dark:border-gray-700 rounded"
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    {strategy && (
+                                      <div 
+                                        className="w-2 h-2 rounded-full flex-shrink-0" 
+                                        style={{ backgroundColor: strategy.colorCode }}
+                                      />
+                                    )}
+                                    <span className="text-sm font-medium truncate">{project.title}</span>
+                                  </div>
+                                  {strategy && (
+                                    <span className="text-xs text-gray-500 ml-4">{strategy.title}</span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-3 flex-shrink-0">
+                                  <div className="text-right text-xs">
+                                    <div className="font-medium">{project.progress || 0}%</div>
+                                    <div className="text-gray-500">{projectCompletedActions.length}/{projectActions.length}</div>
+                                  </div>
+                                  <Progress value={project.progress || 0} className="w-16 h-1.5" />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                  </div>
+                  );
+                }
+                
+                // Interactive view: collapsible
+                return (
+                  <Collapsible key={tag.id} defaultOpen={tagProjects.length > 0 && tagProjects.length <= 5}>
+                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                      <CollapsibleTrigger 
+                        className="flex items-center justify-between w-full p-3 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        style={{ borderLeft: `4px solid ${tag.colorHex}` }}
+                        data-testid={`collapsible-tag-${tag.id}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <ChevronRight className="w-4 h-4 text-gray-500 transition-transform [[data-state=open]>&]:rotate-90" />
+                          <div 
+                            className="w-4 h-4 rounded-full" 
+                            style={{ backgroundColor: tag.colorHex }}
+                          />
+                          <span className="font-medium">#{tag.name}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {tagProjects.length} project{tagProjects.length !== 1 ? 's' : ''}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-3 text-sm text-gray-500">
+                          <span>{tag.avgProgress}% avg</span>
+                          <Progress value={tag.avgProgress} className="w-16 h-1.5" />
+                        </div>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        {tagProjects.length === 0 ? (
+                          <div className="p-4 text-center text-sm text-gray-500 bg-white dark:bg-gray-900">
+                            No projects assigned to this tag
+                          </div>
+                        ) : (
+                          <div className="p-3 space-y-2 bg-white dark:bg-gray-900">
+                            {tagProjects.map((project: any) => {
+                              const strategy = strategies.find((s: any) => s.id === project.strategyId);
+                              const projectActions = actions.filter((a: any) => a.projectId === project.id);
+                              const projectCompletedActions = projectActions.filter((a: any) => a.status === 'achieved');
+                              
+                              return (
+                                <div 
+                                  key={project.id}
+                                  className="flex items-center justify-between p-2 border border-gray-100 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                  data-testid={`tag-project-row-${tag.id}-${project.id}`}
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      {strategy && (
+                                        <div 
+                                          className="w-2 h-2 rounded-full flex-shrink-0" 
+                                          style={{ backgroundColor: strategy.colorCode }}
+                                        />
+                                      )}
+                                      <span className="text-sm font-medium truncate">{project.title}</span>
+                                    </div>
+                                    {strategy && (
+                                      <span className="text-xs text-gray-500 ml-4">{strategy.title}</span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-3 flex-shrink-0">
+                                    <div className="text-right text-xs">
+                                      <div className="font-medium">{project.progress || 0}%</div>
+                                      <div className="text-gray-500">{projectCompletedActions.length}/{projectActions.length}</div>
+                                    </div>
+                                    <Progress value={project.progress || 0} className="w-16 h-1.5" />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </CollapsibleContent>
+                    </div>
+                  </Collapsible>
                 );
               })}
             </div>
