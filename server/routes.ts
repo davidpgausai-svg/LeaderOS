@@ -53,7 +53,7 @@ const strategyAssignmentSchema = z.object({
 
 const resourceAssignmentSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
-  hoursPerWeek: z.number().min(0).max(168, "Hours per week cannot exceed 168")
+  hoursPerWeek: z.coerce.number().min(0).max(168, "Hours per week cannot exceed 168")
 });
 
 const peopleAssignmentSchema = z.object({
