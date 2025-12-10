@@ -35,6 +35,36 @@ The platform supports multiple organizations with complete data isolation on a s
 ### Authentication and Authorization
 A role-based access control system uses JWT email/password authentication. Permissions are enforced at the API level based on user roles (Administrator, Co-Lead, View, SME), strategy assignments, and organization membership. SME users cannot log in.
 
+### Security Hardening
+The platform implements comprehensive security measures:
+
+**Authentication Security:**
+- JWT tokens stored in HTTP-only, Secure, SameSite=strict cookies (not localStorage)
+- CSRF protection using double-submit cookie pattern with X-CSRF-Token header validation
+- Password complexity validation: minimum 8 characters, uppercase, lowercase, number, and special character
+- Security event logging for failed logins, successful authentications, password resets, and privilege changes
+
+**Rate Limiting (Brute Force Protection):**
+- Authentication endpoints: 10 requests per 15 minutes per IP
+- Password reset: 3 requests per hour per IP
+- General API: 500 requests per 15 minutes per IP
+- Write operations (POST/PUT/PATCH/DELETE): 100 requests per 15 minutes per IP
+- AI endpoints: 20 requests per minute per IP
+
+**Input Validation:**
+- All API endpoints use Zod schema validation middleware
+- Structured error responses with field-level validation messages
+- Security logging for validation failures
+
+**HTTP Security Headers:**
+- Content Security Policy (CSP) with strict directives (no unsafe-eval in production)
+- X-Frame-Options: DENY (clickjacking prevention)
+- X-Content-Type-Options: nosniff (MIME sniffing prevention)
+- X-XSS-Protection: 1; mode=block (legacy browser XSS protection)
+- Referrer-Policy: strict-origin-when-cross-origin
+- Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+- Strict-Transport-Security with preload (production only)
+
 ### Password Reset System
 Email-based password reset flow using Resend for transactional emails. Users can request a reset link from the login page, receive an email with a secure token (expires in 30 minutes, single-use), and set a new password. Tokens are hashed before storage for security, and the system prevents email enumeration attacks by always returning a success message.
 
