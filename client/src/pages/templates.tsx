@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Target, ClipboardList, LayoutGrid, Clock, FileText, ChevronRight, FileSpreadsheet, Radar, Swords } from "lucide-react";
+import { Target, ClipboardList, LayoutGrid, Clock, FileText, ChevronRight, FileSpreadsheet, Radar, Swords, Atom } from "lucide-react";
 import type { TemplateType } from "@shared/schema";
 
 type TemplateInfo = {
@@ -79,6 +79,16 @@ const templates: TemplateInfo[] = [
     readTime: "3 min",
     path: "/templates/eisenhower-matrix",
     color: "text-purple-600",
+  },
+  {
+    id: "first-principles",
+    title: "First Principles Thinking",
+    description: "Elon Musk's framework for breakthrough problem-solving. Break problems to fundamentals and rebuild from truth.",
+    icon: Atom,
+    category: "Strategic Planning",
+    readTime: "12 min",
+    path: "/templates/first-principles",
+    color: "text-cyan-600",
   },
 ];
 
