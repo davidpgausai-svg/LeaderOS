@@ -160,6 +160,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Forbidden: Cannot update other users' information" });
       }
       
+      // Get target user and verify organization ownership (Super Admins can update any user)
+      const targetUser = await storage.getUser(req.params.id);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      if (requestingUser.isSuperAdmin !== 'true' && 
+          requestingUser.organizationId !== targetUser.organizationId) {
+        return res.status(403).json({ message: "Cannot modify users from other organizations" });
+      }
+      
       const user = await storage.updateUser(req.params.id, req.body);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -184,6 +195,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Prevent deleting yourself
       if (req.params.id === requestingUserId) {
         return res.status(400).json({ message: "Cannot delete your own account" });
+      }
+      
+      // Verify target user belongs to same organization (Super Admins can delete any user)
+      const targetUser = await storage.getUser(req.params.id);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      if (requestingUser.isSuperAdmin !== 'true' && 
+          requestingUser.organizationId !== targetUser.organizationId) {
+        return res.status(403).json({ message: "Cannot delete users from other organizations" });
       }
       
       const deleted = await storage.deleteUser(req.params.id);
@@ -704,15 +726,19 @@ Respond ONLY with a valid JSON object in this exact format:
         status: 'Archived',
       });
 
-      // Cascade archive to all projects
-      const projects = await storage.getAllProjects();
+      // Cascade archive to all projects (use organization-scoped query for defense-in-depth)
+      const projects = user.organizationId 
+        ? await storage.getProjectsByOrganization(user.organizationId)
+        : await storage.getAllProjects();
       const strategyProjects = projects.filter((p: any) => p.strategyId === req.params.id);
       for (const project of strategyProjects) {
         await storage.updateProject(project.id, { ...project, isArchived: 'true' });
       }
 
-      // Cascade archive to all actions
-      const actions = await storage.getAllActions();
+      // Cascade archive to all actions (use organization-scoped query for defense-in-depth)
+      const actions = user.organizationId 
+        ? await storage.getActionsByOrganization(user.organizationId)
+        : await storage.getAllActions();
       const strategyActions = actions.filter((a: any) => a.strategyId === req.params.id);
       for (const action of strategyActions) {
         await storage.updateAction(action.id, { ...action, isArchived: 'true' });
@@ -1051,9 +1077,11 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.json(allBarriers);
       }
       
-      // Filter barriers to only those in user's assigned strategies
+      // Filter barriers to only those in user's assigned strategies (use org-scoped query)
       const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
-      const allProjects = await storage.getAllProjects();
+      const allProjects = user.organizationId 
+        ? await storage.getProjectsByOrganization(user.organizationId)
+        : await storage.getAllProjects();
       const accessibleProjectIds = allProjects
         .filter((p: any) => assignedStrategyIds.includes(p.strategyId))
         .map((p: any) => p.id);
@@ -1290,8 +1318,12 @@ Respond ONLY with a valid JSON object in this exact format:
       // Filter dependencies based on user access to strategies (for non-admin, non-super-admin users)
       if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
-        const allProjects = await storage.getAllProjects();
-        const allActions = await storage.getAllActions();
+        const allProjects = user.organizationId 
+          ? await storage.getProjectsByOrganization(user.organizationId)
+          : await storage.getAllProjects();
+        const allActions = user.organizationId 
+          ? await storage.getActionsByOrganization(user.organizationId)
+          : await storage.getAllActions();
         
         const accessibleProjectIds = allProjects
           .filter((p: any) => assignedStrategyIds.includes(p.strategyId))
