@@ -359,10 +359,17 @@ export class PostgresStorage implements IStorage {
     };
     const allProjectsCompleted = strategyProjects.every(p => isProjectCompleted(p.status));
     const isStrategyActive = strategy?.status?.toLowerCase() === 'active';
+    const isStrategyCompleted = strategy?.status?.toLowerCase() === 'completed';
     const shouldAutoComplete = avgProgress === 100 && allProjectsCompleted && isStrategyActive;
+    
+    // Auto-revert: If strategy is Completed but progress drops below 100%, revert to Active
+    // This handles cases where users change action status back from Achieved
+    const shouldRevertToActive = isStrategyCompleted && avgProgress < 100;
     
     if (shouldAutoComplete) {
       await this.updateStrategy(strategyId, { progress: avgProgress, status: 'Completed' });
+    } else if (shouldRevertToActive) {
+      await this.updateStrategy(strategyId, { progress: avgProgress, status: 'Active' });
     } else {
       await this.updateStrategy(strategyId, { progress: avgProgress });
     }
