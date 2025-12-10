@@ -46,10 +46,15 @@ Registration requires an organization-specific secret token in the URL (`/regist
 ### Key Data Models
 Core entities include Organizations (for multi-tenancy), Users (with organization membership and optional super_admin status), User Strategy Assignments, Strategies (with Change Continuum Framework), Projects (with communication URL), Actions, Barriers, Dependencies, Meeting Notes, Activities, AI Chat Conversations, Template Types, and Action People Assignments (for to-do list tagging). All tables include organization_id for data isolation.
 
+### Personalized Dashboard
+The main dashboard shows a personalized "Welcome back, [Name]" greeting with two cards:
+- **To-Dos (Left card)**: Actions assigned to the logged-in user (via action people assignments) that are not yet achieved, sorted by due date. Includes quick "Mark Achieved" button, overdue flag with tooltip, and click-to-navigate with flash animation.
+- **Your Projects (Right card)**: Projects where the user is assigned as a resource, sorted by due date, showing hours/week allocation. Click navigates to the project with flash animation.
+
 ### People Resource Features
 **Project-Level Resources**: Users can be assigned to projects with hours/week allocation for capacity planning. The people icon on project cards turns blue when resources are assigned.
 
-**Action-Level People Tagging**: Users can be tagged to individual actions for future to-do list functionality. This is a simple tag (no hours/FTE tracking). A warning appears when tagged people are not assigned at the project level. All organization users are available for tagging.
+**Action-Level People Tagging**: Users can be tagged to individual actions for the to-do list feature. This is a simple tag (no hours/FTE tracking). A warning appears when tagged people are not assigned at the project level. All organization users are available for tagging.
 
 ### Progress Calculation
 Backend-driven progress calculation for actions, projects, and strategies, with cascading rollups and read-only display in the UI.
