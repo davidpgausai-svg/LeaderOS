@@ -3939,13 +3939,27 @@ Available navigation: Dashboard, Strategies, Projects, Actions, Timeline, Meetin
       const actionIds = assignments.map(a => a.actionId);
       const allActions = await storage.getActionsByOrganization(user.organizationId);
       
+      // Get projects and strategies for context
+      const allProjects = await storage.getProjectsByOrganization(user.organizationId);
+      const allStrategies = await storage.getStrategiesByOrganization(user.organizationId);
+      
+      // Create lookup maps for efficient access
+      const projectMap = new Map(allProjects.map(p => [p.id, p]));
+      const strategyMap = new Map(allStrategies.map(s => [s.id, s]));
+      
       // Filter to only assigned actions that are not achieved, and join with assignment data
       const todos = allActions
         .filter(action => actionIds.includes(action.id) && action.status !== 'achieved')
-        .map(action => ({
-          ...action,
-          assignmentId: assignments.find(a => a.actionId === action.id)?.id
-        }))
+        .map(action => {
+          const project = action.projectId ? projectMap.get(action.projectId) : null;
+          const strategy = strategyMap.get(action.strategyId);
+          return {
+            ...action,
+            assignmentId: assignments.find(a => a.actionId === action.id)?.id,
+            projectName: project?.title || null,
+            strategyName: strategy?.title || null
+          };
+        })
         .sort((a, b) => {
           // Sort by due date ascending (closest first), nulls last
           if (!a.dueDate && !b.dueDate) return 0;
