@@ -104,10 +104,10 @@ export default function Landing() {
             <img src={strategyPlanLogo} alt="StrategyPlan Logo" className="w-24 h-24 object-contain" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            StrategyPlan
+            LeaderOS
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Executive Planner: Design the strategy. Deliver the outcomes
+            Your Leader Operating System
           </p>
         </div>
 
