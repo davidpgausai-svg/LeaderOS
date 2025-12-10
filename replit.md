@@ -44,8 +44,17 @@ The platform implements comprehensive security measures:
 - Password complexity validation: minimum 8 characters, uppercase, lowercase, number, and special character
 - Security event logging for failed logins, successful authentications, password resets, and privilege changes
 
+**Two-Factor Authentication (2FA):**
+- Opt-in email-based 2FA using 6-digit verification codes
+- Codes are sent via Resend email service and expire after 10 minutes
+- Codes are hashed (SHA-256) before storage for security
+- Users enable/disable 2FA in Settings > Profile tab
+- Disabling 2FA requires password confirmation
+- Maximum 5 verification attempts per code to prevent brute force
+
 **Rate Limiting (Brute Force Protection):**
 - Authentication endpoints: 10 requests per 15 minutes per IP
+- 2FA verification: 5 requests per 15 minutes per IP
 - Password reset: 3 requests per hour per IP
 - General API: 500 requests per 15 minutes per IP
 - Write operations (POST/PUT/PATCH/DELETE): 100 requests per 15 minutes per IP

@@ -6,7 +6,7 @@ import {
   users, strategies, projects, activities, actions, notifications,
   actionDocuments, actionChecklistItems, userStrategyAssignments,
   meetingNotes, aiChatConversations, barriers, dependencies, templateTypes,
-  organizations, passwordResetTokens, executiveGoals, strategyExecutiveGoals,
+  organizations, passwordResetTokens, twoFactorCodes, executiveGoals, strategyExecutiveGoals,
   teamTags, projectTeamTags, projectResourceAssignments, actionPeopleAssignments,
   type User, type UpsertUser, type InsertUser,
   type Strategy, type InsertStrategy,
@@ -24,6 +24,7 @@ import {
   type TemplateType, type InsertTemplateType,
   type Organization,
   type PasswordResetToken,
+  type TwoFactorCode,
   type ExecutiveGoal, type InsertExecutiveGoal,
   type StrategyExecutiveGoal,
   type TeamTag, type InsertTeamTag,
@@ -1020,4 +1021,66 @@ export async function markPasswordResetTokenUsed(tokenId: string): Promise<void>
 export async function cleanupExpiredTokens(): Promise<void> {
   await db.delete(passwordResetTokens)
     .where(sql`${passwordResetTokens.expiresAt} < NOW() OR ${passwordResetTokens.usedAt} IS NOT NULL`);
+}
+
+// Two-Factor Authentication Code Functions
+export async function createTwoFactorCode(
+  userId: string,
+  codeHash: string,
+  type: 'login' | 'setup',
+  expiresAt: Date,
+  organizationId: string | null
+): Promise<TwoFactorCode> {
+  // Invalidate any existing codes of the same type for this user
+  await db.delete(twoFactorCodes).where(
+    and(
+      eq(twoFactorCodes.userId, userId),
+      eq(twoFactorCodes.type, type)
+    )
+  );
+  
+  const [code] = await db.insert(twoFactorCodes).values({
+    userId,
+    codeHash,
+    type,
+    expiresAt,
+    organizationId,
+  }).returning();
+  
+  return code;
+}
+
+export async function getTwoFactorCode(userId: string, type: 'login' | 'setup'): Promise<TwoFactorCode | undefined> {
+  const [code] = await db.select()
+    .from(twoFactorCodes)
+    .where(
+      and(
+        eq(twoFactorCodes.userId, userId),
+        eq(twoFactorCodes.type, type)
+      )
+    );
+  return code || undefined;
+}
+
+export async function incrementTwoFactorAttempts(codeId: string): Promise<number> {
+  const [updated] = await db.update(twoFactorCodes)
+    .set({ attempts: sql`${twoFactorCodes.attempts} + 1` })
+    .where(eq(twoFactorCodes.id, codeId))
+    .returning();
+  return updated?.attempts || 0;
+}
+
+export async function markTwoFactorCodeUsed(codeId: string): Promise<void> {
+  await db.update(twoFactorCodes)
+    .set({ usedAt: new Date() })
+    .where(eq(twoFactorCodes.id, codeId));
+}
+
+export async function deleteTwoFactorCodes(userId: string): Promise<void> {
+  await db.delete(twoFactorCodes).where(eq(twoFactorCodes.userId, userId));
+}
+
+export async function cleanupExpiredTwoFactorCodes(): Promise<void> {
+  await db.delete(twoFactorCodes)
+    .where(sql`${twoFactorCodes.expiresAt} < NOW() OR ${twoFactorCodes.usedAt} IS NOT NULL`);
 }

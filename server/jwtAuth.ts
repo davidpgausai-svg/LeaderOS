@@ -4,8 +4,8 @@ import type { Express, RequestHandler, Response } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { storage } from './storage';
 import { logger } from './logger';
-import { getOrganization, getOrganizationByToken, updateOrganizationToken, getAllOrganizations, createOrganization, deleteOrganization, getUserByEmail, updateUserPassword, createPasswordResetToken, getPasswordResetToken, markPasswordResetTokenUsed } from './pgStorage';
-import { sendPasswordResetEmail } from './email';
+import { getOrganization, getOrganizationByToken, updateOrganizationToken, getAllOrganizations, createOrganization, deleteOrganization, getUserByEmail, updateUserPassword, createPasswordResetToken, getPasswordResetToken, markPasswordResetTokenUsed, createTwoFactorCode, getTwoFactorCode, incrementTwoFactorAttempts, markTwoFactorCodeUsed, deleteTwoFactorCodes } from './pgStorage';
+import { sendPasswordResetEmail, sendTwoFactorCode } from './email';
 import crypto from 'crypto';
 
 const authLimiter = rateLimit({
@@ -32,6 +32,19 @@ const passwordResetLimiter = rateLimit({
   },
 });
 
+// Rate limiter for 2FA code verification - strict to prevent brute force on 6-digit codes
+const twoFactorLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 5, // Only 5 attempts per 15 minutes
+  message: { error: 'Too many verification attempts. Please try again in 15 minutes.' },
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  handler: (req, res, next, options) => {
+    logger.warn(`[SECURITY] 2FA rate limit exceeded from IP ${req.ip}`);
+    res.status(429).json(options.message);
+  },
+});
+
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
   throw new Error('JWT_SECRET environment variable must be set in production');
@@ -45,6 +58,14 @@ const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 
 function generateCsrfToken(): string {
   return crypto.randomBytes(32).toString('hex');
+}
+
+function generate6DigitCode(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+function hashCode(code: string): string {
+  return crypto.createHash('sha256').update(code).digest('hex');
 }
 
 function validatePasswordComplexity(password: string): { valid: boolean; error?: string } {
@@ -352,6 +373,32 @@ export async function setupAuth(app: Express) {
         return res.status(403).json({ error: 'SME users cannot log in. Please contact administrator.' });
       }
 
+      // Check if 2FA is enabled for this user
+      if (user.twoFactorEnabled === 'true') {
+        // Generate and send 2FA code
+        const code = generate6DigitCode();
+        const codeHash = hashCode(code);
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+        
+        await createTwoFactorCode(user.id, codeHash, 'login', expiresAt, user.organizationId);
+        
+        // Send code via email
+        const emailSent = await sendTwoFactorCode(user.email!, code, user.firstName);
+        if (!emailSent) {
+          logger.error(`Failed to send 2FA code to ${email}`);
+          return res.status(500).json({ error: 'Failed to send verification code. Please try again.' });
+        }
+        
+        logger.info(`[SECURITY] 2FA code sent for login: user ${user.id} (${user.email})`);
+        
+        return res.json({
+          requires2FA: true,
+          userId: user.id,
+          message: 'Verification code sent to your email'
+        });
+      }
+
+      // No 2FA - complete login normally
       const token = generateToken({ userId: user.id, email: user.email! });
       const csrfToken = generateCsrfToken();
       setAuthCookie(res, token);
@@ -382,6 +429,284 @@ export async function setupAuth(app: Express) {
     } catch (error) {
       logger.error('[SECURITY] Login error', error);
       res.status(500).json({ error: 'Login failed. Please try again.' });
+    }
+  });
+
+  // 2FA: Verify login code
+  app.post('/api/auth/verify-2fa', twoFactorLimiter, async (req, res) => {
+    try {
+      const { userId, code } = req.body;
+
+      if (!userId || !code) {
+        return res.status(400).json({ error: 'User ID and verification code are required' });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        logger.warn(`[SECURITY] 2FA verification failed: user not found ${userId}`);
+        return res.status(401).json({ error: 'Invalid verification attempt' });
+      }
+
+      const twoFactorCode = await getTwoFactorCode(userId, 'login');
+      if (!twoFactorCode) {
+        logger.warn(`[SECURITY] 2FA verification failed: no code found for user ${userId}`);
+        return res.status(401).json({ error: 'Verification code expired. Please login again.' });
+      }
+
+      // Check if code is expired
+      if (new Date() > new Date(twoFactorCode.expiresAt)) {
+        logger.warn(`[SECURITY] 2FA verification failed: code expired for user ${userId}`);
+        return res.status(401).json({ error: 'Verification code expired. Please login again.' });
+      }
+
+      // Check if code is already used
+      if (twoFactorCode.usedAt) {
+        logger.warn(`[SECURITY] 2FA verification failed: code already used for user ${userId}`);
+        return res.status(401).json({ error: 'Verification code already used. Please login again.' });
+      }
+
+      // Check attempts (max 5 per code)
+      if (twoFactorCode.attempts >= 5) {
+        logger.warn(`[SECURITY] 2FA verification failed: too many attempts for user ${userId}`);
+        return res.status(401).json({ error: 'Too many failed attempts. Please login again.' });
+      }
+
+      // Verify the code
+      const codeHash = hashCode(code);
+      if (codeHash !== twoFactorCode.codeHash) {
+        await incrementTwoFactorAttempts(twoFactorCode.id);
+        logger.warn(`[SECURITY] 2FA verification failed: invalid code for user ${userId}`);
+        return res.status(401).json({ error: 'Invalid verification code' });
+      }
+
+      // Mark code as used
+      await markTwoFactorCodeUsed(twoFactorCode.id);
+
+      // Complete login
+      const token = generateToken({ userId: user.id, email: user.email! });
+      const csrfToken = generateCsrfToken();
+      setAuthCookie(res, token);
+      setCsrfCookie(res, csrfToken);
+
+      // Fetch organization name if user has an organization
+      let organizationName: string | null = null;
+      if (user.organizationId) {
+        const organization = await getOrganization(user.organizationId);
+        organizationName = organization?.name || null;
+      }
+
+      logger.info(`[SECURITY] Successful 2FA login: user ${user.id} (${user.email})`);
+      
+      res.json({
+        success: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          organizationId: user.organizationId,
+          isSuperAdmin: user.isSuperAdmin === 'true',
+          organizationName,
+        }
+      });
+    } catch (error) {
+      logger.error('[SECURITY] 2FA verification error', error);
+      res.status(500).json({ error: 'Verification failed. Please try again.' });
+    }
+  });
+
+  // 2FA: Resend code during login
+  app.post('/api/auth/resend-2fa', authLimiter, async (req, res) => {
+    try {
+      const { userId } = req.body;
+
+      if (!userId) {
+        return res.status(400).json({ error: 'User ID is required' });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || user.twoFactorEnabled !== 'true') {
+        return res.status(400).json({ error: 'Invalid request' });
+      }
+
+      // Generate new code
+      const code = generate6DigitCode();
+      const codeHash = hashCode(code);
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      
+      await createTwoFactorCode(user.id, codeHash, 'login', expiresAt, user.organizationId);
+      
+      // Send code via email
+      const emailSent = await sendTwoFactorCode(user.email!, code, user.firstName);
+      if (!emailSent) {
+        logger.error(`Failed to resend 2FA code to ${user.email}`);
+        return res.status(500).json({ error: 'Failed to send verification code. Please try again.' });
+      }
+      
+      logger.info(`[SECURITY] 2FA code resent for login: user ${user.id} (${user.email})`);
+      
+      res.json({ success: true, message: 'Verification code sent to your email' });
+    } catch (error) {
+      logger.error('[SECURITY] Resend 2FA code error', error);
+      res.status(500).json({ error: 'Failed to resend code. Please try again.' });
+    }
+  });
+
+  // 2FA Settings: Send setup code to enable 2FA
+  app.post('/api/auth/2fa/setup', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      if (user.twoFactorEnabled === 'true') {
+        return res.status(400).json({ error: 'Two-factor authentication is already enabled' });
+      }
+
+      // Generate and send verification code
+      const code = generate6DigitCode();
+      const codeHash = hashCode(code);
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      
+      await createTwoFactorCode(user.id, codeHash, 'setup', expiresAt, user.organizationId);
+      
+      // Send code via email
+      const emailSent = await sendTwoFactorCode(user.email!, code, user.firstName);
+      if (!emailSent) {
+        logger.error(`Failed to send 2FA setup code to ${user.email}`);
+        return res.status(500).json({ error: 'Failed to send verification code. Please try again.' });
+      }
+      
+      logger.info(`[SECURITY] 2FA setup code sent: user ${user.id} (${user.email})`);
+      
+      res.json({ success: true, message: 'Verification code sent to your email' });
+    } catch (error) {
+      logger.error('[SECURITY] 2FA setup error', error);
+      res.status(500).json({ error: 'Failed to start 2FA setup. Please try again.' });
+    }
+  });
+
+  // 2FA Settings: Verify setup code and enable 2FA
+  app.post('/api/auth/2fa/verify-setup', isAuthenticated, twoFactorLimiter, async (req: any, res) => {
+    try {
+      const { code } = req.body;
+
+      if (!code) {
+        return res.status(400).json({ error: 'Verification code is required' });
+      }
+
+      const user = await storage.getUser(req.user.userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      if (user.twoFactorEnabled === 'true') {
+        return res.status(400).json({ error: 'Two-factor authentication is already enabled' });
+      }
+
+      const twoFactorCode = await getTwoFactorCode(user.id, 'setup');
+      if (!twoFactorCode) {
+        return res.status(401).json({ error: 'No verification code found. Please request a new one.' });
+      }
+
+      // Check if code is expired
+      if (new Date() > new Date(twoFactorCode.expiresAt)) {
+        return res.status(401).json({ error: 'Verification code expired. Please request a new one.' });
+      }
+
+      // Check if code is already used
+      if (twoFactorCode.usedAt) {
+        return res.status(401).json({ error: 'Verification code already used. Please request a new one.' });
+      }
+
+      // Check attempts (max 5 per code)
+      if (twoFactorCode.attempts >= 5) {
+        return res.status(401).json({ error: 'Too many failed attempts. Please request a new code.' });
+      }
+
+      // Verify the code
+      const codeHash = hashCode(code);
+      if (codeHash !== twoFactorCode.codeHash) {
+        await incrementTwoFactorAttempts(twoFactorCode.id);
+        return res.status(401).json({ error: 'Invalid verification code' });
+      }
+
+      // Mark code as used
+      await markTwoFactorCodeUsed(twoFactorCode.id);
+
+      // Enable 2FA for the user
+      await storage.updateUser(user.id, { twoFactorEnabled: 'true' });
+      
+      logger.info(`[SECURITY] 2FA enabled for user ${user.id} (${user.email})`);
+      
+      res.json({ success: true, message: 'Two-factor authentication enabled successfully' });
+    } catch (error) {
+      logger.error('[SECURITY] 2FA verify setup error', error);
+      res.status(500).json({ error: 'Failed to enable 2FA. Please try again.' });
+    }
+  });
+
+  // 2FA Settings: Disable 2FA
+  app.post('/api/auth/2fa/disable', isAuthenticated, async (req: any, res) => {
+    try {
+      const { password } = req.body;
+
+      if (!password) {
+        return res.status(400).json({ error: 'Password is required to disable 2FA' });
+      }
+
+      const user = await storage.getUser(req.user.userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      if (user.twoFactorEnabled !== 'true') {
+        return res.status(400).json({ error: 'Two-factor authentication is not enabled' });
+      }
+
+      // Verify password
+      if (!user.passwordHash) {
+        return res.status(400).json({ error: 'Cannot verify identity. Please contact administrator.' });
+      }
+
+      const isValid = await bcrypt.compare(password, user.passwordHash);
+      if (!isValid) {
+        logger.warn(`[SECURITY] Failed 2FA disable attempt: invalid password for user ${user.id}`);
+        return res.status(401).json({ error: 'Invalid password' });
+      }
+
+      // Disable 2FA for the user
+      await storage.updateUser(user.id, { twoFactorEnabled: 'false' });
+      
+      // Clean up any existing 2FA codes
+      await deleteTwoFactorCodes(user.id);
+      
+      logger.info(`[SECURITY] 2FA disabled for user ${user.id} (${user.email})`);
+      
+      res.json({ success: true, message: 'Two-factor authentication disabled successfully' });
+    } catch (error) {
+      logger.error('[SECURITY] 2FA disable error', error);
+      res.status(500).json({ error: 'Failed to disable 2FA. Please try again.' });
+    }
+  });
+
+  // 2FA Settings: Get 2FA status
+  app.get('/api/auth/2fa/status', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      res.json({ 
+        enabled: user.twoFactorEnabled === 'true',
+        email: user.email ? user.email.replace(/(.{2}).*(@.*)/, '$1***$2') : null // Mask email for display
+      });
+    } catch (error) {
+      logger.error('[SECURITY] 2FA status error', error);
+      res.status(500).json({ error: 'Failed to get 2FA status' });
     }
   });
 

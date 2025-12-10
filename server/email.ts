@@ -132,3 +132,79 @@ export async function sendPasswordResetEmail(
     return false;
   }
 }
+
+export async function sendTwoFactorCode(
+  toEmail: string,
+  code: string,
+  firstName?: string | null
+): Promise<boolean> {
+  try {
+    logger.info(`Attempting to send 2FA code to ${toEmail}`);
+    const { client, fromEmail } = await getResendClient();
+    
+    const greeting = firstName ? `Hi ${firstName},` : 'Hi,';
+
+    const { data, error } = await client.emails.send({
+      from: fromEmail || 'StrategyPlan <noreply@resend.dev>',
+      to: toEmail,
+      subject: 'Your StrategyPlan Verification Code',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">StrategyPlan</h1>
+          </div>
+          
+          <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
+            <p style="font-size: 16px; margin-bottom: 20px;">${greeting}</p>
+            
+            <p style="font-size: 16px; margin-bottom: 20px;">
+              Your verification code is:
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <div style="background: #f3f4f6; border: 2px dashed #3B82F6; padding: 20px 40px; display: inline-block; border-radius: 8px;">
+                <span style="font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #1D4ED8;">${code}</span>
+              </div>
+            </div>
+            
+            <p style="font-size: 14px; color: #666; margin-top: 20px;">
+              This code will expire in <strong>10 minutes</strong> for security reasons.
+            </p>
+            
+            <p style="font-size: 14px; color: #666;">
+              If you didn't try to log in to StrategyPlan, please ignore this email and consider changing your password.
+            </p>
+            
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+            
+            <p style="font-size: 12px; color: #999; text-align: center;">
+              This is an automated security message from StrategyPlan.
+            </p>
+          </div>
+          
+          <p style="font-size: 12px; color: #999; text-align: center; margin-top: 20px;">
+            &copy; ${new Date().getFullYear()} StrategyPlan. All rights reserved.
+          </p>
+        </body>
+        </html>
+      `,
+    });
+
+    if (error) {
+      logger.error('Failed to send 2FA code email', error);
+      return false;
+    }
+
+    logger.info(`2FA code email sent to ${toEmail}`, { messageId: data?.id });
+    return true;
+  } catch (error) {
+    logger.error('Error sending 2FA code email', error);
+    return false;
+  }
+}

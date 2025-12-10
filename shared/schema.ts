@@ -44,6 +44,7 @@ export const users = pgTable("users", {
   isSuperAdmin: text("is_super_admin").notNull().default('false'), // 'true' or 'false' - Super Admin can manage all organizations
   fte: text("fte").default('1.0'), // Full-time equivalent (1.0 = 40 hours/week, 0.5 = 20 hours/week)
   salary: integer("salary"), // Annual salary for cost calculations (nullable for future use)
+  twoFactorEnabled: text("two_factor_enabled").notNull().default('false'), // 'true' or 'false' - 2FA via email
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -65,6 +66,28 @@ export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTo
 
 export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+
+// Two-Factor Authentication Codes for email-based 2FA
+export const twoFactorCodes = pgTable("two_factor_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  codeHash: text("code_hash").notNull(), // Hashed 6-digit code for security
+  type: text("type").notNull().default('login'), // 'login' or 'setup' - purpose of the code
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"), // Null if not used yet
+  attempts: integer("attempts").notNull().default(0), // Track failed attempts for rate limiting
+  organizationId: varchar("organization_id"), // For multi-tenancy
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+export const insertTwoFactorCodeSchema = createInsertSchema(twoFactorCodes).omit({
+  id: true,
+  createdAt: true,
+  attempts: true,
+});
+
+export type InsertTwoFactorCode = z.infer<typeof insertTwoFactorCodeSchema>;
+export type TwoFactorCode = typeof twoFactorCodes.$inferSelect;
 
 // User Strategy Assignments - Links users to strategies they can access
 export const userStrategyAssignments = pgTable("user_strategy_assignments", {

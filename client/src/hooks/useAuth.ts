@@ -38,9 +38,49 @@ export function useAuth() {
       throw new Error(data.error || 'Login failed');
     }
 
+    // Check if 2FA is required
+    if (data.requires2FA) {
+      return { requires2FA: true, userId: data.userId };
+    }
+
     queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     return data;
   }, [queryClient]);
+
+  const verify2FA = useCallback(async (userId: string, code: string) => {
+    const res = await fetch('/api/auth/verify-2fa', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ userId, code }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || 'Verification failed');
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    return data;
+  }, [queryClient]);
+
+  const resend2FA = useCallback(async (userId: string) => {
+    const res = await fetch('/api/auth/resend-2fa', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ userId }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to resend code');
+    }
+
+    return data;
+  }, []);
 
   const register = useCallback(async (registrationToken: string, email: string, password: string, firstName?: string, lastName?: string) => {
     const res = await fetch(`/api/auth/register/${registrationToken}`, {
@@ -84,6 +124,8 @@ export function useAuth() {
     isLoading,
     isAuthenticated: !!user,
     login,
+    verify2FA,
+    resend2FA,
     register,
     validateRegistrationToken,
     logout,

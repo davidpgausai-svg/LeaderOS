@@ -337,6 +337,328 @@ function UserStrategyRow({ user, strategies, currentUserId, onRoleChange, onStra
   );
 }
 
+function TwoFactorSettings() {
+  const [isEnabled, setIsEnabled] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSetupMode, setIsSetupMode] = useState(false);
+  const [isDisableMode, setIsDisableMode] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [password, setPassword] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [maskedEmail, setMaskedEmail] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  React.useEffect(() => {
+    fetch2FAStatus();
+  }, []);
+
+  const fetch2FAStatus = async () => {
+    setIsLoading(true);
+    try {
+      const csrfToken = document.cookie.match(/csrf_token=([^;]+)/)?.[1];
+      const response = await fetch("/api/auth/2fa/status", {
+        credentials: 'include',
+        headers: csrfToken ? { 'x-csrf-token': csrfToken } : {},
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setIsEnabled(data.enabled);
+        setMaskedEmail(data.email);
+      }
+    } catch (error) {
+      console.error("Failed to fetch 2FA status", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const startSetup = async () => {
+    setIsSending(true);
+    try {
+      const csrfToken = document.cookie.match(/csrf_token=([^;]+)/)?.[1];
+      const response = await fetch("/api/auth/2fa/setup", {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
+        },
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setIsSetupMode(true);
+        toast({
+          title: "Code sent",
+          description: "A verification code has been sent to your email.",
+        });
+      } else {
+        throw new Error(data.error || 'Failed to start setup');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to start 2FA setup",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const verifySetup = async () => {
+    setIsVerifying(true);
+    try {
+      const csrfToken = document.cookie.match(/csrf_token=([^;]+)/)?.[1];
+      const response = await fetch("/api/auth/2fa/verify-setup", {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
+        },
+        body: JSON.stringify({ code: verificationCode }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setIsEnabled(true);
+        setIsSetupMode(false);
+        setVerificationCode("");
+        toast({
+          title: "2FA Enabled",
+          description: "Two-factor authentication has been enabled for your account.",
+        });
+      } else {
+        throw new Error(data.error || 'Verification failed');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Verification failed",
+        description: error.message || "Please check the code and try again",
+        variant: "destructive",
+      });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const disable2FA = async () => {
+    setIsVerifying(true);
+    try {
+      const csrfToken = document.cookie.match(/csrf_token=([^;]+)/)?.[1];
+      const response = await fetch("/api/auth/2fa/disable", {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
+        },
+        body: JSON.stringify({ password }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setIsEnabled(false);
+        setIsDisableMode(false);
+        setPassword("");
+        toast({
+          title: "2FA Disabled",
+          description: "Two-factor authentication has been disabled for your account.",
+        });
+      } else {
+        throw new Error(data.error || 'Failed to disable 2FA');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to disable 2FA",
+        variant: "destructive",
+      });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const cancelSetup = () => {
+    setIsSetupMode(false);
+    setVerificationCode("");
+  };
+
+  const cancelDisable = () => {
+    setIsDisableMode(false);
+    setPassword("");
+  };
+
+  if (isLoading) {
+    return (
+      <Card data-testid="card-2fa-settings">
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Shield className="mr-2 h-5 w-5" />
+            Two-Factor Authentication
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center space-x-2 text-gray-500">
+            <RefreshCw className="h-4 w-4 animate-spin" />
+            <span>Loading...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card data-testid="card-2fa-settings">
+      <CardHeader>
+        <CardTitle className="flex items-center">
+          <Shield className="mr-2 h-5 w-5" />
+          Two-Factor Authentication
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {!isSetupMode && !isDisableMode ? (
+          <>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">
+                  {isEnabled ? 'Enabled' : 'Not enabled'}
+                </p>
+                <p className="text-sm text-gray-500">
+                  {isEnabled 
+                    ? `Verification codes are sent to ${maskedEmail || 'your email'}` 
+                    : 'Add an extra layer of security to your account'
+                  }
+                </p>
+              </div>
+              <Badge variant={isEnabled ? "default" : "secondary"}>
+                {isEnabled ? 'On' : 'Off'}
+              </Badge>
+            </div>
+
+            {isEnabled ? (
+              <Button 
+                variant="outline" 
+                onClick={() => setIsDisableMode(true)}
+                className="text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-950"
+                data-testid="button-disable-2fa"
+              >
+                Disable Two-Factor Authentication
+              </Button>
+            ) : (
+              <Button 
+                onClick={startSetup}
+                disabled={isSending}
+                data-testid="button-enable-2fa"
+              >
+                {isSending ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Sending code...
+                  </>
+                ) : (
+                  <>
+                    <Shield className="mr-2 h-4 w-4" />
+                    Enable Two-Factor Authentication
+                  </>
+                )}
+              </Button>
+            )}
+          </>
+        ) : isSetupMode ? (
+          <>
+            <div className="p-4 border rounded-lg bg-blue-50 dark:bg-blue-900/20">
+              <p className="text-sm mb-4">
+                We've sent a 6-digit verification code to your email. Enter it below to enable two-factor authentication.
+              </p>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="2fa-code">Verification Code</Label>
+                  <Input
+                    id="2fa-code"
+                    type="text"
+                    placeholder="123456"
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    maxLength={6}
+                    className="text-center text-xl tracking-widest"
+                    data-testid="input-2fa-setup-code"
+                  />
+                </div>
+                <div className="flex space-x-2">
+                  <Button 
+                    onClick={verifySetup}
+                    disabled={isVerifying || verificationCode.length !== 6}
+                    data-testid="button-verify-2fa-setup"
+                  >
+                    {isVerifying ? (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                        Verifying...
+                      </>
+                    ) : (
+                      'Verify & Enable'
+                    )}
+                  </Button>
+                  <Button variant="outline" onClick={cancelSetup} data-testid="button-cancel-2fa-setup">
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="p-4 border rounded-lg bg-red-50 dark:bg-red-900/20">
+              <p className="text-sm mb-4">
+                To disable two-factor authentication, please enter your password to confirm.
+              </p>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="2fa-disable-password">Password</Label>
+                  <Input
+                    id="2fa-disable-password"
+                    type="password"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    data-testid="input-2fa-disable-password"
+                  />
+                </div>
+                <div className="flex space-x-2">
+                  <Button 
+                    variant="destructive"
+                    onClick={disable2FA}
+                    disabled={isVerifying || !password}
+                    data-testid="button-confirm-disable-2fa"
+                  >
+                    {isVerifying ? (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                        Disabling...
+                      </>
+                    ) : (
+                      'Disable 2FA'
+                    )}
+                  </Button>
+                  <Button variant="outline" onClick={cancelDisable} data-testid="button-cancel-disable-2fa">
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        <div className="pt-4 border-t dark:border-gray-700">
+          <p className="text-xs text-gray-500">
+            When enabled, you'll be asked to enter a verification code sent to your email each time you sign in.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function Settings() {
   const { currentRole, currentUser, setCurrentUser, canManageUsers, isSuperAdmin } = useRole();
   const { toast } = useToast();
@@ -1280,6 +1602,8 @@ export default function Settings() {
                   </form>
                 </CardContent>
               </Card>
+
+              <TwoFactorSettings />
             </TabsContent>
 
             {/* Notifications */}
