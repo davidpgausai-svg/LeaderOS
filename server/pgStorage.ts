@@ -7,7 +7,7 @@ import {
   actionDocuments, actionChecklistItems, userStrategyAssignments,
   meetingNotes, aiChatConversations, barriers, dependencies, templateTypes,
   organizations, passwordResetTokens, executiveGoals, strategyExecutiveGoals,
-  teamTags, projectTeamTags, projectResourceAssignments,
+  teamTags, projectTeamTags, projectResourceAssignments, actionPeopleAssignments,
   type User, type UpsertUser, type InsertUser,
   type Strategy, type InsertStrategy,
   type Project, type InsertProject,
@@ -28,7 +28,8 @@ import {
   type StrategyExecutiveGoal,
   type TeamTag, type InsertTeamTag,
   type ProjectTeamTag,
-  type ProjectResourceAssignment, type InsertProjectResourceAssignment
+  type ProjectResourceAssignment, type InsertProjectResourceAssignment,
+  type ActionPeopleAssignment, type InsertActionPeopleAssignment
 } from '@shared/schema';
 
 export class PostgresStorage implements IStorage {
@@ -860,6 +861,33 @@ export class PostgresStorage implements IStorage {
       .where(and(
         eq(projectResourceAssignments.projectId, projectId),
         eq(projectResourceAssignments.userId, userId)
+      ));
+    return true;
+  }
+
+  // Action People Assignment methods (for to-do list tagging, no hours)
+  async getActionPeopleAssignments(actionId: string): Promise<ActionPeopleAssignment[]> {
+    return db.select().from(actionPeopleAssignments)
+      .where(eq(actionPeopleAssignments.actionId, actionId));
+  }
+
+  async getActionPeopleAssignmentsByOrganization(organizationId: string): Promise<ActionPeopleAssignment[]> {
+    return db.select().from(actionPeopleAssignments)
+      .where(eq(actionPeopleAssignments.organizationId, organizationId));
+  }
+
+  async createActionPeopleAssignment(assignment: InsertActionPeopleAssignment): Promise<ActionPeopleAssignment> {
+    const [created] = await db.insert(actionPeopleAssignments)
+      .values({ ...assignment, id: randomUUID() })
+      .returning();
+    return created;
+  }
+
+  async deleteActionPeopleAssignment(actionId: string, userId: string): Promise<boolean> {
+    await db.delete(actionPeopleAssignments)
+      .where(and(
+        eq(actionPeopleAssignments.actionId, actionId),
+        eq(actionPeopleAssignments.userId, userId)
       ));
     return true;
   }

@@ -130,6 +130,7 @@ export default function Strategies() {
   const [editingChecklistItemTitle, setEditingChecklistItemTitle] = useState("");
   const [notesModalAction, setNotesModalAction] = useState<any>(null);
   const [actionNotes, setActionNotes] = useState("");
+  const [actionPeopleModalAction, setActionPeopleModalAction] = useState<any>(null);
   
   // Executive Goal tagging state
   const [executiveGoalModalStrategy, setExecutiveGoalModalStrategy] = useState<any>(null);
@@ -201,6 +202,11 @@ export default function Strategies() {
   // Fetch all resource assignments for capacity calculations
   const { data: allResourceAssignments = [] } = useQuery<any[]>({
     queryKey: ["/api/resource-assignments"],
+  });
+
+  // Fetch all action people assignments for to-do list tagging
+  const { data: allActionPeopleAssignments = [] } = useQuery<any[]>({
+    queryKey: ["/api/action-people-assignments"],
   });
 
   // Fetch strategy-executive-goal mappings for multiple goals per strategy
@@ -371,6 +377,30 @@ export default function Strategies() {
   const projectHasActiveBarriers = (projectId: string) => {
     if (!barriers) return false;
     return barriers.some((b: any) => b.projectId === projectId && b.status === 'active');
+  };
+
+  // Helper to check if a project has people resources assigned
+  const projectHasResources = (projectId: string) => {
+    if (!allResourceAssignments) return false;
+    return allResourceAssignments.some((a: any) => a.projectId === projectId);
+  };
+
+  // Helper to check if an action has people assigned
+  const actionHasPeople = (actionId: string) => {
+    if (!allActionPeopleAssignments) return false;
+    return allActionPeopleAssignments.some((a: any) => a.actionId === actionId);
+  };
+
+  // Helper to get people assigned to an action
+  const getActionPeople = (actionId: string) => {
+    if (!allActionPeopleAssignments) return [];
+    return allActionPeopleAssignments.filter((a: any) => a.actionId === actionId);
+  };
+
+  // Helper to check if a person is assigned at the project level
+  const isPersonAssignedToProject = (projectId: string, userId: string) => {
+    if (!allResourceAssignments) return false;
+    return allResourceAssignments.some((a: any) => a.projectId === projectId && a.userId === userId);
   };
 
   // Check URL for strategyId param to auto-filter to that strategy
@@ -783,6 +813,49 @@ export default function Strategies() {
       toast({
         title: "Error",
         description: "Failed to remove resource",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Action people assignment mutations (for to-do list tagging)
+  const addActionPeopleMutation = useMutation({
+    mutationFn: async ({ actionId, assignedUserId }: { actionId: string; assignedUserId: string }) => {
+      const response = await apiRequest("POST", `/api/actions/${actionId}/people-assignments`, { assignedUserId });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/action-people-assignments"] });
+      toast({
+        title: "Success",
+        description: "Person assigned to action",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to assign person",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const removeActionPeopleMutation = useMutation({
+    mutationFn: async ({ actionId, userId }: { actionId: string; userId: string }) => {
+      const response = await apiRequest("DELETE", `/api/actions/${actionId}/people-assignments/${userId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/action-people-assignments"] });
+      toast({
+        title: "Success",
+        description: "Person removed from action",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to remove person",
         variant: "destructive",
       });
     },
@@ -1697,10 +1770,10 @@ export default function Strategies() {
                                                 e.stopPropagation();
                                                 setResourcesModalProject(project);
                                               }}
-                                              title="People Resources"
+                                              title={projectHasResources(project.id) ? "View people resources" : "Add people resources"}
                                               data-testid={`button-view-leaders-${project.id}`}
                                             >
-                                              <Users className="w-3.5 h-3.5 text-gray-500" />
+                                              <Users className={`w-3.5 h-3.5 ${projectHasResources(project.id) ? 'text-blue-500' : 'text-gray-400'}`} />
                                             </Button>
                                             
                                             {/* Barriers - grey if none, red if active */}
@@ -2032,6 +2105,21 @@ export default function Strategies() {
                                                   data-testid={`action-folder-${action.id}`}
                                                 >
                                                   <FolderOpen className={`w-3 h-3 ${action.documentFolderUrl ? 'text-blue-500' : 'text-gray-400'}`} />
+                                                </Button>
+                                                
+                                                {/* People assigned */}
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className="h-5 w-5 p-0"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setActionPeopleModalAction(action);
+                                                  }}
+                                                  title={actionHasPeople(action.id) ? "View assigned people" : "Assign people"}
+                                                  data-testid={`action-people-${action.id}`}
+                                                >
+                                                  <Users className={`w-3 h-3 ${actionHasPeople(action.id) ? 'text-blue-500' : 'text-gray-400'}`} />
                                                 </Button>
                                                 
                                                 {/* Three dots menu */}
@@ -2525,6 +2613,145 @@ export default function Strategies() {
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Action People Assignment Modal */}
+      <Dialog open={!!actionPeopleModalAction} onOpenChange={(open) => {
+        if (!open) {
+          setActionPeopleModalAction(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Assigned People
+            </DialogTitle>
+          </DialogHeader>
+          {actionPeopleModalAction && (() => {
+            const actionPeople = getActionPeople(actionPeopleModalAction.id);
+            const parentProject = projects?.find((p: any) => p.id === actionPeopleModalAction.projectId);
+            
+            return (
+              <div className="space-y-4">
+                <div className="border-b pb-3">
+                  <h3 className="font-semibold text-gray-900 dark:text-white">
+                    {actionPeopleModalAction.title}
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">People tagged for this action (for to-do list)</p>
+                </div>
+
+                <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                  {actionPeople.length > 0 ? (
+                    actionPeople.map((assignment: any) => {
+                      const assignedUser = users?.find((u: any) => u.id === assignment.userId);
+                      if (!assignedUser) return null;
+                      const fullName = [assignedUser.firstName, assignedUser.lastName].filter(Boolean).join(' ');
+                      const isOnProject = parentProject ? isPersonAssignedToProject(parentProject.id, assignment.userId) : true;
+                      
+                      return (
+                        <div
+                          key={assignment.id}
+                          className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                        >
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <Users className="h-5 w-5 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-gray-900 dark:text-white truncate">
+                              {fullName || assignedUser.email}
+                            </div>
+                            <div className="text-xs text-gray-400 dark:text-gray-500 capitalize">
+                              {assignedUser.role?.replace('_', ' ')}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {canEditAllStrategies() && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => removeActionPeopleMutation.mutate({
+                                  actionId: actionPeopleModalAction.id,
+                                  userId: assignment.userId
+                                })}
+                                data-testid={`button-remove-action-person-${assignment.userId}`}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                          {!isOnProject && (
+                            <Badge className="text-xs bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">
+                              Not on project
+                            </Badge>
+                          )}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                      <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No people assigned to this action</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Warning for people not on project */}
+                {parentProject && actionPeople.some((a: any) => !isPersonAssignedToProject(parentProject.id, a.userId)) && (
+                  <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm text-yellow-700 dark:text-yellow-300">
+                        <span className="font-medium">Warning:</span> Some assigned people are not part of the project team.
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Add Person Section - only for admins/co-leads */}
+                {canEditAllStrategies() && (
+                  <div className="border-t pt-4">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                      Add Person
+                    </label>
+                    <Select
+                      onValueChange={(userId) => {
+                        if (userId) {
+                          addActionPeopleMutation.mutate({
+                            actionId: actionPeopleModalAction.id,
+                            assignedUserId: userId
+                          });
+                        }
+                      }}
+                    >
+                      <SelectTrigger data-testid="select-add-action-person">
+                        <SelectValue placeholder="Select a person to add..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {users?.filter((u: any) => 
+                          !actionPeople.some((a: any) => a.userId === u.id)
+                        ).map((u: any) => {
+                          const fullName = [u.firstName, u.lastName].filter(Boolean).join(' ');
+                          const isOnProject = parentProject ? isPersonAssignedToProject(parentProject.id, u.id) : true;
+                          return (
+                            <SelectItem key={u.id} value={u.id}>
+                              {fullName || u.email} ({u.role?.replace('_', ' ')})
+                              {!isOnProject && ' ⚠️'}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                    {parentProject && (
+                      <p className="text-xs text-gray-400 mt-1">⚠️ indicates person is not assigned to this project</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 

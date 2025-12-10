@@ -3671,6 +3671,147 @@ Available navigation: Dashboard, Strategies, Projects, Actions, Timeline, Meetin
     }
   });
 
+  // Get people assignments for an action (for to-do list tagging)
+  app.get("/api/actions/:id/people-assignments", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      const action = await storage.getAction(req.params.id);
+      if (!action) {
+        return res.status(404).json({ message: "Action not found" });
+      }
+
+      if (action.organizationId !== user.organizationId) {
+        return res.status(403).json({ message: "Cannot view actions from other organizations" });
+      }
+
+      const assignments = await storage.getActionPeopleAssignments(req.params.id);
+      res.json(assignments);
+    } catch (error) {
+      logger.error("Failed to fetch action people assignments", error);
+      res.status(500).json({ message: "Failed to fetch action people assignments" });
+    }
+  });
+
+  // Add a person to an action (for to-do list tagging)
+  app.post("/api/actions/:id/people-assignments", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      // Only administrators and co-leads can assign people
+      if (user.role !== 'administrator' && user.role !== 'co_lead') {
+        return res.status(403).json({ message: "Only administrators and co-leads can assign people" });
+      }
+
+      const action = await storage.getAction(req.params.id);
+      if (!action) {
+        return res.status(404).json({ message: "Action not found" });
+      }
+
+      if (action.organizationId !== user.organizationId) {
+        return res.status(403).json({ message: "Cannot modify actions from other organizations" });
+      }
+
+      const { assignedUserId } = req.body;
+      if (!assignedUserId) {
+        return res.status(400).json({ message: "assignedUserId is required" });
+      }
+
+      // Verify the user being assigned belongs to the same organization
+      const assignedUser = await storage.getUser(assignedUserId);
+      if (!assignedUser || assignedUser.organizationId !== user.organizationId) {
+        return res.status(403).json({ message: "Cannot assign users from other organizations" });
+      }
+
+      const assignment = await storage.createActionPeopleAssignment({
+        actionId: req.params.id,
+        userId: assignedUserId,
+        organizationId: user.organizationId,
+        assignedBy: userId,
+      });
+
+      res.json(assignment);
+    } catch (error: any) {
+      if (error.code === '23505') {
+        return res.status(409).json({ message: "User is already assigned to this action" });
+      }
+      logger.error("Failed to create action people assignment", error);
+      res.status(500).json({ message: "Failed to create action people assignment" });
+    }
+  });
+
+  // Remove a person from an action
+  app.delete("/api/actions/:id/people-assignments/:userId", isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUserId = req.user?.claims?.sub;
+      if (!currentUserId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(currentUserId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      // Only administrators and co-leads can remove people
+      if (user.role !== 'administrator' && user.role !== 'co_lead') {
+        return res.status(403).json({ message: "Only administrators and co-leads can remove people" });
+      }
+
+      const action = await storage.getAction(req.params.id);
+      if (!action) {
+        return res.status(404).json({ message: "Action not found" });
+      }
+
+      if (action.organizationId !== user.organizationId) {
+        return res.status(403).json({ message: "Cannot modify actions from other organizations" });
+      }
+
+      await storage.deleteActionPeopleAssignment(req.params.id, req.params.userId);
+      res.json({ success: true });
+    } catch (error) {
+      logger.error("Failed to delete action people assignment", error);
+      res.status(500).json({ message: "Failed to delete action people assignment" });
+    }
+  });
+
+  // Get all action people assignments for the organization
+  app.get("/api/action-people-assignments", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      const assignments = await storage.getActionPeopleAssignmentsByOrganization(user.organizationId);
+      res.json(assignments);
+    } catch (error) {
+      logger.error("Failed to fetch all action people assignments", error);
+      res.status(500).json({ message: "Failed to fetch action people assignments" });
+    }
+  });
+
   // Update user FTE and salary (admin only)
   app.patch("/api/users/:id/capacity", isAuthenticated, async (req: any, res) => {
     try {

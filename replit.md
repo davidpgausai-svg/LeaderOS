@@ -44,7 +44,12 @@ Email-based password reset flow using Resend for transactional emails. Users can
 Registration requires an organization-specific secret token in the URL (`/register/:token`). Administrators can manage tokens, and the first registrant for an organization becomes an Administrator. Super Admins can be designated via the `SUPER_ADMIN_EMAILS` environment variable.
 
 ### Key Data Models
-Core entities include Organizations (for multi-tenancy), Users (with organization membership and optional super_admin status), User Strategy Assignments, Strategies (with Change Continuum Framework), Projects (with communication URL), Actions, Barriers, Dependencies, Meeting Notes, Activities, AI Chat Conversations, and Template Types. All tables include organization_id for data isolation.
+Core entities include Organizations (for multi-tenancy), Users (with organization membership and optional super_admin status), User Strategy Assignments, Strategies (with Change Continuum Framework), Projects (with communication URL), Actions, Barriers, Dependencies, Meeting Notes, Activities, AI Chat Conversations, Template Types, and Action People Assignments (for to-do list tagging). All tables include organization_id for data isolation.
+
+### People Resource Features
+**Project-Level Resources**: Users can be assigned to projects with hours/week allocation for capacity planning. The people icon on project cards turns blue when resources are assigned.
+
+**Action-Level People Tagging**: Users can be tagged to individual actions for future to-do list functionality. This is a simple tag (no hours/FTE tracking). A warning appears when tagged people are not assigned at the project level. All organization users are available for tagging.
 
 ### Progress Calculation
 Backend-driven progress calculation for actions, projects, and strategies, with cascading rollups and read-only display in the UI.

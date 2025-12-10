@@ -100,6 +100,26 @@ export const insertProjectResourceAssignmentSchema = createInsertSchema(projectR
 export type InsertProjectResourceAssignment = z.infer<typeof insertProjectResourceAssignmentSchema>;
 export type ProjectResourceAssignment = typeof projectResourceAssignments.$inferSelect;
 
+// Action People Assignments - Links users to actions for to-do list tracking (no hours/FTE)
+export const actionPeopleAssignments = pgTable("action_people_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  actionId: varchar("action_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  assignedBy: varchar("assigned_by").notNull(),
+  createdAt: timestamp("created_at").default(sql`now()`),
+}, (table) => ({
+  uniqueActionUser: unique().on(table.actionId, table.userId),
+}));
+
+export const insertActionPeopleAssignmentSchema = createInsertSchema(actionPeopleAssignments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertActionPeopleAssignment = z.infer<typeof insertActionPeopleAssignmentSchema>;
+export type ActionPeopleAssignment = typeof actionPeopleAssignments.$inferSelect;
+
 export const strategies = pgTable("strategies", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
