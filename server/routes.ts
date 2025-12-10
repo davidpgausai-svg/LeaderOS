@@ -1,14 +1,89 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertStrategySchema, insertProjectSchema, insertActionSchema, insertActionDocumentSchema, insertActionChecklistItemSchema, insertMeetingNoteSchema, insertBarrierSchema, insertDependencySchema, insertTemplateTypeSchema, insertExecutiveGoalSchema, insertTeamTagSchema } from "@shared/schema";
+import { insertStrategySchema, insertProjectSchema, insertActionSchema, insertActionDocumentSchema, insertActionChecklistItemSchema, insertMeetingNoteSchema, insertBarrierSchema, insertDependencySchema, insertTemplateTypeSchema, insertExecutiveGoalSchema, insertTeamTagSchema, insertUserStrategyAssignmentSchema, insertProjectResourceAssignmentSchema, insertActionPeopleAssignmentSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./jwtAuth";
-import { z } from "zod";
+import { z, ZodSchema, ZodError } from "zod";
 import { logger } from "./logger";
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { notifyActionCompleted, notifyActionAchieved, notifyProjectProgress, notifyProjectStatusChanged, notifyStrategyStatusChanged, notifyReadinessRatingChanged, notifyRiskExposureChanged } from "./notifications";
 import { clearActionNotificationTracking } from "./scheduler";
+
+// Validation middleware factory
+function validateBody<T>(schema: ZodSchema<T>) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    try {
+      req.body = schema.parse(req.body);
+      next();
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const messages = error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+        logger.warn(`[SECURITY] Input validation failed: ${messages}`);
+        return res.status(400).json({ 
+          message: "Invalid input data",
+          errors: error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+        });
+      }
+      return res.status(400).json({ message: "Invalid request body" });
+    }
+  };
+}
+
+// Common validation schemas
+const createUserSchema = z.object({
+  firstName: z.string().min(1, "First name is required").max(100),
+  lastName: z.string().min(1, "Last name is required").max(100),
+  email: z.string().email("Invalid email address").max(255),
+  role: z.enum(["administrator", "co_lead", "view", "sme"]).optional()
+});
+
+const updateUserSchema = z.object({
+  firstName: z.string().min(1).max(100).optional(),
+  lastName: z.string().min(1).max(100).optional(),
+  email: z.string().email().max(255).optional(),
+  role: z.enum(["administrator", "co_lead", "view", "sme"]).optional(),
+  fte: z.number().min(0).max(10).optional(),
+  salary: z.number().min(0).optional()
+}).strict();
+
+const strategyAssignmentSchema = z.object({
+  strategyId: z.number().int().positive("Strategy ID is required")
+});
+
+const resourceAssignmentSchema = z.object({
+  userId: z.string().min(1, "User ID is required"),
+  hoursPerWeek: z.number().min(0).max(168, "Hours per week cannot exceed 168")
+});
+
+const peopleAssignmentSchema = z.object({
+  userId: z.string().min(1, "User ID is required")
+});
+
+const capacityUpdateSchema = z.object({
+  fte: z.number().min(0).max(10).optional(),
+  salary: z.number().min(0).optional()
+});
+
+const aiChatSchema = z.object({
+  message: z.string().min(1, "Message is required").max(10000),
+  conversationId: z.number().int().positive().optional().nullable()
+});
+
+const reorderSchema = z.object({
+  strategies: z.array(z.object({
+    id: z.number().int().positive(),
+    sortOrder: z.number().int().min(0)
+  }))
+});
+
+const executiveGoalsUpdateSchema = z.object({
+  executiveGoalIds: z.array(z.number().int().positive())
+});
+
+const teamTagsUpdateSchema = z.object({
+  teamTagIds: z.array(z.number().int().positive())
+});
 
 // Validation helpers
 function isValidHexColor(color: string): boolean {
@@ -97,7 +172,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/users", isAuthenticated, async (req: any, res) => {
+  app.post("/api/users", isAuthenticated, validateBody(createUserSchema), async (req: any, res) => {
     try {
       // Check if the requesting user is an administrator
       const requestingUserId = req.user.claims.sub;
@@ -108,16 +183,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { firstName, lastName, email } = req.body;
-      
-      if (!firstName || !lastName || !email) {
-        return res.status(400).json({ message: "Missing required fields" });
-      }
-
-      // Email validation
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        return res.status(400).json({ message: "Invalid email address" });
-      }
 
       // Check if user with this email already exists
       const existingUsers = await storage.getAllUsers();
@@ -141,7 +206,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/users/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/users/:id", isAuthenticated, validateBody(updateUserSchema.partial()), async (req: any, res) => {
     try {
       const requestingUserId = req.user.claims.sub;
       const requestingUser = await storage.getUser(requestingUserId);
@@ -239,7 +304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/users/:userId/strategy-assignments", isAuthenticated, async (req: any, res) => {
+  app.post("/api/users/:userId/strategy-assignments", isAuthenticated, validateBody(strategyAssignmentSchema), async (req: any, res) => {
     try {
       const requestingUserId = req.user.claims.sub;
       const requestingUser = await storage.getUser(requestingUserId);
@@ -250,9 +315,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { strategyId } = req.body;
-      if (!strategyId) {
-        return res.status(400).json({ message: "Strategy ID is required" });
-      }
 
       // Verify strategy exists
       const strategy = await storage.getStrategy(strategyId);
@@ -483,7 +545,7 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.post("/api/strategies", isAuthenticated, async (req: any, res) => {
+  app.post("/api/strategies", isAuthenticated, validateBody(insertStrategySchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -521,7 +583,7 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.patch("/api/strategies/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/strategies/:id", isAuthenticated, validateBody(insertStrategySchema.partial()), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -593,7 +655,7 @@ Respond ONLY with a valid JSON object in this exact format:
   });
 
   // Bulk reorder strategies endpoint
-  app.post("/api/strategies/reorder", isAuthenticated, async (req: any, res) => {
+  app.post("/api/strategies/reorder", isAuthenticated, validateBody(reorderSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -837,7 +899,7 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.post("/api/projects", isAuthenticated, async (req: any, res) => {
+  app.post("/api/projects", isAuthenticated, validateBody(insertProjectSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -885,7 +947,7 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.patch("/api/projects/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/projects/:id", isAuthenticated, validateBody(insertProjectSchema.partial()), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -1097,7 +1159,7 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.post("/api/barriers", isAuthenticated, async (req: any, res) => {
+  app.post("/api/barriers", isAuthenticated, validateBody(insertBarrierSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -1160,7 +1222,7 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.patch("/api/barriers/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/barriers/:id", isAuthenticated, validateBody(insertBarrierSchema.partial()), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -1351,7 +1413,7 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.post("/api/dependencies", isAuthenticated, async (req: any, res) => {
+  app.post("/api/dependencies", isAuthenticated, validateBody(insertDependencySchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -1656,7 +1718,7 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.post("/api/actions", isAuthenticated, async (req: any, res) => {
+  app.post("/api/actions", isAuthenticated, validateBody(insertActionSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -1710,7 +1772,7 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.patch("/api/actions/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/actions/:id", isAuthenticated, validateBody(insertActionSchema.partial()), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -1882,7 +1944,7 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.post("/api/actions/:actionId/documents", isAuthenticated, async (req: any, res) => {
+  app.post("/api/actions/:actionId/documents", isAuthenticated, validateBody(insertActionDocumentSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -1922,7 +1984,7 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.patch("/api/actions/:actionId/documents/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/actions/:actionId/documents/:id", isAuthenticated, validateBody(insertActionDocumentSchema.partial()), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -2020,7 +2082,7 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.post("/api/actions/:actionId/checklist", isAuthenticated, async (req: any, res) => {
+  app.post("/api/actions/:actionId/checklist", isAuthenticated, validateBody(insertActionChecklistItemSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -2060,7 +2122,7 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.patch("/api/actions/:actionId/checklist/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/actions/:actionId/checklist/:id", isAuthenticated, validateBody(insertActionChecklistItemSchema.partial()), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -2341,7 +2403,7 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.post("/api/meeting-notes", isAuthenticated, async (req: any, res) => {
+  app.post("/api/meeting-notes", isAuthenticated, validateBody(insertMeetingNoteSchema), async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -2382,7 +2444,7 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.patch("/api/meeting-notes/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/meeting-notes/:id", isAuthenticated, validateBody(insertMeetingNoteSchema.partial()), async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -2690,7 +2752,7 @@ ${outputTemplate}`;
   });
 
   // AI Chat Assistant endpoint
-  app.post("/api/ai/chat", isAuthenticated, async (req: any, res) => {
+  app.post("/api/ai/chat", isAuthenticated, validateBody(aiChatSchema), async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -3003,7 +3065,7 @@ Available navigation: Dashboard, Strategies, Projects, Actions, Timeline, Meetin
     }
   });
 
-  app.post("/api/template-types", isAuthenticated, async (req: any, res) => {
+  app.post("/api/template-types", isAuthenticated, validateBody(insertTemplateTypeSchema), async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -3077,7 +3139,7 @@ Available navigation: Dashboard, Strategies, Projects, Actions, Timeline, Meetin
     }
   });
 
-  app.post("/api/executive-goals", isAuthenticated, async (req: any, res) => {
+  app.post("/api/executive-goals", isAuthenticated, validateBody(insertExecutiveGoalSchema), async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -3110,7 +3172,7 @@ Available navigation: Dashboard, Strategies, Projects, Actions, Timeline, Meetin
     }
   });
 
-  app.patch("/api/executive-goals/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/executive-goals/:id", isAuthenticated, validateBody(insertExecutiveGoalSchema.partial()), async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -3220,7 +3282,7 @@ Available navigation: Dashboard, Strategies, Projects, Actions, Timeline, Meetin
     }
   });
 
-  app.put("/api/strategies/:id/executive-goals", isAuthenticated, async (req: any, res) => {
+  app.put("/api/strategies/:id/executive-goals", isAuthenticated, validateBody(executiveGoalsUpdateSchema), async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -3326,7 +3388,7 @@ Available navigation: Dashboard, Strategies, Projects, Actions, Timeline, Meetin
     }
   });
 
-  app.post("/api/team-tags", isAuthenticated, async (req: any, res) => {
+  app.post("/api/team-tags", isAuthenticated, validateBody(insertTeamTagSchema), async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -3357,7 +3419,7 @@ Available navigation: Dashboard, Strategies, Projects, Actions, Timeline, Meetin
     }
   });
 
-  app.patch("/api/team-tags/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/team-tags/:id", isAuthenticated, validateBody(insertTeamTagSchema.partial()), async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -3455,7 +3517,7 @@ Available navigation: Dashboard, Strategies, Projects, Actions, Timeline, Meetin
     }
   });
 
-  app.put("/api/projects/:id/team-tags", isAuthenticated, async (req: any, res) => {
+  app.put("/api/projects/:id/team-tags", isAuthenticated, validateBody(teamTagsUpdateSchema), async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -3563,7 +3625,7 @@ Available navigation: Dashboard, Strategies, Projects, Actions, Timeline, Meetin
   });
 
   // Upsert a resource assignment for a project (add/update user with hours)
-  app.post("/api/projects/:id/resource-assignments", isAuthenticated, async (req: any, res) => {
+  app.post("/api/projects/:id/resource-assignments", isAuthenticated, validateBody(resourceAssignmentSchema), async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -3702,7 +3764,7 @@ Available navigation: Dashboard, Strategies, Projects, Actions, Timeline, Meetin
   });
 
   // Add a person to an action (for to-do list tagging)
-  app.post("/api/actions/:id/people-assignments", isAuthenticated, async (req: any, res) => {
+  app.post("/api/actions/:id/people-assignments", isAuthenticated, validateBody(peopleAssignmentSchema), async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -3813,7 +3875,7 @@ Available navigation: Dashboard, Strategies, Projects, Actions, Timeline, Meetin
   });
 
   // Update user FTE and salary (admin only)
-  app.patch("/api/users/:id/capacity", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/users/:id/capacity", isAuthenticated, validateBody(capacityUpdateSchema), async (req: any, res) => {
     try {
       const currentUserId = req.user?.claims?.sub;
       if (!currentUserId) {

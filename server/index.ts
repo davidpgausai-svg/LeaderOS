@@ -1,15 +1,80 @@
 import express, { type Request, Response, NextFunction } from "express";
 import cookieParser from "cookie-parser";
+import { rateLimit } from "express-rate-limit";
 import { registerRoutes } from "./routes";
 import { startDueDateScheduler } from "./scheduler";
 import { validateCsrf } from "./jwtAuth";
+import { logger } from "./logger";
 import fs from "fs";
 import path from "path";
 
+// Global API rate limiter - generous limits for normal use
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 500, // 500 requests per 15 minutes per IP
+  message: { error: 'Too many requests. Please try again later.' },
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for auth endpoints (they have their own stricter limits)
+    // Use originalUrl since middleware is mounted at /api
+    const fullPath = req.originalUrl || req.path;
+    return fullPath.startsWith('/api/auth/');
+  },
+  handler: (req, res, next, options) => {
+    const fullPath = req.originalUrl || req.path;
+    logger.warn(`[SECURITY] API rate limit exceeded from IP ${req.ip} for ${req.method} ${fullPath}`);
+    res.status(429).json(options.message);
+  },
+});
+
+// Stricter rate limiter for write operations (POST, PUT, PATCH, DELETE)
+const writeOperationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 100, // 100 write operations per 15 minutes per IP
+  message: { error: 'Too many write operations. Please slow down.' },
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  skip: (req) => {
+    // Only apply to write operations, skip auth endpoints
+    const isWriteOperation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
+    // Use originalUrl since middleware is mounted at /api
+    const fullPath = req.originalUrl || req.path;
+    const isAuthEndpoint = fullPath.startsWith('/api/auth/');
+    return !isWriteOperation || isAuthEndpoint;
+  },
+  handler: (req, res, next, options) => {
+    const fullPath = req.originalUrl || req.path;
+    logger.warn(`[SECURITY] Write operation rate limit exceeded from IP ${req.ip} for ${req.method} ${fullPath}`);
+    res.status(429).json(options.message);
+  },
+});
+
+// AI endpoint rate limiter - expensive operations
+const aiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  limit: 20, // 20 AI requests per minute per IP
+  message: { error: 'Too many AI requests. Please wait a moment before trying again.' },
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  handler: (req, res, next, options) => {
+    logger.warn(`[SECURITY] AI rate limit exceeded from IP ${req.ip}`);
+    res.status(429).json(options.message);
+  },
+});
+
 const app = express();
+
+// Trust proxy - necessary for rate limiting behind reverse proxy (Replit)
+app.set('trust proxy', 1);
 
 // Cookie parser for HTTP-only auth cookies
 app.use(cookieParser());
+
+// Apply rate limiters to API routes
+app.use('/api', apiLimiter);
+app.use('/api', writeOperationLimiter);
+app.use('/api/ai', aiLimiter);
 
 // CSRF validation for all API routes (applied before routes are registered)
 app.use('/api', validateCsrf);
@@ -27,11 +92,27 @@ function log(message: string, source = "express") {
 
 // Security headers
 app.use((req, res, next) => {
-  // Content Security Policy
-  res.setHeader(
-    'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://ep-lucky-haze-adzxnn4p.c-2.us-east-1.aws.neon.tech wss://ep-lucky-haze-adzxnn4p.c-2.us-east-1.aws.neon.tech; frame-src https://www.youtube.com;"
-  );
+  // Content Security Policy - stricter for production
+  const isProduction = process.env.NODE_ENV === 'production';
+  const cspDirectives = [
+    "default-src 'self'",
+    // Scripts: Allow inline for React, eval for dev hot reload
+    isProduction 
+      ? "script-src 'self' 'unsafe-inline'" 
+      : "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: https:",
+    "font-src 'self' data:",
+    // Allow database and API connections
+    "connect-src 'self' https://ep-lucky-haze-adzxnn4p.c-2.us-east-1.aws.neon.tech wss://ep-lucky-haze-adzxnn4p.c-2.us-east-1.aws.neon.tech https://api.openai.com https://generativelanguage.googleapis.com",
+    "frame-src https://www.youtube.com",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    "upgrade-insecure-requests"
+  ];
+  res.setHeader('Content-Security-Policy', cspDirectives.join('; '));
   
   // Prevent clickjacking
   res.setHeader('X-Frame-Options', 'DENY');
@@ -39,15 +120,18 @@ app.use((req, res, next) => {
   // Prevent MIME type sniffing
   res.setHeader('X-Content-Type-Options', 'nosniff');
   
-  // XSS Protection
+  // XSS Protection (legacy browsers)
   res.setHeader('X-XSS-Protection', '1; mode=block');
   
   // Referrer Policy
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   
+  // Permissions Policy - restrict sensitive browser features
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+  
   // Only use HSTS in production
-  if (process.env.NODE_ENV === 'production') {
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  if (isProduction) {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
   }
   
   next();
