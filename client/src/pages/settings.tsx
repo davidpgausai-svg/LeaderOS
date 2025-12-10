@@ -70,11 +70,15 @@ interface UserStrategyRowProps {
   onRoleChange: (userId: string, newRole: string) => void;
   onStrategyToggle: (userId: string, strategyId: string, isAssigned: boolean) => void;
   onDelete: (userId: string, userName: string) => void;
+  onCapacityUpdate: (userId: string, fte: string, salary: number | null) => void;
 }
 
-function UserStrategyRow({ user, strategies, currentUserId, onRoleChange, onStrategyToggle, onDelete }: UserStrategyRowProps) {
+function UserStrategyRow({ user, strategies, currentUserId, onRoleChange, onStrategyToggle, onDelete, onCapacityUpdate }: UserStrategyRowProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isCapacityOpen, setIsCapacityOpen] = useState(false);
+  const [fteValue, setFteValue] = useState(user.fte || '1.0');
+  const [salaryValue, setSalaryValue] = useState(user.salary?.toString() || '');
   
   const { data: userAssignments } = useQuery({
     queryKey: [`/api/users/${user.id}/strategy-assignments`],
@@ -151,6 +155,73 @@ function UserStrategyRow({ user, strategies, currentUserId, onRoleChange, onStra
             </SelectContent>
           </Select>
           
+          {/* FTE/Salary Edit Popover */}
+          <Popover open={isCapacityOpen} onOpenChange={setIsCapacityOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-gray-600 hover:text-gray-700 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-800"
+                data-testid={`button-edit-capacity-${user.id}`}
+                title="Edit FTE & Salary"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-4" align="end">
+              <div className="space-y-4">
+                <h4 className="font-medium text-sm">Capacity Settings</h4>
+                <div className="space-y-2">
+                  <Label htmlFor={`fte-${user.id}`} className="text-xs">
+                    FTE (Full-Time Equivalent)
+                  </Label>
+                  <Input
+                    id={`fte-${user.id}`}
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="2"
+                    value={fteValue}
+                    onChange={(e) => setFteValue(e.target.value)}
+                    placeholder="1.0"
+                    data-testid={`input-fte-${user.id}`}
+                  />
+                  <p className="text-xs text-gray-500">1.0 = 40 hrs/week</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={`salary-${user.id}`} className="text-xs">
+                    Annual Salary ($)
+                  </Label>
+                  <Input
+                    id={`salary-${user.id}`}
+                    type="number"
+                    min="0"
+                    value={salaryValue}
+                    onChange={(e) => setSalaryValue(e.target.value)}
+                    placeholder="Optional"
+                    data-testid={`input-salary-${user.id}`}
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  className="w-full"
+                  onClick={() => {
+                    onCapacityUpdate(
+                      user.id, 
+                      fteValue, 
+                      salaryValue ? parseInt(salaryValue) : null
+                    );
+                    setIsCapacityOpen(false);
+                  }}
+                  data-testid={`button-save-capacity-${user.id}`}
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Save
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+
           <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
             <AlertDialogTrigger asChild>
               <Button
@@ -903,6 +974,23 @@ export default function Settings() {
     deleteUserMutation.mutate(userId);
   };
 
+  const handleCapacityUpdate = async (userId: string, fte: string, salary: number | null) => {
+    try {
+      await apiRequest("PATCH", `/api/users/${userId}/capacity`, { fte, salary });
+      toast({
+        title: "Success", 
+        description: "User capacity updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update user capacity",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleUserRoleChange = async (userId: string, newRole: string) => {
     try {
       await apiRequest("PATCH", `/api/users/${userId}`, { role: newRole });
@@ -1574,6 +1662,7 @@ export default function Settings() {
                           onRoleChange={handleUserRoleChange}
                           onStrategyToggle={handleStrategyAssignmentToggle}
                           onDelete={handleDeleteUser}
+                          onCapacityUpdate={handleCapacityUpdate}
                         />
                       ))}
                     </div>

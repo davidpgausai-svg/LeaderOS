@@ -7,7 +7,7 @@ import {
   actionDocuments, actionChecklistItems, userStrategyAssignments,
   meetingNotes, aiChatConversations, barriers, dependencies, templateTypes,
   organizations, passwordResetTokens, executiveGoals, strategyExecutiveGoals,
-  teamTags, projectTeamTags,
+  teamTags, projectTeamTags, projectResourceAssignments,
   type User, type UpsertUser, type InsertUser,
   type Strategy, type InsertStrategy,
   type Project, type InsertProject,
@@ -27,7 +27,8 @@ import {
   type ExecutiveGoal, type InsertExecutiveGoal,
   type StrategyExecutiveGoal,
   type TeamTag, type InsertTeamTag,
-  type ProjectTeamTag
+  type ProjectTeamTag,
+  type ProjectResourceAssignment, type InsertProjectResourceAssignment
 } from '@shared/schema';
 
 export class PostgresStorage implements IStorage {
@@ -799,6 +800,48 @@ export class PostgresStorage implements IStorage {
     
     const projectIds = assignments.map(a => a.projectId);
     return db.select().from(projects).where(inArray(projects.id, projectIds));
+  }
+
+  // Project Resource Assignment methods (for capacity planning)
+  async getProjectResourceAssignments(projectId: string): Promise<ProjectResourceAssignment[]> {
+    return db.select().from(projectResourceAssignments)
+      .where(eq(projectResourceAssignments.projectId, projectId));
+  }
+
+  async getResourceAssignmentsByUser(userId: string, organizationId: string): Promise<ProjectResourceAssignment[]> {
+    return db.select().from(projectResourceAssignments)
+      .where(and(
+        eq(projectResourceAssignments.userId, userId),
+        eq(projectResourceAssignments.organizationId, organizationId)
+      ));
+  }
+
+  async getResourceAssignmentsByOrganization(organizationId: string): Promise<ProjectResourceAssignment[]> {
+    return db.select().from(projectResourceAssignments)
+      .where(eq(projectResourceAssignments.organizationId, organizationId));
+  }
+
+  async upsertProjectResourceAssignment(assignment: InsertProjectResourceAssignment): Promise<ProjectResourceAssignment> {
+    const [result] = await db.insert(projectResourceAssignments).values({
+      id: randomUUID(),
+      ...assignment,
+    }).onConflictDoUpdate({
+      target: [projectResourceAssignments.projectId, projectResourceAssignments.userId],
+      set: {
+        hoursPerWeek: assignment.hoursPerWeek,
+        updatedAt: new Date(),
+      }
+    }).returning();
+    return result;
+  }
+
+  async deleteProjectResourceAssignment(projectId: string, userId: string): Promise<boolean> {
+    const result = await db.delete(projectResourceAssignments)
+      .where(and(
+        eq(projectResourceAssignments.projectId, projectId),
+        eq(projectResourceAssignments.userId, userId)
+      ));
+    return true;
   }
 }
 

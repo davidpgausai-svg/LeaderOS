@@ -79,6 +79,16 @@ type User = {
   lastName: string;
   email: string;
   role: string;
+  fte?: string;
+  salary?: number;
+};
+
+type ResourceAssignment = {
+  id: string;
+  projectId: string;
+  userId: string;
+  hoursPerWeek: string;
+  organizationId: string;
 };
 
 type ExecutiveGoal = {
@@ -145,6 +155,10 @@ export default function Reports() {
 
   const { data: projectTeamTags = [] } = useQuery<ProjectTeamTag[]>({
     queryKey: ["/api/project-team-tags"],
+  });
+
+  const { data: resourceAssignments = [] } = useQuery<ResourceAssignment[]>({
+    queryKey: ["/api/resource-assignments"],
   });
 
   const handlePrint = useReactToPrint({
@@ -404,6 +418,10 @@ export default function Reports() {
                 <Hash className="w-4 h-4 mr-2" />
                 Team Tags
               </TabsTrigger>
+              <TabsTrigger value="capacity" data-testid="tab-capacity">
+                <Users className="w-4 h-4 mr-2" />
+                Capacity
+              </TabsTrigger>
             </TabsList>
 
             {/* Strategy Health Overview */}
@@ -462,6 +480,16 @@ export default function Reports() {
                 strategies={strategies}
                 actions={actions}
                 safeDate={safeDate}
+              />
+            </TabsContent>
+
+            {/* Capacity Report */}
+            <TabsContent value="capacity" className="space-y-4">
+              <CapacityReport
+                users={users}
+                projects={projects}
+                strategies={strategies}
+                resourceAssignments={resourceAssignments}
               />
             </TabsContent>
           </Tabs>
@@ -1771,6 +1799,296 @@ function TeamTagsReport({
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+}
+
+function CapacityReport({ 
+  users, 
+  projects, 
+  strategies,
+  resourceAssignments 
+}: {
+  users: User[];
+  projects: Project[];
+  strategies: Strategy[];
+  resourceAssignments: ResourceAssignment[];
+}) {
+  const [viewMode, setViewMode] = useState<'current' | 'forecast'>('current');
+
+  // Filter projects based on view mode
+  const getRelevantProjects = () => {
+    if (viewMode === 'current') {
+      // Current: Only "On Track" and "Behind" projects (status = in_progress, etc.)
+      return projects.filter(p => 
+        p.status === 'in_progress' || 
+        p.status === 'on_track' || 
+        p.status === 'behind' ||
+        p.status === 'at_risk'
+      );
+    } else {
+      // Forecast: Include "Not Yet Started" projects as well
+      return projects.filter(p => 
+        p.status !== 'completed' && 
+        p.status !== 'archived' &&
+        p.status !== 'cancelled'
+      );
+    }
+  };
+
+  const relevantProjects = getRelevantProjects();
+  const relevantProjectIds = relevantProjects.map(p => p.id);
+
+  // Calculate capacity for each user
+  const getUserCapacity = (userId: string) => {
+    const user = users.find(u => u.id === userId);
+    if (!user) return null;
+
+    const userAssignments = resourceAssignments.filter(
+      ra => ra.userId === userId && relevantProjectIds.includes(ra.projectId)
+    );
+
+    const totalHours = userAssignments.reduce((sum, ra) => sum + parseFloat(ra.hoursPerWeek || '0'), 0);
+    const maxHours = parseFloat(user.fte || '1') * 40;
+    const capacityPercent = maxHours > 0 ? (totalHours / maxHours) * 100 : 0;
+
+    // Get project details for each assignment
+    const projectDetails = userAssignments.map(ra => {
+      const project = projects.find(p => p.id === ra.projectId);
+      const strategy = project ? strategies.find(s => s.id === project.strategyId) : null;
+      return {
+        assignment: ra,
+        project,
+        strategy,
+        isNotYetStarted: project?.status === 'not_started' || project?.status === 'pending'
+      };
+    });
+
+    return {
+      user,
+      totalHours,
+      maxHours,
+      capacityPercent,
+      projectDetails,
+      assignmentCount: userAssignments.length
+    };
+  };
+
+  // Get all users with assignments
+  const usersWithCapacity = users
+    .filter(u => u.role !== 'sme')
+    .map(u => getUserCapacity(u.id))
+    .filter(Boolean)
+    .sort((a, b) => (b?.capacityPercent || 0) - (a?.capacityPercent || 0));
+
+  // Stats
+  const overCapacityUsers = usersWithCapacity.filter(u => u && u.capacityPercent > 100);
+  const underUtilizedUsers = usersWithCapacity.filter(u => u && u.capacityPercent < 50 && u.assignmentCount > 0);
+  const optimalUsers = usersWithCapacity.filter(u => u && u.capacityPercent >= 50 && u.capacityPercent <= 100);
+
+  const getCapacityBadge = (percent: number) => {
+    if (percent > 100) {
+      return <Badge variant="destructive" className="text-xs">Over Capacity</Badge>;
+    } else if (percent < 50 && percent > 0) {
+      return <Badge variant="secondary" className="text-xs">Under-Utilized</Badge>;
+    } else if (percent >= 50) {
+      return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs">Optimal</Badge>;
+    }
+    return null;
+  };
+
+  const getCapacityColor = (percent: number) => {
+    if (percent > 100) return 'bg-red-500';
+    if (percent > 80) return 'bg-yellow-500';
+    return 'bg-green-500';
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* View Mode Toggle */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">People Capacity Report</h3>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">View:</span>
+          <Select value={viewMode} onValueChange={(v) => setViewMode(v as 'current' | 'forecast')}>
+            <SelectTrigger className="w-32" data-testid="select-capacity-view-mode">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="current">Current</SelectItem>
+              <SelectItem value="forecast">Forecast</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card data-testid="card-total-assigned">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              People Assigned
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{usersWithCapacity.filter(u => u && u.assignmentCount > 0).length}</div>
+            <div className="text-xs text-gray-500">of {users.filter(u => u.role !== 'sme').length} total</div>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-over-capacity">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-red-600">
+              <AlertTriangle className="w-4 h-4 inline mr-1" />
+              Over Capacity
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{overCapacityUsers.length}</div>
+            <div className="text-xs text-gray-500">&gt;100% allocated</div>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-optimal">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-green-600">
+              <CheckCircle className="w-4 h-4 inline mr-1" />
+              Optimal
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{optimalUsers.length}</div>
+            <div className="text-xs text-gray-500">50-100% allocated</div>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-under-utilized">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              <ArrowDownRight className="w-4 h-4 inline mr-1" />
+              Under-Utilized
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{underUtilizedUsers.length}</div>
+            <div className="text-xs text-gray-500">&lt;50% allocated</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* User Capacity List */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center text-base">
+            <Users className="w-5 h-5 mr-2" />
+            Individual Capacity ({viewMode === 'current' ? 'Active Projects' : 'All Planned Projects'})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {usersWithCapacity.length === 0 || usersWithCapacity.every(u => !u || u.assignmentCount === 0) ? (
+            <div className="text-center py-8 text-gray-500">
+              <Users className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+              <p>No resource assignments found</p>
+              <p className="text-sm text-gray-400">Assign people to projects to see capacity utilization</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {usersWithCapacity
+                .filter(u => u && u.assignmentCount > 0)
+                .map(userCap => {
+                  if (!userCap) return null;
+                  const { user, totalHours, maxHours, capacityPercent, projectDetails } = userCap;
+                  
+                  return (
+                    <Collapsible key={user.id}>
+                      <div className="border rounded-lg overflow-hidden">
+                        <CollapsibleTrigger className="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm font-medium">
+                              {user.firstName?.[0]}{user.lastName?.[0]}
+                            </div>
+                            <div className="text-left">
+                              <div className="font-medium">{user.firstName} {user.lastName}</div>
+                              <div className="text-xs text-gray-500">
+                                {user.fte || '1.0'} FTE ({maxHours}h/week max)
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            {getCapacityBadge(capacityPercent)}
+                            <div className="text-right">
+                              <div className="text-lg font-bold">{Math.round(capacityPercent)}%</div>
+                              <div className="text-xs text-gray-500">{totalHours}h / {maxHours}h</div>
+                            </div>
+                            <div className="w-24">
+                              <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <div 
+                                  className={`h-full ${getCapacityColor(capacityPercent)} transition-all`}
+                                  style={{ width: `${Math.min(capacityPercent, 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                            <ChevronDown className="w-5 h-5 text-gray-400" />
+                          </div>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <div className="border-t bg-gray-50 dark:bg-gray-900 p-4">
+                            <div className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3">
+                              Project Assignments ({projectDetails.length})
+                            </div>
+                            <div className="space-y-2">
+                              {projectDetails.map(({ assignment, project, strategy, isNotYetStarted }) => (
+                                <div 
+                                  key={assignment.id}
+                                  className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border"
+                                  data-testid={`capacity-assignment-${assignment.id}`}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    {strategy && (
+                                      <div 
+                                        className="w-2 h-2 rounded-full"
+                                        style={{ backgroundColor: strategy.colorCode }}
+                                      />
+                                    )}
+                                    <span className="text-sm">{project?.title || 'Unknown Project'}</span>
+                                    {isNotYetStarted && viewMode === 'forecast' && (
+                                      <Badge variant="secondary" className="text-xs bg-gray-200 text-gray-600">
+                                        Not Yet Started
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="text-sm font-medium">
+                                    {assignment.hoursPerWeek}h/week
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </CollapsibleContent>
+                      </div>
+                    </Collapsible>
+                  );
+                })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Legend */}
+      <div className="flex items-center gap-6 text-sm text-gray-500">
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full bg-red-500" />
+          <span>Over 100% (Over Capacity)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full bg-yellow-500" />
+          <span>80-100% (Near Capacity)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full bg-green-500" />
+          <span>Under 80% (Available)</span>
+        </div>
+      </div>
     </div>
   );
 }

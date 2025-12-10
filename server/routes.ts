@@ -3498,6 +3498,192 @@ Available navigation: Dashboard, Strategies, Projects, Actions, Timeline, Meetin
     }
   });
 
+  // ==================== PROJECT RESOURCE ASSIGNMENTS (CAPACITY PLANNING) ====================
+
+  // Get resource assignments for a project
+  app.get("/api/projects/:id/resource-assignments", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      const project = await storage.getProject(req.params.id);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      if (project.organizationId !== user.organizationId) {
+        return res.status(403).json({ message: "Cannot view projects from other organizations" });
+      }
+
+      const assignments = await storage.getProjectResourceAssignments(req.params.id);
+      res.json(assignments);
+    } catch (error) {
+      logger.error("Failed to fetch project resource assignments", error);
+      res.status(500).json({ message: "Failed to fetch project resource assignments" });
+    }
+  });
+
+  // Upsert a resource assignment for a project (add/update user with hours)
+  app.post("/api/projects/:id/resource-assignments", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      // Only administrators and co-leads can assign resources
+      if (user.role !== 'administrator' && user.role !== 'co_lead') {
+        return res.status(403).json({ message: "Only administrators and co-leads can assign resources" });
+      }
+
+      const project = await storage.getProject(req.params.id);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      if (project.organizationId !== user.organizationId) {
+        return res.status(403).json({ message: "Cannot modify projects from other organizations" });
+      }
+
+      const { assignedUserId, hoursPerWeek } = req.body;
+      if (!assignedUserId) {
+        return res.status(400).json({ message: "assignedUserId is required" });
+      }
+
+      // Verify the assigned user belongs to the same organization
+      const assignedUser = await storage.getUser(assignedUserId);
+      if (!assignedUser || assignedUser.organizationId !== user.organizationId) {
+        return res.status(400).json({ message: "Invalid user ID or user from another organization" });
+      }
+
+      const assignment = await storage.upsertProjectResourceAssignment({
+        projectId: req.params.id,
+        userId: assignedUserId,
+        hoursPerWeek: hoursPerWeek || '0',
+        organizationId: user.organizationId,
+        assignedBy: userId,
+      });
+
+      res.json(assignment);
+    } catch (error) {
+      logger.error("Failed to upsert project resource assignment", error);
+      res.status(500).json({ message: "Failed to upsert project resource assignment" });
+    }
+  });
+
+  // Delete a resource assignment from a project
+  app.delete("/api/projects/:projectId/resource-assignments/:userId", isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUserId = req.user?.claims?.sub;
+      if (!currentUserId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(currentUserId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      // Only administrators and co-leads can remove resources
+      if (user.role !== 'administrator' && user.role !== 'co_lead') {
+        return res.status(403).json({ message: "Only administrators and co-leads can remove resources" });
+      }
+
+      const project = await storage.getProject(req.params.projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      if (project.organizationId !== user.organizationId) {
+        return res.status(403).json({ message: "Cannot modify projects from other organizations" });
+      }
+
+      await storage.deleteProjectResourceAssignment(req.params.projectId, req.params.userId);
+      res.json({ success: true });
+    } catch (error) {
+      logger.error("Failed to delete project resource assignment", error);
+      res.status(500).json({ message: "Failed to delete project resource assignment" });
+    }
+  });
+
+  // Get all resource assignments for the organization (for capacity report)
+  app.get("/api/resource-assignments", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      const assignments = await storage.getResourceAssignmentsByOrganization(user.organizationId);
+      res.json(assignments);
+    } catch (error) {
+      logger.error("Failed to fetch all resource assignments", error);
+      res.status(500).json({ message: "Failed to fetch resource assignments" });
+    }
+  });
+
+  // Update user FTE and salary (admin only)
+  app.patch("/api/users/:id/capacity", isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUserId = req.user?.claims?.sub;
+      if (!currentUserId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const currentUser = await storage.getUser(currentUserId);
+      if (!currentUser || !currentUser.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      // Only administrators can update FTE/salary
+      if (currentUser.role !== 'administrator') {
+        return res.status(403).json({ message: "Only administrators can update FTE and salary" });
+      }
+
+      const targetUser = await storage.getUser(req.params.id);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (targetUser.organizationId !== currentUser.organizationId) {
+        return res.status(403).json({ message: "Cannot modify users from other organizations" });
+      }
+
+      const { fte, salary } = req.body;
+      const updates: any = {};
+      
+      if (fte !== undefined) {
+        updates.fte = String(fte);
+      }
+      if (salary !== undefined) {
+        updates.salary = salary === null ? null : Number(salary);
+      }
+
+      const updatedUser = await storage.updateUser(req.params.id, updates);
+      res.json(updatedUser);
+    } catch (error) {
+      logger.error("Failed to update user capacity", error);
+      res.status(500).json({ message: "Failed to update user capacity" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

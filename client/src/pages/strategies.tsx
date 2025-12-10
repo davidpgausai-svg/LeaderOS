@@ -92,7 +92,8 @@ export default function Strategies() {
   const [strategyFilter, setStrategyFilter] = useState("all");
   const [metricsModalStrategy, setMetricsModalStrategy] = useState<any>(null);
   const [continuumModalStrategy, setContinuumModalStrategy] = useState<any>(null);
-  const [leadersModalProject, setLeadersModalProject] = useState<any>(null);
+  const [resourcesModalProject, setResourcesModalProject] = useState<any>(null);
+  const [resourceHoursInputs, setResourceHoursInputs] = useState<Record<string, string>>({});
   const [collapsedStrategies, setCollapsedStrategies] = useState<Set<string>>(new Set());
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   
@@ -187,6 +188,25 @@ export default function Strategies() {
 
   const { data: projectTeamTags = [] } = useQuery<any[]>({
     queryKey: ["/api/project-team-tags"],
+  });
+
+  // Fetch resource assignments for the currently open modal project
+  const { data: projectResourceAssignments = [] } = useQuery<any[]>({
+    queryKey: ["/api/projects", resourcesModalProject?.id, "resource-assignments"],
+    queryFn: async () => {
+      if (!resourcesModalProject?.id) return [];
+      const response = await fetch(`/api/projects/${resourcesModalProject.id}/resource-assignments`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to fetch resource assignments');
+      return response.json();
+    },
+    enabled: !!resourcesModalProject?.id,
+  });
+
+  // Fetch all resource assignments for capacity calculations
+  const { data: allResourceAssignments = [] } = useQuery<any[]>({
+    queryKey: ["/api/resource-assignments"],
   });
 
   // Fetch strategy-executive-goal mappings for multiple goals per strategy
@@ -393,15 +413,23 @@ export default function Strategies() {
     }
   };
 
+  // Track previous filter to only reset collapse state when filter actually changes
+  const previousFilterRef = useRef<string>(strategyFilter);
+  
   // Auto-collapse all strategies when "All Strategies" filter is active
   useEffect(() => {
-    if (strategies && strategyFilter === "all") {
-      // Collapse all strategy cards
-      const allStrategyIds = new Set((strategies as any[]).map((s: any) => s.id));
-      setCollapsedStrategies(allStrategyIds);
-    } else if (strategyFilter !== "all") {
-      // Expand when a specific strategy is selected
-      setCollapsedStrategies(new Set());
+    // Only reset collapse state when the filter actually changes, not on data refresh
+    if (previousFilterRef.current !== strategyFilter) {
+      previousFilterRef.current = strategyFilter;
+      
+      if (strategies && strategyFilter === "all") {
+        // Collapse all strategy cards
+        const allStrategyIds = new Set((strategies as any[]).map((s: any) => s.id));
+        setCollapsedStrategies(allStrategyIds);
+      } else if (strategyFilter !== "all") {
+        // Expand when a specific strategy is selected
+        setCollapsedStrategies(new Set());
+      }
     }
   }, [strategies, strategyFilter]);
 
@@ -702,6 +730,55 @@ export default function Strategies() {
       toast({
         title: "Error",
         description: "Failed to update Team Tags",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Resource assignment mutations for capacity planning
+  const upsertResourceAssignmentMutation = useMutation({
+    mutationFn: async ({ projectId, assignedUserId, hoursPerWeek }: { projectId: string; assignedUserId: string; hoursPerWeek: string }) => {
+      const response = await apiRequest("POST", `/api/projects/${projectId}/resource-assignments`, { assignedUserId, hoursPerWeek });
+      return response.json();
+    },
+    onSuccess: () => {
+      if (resourcesModalProject?.id) {
+        queryClient.invalidateQueries({ queryKey: ["/api/projects", resourcesModalProject.id, "resource-assignments"] });
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/resource-assignments"] });
+      toast({
+        title: "Success",
+        description: "Resource assignment updated",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update resource assignment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteResourceAssignmentMutation = useMutation({
+    mutationFn: async ({ projectId, userId }: { projectId: string; userId: string }) => {
+      const response = await apiRequest("DELETE", `/api/projects/${projectId}/resource-assignments/${userId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      if (resourcesModalProject?.id) {
+        queryClient.invalidateQueries({ queryKey: ["/api/projects", resourcesModalProject.id, "resource-assignments"] });
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/resource-assignments"] });
+      toast({
+        title: "Success",
+        description: "Resource removed from project",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to remove resource",
         variant: "destructive",
       });
     },
@@ -1614,9 +1691,9 @@ export default function Strategies() {
                                               className="h-6 w-6 p-0"
                                               onClick={(e) => {
                                                 e.stopPropagation();
-                                                setLeadersModalProject(project);
+                                                setResourcesModalProject(project);
                                               }}
-                                              title="View project leaders"
+                                              title="People Resources"
                                               data-testid={`button-view-leaders-${project.id}`}
                                             >
                                               <Users className="w-3.5 h-3.5 text-gray-500" />
@@ -2227,33 +2304,45 @@ export default function Strategies() {
         </DialogContent>
       </Dialog>
 
-      {/* Project Leaders Modal */}
-      <Dialog open={!!leadersModalProject} onOpenChange={(open) => !open && setLeadersModalProject(null)}>
-        <DialogContent className="sm:max-w-md">
+      {/* People Resources Modal */}
+      <Dialog open={!!resourcesModalProject} onOpenChange={(open) => {
+        if (!open) {
+          setResourcesModalProject(null);
+          setResourceHoursInputs({});
+        }
+      }}>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Project Leaders
+              People Resources
             </DialogTitle>
           </DialogHeader>
-          {leadersModalProject && (
+          {resourcesModalProject && (
             <div className="space-y-4">
               {/* Project Title */}
               <div className="border-b pb-3">
                 <h3 className="font-semibold text-gray-900 dark:text-white">
-                  {leadersModalProject.title}
+                  {resourcesModalProject.title}
                 </h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Accountable leaders for this project</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">People assigned to this project with capacity allocation</p>
               </div>
 
-              {/* Leaders List */}
-              <div className="space-y-2">
-                {getProjectLeaders(leadersModalProject).length > 0 ? (
-                  getProjectLeaders(leadersModalProject).map((leader: any) => {
-                    const fullName = [leader.firstName, leader.lastName].filter(Boolean).join(' ');
+              {/* Assigned Resources List */}
+              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                {projectResourceAssignments.length > 0 ? (
+                  projectResourceAssignments.map((assignment: any) => {
+                    const assignedUser = users?.find((u: any) => u.id === assignment.userId);
+                    if (!assignedUser) return null;
+                    const fullName = [assignedUser.firstName, assignedUser.lastName].filter(Boolean).join(' ');
+                    const fte = parseFloat(assignedUser.fte || '1') || 1;
+                    const maxHours = fte * 40;
+                    const hours = parseFloat(assignment.hoursPerWeek || '0') || 0;
+                    const capacityPercent = maxHours > 0 ? (hours / maxHours) * 100 : 0;
+                    
                     return (
                       <div
-                        key={leader.id}
+                        key={assignment.id}
                         className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
                       >
                         <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -2261,16 +2350,66 @@ export default function Strategies() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="font-medium text-gray-900 dark:text-white truncate">
-                            {fullName || leader.email}
+                            {fullName || assignedUser.email}
                           </div>
-                          {fullName && (
-                            <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                              {leader.email}
-                            </div>
-                          )}
                           <div className="text-xs text-gray-400 dark:text-gray-500 capitalize">
-                            {leader.role?.replace('_', ' ')}
+                            {assignedUser.role?.replace('_', ' ')} · FTE: {fte}
                           </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {canEditAllStrategies() ? (
+                            <div className="flex items-center gap-1">
+                              <Input
+                                type="number"
+                                min="0"
+                                max="80"
+                                step="0.5"
+                                className="w-16 h-8 text-center text-sm"
+                                value={resourceHoursInputs[assignment.userId] ?? assignment.hoursPerWeek ?? '0'}
+                                onChange={(e) => setResourceHoursInputs(prev => ({
+                                  ...prev,
+                                  [assignment.userId]: e.target.value
+                                }))}
+                                onBlur={() => {
+                                  const newHours = resourceHoursInputs[assignment.userId];
+                                  if (newHours !== undefined && newHours !== assignment.hoursPerWeek) {
+                                    upsertResourceAssignmentMutation.mutate({
+                                      projectId: resourcesModalProject.id,
+                                      assignedUserId: assignment.userId,
+                                      hoursPerWeek: newHours
+                                    });
+                                  }
+                                }}
+                                data-testid={`input-hours-${assignment.userId}`}
+                              />
+                              <span className="text-xs text-gray-500">hrs/wk</span>
+                            </div>
+                          ) : (
+                            <span className="text-sm font-medium">{hours} hrs/wk</span>
+                          )}
+                          <Badge 
+                            className={`text-xs ${
+                              capacityPercent > 100 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' :
+                              capacityPercent >= 80 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' :
+                              'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                            }`}
+                          >
+                            {capacityPercent.toFixed(0)}%
+                          </Badge>
+                          {canEditAllStrategies() && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => deleteResourceAssignmentMutation.mutate({
+                                projectId: resourcesModalProject.id,
+                                userId: assignment.userId
+                              })}
+                              data-testid={`button-remove-resource-${assignment.userId}`}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                     );
@@ -2278,10 +2417,46 @@ export default function Strategies() {
                 ) : (
                   <div className="text-center py-6 text-gray-500 dark:text-gray-400">
                     <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No leaders assigned to this project</p>
+                    <p className="text-sm">No resources assigned to this project</p>
                   </div>
                 )}
               </div>
+
+              {/* Add Resource Section - only for admins/co-leads */}
+              {canEditAllStrategies() && (
+                <div className="border-t pt-4">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                    Add Resource
+                  </label>
+                  <Select
+                    onValueChange={(userId) => {
+                      if (userId) {
+                        upsertResourceAssignmentMutation.mutate({
+                          projectId: resourcesModalProject.id,
+                          assignedUserId: userId,
+                          hoursPerWeek: '0'
+                        });
+                      }
+                    }}
+                  >
+                    <SelectTrigger data-testid="select-add-resource">
+                      <SelectValue placeholder="Select a person to add..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {users?.filter((u: any) => 
+                        !projectResourceAssignments.some((a: any) => a.userId === u.id)
+                      ).map((u: any) => {
+                        const fullName = [u.firstName, u.lastName].filter(Boolean).join(' ');
+                        return (
+                          <SelectItem key={u.id} value={u.id}>
+                            {fullName || u.email} ({u.role?.replace('_', ' ')})
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

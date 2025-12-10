@@ -42,6 +42,8 @@ export const users = pgTable("users", {
   timezone: varchar("timezone").default('America/Chicago'), // User's timezone (e.g., 'America/Chicago', 'America/New_York')
   organizationId: varchar("organization_id"), // Foreign key to organizations table
   isSuperAdmin: text("is_super_admin").notNull().default('false'), // 'true' or 'false' - Super Admin can manage all organizations
+  fte: text("fte").default('1.0'), // Full-time equivalent (1.0 = 40 hours/week, 0.5 = 20 hours/week)
+  salary: integer("salary"), // Annual salary for cost calculations (nullable for future use)
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -74,6 +76,29 @@ export const userStrategyAssignments = pgTable("user_strategy_assignments", {
 }, (table) => ({
   uniqueUserStrategy: unique().on(table.userId, table.strategyId),
 }));
+
+// Project Resource Assignments - Links users to projects with hours per week for capacity planning
+export const projectResourceAssignments = pgTable("project_resource_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull(), // Project being assigned to
+  userId: varchar("user_id").notNull(), // User being assigned
+  hoursPerWeek: text("hours_per_week").notNull().default('0'), // Hours per week assigned to this project
+  organizationId: varchar("organization_id").notNull(), // For multi-tenancy
+  assignedBy: varchar("assigned_by").notNull(), // User who made the assignment
+  createdAt: timestamp("created_at").default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+}, (table) => ({
+  uniqueProjectUser: unique().on(table.projectId, table.userId),
+}));
+
+export const insertProjectResourceAssignmentSchema = createInsertSchema(projectResourceAssignments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertProjectResourceAssignment = z.infer<typeof insertProjectResourceAssignmentSchema>;
+export type ProjectResourceAssignment = typeof projectResourceAssignments.$inferSelect;
 
 export const strategies = pgTable("strategies", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

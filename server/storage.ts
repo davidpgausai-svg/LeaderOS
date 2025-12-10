@@ -1,4 +1,4 @@
-import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Project, type InsertProject, type Activity, type InsertActivity, type Action, type InsertAction, type Notification, type InsertNotification, type ActionDocument, type InsertActionDocument, type ActionChecklistItem, type InsertActionChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, type AiChatConversation, type InsertAiChatConversation, type Barrier, type InsertBarrier, type Dependency, type InsertDependency, type TemplateType, type InsertTemplateType, type ExecutiveGoal, type InsertExecutiveGoal, type StrategyExecutiveGoal, type TeamTag, type InsertTeamTag, type ProjectTeamTag } from "@shared/schema";
+import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Project, type InsertProject, type Activity, type InsertActivity, type Action, type InsertAction, type Notification, type InsertNotification, type ActionDocument, type InsertActionDocument, type ActionChecklistItem, type InsertActionChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, type AiChatConversation, type InsertAiChatConversation, type Barrier, type InsertBarrier, type Dependency, type InsertDependency, type TemplateType, type InsertTemplateType, type ExecutiveGoal, type InsertExecutiveGoal, type StrategyExecutiveGoal, type TeamTag, type InsertTeamTag, type ProjectTeamTag, type ProjectResourceAssignment, type InsertProjectResourceAssignment } from "@shared/schema";
 
 export interface IStorage {
   // User methods
@@ -134,6 +134,13 @@ export interface IStorage {
   getProjectTeamTags(projectId: string): Promise<ProjectTeamTag[]>;
   setProjectTeamTags(projectId: string, tagIds: string[], organizationId: string): Promise<ProjectTeamTag[]>;
   getProjectsByTeamTag(teamTagId: string, organizationId: string): Promise<Project[]>;
+
+  // Project Resource Assignment methods (for capacity planning)
+  getProjectResourceAssignments(projectId: string): Promise<ProjectResourceAssignment[]>;
+  getResourceAssignmentsByUser(userId: string, organizationId: string): Promise<ProjectResourceAssignment[]>;
+  getResourceAssignmentsByOrganization(organizationId: string): Promise<ProjectResourceAssignment[]>;
+  upsertProjectResourceAssignment(assignment: InsertProjectResourceAssignment): Promise<ProjectResourceAssignment>;
+  deleteProjectResourceAssignment(projectId: string, userId: string): Promise<boolean>;
 }
 
 // Use PostgreSQL storage
