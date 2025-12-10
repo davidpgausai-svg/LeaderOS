@@ -883,6 +883,14 @@ export class PostgresStorage implements IStorage {
       .where(eq(actionPeopleAssignments.organizationId, organizationId));
   }
 
+  async getActionPeopleAssignmentsByUser(userId: string, organizationId: string): Promise<ActionPeopleAssignment[]> {
+    return db.select().from(actionPeopleAssignments)
+      .where(and(
+        eq(actionPeopleAssignments.userId, userId),
+        eq(actionPeopleAssignments.organizationId, organizationId)
+      ));
+  }
+
   async createActionPeopleAssignment(assignment: InsertActionPeopleAssignment): Promise<ActionPeopleAssignment> {
     const [created] = await db.insert(actionPeopleAssignments)
       .values({ ...assignment, id: randomUUID() })

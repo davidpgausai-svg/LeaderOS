@@ -3857,6 +3857,94 @@ Available navigation: Dashboard, Strategies, Projects, Actions, Timeline, Meetin
     }
   });
 
+  // Dashboard API: Get user's to-dos (actions assigned to them that are not achieved)
+  app.get("/api/my-todos", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      // Get all action assignments for this user
+      const assignments = await storage.getActionPeopleAssignmentsByUser(userId, user.organizationId);
+      
+      // Get the actions for these assignments, filtering out achieved ones
+      const actionIds = assignments.map(a => a.actionId);
+      const allActions = await storage.getActionsByOrganization(user.organizationId);
+      
+      // Filter to only assigned actions that are not achieved, and join with assignment data
+      const todos = allActions
+        .filter(action => actionIds.includes(action.id) && action.status !== 'achieved')
+        .map(action => ({
+          ...action,
+          assignmentId: assignments.find(a => a.actionId === action.id)?.id
+        }))
+        .sort((a, b) => {
+          // Sort by due date ascending (closest first), nulls last
+          if (!a.dueDate && !b.dueDate) return 0;
+          if (!a.dueDate) return 1;
+          if (!b.dueDate) return -1;
+          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        });
+
+      res.json(todos);
+    } catch (error) {
+      logger.error("Failed to fetch user's to-dos", error);
+      res.status(500).json({ message: "Failed to fetch to-dos" });
+    }
+  });
+
+  // Dashboard API: Get user's assigned projects (where they are a resource)
+  app.get("/api/my-projects", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      // Get all resource assignments for this user
+      const assignments = await storage.getResourceAssignmentsByUser(userId, user.organizationId);
+      
+      // Get the projects for these assignments
+      const projectIds = assignments.map(a => a.projectId);
+      const allProjects = await storage.getProjectsByOrganization(user.organizationId);
+      
+      // Filter to only assigned projects and join with assignment data
+      const myProjects = allProjects
+        .filter(project => projectIds.includes(project.id))
+        .map(project => {
+          const assignment = assignments.find(a => a.projectId === project.id);
+          return {
+            ...project,
+            hoursPerWeek: assignment?.hoursPerWeek || '0',
+            assignmentId: assignment?.id
+          };
+        })
+        .sort((a, b) => {
+          // Sort by due date ascending (closest first), nulls last
+          if (!a.dueDate && !b.dueDate) return 0;
+          if (!a.dueDate) return 1;
+          if (!b.dueDate) return -1;
+          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        });
+
+      res.json(myProjects);
+    } catch (error) {
+      logger.error("Failed to fetch user's projects", error);
+      res.status(500).json({ message: "Failed to fetch projects" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

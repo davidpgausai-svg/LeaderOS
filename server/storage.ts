@@ -145,6 +145,7 @@ export interface IStorage {
   // Action People Assignment methods (for to-do list tagging, no hours)
   getActionPeopleAssignments(actionId: string): Promise<ActionPeopleAssignment[]>;
   getActionPeopleAssignmentsByOrganization(organizationId: string): Promise<ActionPeopleAssignment[]>;
+  getActionPeopleAssignmentsByUser(userId: string, organizationId: string): Promise<ActionPeopleAssignment[]>;
   createActionPeopleAssignment(assignment: InsertActionPeopleAssignment): Promise<ActionPeopleAssignment>;
   deleteActionPeopleAssignment(actionId: string, userId: string): Promise<boolean>;
 }
