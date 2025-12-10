@@ -348,10 +348,16 @@ export class PostgresStorage implements IStorage {
     // Get the current strategy to check its status
     const strategy = await this.getStrategy(strategyId);
     
-    // Auto-complete: If progress is 100% and all projects are achieved, set status to Completed
+    // Auto-complete: If progress is 100% and all projects are completed, set status to Completed
     // Only auto-complete if strategy is currently Active (don't revert from Archived)
-    const allProjectsAchieved = strategyProjects.every(p => p.status === 'Achieved');
-    const shouldAutoComplete = avgProgress === 100 && allProjectsAchieved && strategy?.status === 'Active';
+    // Check for all possible completed status values (case-insensitive)
+    const isProjectCompleted = (status: string | null) => {
+      if (!status) return false;
+      const normalizedStatus = status.toLowerCase();
+      return normalizedStatus === 'achieved' || normalizedStatus === 'c' || normalizedStatus === 'completed';
+    };
+    const allProjectsCompleted = strategyProjects.every(p => isProjectCompleted(p.status));
+    const shouldAutoComplete = avgProgress === 100 && allProjectsCompleted && strategy?.status === 'Active';
     
     if (shouldAutoComplete) {
       await this.updateStrategy(strategyId, { progress: avgProgress, status: 'Completed' });
