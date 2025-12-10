@@ -67,9 +67,9 @@ export async function sendPasswordResetEmail(
     const greeting = firstName ? `Hi ${firstName},` : 'Hi,';
 
     const { data, error } = await client.emails.send({
-      from: fromEmail || 'StrategyPlan <noreply@resend.dev>',
+      from: fromEmail || 'LeaderOS <noreply@resend.dev>',
       to: toEmail,
-      subject: 'Reset Your StrategyPlan Password',
+      subject: 'Reset Your LeaderOS Password',
       html: `
         <!DOCTYPE html>
         <html>
@@ -86,7 +86,7 @@ export async function sendPasswordResetEmail(
             <p style="font-size: 16px; margin-bottom: 20px;">${greeting}</p>
             
             <p style="font-size: 16px; margin-bottom: 20px;">
-              We received a request to reset your password for your StrategyPlan account.
+              We received a request to reset your password for your LeaderOS account.
             </p>
             
             <div style="text-align: center; margin: 30px 0;">
@@ -113,7 +113,7 @@ export async function sendPasswordResetEmail(
           </div>
           
           <p style="font-size: 12px; color: #999; text-align: center; margin-top: 20px;">
-            &copy; ${new Date().getFullYear()} StrategyPlan. All rights reserved.
+            &copy; ${new Date().getFullYear()} LeaderOS powered by Gaus LLC. All rights reserved.
           </p>
         </body>
         </html>
@@ -145,9 +145,9 @@ export async function sendTwoFactorCode(
     const greeting = firstName ? `Hi ${firstName},` : 'Hi,';
 
     const { data, error } = await client.emails.send({
-      from: fromEmail || 'StrategyPlan <noreply@resend.dev>',
+      from: fromEmail || 'LeaderOS <noreply@resend.dev>',
       to: toEmail,
-      subject: 'Your StrategyPlan Verification Code',
+      subject: 'Your LeaderOS Verification Code',
       html: `
         <!DOCTYPE html>
         <html>
@@ -157,7 +157,7 @@ export async function sendTwoFactorCode(
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">StrategyPlan</h1>
+            <h1 style="color: white; margin: 0; font-size: 28px;">LeaderOS</h1>
           </div>
           
           <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
@@ -189,7 +189,7 @@ export async function sendTwoFactorCode(
           </div>
           
           <p style="font-size: 12px; color: #999; text-align: center; margin-top: 20px;">
-            &copy; ${new Date().getFullYear()} StrategyPlan. All rights reserved.
+            &copy; ${new Date().getFullYear()} LeaderOS powered by Gaus LLC. All rights reserved.
           </p>
         </body>
         </html>
