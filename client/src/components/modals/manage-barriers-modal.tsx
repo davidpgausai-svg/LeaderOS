@@ -81,9 +81,8 @@ export function ManageBarriersModal({ isOpen, onClose, projectId }: ManageBarrie
   const { data: barriers, isLoading: barriersLoading } = useQuery({
     queryKey: ["/api/barriers", projectId],
     queryFn: async () => {
-      const token = localStorage.getItem('jwt');
       const response = await fetch(`/api/barriers?projectId=${projectId}`, {
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        credentials: 'include',
       });
       if (!response.ok) throw new Error("Failed to fetch barriers");
       return response.json();

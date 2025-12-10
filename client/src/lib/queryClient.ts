@@ -1,12 +1,8 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-function getAuthToken(): string | null {
-  return localStorage.getItem('jwt');
-}
-
-function getAuthHeaders(): HeadersInit {
-  const token = getAuthToken();
-  return token ? { 'Authorization': `Bearer ${token}` } : {};
+function getCsrfToken(): string | null {
+  const match = document.cookie.match(/csrf_token=([^;]+)/);
+  return match ? match[1] : null;
 }
 
 async function throwIfResNotOk(res: Response) {
@@ -21,14 +17,16 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  const csrfToken = getCsrfToken();
   const headers: HeadersInit = {
-    ...getAuthHeaders(),
     ...(data ? { "Content-Type": "application/json" } : {}),
+    ...(csrfToken ? { "x-csrf-token": csrfToken } : {}),
   };
 
   const res = await fetch(url, {
     method,
     headers,
+    credentials: 'include',
     body: data ? JSON.stringify(data) : undefined,
   });
 
@@ -43,7 +41,7 @@ export const getQueryFn: <T>(options: {
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
     const res = await fetch(queryKey.join("/") as string, {
-      headers: getAuthHeaders(),
+      credentials: 'include',
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {

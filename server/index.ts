@@ -1,10 +1,18 @@
 import express, { type Request, Response, NextFunction } from "express";
+import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { startDueDateScheduler } from "./scheduler";
+import { validateCsrf } from "./jwtAuth";
 import fs from "fs";
 import path from "path";
 
 const app = express();
+
+// Cookie parser for HTTP-only auth cookies
+app.use(cookieParser());
+
+// CSRF validation for all API routes (applied before routes are registered)
+app.use('/api', validateCsrf);
 
 // Simple log function for production (doesn't need vite)
 function log(message: string, source = "express") {

@@ -1,11 +1,36 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import type { Express, RequestHandler } from 'express';
+import type { Express, RequestHandler, Response } from 'express';
+import { rateLimit } from 'express-rate-limit';
 import { storage } from './storage';
 import { logger } from './logger';
 import { getOrganization, getOrganizationByToken, updateOrganizationToken, getAllOrganizations, createOrganization, deleteOrganization, getUserByEmail, updateUserPassword, createPasswordResetToken, getPasswordResetToken, markPasswordResetTokenUsed } from './pgStorage';
 import { sendPasswordResetEmail } from './email';
 import crypto from 'crypto';
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  handler: (req, res, next, options) => {
+    logger.warn(`[SECURITY] Rate limit exceeded for auth endpoint from IP ${req.ip}`);
+    res.status(429).json(options.message);
+  },
+});
+
+const passwordResetLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 3,
+  message: { error: 'Too many password reset requests. Please try again in an hour.' },
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  handler: (req, res, next, options) => {
+    logger.warn(`[SECURITY] Rate limit exceeded for password reset from IP ${req.ip}`);
+    res.status(429).json(options.message);
+  },
+});
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
@@ -13,6 +38,68 @@ if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
 }
 const SECRET = JWT_SECRET || 'development-secret-change-in-production';
 const JWT_EXPIRES_IN = '7d';
+const COOKIE_NAME = 'auth_token';
+const CSRF_COOKIE_NAME = 'csrf_token';
+const CSRF_HEADER_NAME = 'x-csrf-token';
+const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+
+function generateCsrfToken(): string {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+function validatePasswordComplexity(password: string): { valid: boolean; error?: string } {
+  if (password.length < 8) {
+    return { valid: false, error: 'Password must be at least 8 characters long' };
+  }
+  if (!/[A-Z]/.test(password)) {
+    return { valid: false, error: 'Password must contain at least one uppercase letter' };
+  }
+  if (!/[a-z]/.test(password)) {
+    return { valid: false, error: 'Password must contain at least one lowercase letter' };
+  }
+  if (!/[0-9]/.test(password)) {
+    return { valid: false, error: 'Password must contain at least one number' };
+  }
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    return { valid: false, error: 'Password must contain at least one special character (!@#$%^&*()_+-=[]{};\':"|,.<>/?)' };
+  }
+  return { valid: true };
+}
+
+function setAuthCookie(res: Response, token: string) {
+  res.cookie(COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: COOKIE_MAX_AGE,
+    path: '/',
+  });
+}
+
+function setCsrfCookie(res: Response, csrfToken: string) {
+  res.cookie(CSRF_COOKIE_NAME, csrfToken, {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: COOKIE_MAX_AGE,
+    path: '/',
+  });
+}
+
+function clearAuthCookie(res: Response) {
+  res.clearCookie(COOKIE_NAME, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/',
+  });
+  res.clearCookie(CSRF_COOKIE_NAME, {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/',
+  });
+}
 
 export interface JWTPayload {
   userId: string;
@@ -38,7 +125,7 @@ export async function setupAuth(app: Express) {
     res.json({ valid: !!org, organizationName: org?.name || null });
   });
 
-  app.post('/api/auth/register/:registrationToken', async (req, res) => {
+  app.post('/api/auth/register/:registrationToken', authLimiter, async (req, res) => {
     try {
       const { registrationToken } = req.params;
       const { email, password, firstName, lastName } = req.body;
@@ -57,8 +144,9 @@ export async function setupAuth(app: Express) {
         return res.status(400).json({ error: 'Invalid email address' });
       }
 
-      if (password.length < 6) {
-        return res.status(400).json({ error: 'Password must be at least 6 characters' });
+      const passwordValidation = validatePasswordComplexity(password);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({ error: passwordValidation.error });
       }
 
       const existingUsers = await storage.getAllUsers();
@@ -88,10 +176,14 @@ export async function setupAuth(app: Express) {
       await updateUserPassword(user.id, passwordHash);
 
       const token = generateToken({ userId: user.id, email: user.email! });
+      const csrfToken = generateCsrfToken();
+      setAuthCookie(res, token);
+      setCsrfCookie(res, csrfToken);
+
+      logger.info(`[SECURITY] New user registration: user ${user.id} (${user.email}) in org ${org.id}, role: ${user.role}`);
 
       res.status(201).json({ 
-        success: true, 
-        token,
+        success: true,
         user: {
           id: user.id,
           email: user.email,
@@ -103,7 +195,7 @@ export async function setupAuth(app: Express) {
         }
       });
     } catch (error) {
-      logger.error('Registration failed', error);
+      logger.error('[SECURITY] Registration failed', error);
       res.status(500).json({ error: 'Registration failed. Please try again.' });
     }
   });
@@ -228,7 +320,7 @@ export async function setupAuth(app: Express) {
     }
   });
 
-  app.post('/api/auth/login', async (req, res) => {
+  app.post('/api/auth/login', authLimiter, async (req, res) => {
     try {
       const { email, password } = req.body;
 
@@ -240,23 +332,30 @@ export async function setupAuth(app: Express) {
       const user = await getUserByEmail(email);
 
       if (!user) {
+        logger.warn(`[SECURITY] Failed login attempt: user not found for email ${email}`);
         return res.status(401).json({ error: 'Invalid email or password' });
       }
 
       if (!user.passwordHash) {
+        logger.warn(`[SECURITY] Failed login attempt: no password hash for user ${user.id} (${email})`);
         return res.status(401).json({ error: 'Account not set up for password login. Please contact administrator.' });
       }
 
       const isValid = await bcrypt.compare(password, user.passwordHash);
       if (!isValid) {
+        logger.warn(`[SECURITY] Failed login attempt: invalid password for user ${user.id} (${email})`);
         return res.status(401).json({ error: 'Invalid email or password' });
       }
 
       if (user.role === 'sme') {
+        logger.warn(`[SECURITY] Blocked SME user login attempt: user ${user.id} (${email})`);
         return res.status(403).json({ error: 'SME users cannot log in. Please contact administrator.' });
       }
 
       const token = generateToken({ userId: user.id, email: user.email! });
+      const csrfToken = generateCsrfToken();
+      setAuthCookie(res, token);
+      setCsrfCookie(res, csrfToken);
 
       // Fetch organization name if user has an organization
       let organizationName: string | null = null;
@@ -265,8 +364,10 @@ export async function setupAuth(app: Express) {
         organizationName = organization?.name || null;
       }
 
+      logger.info(`[SECURITY] Successful login: user ${user.id} (${user.email})`);
+      
       res.json({
-        token,
+        success: true,
         user: {
           id: user.id,
           email: user.email,
@@ -279,13 +380,13 @@ export async function setupAuth(app: Express) {
         }
       });
     } catch (error) {
-      logger.error('Login failed', error);
+      logger.error('[SECURITY] Login error', error);
       res.status(500).json({ error: 'Login failed. Please try again.' });
     }
   });
 
   // Password Reset: Request a reset link
-  app.post('/api/auth/request-password-reset', async (req, res) => {
+  app.post('/api/auth/request-password-reset', passwordResetLimiter, async (req, res) => {
     try {
       const { email } = req.body;
 
@@ -331,7 +432,7 @@ export async function setupAuth(app: Express) {
   });
 
   // Password Reset: Reset password with token
-  app.post('/api/auth/reset-password', async (req, res) => {
+  app.post('/api/auth/reset-password', passwordResetLimiter, async (req, res) => {
     try {
       const { token, password } = req.body;
 
@@ -339,8 +440,9 @@ export async function setupAuth(app: Express) {
         return res.status(400).json({ error: 'Token and password are required' });
       }
 
-      if (password.length < 6) {
-        return res.status(400).json({ error: 'Password must be at least 6 characters' });
+      const passwordValidation = validatePasswordComplexity(password);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({ error: passwordValidation.error });
       }
 
       // Hash the provided token to compare with stored hash
@@ -349,16 +451,19 @@ export async function setupAuth(app: Express) {
       const resetToken = await getPasswordResetToken(tokenHash);
       
       if (!resetToken) {
+        logger.warn(`[SECURITY] Password reset failed: invalid token hash`);
         return res.status(400).json({ error: 'Invalid or expired reset link. Please request a new one.' });
       }
 
       // Check if token is expired
       if (new Date() > resetToken.expiresAt) {
+        logger.warn(`[SECURITY] Password reset failed: expired token for user ${resetToken.userId}`);
         return res.status(400).json({ error: 'Reset link has expired. Please request a new one.' });
       }
 
       // Check if token was already used
       if (resetToken.usedAt) {
+        logger.warn(`[SECURITY] Password reset failed: already used token for user ${resetToken.userId}`);
         return res.status(400).json({ error: 'This reset link has already been used. Please request a new one.' });
       }
 
@@ -369,7 +474,7 @@ export async function setupAuth(app: Express) {
       // Mark token as used
       await markPasswordResetTokenUsed(resetToken.id);
 
-      logger.info(`Password reset successful for user ${resetToken.userId}`);
+      logger.info(`[SECURITY] Password reset successful for user ${resetToken.userId}`);
 
       res.json({ 
         success: true, 
@@ -406,18 +511,27 @@ export async function setupAuth(app: Express) {
   });
 
   app.post('/api/auth/logout', (req, res) => {
+    clearAuthCookie(res);
     res.json({ success: true });
   });
 }
 
 export const isAuthenticated: RequestHandler = async (req: any, res, next) => {
-  const authHeader = req.headers.authorization;
+  // First try to get token from HTTP-only cookie (preferred)
+  let token = req.cookies?.[COOKIE_NAME];
   
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  // Fallback to Authorization header for backward compatibility during migration
+  if (!token) {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    }
+  }
+  
+  if (!token) {
     return res.status(401).json({ message: 'Unauthorized' });
   }
 
-  const token = authHeader.substring(7);
   const payload = verifyToken(token);
 
   if (!payload) {
@@ -430,5 +544,36 @@ export const isAuthenticated: RequestHandler = async (req: any, res, next) => {
     claims: { sub: payload.userId }
   };
 
+  next();
+};
+
+export const validateCsrf: RequestHandler = (req: any, res, next) => {
+  const method = req.method.toUpperCase();
+  
+  // Only validate CSRF for state-changing methods
+  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+    return next();
+  }
+  
+  // Skip CSRF for auth endpoints (login, register, password reset) as they don't have tokens yet
+  // Use originalUrl to get the full path since middleware may be mounted at a sub-path
+  const fullPath = req.originalUrl || req.path;
+  if (fullPath.startsWith('/api/auth/')) {
+    return next();
+  }
+  
+  const csrfCookie = req.cookies?.[CSRF_COOKIE_NAME];
+  const csrfHeader = req.headers[CSRF_HEADER_NAME];
+  
+  if (!csrfCookie || !csrfHeader) {
+    logger.warn(`[SECURITY] CSRF validation failed: missing token for ${method} ${fullPath}`);
+    return res.status(403).json({ message: 'CSRF token missing' });
+  }
+  
+  if (csrfCookie !== csrfHeader) {
+    logger.warn(`[SECURITY] CSRF validation failed: token mismatch for ${method} ${fullPath}`);
+    return res.status(403).json({ message: 'CSRF token invalid' });
+  }
+  
   next();
 };

@@ -6,19 +6,14 @@ type UserWithOrgName = User & { organizationName?: string | null };
 
 export function useAuth() {
   const queryClient = useQueryClient();
-  const token = typeof window !== 'undefined' ? localStorage.getItem('jwt') : null;
 
   const { data: user, isLoading, error } = useQuery<UserWithOrgName | null>({
     queryKey: ["/api/auth/user"],
     queryFn: async () => {
-      const storedToken = localStorage.getItem('jwt');
-      if (!storedToken) return null;
-      
       const res = await fetch("/api/auth/user", {
-        headers: { 'Authorization': `Bearer ${storedToken}` },
+        credentials: 'include',
       });
       if (res.status === 401 || res.status === 404) {
-        localStorage.removeItem('jwt');
         return null;
       }
       if (!res.ok) {
@@ -27,13 +22,13 @@ export function useAuth() {
       return res.json();
     },
     retry: false,
-    enabled: !!token,
   });
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ email, password }),
     });
 
@@ -43,7 +38,6 @@ export function useAuth() {
       throw new Error(data.error || 'Login failed');
     }
 
-    localStorage.setItem('jwt', data.token);
     queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     return data;
   }, [queryClient]);
@@ -52,6 +46,7 @@ export function useAuth() {
     const res = await fetch(`/api/auth/register/${registrationToken}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ email, password, firstName, lastName }),
     });
 
@@ -61,27 +56,33 @@ export function useAuth() {
       throw new Error(data.error || 'Registration failed');
     }
 
-    localStorage.setItem('jwt', data.token);
     queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     return data;
   }, [queryClient]);
 
   const validateRegistrationToken = useCallback(async (tokenToValidate: string): Promise<boolean> => {
-    const res = await fetch(`/api/auth/validate-registration-token/${tokenToValidate}`);
+    const res = await fetch(`/api/auth/validate-registration-token/${tokenToValidate}`, {
+      credentials: 'include',
+    });
     const data = await res.json();
     return data.valid === true;
   }, []);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('jwt');
+  const logout = useCallback(async () => {
+    const csrfToken = document.cookie.match(/csrf_token=([^;]+)/)?.[1];
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'include',
+      headers: csrfToken ? { 'x-csrf-token': csrfToken } : {},
+    });
     queryClient.clear();
     window.location.href = '/';
   }, [queryClient]);
 
   return {
-    user: token ? user : null,
-    isLoading: token ? isLoading : false,
-    isAuthenticated: !!token && !!user,
+    user: user ?? null,
+    isLoading,
+    isAuthenticated: !!user,
     login,
     register,
     validateRegistrationToken,

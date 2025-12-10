@@ -81,9 +81,8 @@ export function DependencyTags({
   const { data: dependencies = [] } = useQuery<Dependency[]>({
     queryKey: ["/api/dependencies", { sourceType, sourceId }],
     queryFn: async () => {
-      const token = localStorage.getItem('jwt');
       const response = await fetch(`/api/dependencies?sourceType=${sourceType}&sourceId=${sourceId}`, {
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        credentials: 'include',
       });
       if (!response.ok) throw new Error("Failed to fetch dependencies");
       return response.json();
@@ -93,9 +92,8 @@ export function DependencyTags({
   const { data: reverseDependencies = [] } = useQuery<Dependency[]>({
     queryKey: ["/api/dependencies", "reverse", { targetType: sourceType, targetId: sourceId }],
     queryFn: async () => {
-      const token = localStorage.getItem('jwt');
       const response = await fetch(`/api/dependencies?targetType=${sourceType}&targetId=${sourceId}`, {
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        credentials: 'include',
       });
       if (!response.ok) throw new Error("Failed to fetch reverse dependencies");
       return response.json();
