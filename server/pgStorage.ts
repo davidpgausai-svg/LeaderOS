@@ -344,7 +344,20 @@ export class PostgresStorage implements IStorage {
 
     const totalProgress = strategyProjects.reduce((sum, p) => sum + p.progress, 0);
     const avgProgress = Math.round(totalProgress / strategyProjects.length);
-    await this.updateStrategy(strategyId, { progress: avgProgress });
+    
+    // Get the current strategy to check its status
+    const strategy = await this.getStrategy(strategyId);
+    
+    // Auto-complete: If progress is 100% and all projects are achieved, set status to Completed
+    // Only auto-complete if strategy is currently Active (don't revert from Archived)
+    const allProjectsAchieved = strategyProjects.every(p => p.status === 'Achieved');
+    const shouldAutoComplete = avgProgress === 100 && allProjectsAchieved && strategy?.status === 'Active';
+    
+    if (shouldAutoComplete) {
+      await this.updateStrategy(strategyId, { progress: avgProgress, status: 'Completed' });
+    } else {
+      await this.updateStrategy(strategyId, { progress: avgProgress });
+    }
   }
 
   async createNotification(insertNotification: InsertNotification): Promise<Notification> {

@@ -614,7 +614,7 @@ export default function Strategies() {
     projects: (projects as any[])?.filter((project: any) => project.strategyId === strategy.id) || []
   })) || [];
 
-  // Filter and sort strategies
+  // Filter and sort strategies (active and completed)
   const filteredStrategies = strategiesWithProjects
     .filter((strategy: any) => {
       const matchesSearch = strategy.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -627,6 +627,16 @@ export default function Strategies() {
       const isNotArchived = strategy.status !== 'Archived';
       
       return matchesSearch && matchesStrategyFilter && isNotArchived;
+    })
+    .sort((a: any, b: any) => (a.displayOrder || 0) - (b.displayOrder || 0));
+
+  // Get archived strategies separately
+  const archivedStrategies = strategiesWithProjects
+    .filter((strategy: any) => {
+      const matchesSearch = strategy.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           strategy.description.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStrategyFilter = strategyFilter === "all" || strategy.id === strategyFilter;
+      return matchesSearch && matchesStrategyFilter && strategy.status === 'Archived';
     })
     .sort((a: any, b: any) => (a.displayOrder || 0) - (b.displayOrder || 0));
 
@@ -2136,6 +2146,68 @@ export default function Strategies() {
               })}
             </div>
           )}
+
+          {/* Archived Strategies Section */}
+          {archivedStrategies.length > 0 && (
+            <div className="mt-8" data-testid="archived-strategies-section">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="flex-1 h-px bg-gray-300 dark:bg-gray-600"></div>
+                  <span className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                    <Archive className="w-4 h-4" />
+                    Archived
+                  </span>
+                  <div className="flex-1 h-px bg-gray-300 dark:bg-gray-600"></div>
+                </div>
+                
+                <div className="space-y-4">
+                  {archivedStrategies.map((strategy: any) => (
+                    <Card 
+                      key={strategy.id} 
+                      className="border-l-4 opacity-60 hover:opacity-80 transition-opacity"
+                      style={{ borderLeftColor: strategy.colorCode || '#6B7280' }}
+                      data-testid={`card-archived-strategy-${strategy.id}`}
+                    >
+                      <CardHeader className="py-3 px-6">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+                                {strategy.title}
+                              </h3>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                              <Calendar className="w-3.5 h-3.5" />
+                              <span>{formatDateShort(strategy.startDate)} - {formatDateShort(strategy.endDate)}</span>
+                              <span className="ml-2">
+                                <FolderOpen className="w-3.5 h-3.5 inline mr-1" />
+                                {strategy.projects.length} projects
+                              </span>
+                            </div>
+                            <ProgressRing progress={strategy.progress} size={28} />
+                            <Badge variant="secondary" className="text-xs">
+                              Archived
+                            </Badge>
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewStrategy(strategy)}
+                              className="h-7 px-2 text-xs"
+                              data-testid={`button-view-archived-${strategy.id}`}
+                            >
+                              <Eye className="w-3.5 h-3.5 mr-1" />
+                              View
+                            </Button>
+                          </div>
+                        </div>
+                      </CardHeader>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
         </div>
       </main>
 
