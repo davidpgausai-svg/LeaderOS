@@ -3919,9 +3919,9 @@ Available navigation: Dashboard, Strategies, Projects, Actions, Timeline, Meetin
       const projectIds = assignments.map(a => a.projectId);
       const allProjects = await storage.getProjectsByOrganization(user.organizationId);
       
-      // Filter to only assigned projects and join with assignment data
+      // Filter to only assigned projects that are not archived and join with assignment data
       const myProjects = allProjects
-        .filter(project => projectIds.includes(project.id))
+        .filter(project => projectIds.includes(project.id) && project.isArchived !== 'true')
         .map(project => {
           const assignment = assignments.find(a => a.projectId === project.id);
           return {

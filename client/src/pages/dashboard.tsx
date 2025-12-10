@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 interface TodoAction {
   id: string;
@@ -47,10 +48,7 @@ interface MyProject {
 export default function Dashboard() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
-
-  const { data: currentUser, isLoading: userLoading } = useQuery({
-    queryKey: ["/api/auth/me"],
-  });
+  const { user, isLoading: userLoading } = useAuth();
 
   const { data: myTodos, isLoading: todosLoading } = useQuery<TodoAction[]>({
     queryKey: ["/api/my-todos"],
@@ -112,8 +110,8 @@ export default function Dashboard() {
   };
 
   // Get user's first name for greeting
-  const firstName = (currentUser as any)?.firstName || 
-    (currentUser as any)?.email?.split('@')[0] || 
+  const firstName = user?.firstName || 
+    user?.email?.split('@')[0] || 
     'there';
 
   const isLoading = userLoading || todosLoading || projectsLoading;
