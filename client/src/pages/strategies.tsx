@@ -191,16 +191,10 @@ export default function Strategies() {
   });
 
   // Fetch resource assignments for the currently open modal project
-  const { data: projectResourceAssignments = [] } = useQuery<any[]>({
-    queryKey: ["/api/projects", resourcesModalProject?.id, "resource-assignments"],
-    queryFn: async () => {
-      if (!resourcesModalProject?.id) return [];
-      const response = await fetch(`/api/projects/${resourcesModalProject.id}/resource-assignments`, {
-        credentials: 'include'
-      });
-      if (!response.ok) throw new Error('Failed to fetch resource assignments');
-      return response.json();
-    },
+  const { data: projectResourceAssignments = [], refetch: refetchProjectResourceAssignments } = useQuery<any[]>({
+    queryKey: resourcesModalProject?.id 
+      ? [`/api/projects/${resourcesModalProject.id}/resource-assignments`] 
+      : ["/api/projects/none/resource-assignments"],
     enabled: !!resourcesModalProject?.id,
   });
 
@@ -743,7 +737,7 @@ export default function Strategies() {
     },
     onSuccess: () => {
       if (resourcesModalProject?.id) {
-        queryClient.invalidateQueries({ queryKey: ["/api/projects", resourcesModalProject.id, "resource-assignments"] });
+        queryClient.invalidateQueries({ queryKey: [`/api/projects/${resourcesModalProject.id}/resource-assignments`] });
       }
       queryClient.invalidateQueries({ queryKey: ["/api/resource-assignments"] });
       toast({
@@ -767,7 +761,7 @@ export default function Strategies() {
     },
     onSuccess: () => {
       if (resourcesModalProject?.id) {
-        queryClient.invalidateQueries({ queryKey: ["/api/projects", resourcesModalProject.id, "resource-assignments"] });
+        queryClient.invalidateQueries({ queryKey: [`/api/projects/${resourcesModalProject.id}/resource-assignments`] });
       }
       queryClient.invalidateQueries({ queryKey: ["/api/resource-assignments"] });
       toast({
