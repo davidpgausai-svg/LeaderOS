@@ -178,13 +178,13 @@ export async function sendTwoFactorCode(
             </p>
             
             <p style="font-size: 14px; color: #666;">
-              If you didn't try to log in to StrategyPlan, please ignore this email and consider changing your password.
+              If you didn't try to log in to LeaderOS, please ignore this email and consider changing your password.
             </p>
             
             <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
             
             <p style="font-size: 12px; color: #999; text-align: center;">
-              This is an automated security message from StrategyPlan.
+              This is an automated security message from LeaderOS.
             </p>
           </div>
           
