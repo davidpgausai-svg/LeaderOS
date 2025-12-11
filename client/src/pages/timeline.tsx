@@ -24,6 +24,8 @@ interface GanttDataItem {
   Predecessor?: string;
   subtasks?: GanttDataItem[];
   isParent?: boolean;
+  isMilestone?: boolean;
+  isManualSchedule?: boolean;
   level?: number;
   colorCode?: string;
   entityType: 'priority' | 'project' | 'action';
@@ -351,9 +353,7 @@ export default function Timeline() {
         projectActions.forEach(action => {
           if (!action.dueDate) return;
 
-          const actionEnd = new Date(action.dueDate);
-          const actionStart = new Date(actionEnd);
-          actionStart.setDate(actionStart.getDate() - 7);
+          const actionDate = new Date(action.dueDate);
 
           const actionTaskId = `action-${action.id}`;
           renderedTaskIds.add(actionTaskId);
@@ -361,9 +361,11 @@ export default function Timeline() {
           actionSubtasks.push({
             TaskID: actionTaskId,
             TaskName: action.title,
-            StartDate: actionStart,
-            EndDate: actionEnd,
-            Progress: action.status === "achieved" ? 100 : action.status === "in_progress" ? 50 : 0,
+            StartDate: actionDate,
+            EndDate: actionDate,
+            Duration: 0,
+            isMilestone: true,
+            Progress: action.status === "achieved" ? 100 : 0,
             level: 2,
             entityType: 'action',
             entityId: action.id,
@@ -376,6 +378,7 @@ export default function Timeline() {
           StartDate: projectStart,
           EndDate: projectEnd,
           Progress: project.progress || 0,
+          isManualSchedule: true,
           level: 1,
           entityType: 'project',
           entityId: project.id,
@@ -389,6 +392,7 @@ export default function Timeline() {
         StartDate: strategyStart,
         EndDate: strategyEnd,
         Progress: strategy.progress || 0,
+        isManualSchedule: true,
         level: 0,
         colorCode: strategy.colorCode,
         isParent: true,
@@ -514,9 +518,16 @@ export default function Timeline() {
     name: 'TaskName',
     startDate: 'StartDate',
     endDate: 'EndDate',
+    duration: 'Duration',
     progress: 'Progress',
     child: 'subtasks',
     dependency: 'Predecessor',
+    milestone: 'isMilestone',
+    manual: 'isManualSchedule',
+  };
+
+  const labelSettings = {
+    leftLabel: 'TaskName',
   };
 
 
@@ -692,6 +703,7 @@ export default function Timeline() {
                 ref={ganttRef}
                 dataSource={ganttData}
                 taskFields={taskFields}
+                labelSettings={labelSettings}
                 height="100%"
                 width="100%"
                 highlightWeekends={true}
@@ -711,6 +723,9 @@ export default function Timeline() {
                 rowHeight={36}
                 taskbarHeight={24}
                 allowUnscheduledTasks={false}
+                autoCalculateDateScheduling={false}
+                taskMode="Manual"
+                renderBaseline={false}
               >
                 <ColumnsDirective>
                   <ColumnDirective field="TaskName" headerText="Task Name" width="200" />
