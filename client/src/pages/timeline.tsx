@@ -30,17 +30,25 @@ interface GanttDataItem {
   entityId: string;
 }
 
-function formatDateString(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+function toISODateString(date: Date): string {
+  return date.toISOString().split('T')[0];
 }
 
-function calculateDuration(startDate: Date, endDate: Date): number {
-  const diffTime = endDate.getTime() - startDate.getTime();
+function calculateDurationDays(startStr: string, endStr: string): number {
+  const start = new Date(startStr);
+  const end = new Date(endStr);
+  const diffTime = end.getTime() - start.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   return Math.max(1, diffDays);
+}
+
+function ensureDifferentDates(startStr: string, endStr: string): string {
+  if (startStr === endStr) {
+    const endDate = new Date(endStr);
+    endDate.setUTCDate(endDate.getUTCDate() + 1);
+    return endDate.toISOString().split('T')[0];
+  }
+  return endStr;
 }
 
 interface DayItems {
@@ -364,8 +372,7 @@ export default function Timeline() {
         projectActions.forEach(action => {
           if (!action.dueDate) return;
 
-          const actionDate = new Date(action.dueDate);
-          const actionDateStr = formatDateString(actionDate);
+          const actionDateStr = toISODateString(new Date(action.dueDate));
 
           const actionTaskId = `action-${action.id}`;
           renderedTaskIds.add(actionTaskId);
@@ -383,18 +390,16 @@ export default function Timeline() {
           });
         });
 
-        let effectiveProjectEnd = projectEnd;
-        if (projectStart.toDateString() === projectEnd.toDateString()) {
-          effectiveProjectEnd = new Date(projectEnd);
-          effectiveProjectEnd.setDate(effectiveProjectEnd.getDate() + 1);
-        }
-        const projectDuration = calculateDuration(projectStart, effectiveProjectEnd);
+        const projectStartStr = toISODateString(projectStart);
+        const projectEndStr = toISODateString(projectEnd);
+        const adjustedProjectEndStr = ensureDifferentDates(projectStartStr, projectEndStr);
+        const projectDuration = calculateDurationDays(projectStartStr, adjustedProjectEndStr);
         
         projectSubtasks.push({
           TaskID: projectTaskId,
           TaskName: project.title,
-          StartDate: formatDateString(projectStart),
-          EndDate: formatDateString(effectiveProjectEnd),
+          StartDate: projectStartStr,
+          EndDate: adjustedProjectEndStr,
           Duration: projectDuration,
           Progress: project.progress || 0,
           level: 1,
@@ -404,18 +409,16 @@ export default function Timeline() {
         });
       });
 
-      let effectiveStrategyEnd = strategyEnd;
-      if (strategyStart.toDateString() === strategyEnd.toDateString()) {
-        effectiveStrategyEnd = new Date(strategyEnd);
-        effectiveStrategyEnd.setDate(effectiveStrategyEnd.getDate() + 1);
-      }
-      const strategyDuration = calculateDuration(strategyStart, effectiveStrategyEnd);
+      const strategyStartStr = toISODateString(strategyStart);
+      const strategyEndStr = toISODateString(strategyEnd);
+      const adjustedStrategyEndStr = ensureDifferentDates(strategyStartStr, strategyEndStr);
+      const strategyDuration = calculateDurationDays(strategyStartStr, adjustedStrategyEndStr);
       
       result.push({
         TaskID: strategyTaskId,
         TaskName: strategy.title,
-        StartDate: formatDateString(strategyStart),
-        EndDate: formatDateString(effectiveStrategyEnd),
+        StartDate: strategyStartStr,
+        EndDate: adjustedStrategyEndStr,
         Duration: strategyDuration,
         Progress: strategy.progress || 0,
         level: 0,
