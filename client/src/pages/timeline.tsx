@@ -796,6 +796,7 @@ export default function Timeline() {
                 ref={ganttRef}
                 dataSource={ganttData}
                 taskFields={taskFields}
+                taskMode="Manual"
                 height="100%"
                 width="100%"
                 highlightWeekends={true}
