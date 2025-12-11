@@ -369,13 +369,17 @@ export default function Timeline() {
           });
         });
 
-        const projectDuration = Math.max(1, Math.ceil((projectEnd.getTime() - projectStart.getTime()) / (1000 * 60 * 60 * 24)));
+        let adjustedProjectEnd = projectEnd;
+        if (projectStart.getTime() === projectEnd.getTime()) {
+          adjustedProjectEnd = new Date(projectEnd.getTime() + 24 * 60 * 60 * 1000);
+        }
+        const projectDuration = Math.max(1, Math.ceil((adjustedProjectEnd.getTime() - projectStart.getTime()) / (1000 * 60 * 60 * 24)));
         
         projectSubtasks.push({
           TaskID: projectTaskId,
           TaskName: project.title,
           StartDate: projectStart,
-          EndDate: projectEnd,
+          EndDate: adjustedProjectEnd,
           Duration: projectDuration,
           Progress: project.progress || 0,
           level: 1,
@@ -385,13 +389,17 @@ export default function Timeline() {
         });
       });
 
-      const strategyDuration = Math.max(1, Math.ceil((strategyEnd.getTime() - strategyStart.getTime()) / (1000 * 60 * 60 * 24)));
+      let adjustedStrategyEnd = strategyEnd;
+      if (strategyStart.getTime() === strategyEnd.getTime()) {
+        adjustedStrategyEnd = new Date(strategyEnd.getTime() + 24 * 60 * 60 * 1000);
+      }
+      const strategyDuration = Math.max(1, Math.ceil((adjustedStrategyEnd.getTime() - strategyStart.getTime()) / (1000 * 60 * 60 * 24)));
       
       result.push({
         TaskID: strategyTaskId,
         TaskName: strategy.title,
         StartDate: strategyStart,
-        EndDate: strategyEnd,
+        EndDate: adjustedStrategyEnd,
         Duration: strategyDuration,
         Progress: strategy.progress || 0,
         level: 0,
@@ -726,6 +734,13 @@ export default function Timeline() {
                   topTier: { unit: 'Week', format: 'MMM dd, yyyy' },
                   bottomTier: { unit: 'Day', format: 'd' },
                 }}
+                eventMarkers={[
+                  {
+                    day: new Date(),
+                    label: 'Today',
+                    cssClass: 'e-custom-event-marker'
+                  }
+                ]}
               >
                 <ColumnsDirective>
                   <ColumnDirective field="TaskName" headerText="Task Name" width="200" />
