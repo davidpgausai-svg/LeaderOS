@@ -1,35 +1,21 @@
-@import "@syncfusion/ej2-react-gantt/styles/material.css";
-
-/* Hide Syncfusion dialog and confirmation elements */
-.e-dlg-container,
-.e-dialog,
-.e-popup-open,
-.e-popup,
-.e-confirm-dialog,
-body > .e-dlg-overlay,
-body > .e-dialog,
-body > .e-popup {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
+/* Syncfusion Gantt Chart - Full CSS Bundle */
+@import "@syncfusion/ej2-base/styles/material.css";
+@import "@syncfusion/ej2-buttons/styles/material.css";
+@import "@syncfusion/ej2-calendars/styles/material.css";
+@import "@syncfusion/ej2-dropdowns/styles/material.css";
+@import "@syncfusion/ej2-inputs/styles/material.css";
+@import "@syncfusion/ej2-lists/styles/material.css";
+@import "@syncfusion/ej2-layouts/styles/material.css";
+@import "@syncfusion/ej2-navigations/styles/material.css";
+@import "@syncfusion/ej2-popups/styles/material.css";
+@import "@syncfusion/ej2-richtexteditor/styles/material.css";
+@import "@syncfusion/ej2-grids/styles/material.css";
+@import "@syncfusion/ej2-treegrid/styles/material.css";
+@import "@syncfusion/ej2-gantt/styles/material.css";
 
 .syncfusion-gantt-container .e-gantt {
   height: 100% !important;
   border: none !important;
-}
-
-/* Tree expand/collapse icons */
-.syncfusion-gantt-container .e-gantt .e-treegridexpand,
-.syncfusion-gantt-container .e-gantt .e-treegridcollapse {
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.dark .syncfusion-gantt-container .e-gantt .e-treegridexpand::before,
-.dark .syncfusion-gantt-container .e-gantt .e-treegridcollapse::before {
-  color: #9ca3af;
 }
 
 .syncfusion-gantt-container .e-gantt .e-gantt-chart {
@@ -154,4 +140,24 @@ body > .e-popup {
 
 .syncfusion-gantt-container .e-gantt .e-connector-line-arrow {
   fill: #94a3b8;
+}
+
+/* Tree expand/collapse icons */
+.syncfusion-gantt-container .e-gantt .e-treegridexpand,
+.syncfusion-gantt-container .e-gantt .e-treegridcollapse {
+  cursor: pointer;
+}
+
+.dark .syncfusion-gantt-container .e-gantt .e-treegridexpand::before,
+.dark .syncfusion-gantt-container .e-gantt .e-treegridcollapse::before {
+  color: #9ca3af;
+}
+
+/* Dark mode for content pane */
+.dark .syncfusion-gantt-container .e-gantt .e-content {
+  background: #111827;
+}
+
+.dark .syncfusion-gantt-container .e-gantt .e-table {
+  background: #111827;
 }

@@ -201,7 +201,6 @@ export default function Timeline() {
   
   const [viewType, setViewType] = useState<'timeline' | 'calendar'>('timeline');
   const [calendarMonth, setCalendarMonth] = useState(new Date());
-  const [timelineView, setTimelineView] = useState<'Day' | 'Week' | 'Month'>('Month');
   const [selectedPriorityIds, setSelectedPriorityIds] = useState<string[]>([]);
   const [dayDetailsDialogOpen, setDayDetailsDialogOpen] = useState(false);
   const [selectedDayItems, setSelectedDayItems] = useState<DayItems | null>(null);
@@ -430,7 +429,7 @@ export default function Timeline() {
         ganttRef.current?.scrollToDate(new Date().toISOString().split('T')[0]);
       }, 500);
     }
-  }, [ganttData, viewType]);
+  }, [ganttData]);
 
   const handlePriorityFilterChange = (priorityId: string, checked: boolean) => {
     setSelectedPriorityIds(prev => {
@@ -520,26 +519,6 @@ export default function Timeline() {
     dependency: 'Predecessor',
   };
 
-  const timelineSettings = useMemo(() => {
-    switch (timelineView) {
-      case 'Day':
-        return {
-          topTier: { unit: 'Week', format: 'MMM dd, yyyy' },
-          bottomTier: { unit: 'Day', format: 'dd' },
-        };
-      case 'Week':
-        return {
-          topTier: { unit: 'Month', format: 'MMMM yyyy' },
-          bottomTier: { unit: 'Week', format: 'MMM dd' },
-        };
-      case 'Month':
-      default:
-        return {
-          topTier: { unit: 'Year', format: 'yyyy' },
-          bottomTier: { unit: 'Month', format: 'MMM' },
-        };
-    }
-  }, [timelineView]);
 
   if (strategiesLoading || projectsLoading || actionsLoading) {
     return (
@@ -642,38 +621,6 @@ export default function Timeline() {
                 </PopoverContent>
               </Popover>
 
-              {viewType === 'timeline' && (
-                <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-md p-0.5">
-                  <Button
-                    variant={timelineView === 'Day' ? "default" : "ghost"}
-                    size="sm"
-                    className="h-7 px-2.5 text-xs"
-                    onClick={() => setTimelineView('Day')}
-                    data-testid="button-scale-days"
-                  >
-                    Day
-                  </Button>
-                  <Button
-                    variant={timelineView === 'Week' ? "default" : "ghost"}
-                    size="sm"
-                    className="h-7 px-2.5 text-xs"
-                    onClick={() => setTimelineView('Week')}
-                    data-testid="button-scale-weeks"
-                  >
-                    Week
-                  </Button>
-                  <Button
-                    variant={timelineView === 'Month' ? "default" : "ghost"}
-                    size="sm"
-                    className="h-7 px-2.5 text-xs"
-                    onClick={() => setTimelineView('Month')}
-                    data-testid="button-scale-months"
-                  >
-                    Month
-                  </Button>
-                </div>
-              )}
-
               {viewType === 'calendar' && (
                 <div className="flex items-center gap-2">
                   <Button
@@ -756,7 +703,6 @@ export default function Timeline() {
                 collapseAllParentTasks={false}
                 treeColumnIndex={0}
                 splitterSettings={{ position: '35%' }}
-                timelineSettings={timelineSettings as any}
                 taskbarEdited={handleTaskbarEdited}
                 queryTaskbarInfo={queryTaskbarInfo}
                 queryCellInfo={queryCellInfo}
