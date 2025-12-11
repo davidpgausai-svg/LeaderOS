@@ -17,10 +17,10 @@ import { useLocation } from "wouter";
 interface GanttDataItem {
   TaskID: string;
   TaskName: string;
-  StartDate: Date;
-  EndDate: Date;
+  StartDate: string;
+  EndDate: string;
   Progress: number;
-  Duration?: number;
+  Duration: number;
   Predecessor?: string;
   subtasks?: GanttDataItem[];
   isParent?: boolean;
@@ -28,6 +28,19 @@ interface GanttDataItem {
   colorCode?: string;
   entityType: 'priority' | 'project' | 'action';
   entityId: string;
+}
+
+function formatDateString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function calculateDuration(startDate: Date, endDate: Date): number {
+  const diffTime = endDate.getTime() - startDate.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return Math.max(1, diffDays);
 }
 
 interface DayItems {
@@ -352,6 +365,7 @@ export default function Timeline() {
           if (!action.dueDate) return;
 
           const actionDate = new Date(action.dueDate);
+          const actionDateStr = formatDateString(actionDate);
 
           const actionTaskId = `action-${action.id}`;
           renderedTaskIds.add(actionTaskId);
@@ -359,8 +373,8 @@ export default function Timeline() {
           actionSubtasks.push({
             TaskID: actionTaskId,
             TaskName: action.title,
-            StartDate: actionDate,
-            EndDate: actionDate,
+            StartDate: actionDateStr,
+            EndDate: actionDateStr,
             Duration: 0,
             Progress: action.status === "achieved" ? 100 : 0,
             level: 2,
@@ -369,26 +383,18 @@ export default function Timeline() {
           });
         });
 
-        const normalizedProjectStart = new Date(projectStart);
-        normalizedProjectStart.setHours(0, 0, 0, 0);
-        
-        const normalizedProjectEnd = new Date(projectEnd);
-        normalizedProjectEnd.setHours(0, 0, 0, 0);
-        
-        let adjustedProjectEnd = normalizedProjectEnd;
-        if (normalizedProjectStart.getTime() === normalizedProjectEnd.getTime()) {
-          adjustedProjectEnd = new Date(normalizedProjectEnd);
-          adjustedProjectEnd.setDate(adjustedProjectEnd.getDate() + 1);
+        let effectiveProjectEnd = projectEnd;
+        if (projectStart.toDateString() === projectEnd.toDateString()) {
+          effectiveProjectEnd = new Date(projectEnd);
+          effectiveProjectEnd.setDate(effectiveProjectEnd.getDate() + 1);
         }
-        adjustedProjectEnd.setHours(23, 59, 59, 999);
-        
-        const projectDuration = Math.max(1, Math.ceil((adjustedProjectEnd.getTime() - normalizedProjectStart.getTime()) / (1000 * 60 * 60 * 24)));
+        const projectDuration = calculateDuration(projectStart, effectiveProjectEnd);
         
         projectSubtasks.push({
           TaskID: projectTaskId,
           TaskName: project.title,
-          StartDate: normalizedProjectStart,
-          EndDate: adjustedProjectEnd,
+          StartDate: formatDateString(projectStart),
+          EndDate: formatDateString(effectiveProjectEnd),
           Duration: projectDuration,
           Progress: project.progress || 0,
           level: 1,
@@ -398,26 +404,18 @@ export default function Timeline() {
         });
       });
 
-      const normalizedStrategyStart = new Date(strategyStart);
-      normalizedStrategyStart.setHours(0, 0, 0, 0);
-      
-      const normalizedStrategyEnd = new Date(strategyEnd);
-      normalizedStrategyEnd.setHours(0, 0, 0, 0);
-      
-      let adjustedStrategyEnd = normalizedStrategyEnd;
-      if (normalizedStrategyStart.getTime() === normalizedStrategyEnd.getTime()) {
-        adjustedStrategyEnd = new Date(normalizedStrategyEnd);
-        adjustedStrategyEnd.setDate(adjustedStrategyEnd.getDate() + 1);
+      let effectiveStrategyEnd = strategyEnd;
+      if (strategyStart.toDateString() === strategyEnd.toDateString()) {
+        effectiveStrategyEnd = new Date(strategyEnd);
+        effectiveStrategyEnd.setDate(effectiveStrategyEnd.getDate() + 1);
       }
-      adjustedStrategyEnd.setHours(23, 59, 59, 999);
-      
-      const strategyDuration = Math.max(1, Math.ceil((adjustedStrategyEnd.getTime() - normalizedStrategyStart.getTime()) / (1000 * 60 * 60 * 24)));
+      const strategyDuration = calculateDuration(strategyStart, effectiveStrategyEnd);
       
       result.push({
         TaskID: strategyTaskId,
         TaskName: strategy.title,
-        StartDate: normalizedStrategyStart,
-        EndDate: adjustedStrategyEnd,
+        StartDate: formatDateString(strategyStart),
+        EndDate: formatDateString(effectiveStrategyEnd),
         Duration: strategyDuration,
         Progress: strategy.progress || 0,
         level: 0,
