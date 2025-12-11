@@ -369,11 +369,14 @@ export default function Timeline() {
           });
         });
 
+        const projectDuration = Math.max(1, Math.ceil((projectEnd.getTime() - projectStart.getTime()) / (1000 * 60 * 60 * 24)));
+        
         projectSubtasks.push({
           TaskID: projectTaskId,
           TaskName: project.title,
           StartDate: projectStart,
           EndDate: projectEnd,
+          Duration: projectDuration,
           Progress: project.progress || 0,
           level: 1,
           entityType: 'project',
@@ -382,11 +385,14 @@ export default function Timeline() {
         });
       });
 
+      const strategyDuration = Math.max(1, Math.ceil((strategyEnd.getTime() - strategyStart.getTime()) / (1000 * 60 * 60 * 24)));
+      
       result.push({
         TaskID: strategyTaskId,
         TaskName: strategy.title,
         StartDate: strategyStart,
         EndDate: strategyEnd,
+        Duration: strategyDuration,
         Progress: strategy.progress || 0,
         level: 0,
         colorCode: strategy.colorCode,
