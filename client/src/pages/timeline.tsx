@@ -750,12 +750,12 @@ export default function Timeline() {
                 highlightWeekends={true}
                 allowSelection={true}
                 allowResizing={true}
-                editSettings={{ allowTaskbarEditing: true, allowEditing: true }}
+                editSettings={{ allowTaskbarEditing: true, allowEditing: false }}
                 enableVirtualization={false}
                 showColumnMenu={false}
                 collapseAllParentTasks={false}
                 treeColumnIndex={0}
-                splitterSettings={{ position: '25%' }}
+                splitterSettings={{ position: '35%' }}
                 timelineSettings={timelineSettings as any}
                 taskbarEdited={handleTaskbarEdited}
                 queryTaskbarInfo={queryTaskbarInfo}
@@ -764,9 +764,12 @@ export default function Timeline() {
                 includeWeekend={true}
                 rowHeight={36}
                 taskbarHeight={24}
+                allowUnscheduledTasks={false}
               >
                 <ColumnsDirective>
-                  <ColumnDirective field="TaskName" headerText="Task Name" width="250" />
+                  <ColumnDirective field="TaskName" headerText="Task Name" width="200" />
+                  <ColumnDirective field="StartDate" headerText="Start Date" width="100" format="yMd" textAlign="Left" />
+                  <ColumnDirective field="EndDate" headerText="End Date" width="100" format="yMd" textAlign="Left" />
                 </ColumnsDirective>
                 <Inject services={[Edit, Selection, DayMarkers]} />
               </GanttComponent>

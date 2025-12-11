@@ -1,8 +1,35 @@
 @import "@syncfusion/ej2-react-gantt/styles/material.css";
 
+/* Hide Syncfusion dialog and confirmation elements */
+.e-dlg-container,
+.e-dialog,
+.e-popup-open,
+.e-popup,
+.e-confirm-dialog,
+body > .e-dlg-overlay,
+body > .e-dialog,
+body > .e-popup {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 .syncfusion-gantt-container .e-gantt {
   height: 100% !important;
   border: none !important;
+}
+
+/* Tree expand/collapse icons */
+.syncfusion-gantt-container .e-gantt .e-treegridexpand,
+.syncfusion-gantt-container .e-gantt .e-treegridcollapse {
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.dark .syncfusion-gantt-container .e-gantt .e-treegridexpand::before,
+.dark .syncfusion-gantt-container .e-gantt .e-treegridcollapse::before {
+  color: #9ca3af;
 }
 
 .syncfusion-gantt-container .e-gantt .e-gantt-chart {
