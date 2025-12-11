@@ -1,153 +1,44 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Sidebar } from "@/components/layout/sidebar";
-import { useMemo, useState, useEffect } from "react";
-import { Gantt, Task, ViewMode } from "gantt-task-react";
-import "gantt-task-react/dist/index.css";
+import { useMemo, useState, useEffect, useRef } from "react";
+import { registerLicense } from "@syncfusion/ej2-base";
+import { GanttComponent, Inject, Edit, Selection, Toolbar, ColumnsDirective, ColumnDirective, DayMarkers } from "@syncfusion/ej2-react-gantt";
+import "@syncfusion/ej2-base/styles/material.css";
+import "@syncfusion/ej2-buttons/styles/material.css";
+import "@syncfusion/ej2-calendars/styles/material.css";
+import "@syncfusion/ej2-dropdowns/styles/material.css";
+import "@syncfusion/ej2-inputs/styles/material.css";
+import "@syncfusion/ej2-lists/styles/material.css";
+import "@syncfusion/ej2-layouts/styles/material.css";
+import "@syncfusion/ej2-navigations/styles/material.css";
+import "@syncfusion/ej2-popups/styles/material.css";
+import "@syncfusion/ej2-splitbuttons/styles/material.css";
+import "@syncfusion/ej2-grids/styles/material.css";
+import "@syncfusion/ej2-treegrid/styles/material.css";
+import "@syncfusion/ej2-react-gantt/styles/material.css";
 import type { Strategy, Project, Action, Barrier, Dependency } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Filter, Calendar, AlertTriangle, ChevronRight, ChevronDown, ChevronLeft, LayoutGrid, GanttChart, ExternalLink } from "lucide-react";
+import { Filter, Calendar, AlertTriangle, ChevronRight, ChevronLeft, LayoutGrid, GanttChart, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 
-interface TaskWithMeta extends Task {
-  level?: number;
-  hasChildren?: boolean;
-  colorCode?: string;
+interface SyncfusionTask {
+  TaskID: string;
+  TaskName: string;
+  StartDate: Date;
+  EndDate: Date;
+  Progress: number;
+  subtasks?: SyncfusionTask[];
+  Predecessor?: string;
+  taskColor?: string;
+  taskType?: 'strategy' | 'project' | 'action';
+  hasBarriers?: boolean;
 }
-
-const CustomTaskListHeader: React.FC<{
-  headerHeight: number;
-  rowWidth: string;
-  fontFamily: string;
-  fontSize: string;
-}> = ({ headerHeight, rowWidth }) => {
-  return (
-    <div 
-      className="flex items-center border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 font-medium text-[11px] text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-      style={{ height: headerHeight, width: rowWidth }}
-    >
-      <div className="flex-1 px-3">Task Name</div>
-    </div>
-  );
-};
-
-const CustomTaskListTable: React.FC<{
-  rowHeight: number;
-  rowWidth: string;
-  fontFamily: string;
-  fontSize: string;
-  locale: string;
-  tasks: TaskWithMeta[];
-  selectedTaskId: string;
-  setSelectedTask: (taskId: string) => void;
-  onExpanderClick: (task: Task) => void;
-}> = ({ tasks, rowHeight, rowWidth, setSelectedTask, selectedTaskId, onExpanderClick }) => {
-  const hiddenParents = new Set<string>();
-  tasks.forEach(task => {
-    if (task.hideChildren) {
-      hiddenParents.add(task.id);
-    }
-  });
-
-  const visibleTasks = tasks.filter(task => {
-    if (!task.project) return true;
-    if (hiddenParents.has(task.project)) return false;
-    const grandparent = tasks.find(t => t.id === task.project)?.project;
-    if (grandparent && hiddenParents.has(grandparent)) return false;
-    return true;
-  });
-
-  return (
-    <div style={{ width: rowWidth }} className="bg-white dark:bg-gray-900">
-      {visibleTasks.map((task) => {
-        const level = task.level || 0;
-        const hasChildren = task.hasChildren;
-        const isExpanded = !task.hideChildren;
-        const isSelected = task.id === selectedTaskId;
-        const isStrategy = task.id.startsWith('strategy-');
-        const isProject = task.id.startsWith('project-');
-        const isAction = task.id.startsWith('action-');
-        
-        return (
-          <div
-            key={task.id}
-            className={`flex items-center border-b border-gray-100 dark:border-gray-800 cursor-pointer transition-colors ${
-              isSelected 
-                ? 'bg-blue-50 dark:bg-blue-900/20' 
-                : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
-            } ${isStrategy ? 'bg-gray-50/80 dark:bg-gray-800/50' : ''}`}
-            style={{ height: rowHeight }}
-            onClick={() => setSelectedTask(task.id)}
-            data-testid={`task-row-${task.id}`}
-          >
-            <div 
-              className="flex items-center flex-1 min-w-0 px-3"
-              style={{ paddingLeft: `${12 + level * 16}px` }}
-            >
-              {hasChildren ? (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onExpanderClick(task);
-                  }}
-                  className="w-4 h-4 flex items-center justify-center mr-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors shrink-0"
-                  data-testid={`expand-${task.id}`}
-                >
-                  {isExpanded ? (
-                    <ChevronDown className="w-3 h-3 text-gray-400" />
-                  ) : (
-                    <ChevronRight className="w-3 h-3 text-gray-400" />
-                  )}
-                </button>
-              ) : (
-                <div className="w-4 h-4 mr-1 shrink-0" />
-              )}
-              
-              {isStrategy && (
-                <div 
-                  className="w-2.5 h-2.5 rounded-full mr-1.5 shrink-0"
-                  style={{ backgroundColor: task.colorCode || '#6366f1' }}
-                />
-              )}
-              
-              {isProject && (
-                <div 
-                  className="w-2 h-2 rounded-sm mr-1.5 shrink-0"
-                  style={{ backgroundColor: task.styles?.backgroundColor || '#6b7280' }}
-                />
-              )}
-              
-              {isAction && (
-                <div 
-                  className="w-1.5 h-1.5 rounded-full mr-1.5 shrink-0"
-                  style={{ backgroundColor: task.styles?.backgroundColor || '#9ca3af' }}
-                />
-              )}
-              
-              <span 
-                className={`truncate text-[12px] ${
-                  isStrategy 
-                    ? 'font-semibold text-gray-900 dark:text-white' 
-                    : isProject 
-                      ? 'font-medium text-gray-700 dark:text-gray-200'
-                      : 'text-gray-600 dark:text-gray-400'
-                }`}
-                title={task.name}
-              >
-                {task.name}
-              </span>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
 
 interface DayItems {
   date: Date;
@@ -316,20 +207,49 @@ const CalendarView: React.FC<{
 export default function Timeline() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const ganttRef = useRef<GanttComponent>(null);
   
   const [viewType, setViewType] = useState<'timeline' | 'calendar'>('timeline');
   const [calendarMonth, setCalendarMonth] = useState(new Date());
-  const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Month);
+  const [timelineView, setTimelineView] = useState<'Day' | 'Week' | 'Month'>('Month');
   const [selectedPriorityIds, setSelectedPriorityIds] = useState<string[]>([]);
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
-    const stored = localStorage.getItem('gantt-expanded-rows');
-    return stored ? new Set(JSON.parse(stored)) : new Set();
-  });
   const [barrierDialogOpen, setBarrierDialogOpen] = useState(false);
   const [selectedProjectBarriers, setSelectedProjectBarriers] = useState<Barrier[]>([]);
   const [selectedProjectTitle, setSelectedProjectTitle] = useState("");
   const [dayDetailsDialogOpen, setDayDetailsDialogOpen] = useState(false);
   const [selectedDayItems, setSelectedDayItems] = useState<DayItems | null>(null);
+  const [licenseRegistered, setLicenseRegistered] = useState(false);
+  const [licenseError, setLicenseError] = useState(false);
+
+  useEffect(() => {
+    async function loadLicense() {
+      try {
+        const response = await fetch('/api/config/syncfusion', {
+          credentials: 'include'
+        });
+        if (response.ok) {
+          const { licenseKey } = await response.json();
+          if (licenseKey) {
+            registerLicense(licenseKey);
+            setLicenseRegistered(true);
+          } else {
+            setLicenseError(true);
+            toast({ 
+              title: "Timeline chart unavailable", 
+              description: "License key not configured. Please contact your administrator.",
+              variant: "destructive" 
+            });
+          }
+        } else {
+          setLicenseError(true);
+        }
+      } catch (error) {
+        console.warn('Failed to load Syncfusion license:', error);
+        setLicenseError(true);
+      }
+    }
+    loadLicense();
+  }, [toast]);
 
   const navigateToProject = (projectId: string) => {
     setDayDetailsDialogOpen(false);
@@ -340,10 +260,6 @@ export default function Timeline() {
     setDayDetailsDialogOpen(false);
     setLocation(`/strategies?highlight=action-${actionId}&project=${projectId}`);
   };
-
-  useEffect(() => {
-    localStorage.setItem('gantt-expanded-rows', JSON.stringify(Array.from(expandedIds)));
-  }, [expandedIds]);
 
   const { data: strategies, isLoading: strategiesLoading } = useQuery<Strategy[]>({
     queryKey: ["/api/strategies"],
@@ -415,28 +331,8 @@ export default function Timeline() {
     return actions.filter(a => a.projectId && projectIds.has(a.projectId));
   }, [actions, filteredProjects]);
 
-  const dependencyMap = useMemo(() => {
-    if (!dependencies) return new Map<string, string[]>();
-    
-    const map = new Map<string, string[]>();
-    
-    dependencies.forEach(dep => {
-      const targetId = `${dep.targetType}-${dep.targetId}`;
-      const sourceId = `${dep.sourceType}-${dep.sourceId}`;
-      
-      if (!map.has(targetId)) {
-        map.set(targetId, []);
-      }
-      map.get(targetId)!.push(sourceId);
-    });
-    
-    return map;
-  }, [dependencies]);
-
-  const allTasks: TaskWithMeta[] = useMemo(() => {
+  const ganttData: SyncfusionTask[] = useMemo(() => {
     if (!filteredStrategies || !projects || !actions) return [];
-
-    const result: TaskWithMeta[] = [];
 
     const getProjectStatusColor = (status: string) => {
       switch (status) {
@@ -459,6 +355,8 @@ export default function Timeline() {
       }
     };
 
+    const result: SyncfusionTask[] = [];
+
     filteredStrategies.forEach(strategy => {
       const strategyProjects = projects
         .filter(p => p.strategyId === strategy.id)
@@ -469,11 +367,9 @@ export default function Timeline() {
           return a.id.localeCompare(b.id);
         });
 
-      // Use strategy's own dates if available, otherwise fall back to project dates
       let strategyStart: Date | null = strategy.startDate ? new Date(strategy.startDate) : null;
       let strategyEnd: Date | null = strategy.targetDate ? new Date(strategy.targetDate) : null;
 
-      // If strategy doesn't have dates, calculate from projects
       if (!strategyStart || !strategyEnd) {
         const strategyStartDates: Date[] = [];
         const strategyEndDates: Date[] = [];
@@ -491,36 +387,13 @@ export default function Timeline() {
         }
       }
 
-      // Skip if we still don't have valid dates
       if (!strategyStart || !strategyEnd) {
         if (strategyProjects.length === 0) return;
-        // Use today as fallback
         strategyStart = strategyStart || new Date();
         strategyEnd = strategyEnd || new Date();
       }
 
-      const isStrategyExpanded = expandedIds.has(`strategy-${strategy.id}`);
-      const strategyTaskId = `strategy-${strategy.id}`;
-
-      result.push({
-        start: strategyStart,
-        end: strategyEnd,
-        name: strategy.title,
-        id: strategyTaskId,
-        progress: strategy.progress || 0,
-        type: "project",
-        hideChildren: !isStrategyExpanded,
-        dependencies: dependencyMap.get(strategyTaskId) || [],
-        level: 0,
-        hasChildren: true,
-        colorCode: strategy.colorCode,
-        styles: {
-          backgroundColor: strategy.colorCode || "#1e3a8a",
-          backgroundSelectedColor: strategy.colorCode || "#1e3a8a",
-          progressColor: strategy.colorCode || "#1e3a8a",
-          progressSelectedColor: strategy.colorCode || "#1e3a8a",
-        },
-      });
+      const projectSubtasks: SyncfusionTask[] = [];
 
       strategyProjects.forEach(project => {
         if (!project.startDate || !project.dueDate) return;
@@ -537,101 +410,106 @@ export default function Timeline() {
             return a.id.localeCompare(b.id);
           });
 
-        const hasActions = projectActions.length > 0;
-        const isProjectExpanded = expandedIds.has(`project-${project.id}`);
-
         const projectBarriers = barriers?.filter(b => 
           b.projectId === project.id && b.status !== 'resolved' && b.status !== 'closed'
         ) || [];
         const hasBarriers = projectBarriers.length > 0;
 
-        const projectColor = getProjectStatusColor(project.status);
-        const projectTaskId = `project-${project.id}`;
-
-        result.push({
-          start: projectStart,
-          end: projectEnd,
-          name: hasBarriers ? `⚠️ ${project.title}` : project.title,
-          id: projectTaskId,
-          progress: project.progress || 0,
-          type: hasActions ? "project" : "task",
-          project: strategyTaskId,
-          hideChildren: !isProjectExpanded,
-          dependencies: dependencyMap.get(projectTaskId) || [],
-          level: 1,
-          hasChildren: hasActions,
-          styles: {
-            backgroundColor: projectColor,
-            backgroundSelectedColor: projectColor,
-            progressColor: projectColor,
-            progressSelectedColor: projectColor,
-          },
-        });
-
-        projectActions.forEach(action => {
-          if (!action.dueDate) return;
-
-          const actionEnd = new Date(action.dueDate);
+        const actionSubtasks: SyncfusionTask[] = projectActions.map(action => {
+          const actionEnd = new Date(action.dueDate!);
           const actionStart = new Date(actionEnd);
           actionStart.setDate(actionStart.getDate() - 7);
 
-          const actionColor = getActionStatusColor(action.status);
-          const actionTaskId = `action-${action.id}`;
-
-          result.push({
-            start: actionStart,
-            end: actionEnd,
-            name: action.title,
-            id: actionTaskId,
-            progress: action.status === "achieved" ? 100 : action.status === "in_progress" ? 50 : 0,
-            type: "task",
-            project: projectTaskId,
-            dependencies: dependencyMap.get(actionTaskId) || [],
-            level: 2,
-            hasChildren: false,
-            styles: {
-              backgroundColor: actionColor,
-              backgroundSelectedColor: actionColor,
-              progressColor: actionColor,
-              progressSelectedColor: actionColor,
-            },
-          });
+          return {
+            TaskID: `action-${action.id}`,
+            TaskName: action.title,
+            StartDate: actionStart,
+            EndDate: actionEnd,
+            Progress: action.status === "achieved" ? 100 : action.status === "in_progress" ? 50 : 0,
+            taskColor: getActionStatusColor(action.status),
+            taskType: 'action' as const,
+          };
         });
+
+        projectSubtasks.push({
+          TaskID: `project-${project.id}`,
+          TaskName: hasBarriers ? `⚠️ ${project.title}` : project.title,
+          StartDate: projectStart,
+          EndDate: projectEnd,
+          Progress: project.progress || 0,
+          subtasks: actionSubtasks.length > 0 ? actionSubtasks : undefined,
+          taskColor: getProjectStatusColor(project.status),
+          taskType: 'project' as const,
+          hasBarriers,
+        });
+      });
+
+      result.push({
+        TaskID: `strategy-${strategy.id}`,
+        TaskName: strategy.title,
+        StartDate: strategyStart,
+        EndDate: strategyEnd,
+        Progress: strategy.progress || 0,
+        subtasks: projectSubtasks.length > 0 ? projectSubtasks : undefined,
+        taskColor: strategy.colorCode || "#1e3a8a",
+        taskType: 'strategy' as const,
       });
     });
 
     return result;
-  }, [filteredStrategies, projects, actions, barriers, expandedIds, dependencyMap]);
+  }, [filteredStrategies, projects, actions, barriers]);
 
-
-  const handleExpanderClick = (task: Task) => {
-    setExpandedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(task.id)) {
-        next.delete(task.id);
-      } else {
-        next.add(task.id);
-      }
-      return next;
-    });
+  const taskFields = {
+    id: 'TaskID',
+    name: 'TaskName',
+    startDate: 'StartDate',
+    endDate: 'EndDate',
+    progress: 'Progress',
+    child: 'subtasks',
+    dependency: 'Predecessor',
   };
 
-  const handleDateChange = (task: Task) => {
-    const parts = task.id.split('-');
-    const type = parts[0];
-    const id = parts.slice(1).join('-');
+  const handleTaskbarEditing = (args: any) => {
+    if (args.data && args.data.taskData) {
+      const taskId = args.data.taskData.TaskID;
+      const parts = taskId.split('-');
+      const type = parts[0];
+      const id = parts.slice(1).join('-');
 
-    if (type === 'project') {
-      updateProjectMutation.mutate({
-        id,
-        startDate: task.start,
-        dueDate: task.end,
-      });
-    } else if (type === 'action') {
-      updateActionMutation.mutate({
-        id,
-        dueDate: task.end,
-      });
+      if (type === 'project') {
+        updateProjectMutation.mutate({
+          id,
+          startDate: args.data.ganttProperties.startDate,
+          dueDate: args.data.ganttProperties.endDate,
+        });
+      } else if (type === 'action') {
+        updateActionMutation.mutate({
+          id,
+          dueDate: args.data.ganttProperties.endDate,
+        });
+      }
+    }
+  };
+
+  const handleRecordClick = (args: any) => {
+    if (args.data && args.data.taskData) {
+      const taskId = args.data.taskData.TaskID;
+      const parts = taskId.split('-');
+      const type = parts[0];
+      const id = parts.slice(1).join('-');
+
+      if (type === 'project' && args.data.taskData.hasBarriers) {
+        const projectBarriers = barriers?.filter(b => 
+          b.projectId === id && b.status !== 'resolved' && b.status !== 'closed'
+        ) || [];
+        
+        if (projectBarriers.length > 0) {
+          const project = projects?.find(p => p.id === id);
+          setSelectedProjectBarriers(projectBarriers);
+          setSelectedProjectTitle(project?.title || "Project");
+          setBarrierDialogOpen(true);
+        }
+      }
     }
   };
 
@@ -645,26 +523,20 @@ export default function Timeline() {
     });
   };
 
-  const handleTaskClick = (task: Task) => {
-    const parts = task.id.split('-');
-    const type = parts[0];
-    const id = parts.slice(1).join('-');
-
-    if (type === 'project') {
-      const projectBarriers = barriers?.filter(b => 
-        b.projectId === id && b.status !== 'resolved' && b.status !== 'closed'
-      ) || [];
-      
-      if (projectBarriers.length > 0) {
-        const project = projects?.find(p => p.id === id);
-        setSelectedProjectBarriers(projectBarriers);
-        setSelectedProjectTitle(project?.title || "Project");
-        setBarrierDialogOpen(true);
-      }
+  useEffect(() => {
+    if (ganttRef.current) {
+      const viewSettings: { [key: string]: string } = {
+        'Day': 'Day',
+        'Week': 'Week', 
+        'Month': 'Month'
+      };
+      ganttRef.current.timelineSettings = {
+        timelineViewMode: viewSettings[timelineView] as any
+      };
     }
-  };
+  }, [timelineView]);
 
-  if (strategiesLoading || projectsLoading || actionsLoading) {
+  if (strategiesLoading || projectsLoading || actionsLoading || (!licenseRegistered && !licenseError)) {
     return (
       <div className="min-h-screen flex">
         <Sidebar />
@@ -679,8 +551,6 @@ export default function Timeline() {
   }
 
   const activeStrategies = strategies?.filter(s => s.status !== 'Archived') || [];
-
-  const columnWidth = viewMode === ViewMode.Day ? 40 : viewMode === ViewMode.Week ? 80 : 150;
 
   return (
     <div className="min-h-screen flex bg-gray-50 dark:bg-gray-950">
@@ -770,28 +640,28 @@ export default function Timeline() {
               {viewType === 'timeline' && (
                 <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-md p-0.5">
                   <Button
-                    variant={viewMode === ViewMode.Day ? "default" : "ghost"}
+                    variant={timelineView === 'Day' ? "default" : "ghost"}
                     size="sm"
                     className="h-7 px-2.5 text-xs"
-                    onClick={() => setViewMode(ViewMode.Day)}
+                    onClick={() => setTimelineView('Day')}
                     data-testid="button-scale-days"
                   >
                     Day
                   </Button>
                   <Button
-                    variant={viewMode === ViewMode.Week ? "default" : "ghost"}
+                    variant={timelineView === 'Week' ? "default" : "ghost"}
                     size="sm"
                     className="h-7 px-2.5 text-xs"
-                    onClick={() => setViewMode(ViewMode.Week)}
+                    onClick={() => setTimelineView('Week')}
                     data-testid="button-scale-weeks"
                   >
                     Week
                   </Button>
                   <Button
-                    variant={viewMode === ViewMode.Month ? "default" : "ghost"}
+                    variant={timelineView === 'Month' ? "default" : "ghost"}
                     size="sm"
                     className="h-7 px-2.5 text-xs"
-                    onClick={() => setViewMode(ViewMode.Month)}
+                    onClick={() => setTimelineView('Month')}
                     data-testid="button-scale-months"
                   >
                     Month
@@ -849,7 +719,22 @@ export default function Timeline() {
                 setDayDetailsDialogOpen(true);
               }}
             />
-          ) : allTasks.length === 0 ? (
+          ) : licenseError ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center py-12">
+                <AlertTriangle className="w-10 h-10 text-orange-400 mx-auto mb-3" />
+                <h3 className="text-base font-medium text-gray-900 dark:text-white mb-1">
+                  Timeline chart unavailable
+                </h3>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">
+                  The Gantt chart license could not be loaded. Please contact your administrator.
+                </p>
+                <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">
+                  You can still use the Calendar view above.
+                </p>
+              </div>
+            </div>
+          ) : ganttData.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center py-12">
                 <Calendar className="w-10 h-10 text-gray-400 mx-auto mb-3" />
@@ -865,147 +750,97 @@ export default function Timeline() {
               </div>
             </div>
           ) : (
-            <div className="h-full gantt-container">
+            <div className="h-full w-full syncfusion-gantt-container">
               <style>{`
-                /* Grid background */
-                .gantt-container ._2dZTy {
-                  fill: #f9fafb;
+                .syncfusion-gantt-container {
+                  height: 100%;
                 }
-                .dark .gantt-container ._2dZTy {
-                  fill: #111827;
+                .syncfusion-gantt-container .e-gantt {
+                  height: 100% !important;
                 }
-                /* Grid lines */
-                .gantt-container ._3_ygE {
-                  stroke: #e5e7eb;
+                .e-gantt .e-chart-row-container .e-gantt-parent-taskbar {
+                  border-radius: 4px;
                 }
-                .dark .gantt-container ._3_ygE {
-                  stroke: #374151;
+                .e-gantt .e-chart-row-container .e-gantt-child-taskbar {
+                  border-radius: 4px;
                 }
-                /* Header text */
-                .gantt-container ._9w8d5 {
-                  fill: #6b7280;
-                  font-size: 11px;
+                .e-gantt .e-chart-row-container .e-gantt-milestone {
+                  border-radius: 50%;
                 }
-                .dark .gantt-container ._9w8d5 {
-                  fill: #9ca3af;
+                .dark .e-gantt .e-gantt-chart,
+                .dark .e-gantt .e-chart-root-container {
+                  background-color: #111827;
                 }
-                /* Alternating row background */
-                .gantt-container ._3rUKi {
-                  fill: #f3f4f6;
+                .dark .e-gantt .e-grid-header,
+                .dark .e-gantt .e-timeline-header-container {
+                  background-color: #1f2937;
                 }
-                .dark .gantt-container ._3rUKi {
-                  fill: #1f2937;
+                .dark .e-gantt .e-content {
+                  background-color: #111827;
                 }
-                /* Row borders */
-                .gantt-container ._RuwuK {
-                  stroke: #e5e7eb;
+                .dark .e-gantt .e-row {
+                  background-color: #111827;
                 }
-                .dark .gantt-container ._RuwuK {
-                  stroke: #374151;
+                .dark .e-gantt .e-row:hover {
+                  background-color: #1f2937;
                 }
-                .gantt-container svg {
-                  overflow: visible;
+                .dark .e-gantt .e-headercelldiv,
+                .dark .e-gantt .e-headercell {
+                  color: #9ca3af;
                 }
-                
-                /* === TASK BAR STYLING === */
-                /* All bars - flat modern look with subtle rounding */
-                .gantt-container g > rect {
-                  rx: 3px;
-                  ry: 3px;
-                }
-                
-                /* Hide ALL grey background rects - target by fill color */
-                .gantt-container svg rect[fill="#b8c2cc"],
-                .gantt-container svg rect[fill="rgb(184, 194, 204)"],
-                .gantt-container svg rect[fill="#aeb8c2"],
-                .gantt-container svg rect[fill="rgb(174, 184, 194)"] {
-                  fill: transparent !important;
-                  opacity: 0 !important;
-                }
-                
-                /* Universal: hide first rect in any bar group (background rect) */
-                .gantt-container svg g[cursor="pointer"] > rect:first-of-type {
-                  fill: transparent !important;
-                  stroke: none !important;
-                  opacity: 0 !important;
-                  visibility: hidden !important;
-                }
-                
-                /* Remove ALL filters and opacity changes globally */
-                .gantt-container svg g,
-                .gantt-container svg g *,
-                .gantt-container svg g:hover,
-                .gantt-container svg g:hover *,
-                .gantt-container svg g:focus,
-                .gantt-container svg g:focus *,
-                .gantt-container svg g:active,
-                .gantt-container svg g:active * {
-                  filter: none !important;
-                  opacity: 1 !important;
-                  transition: none !important;
-                }
-                
-                /* Override first-of-type to ensure background is hidden */
-                .gantt-container svg g[cursor="pointer"] > rect:first-of-type {
-                  opacity: 0 !important;
-                  visibility: hidden !important;
-                }
-                
-                /* Remove any strokes/borders from all rects */
-                .gantt-container svg g rect {
-                  stroke: none !important;
-                }
-                
-                /* Cursor for interactive bars */
-                .gantt-container g[cursor="pointer"] {
-                  cursor: pointer;
+                .dark .e-gantt .e-rowcell {
+                  color: #e5e7eb;
                 }
               `}</style>
-              <Gantt
-                tasks={allTasks}
-                viewMode={viewMode}
-                onExpanderClick={handleExpanderClick}
-                onDateChange={handleDateChange}
-                onClick={handleTaskClick}
-                TaskListHeader={CustomTaskListHeader}
-                TaskListTable={CustomTaskListTable}
-                listCellWidth="230px"
-                columnWidth={columnWidth}
-                rowHeight={36}
-                fontSize="12px"
-                headerHeight={40}
-                todayColor="rgba(239, 68, 68, 0.1)"
-                arrowColor="#94a3b8"
-                arrowIndent={15}
-                barBackgroundColor="transparent"
-                barBackgroundSelectedColor="transparent"
-                TooltipContent={({ task }) => {
-                  const parts = task.id.split('-');
-                  const type = parts[0];
-                  const typeLabel = type === 'strategy' ? 'Priority' : type === 'project' ? 'Project' : 'Action';
-                  
-                  return (
-                    <div className="bg-white dark:bg-gray-800 p-2.5 shadow-lg border border-gray-200 dark:border-gray-700 rounded-md text-xs max-w-xs">
-                      <p className="font-semibold text-gray-900 dark:text-white mb-0.5">{task.name}</p>
-                      <p className="text-gray-500 dark:text-gray-400 mb-1">{typeLabel}</p>
-                      <p className="text-gray-600 dark:text-gray-300">
-                        {task.start.toLocaleDateString()} → {task.end.toLocaleDateString()}
-                      </p>
-                      {task.progress > 0 && (
-                        <div className="mt-1.5 flex items-center gap-1.5">
-                          <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                            <div 
-                              className="bg-blue-500 h-1.5 rounded-full" 
-                              style={{ width: `${task.progress}%` }}
-                            />
-                          </div>
-                          <span className="text-gray-500 text-[10px]">{task.progress}%</span>
-                        </div>
-                      )}
-                    </div>
-                  );
+              <GanttComponent
+                ref={ganttRef}
+                dataSource={ganttData}
+                taskFields={taskFields}
+                height="100%"
+                width="100%"
+                highlightWeekends={true}
+                allowSelection={true}
+                allowResizing={true}
+                editSettings={{
+                  allowEditing: true,
+                  allowTaskbarEditing: true,
+                  mode: 'Auto'
                 }}
-              />
+                selectionSettings={{ mode: 'Row', type: 'Single' }}
+                timelineSettings={{
+                  timelineViewMode: timelineView as any,
+                  topTier: {
+                    unit: timelineView === 'Day' ? 'Week' : timelineView === 'Week' ? 'Month' : 'Year',
+                    format: timelineView === 'Day' ? 'MMM dd, yyyy' : timelineView === 'Week' ? 'MMM yyyy' : 'yyyy',
+                  },
+                  bottomTier: {
+                    unit: timelineView as any,
+                    format: timelineView === 'Day' ? 'd' : timelineView === 'Week' ? 'MMM dd' : 'MMM',
+                  }
+                }}
+                treeColumnIndex={0}
+                labelSettings={{
+                  taskLabel: '${Progress}%'
+                }}
+                projectStartDate={new Date(new Date().getFullYear(), 0, 1)}
+                projectEndDate={new Date(new Date().getFullYear() + 1, 11, 31)}
+                taskbarEdited={handleTaskbarEditing}
+                rowSelected={handleRecordClick}
+                queryTaskbarInfo={(args: any) => {
+                  if (args.data && args.data.taskData && args.data.taskData.taskColor) {
+                    args.taskbarBgColor = args.data.taskData.taskColor;
+                    args.progressBarBgColor = args.data.taskData.taskColor;
+                  }
+                }}
+              >
+                <ColumnsDirective>
+                  <ColumnDirective field="TaskName" headerText="Task Name" width="300" />
+                  <ColumnDirective field="StartDate" headerText="Start" width="100" format="yMd" />
+                  <ColumnDirective field="EndDate" headerText="End" width="100" format="yMd" />
+                  <ColumnDirective field="Progress" headerText="Progress" width="80" />
+                </ColumnsDirective>
+                <Inject services={[Edit, Selection, Toolbar, DayMarkers]} />
+              </GanttComponent>
             </div>
           )}
         </div>
@@ -1040,7 +875,6 @@ export default function Timeline() {
         </DialogContent>
       </Dialog>
 
-      {/* Day Details Dialog */}
       <Dialog open={dayDetailsDialogOpen} onOpenChange={setDayDetailsDialogOpen}>
         <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden flex flex-col" data-testid="day-details-dialog">
           <DialogHeader>
@@ -1055,7 +889,6 @@ export default function Timeline() {
             </DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto space-y-4 pr-2">
-            {/* Projects Section */}
             {selectedDayItems && selectedDayItems.projects.length > 0 && (
               <div>
                 <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
@@ -1108,7 +941,6 @@ export default function Timeline() {
               </div>
             )}
 
-            {/* Actions Section */}
             {selectedDayItems && selectedDayItems.actions.length > 0 && (
               <div>
                 <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
@@ -1163,7 +995,6 @@ export default function Timeline() {
               </div>
             )}
 
-            {/* Empty state */}
             {selectedDayItems && selectedDayItems.projects.length === 0 && selectedDayItems.actions.length === 0 && (
               <p className="text-sm text-gray-500 text-center py-6">No items due on this date</p>
             )}

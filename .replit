@@ -46,6 +46,7 @@ integrations = ["javascript_database:1.0.0", "javascript_log_in_with_replit:1.0.
 [userenv.shared]
 CHAT_AI_PROVIDER = "gemini"
 APP_URL = "https://strategyplanner.replit.app"
+VITE_SYNCFUSION_LICENSE_KEY = "${SYNCFUSION_LICENSE_KEY}"
 
 [userenv.development]
 INITIAL_REGISTRATION_TOKEN = "MySecureToken12345678"

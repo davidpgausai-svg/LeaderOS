@@ -118,6 +118,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     await (storage as any).seedData();
   }
 
+  // Config endpoint for Syncfusion license (auth required)
+  app.get("/api/config/syncfusion", isAuthenticated, (req: any, res) => {
+    const licenseKey = process.env.SYNCFUSION_LICENSE_KEY || '';
+    res.json({ licenseKey });
+  });
+
   // User routes
   app.get("/api/users", isAuthenticated, async (req: any, res) => {
     try {
