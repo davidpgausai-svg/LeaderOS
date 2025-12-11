@@ -1,0 +1,130 @@
+@import "@syncfusion/ej2-react-gantt/styles/material.css";
+
+.syncfusion-gantt-container .e-gantt {
+  height: 100% !important;
+  border: none !important;
+}
+
+.syncfusion-gantt-container .e-gantt .e-gantt-chart {
+  background: #ffffff;
+}
+
+.dark .syncfusion-gantt-container .e-gantt .e-gantt-chart {
+  background: #111827;
+}
+
+.syncfusion-gantt-container .e-gantt .e-chart-row-cell {
+  background: #ffffff;
+}
+
+.dark .syncfusion-gantt-container .e-gantt .e-chart-row-cell {
+  background: #111827;
+}
+
+.syncfusion-gantt-container .e-gantt .e-gridheader {
+  background: #f9fafb;
+}
+
+.dark .syncfusion-gantt-container .e-gantt .e-gridheader {
+  background: #1f2937;
+}
+
+.syncfusion-gantt-container .e-gantt .e-headercell {
+  background: #f9fafb !important;
+  color: #6b7280;
+  font-weight: 500;
+  font-size: 12px;
+}
+
+.dark .syncfusion-gantt-container .e-gantt .e-headercell {
+  background: #1f2937 !important;
+  color: #9ca3af;
+}
+
+.syncfusion-gantt-container .e-gantt .e-rowcell {
+  background: #ffffff;
+  color: #374151;
+  font-size: 12px;
+  border-color: #e5e7eb !important;
+}
+
+.dark .syncfusion-gantt-container .e-gantt .e-rowcell {
+  background: #111827;
+  color: #d1d5db;
+  border-color: #374151 !important;
+}
+
+.syncfusion-gantt-container .e-gantt .e-timeline-header-container {
+  background: #f9fafb;
+}
+
+.dark .syncfusion-gantt-container .e-gantt .e-timeline-header-container {
+  background: #1f2937;
+}
+
+.syncfusion-gantt-container .e-gantt .e-header-cell-label {
+  color: #6b7280;
+  font-size: 11px;
+}
+
+.dark .syncfusion-gantt-container .e-gantt .e-header-cell-label {
+  color: #9ca3af;
+}
+
+.syncfusion-gantt-container .e-gantt .e-chart-row {
+  border-color: #e5e7eb;
+}
+
+.dark .syncfusion-gantt-container .e-gantt .e-chart-row {
+  border-color: #374151;
+}
+
+.syncfusion-gantt-container .e-gantt .e-weekend-header-cell {
+  background: #f3f4f6;
+}
+
+.dark .syncfusion-gantt-container .e-gantt .e-weekend-header-cell {
+  background: #1f2937;
+}
+
+.syncfusion-gantt-container .e-gantt .e-gantt-splitter .e-split-bar {
+  background: #e5e7eb;
+}
+
+.dark .syncfusion-gantt-container .e-gantt .e-gantt-splitter .e-split-bar {
+  background: #374151;
+}
+
+/* Today line styling */
+.syncfusion-gantt-container .e-gantt .e-line-container-cell .e-current-time,
+.syncfusion-gantt-container .e-gantt .e-gantt-chart-pane .e-current-time {
+  border-left: 2px solid #ef4444 !important;
+}
+
+.syncfusion-gantt-container .e-gantt .e-current-time-header {
+  background: #ef4444 !important;
+  color: white !important;
+}
+
+/* Taskbar styling */
+.syncfusion-gantt-container .e-gantt .e-taskbar-main-container {
+  border-radius: 4px;
+}
+
+.syncfusion-gantt-container .e-gantt .e-gantt-child-taskbar {
+  border-radius: 4px;
+}
+
+.syncfusion-gantt-container .e-gantt .e-gantt-parent-taskbar {
+  border-radius: 4px;
+}
+
+/* Dependency arrows */
+.syncfusion-gantt-container .e-gantt .e-connector-line {
+  stroke: #94a3b8;
+  stroke-width: 1.5px;
+}
+
+.syncfusion-gantt-container .e-gantt .e-connector-line-arrow {
+  fill: #94a3b8;
+}

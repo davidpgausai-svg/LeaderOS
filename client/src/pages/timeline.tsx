@@ -1,153 +1,34 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Sidebar } from "@/components/layout/sidebar";
-import { useMemo, useState, useEffect } from "react";
-import { Gantt, Task, ViewMode } from "gantt-task-react";
-import "gantt-task-react/dist/index.css";
-import type { Strategy, Project, Action, Barrier, Dependency } from "@shared/schema";
+import { useMemo, useState, useEffect, useRef } from "react";
+import { GanttComponent, Inject, Edit, Selection, DayMarkers, ColumnsDirective, ColumnDirective } from "@syncfusion/ej2-react-gantt";
+import "@/styles/syncfusion-gantt.css";
+import type { Strategy, Project, Action, Dependency } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Filter, Calendar, AlertTriangle, ChevronRight, ChevronDown, ChevronLeft, LayoutGrid, GanttChart, ExternalLink } from "lucide-react";
+import { Filter, Calendar, ChevronRight, ChevronLeft, LayoutGrid, GanttChart, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 
-interface TaskWithMeta extends Task {
+interface GanttDataItem {
+  TaskID: string;
+  TaskName: string;
+  StartDate: Date;
+  EndDate: Date;
+  Progress: number;
+  Duration?: number;
+  Predecessor?: string;
+  subtasks?: GanttDataItem[];
+  isParent?: boolean;
   level?: number;
-  hasChildren?: boolean;
   colorCode?: string;
+  entityType: 'priority' | 'project' | 'action';
+  entityId: string;
 }
-
-const CustomTaskListHeader: React.FC<{
-  headerHeight: number;
-  rowWidth: string;
-  fontFamily: string;
-  fontSize: string;
-}> = ({ headerHeight, rowWidth }) => {
-  return (
-    <div 
-      className="flex items-center border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 font-medium text-[11px] text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-      style={{ height: headerHeight, width: rowWidth }}
-    >
-      <div className="flex-1 px-3">Task Name</div>
-    </div>
-  );
-};
-
-const CustomTaskListTable: React.FC<{
-  rowHeight: number;
-  rowWidth: string;
-  fontFamily: string;
-  fontSize: string;
-  locale: string;
-  tasks: TaskWithMeta[];
-  selectedTaskId: string;
-  setSelectedTask: (taskId: string) => void;
-  onExpanderClick: (task: Task) => void;
-}> = ({ tasks, rowHeight, rowWidth, setSelectedTask, selectedTaskId, onExpanderClick }) => {
-  const hiddenParents = new Set<string>();
-  tasks.forEach(task => {
-    if (task.hideChildren) {
-      hiddenParents.add(task.id);
-    }
-  });
-
-  const visibleTasks = tasks.filter(task => {
-    if (!task.project) return true;
-    if (hiddenParents.has(task.project)) return false;
-    const grandparent = tasks.find(t => t.id === task.project)?.project;
-    if (grandparent && hiddenParents.has(grandparent)) return false;
-    return true;
-  });
-
-  return (
-    <div style={{ width: rowWidth }} className="bg-white dark:bg-gray-900">
-      {visibleTasks.map((task) => {
-        const level = task.level || 0;
-        const hasChildren = task.hasChildren;
-        const isExpanded = !task.hideChildren;
-        const isSelected = task.id === selectedTaskId;
-        const isStrategy = task.id.startsWith('strategy-');
-        const isProject = task.id.startsWith('project-');
-        const isAction = task.id.startsWith('action-');
-        
-        return (
-          <div
-            key={task.id}
-            className={`flex items-center border-b border-gray-100 dark:border-gray-800 cursor-pointer transition-colors ${
-              isSelected 
-                ? 'bg-blue-50 dark:bg-blue-900/20' 
-                : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
-            } ${isStrategy ? 'bg-gray-50/80 dark:bg-gray-800/50' : ''}`}
-            style={{ height: rowHeight }}
-            onClick={() => setSelectedTask(task.id)}
-            data-testid={`task-row-${task.id}`}
-          >
-            <div 
-              className="flex items-center flex-1 min-w-0 px-3"
-              style={{ paddingLeft: `${12 + level * 16}px` }}
-            >
-              {hasChildren ? (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onExpanderClick(task);
-                  }}
-                  className="w-4 h-4 flex items-center justify-center mr-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors shrink-0"
-                  data-testid={`expand-${task.id}`}
-                >
-                  {isExpanded ? (
-                    <ChevronDown className="w-3 h-3 text-gray-400" />
-                  ) : (
-                    <ChevronRight className="w-3 h-3 text-gray-400" />
-                  )}
-                </button>
-              ) : (
-                <div className="w-4 h-4 mr-1 shrink-0" />
-              )}
-              
-              {isStrategy && (
-                <div 
-                  className="w-2.5 h-2.5 rounded-full mr-1.5 shrink-0"
-                  style={{ backgroundColor: task.colorCode || '#6366f1' }}
-                />
-              )}
-              
-              {isProject && (
-                <div 
-                  className="w-2 h-2 rounded-sm mr-1.5 shrink-0"
-                  style={{ backgroundColor: task.styles?.backgroundColor || '#6b7280' }}
-                />
-              )}
-              
-              {isAction && (
-                <div 
-                  className="w-1.5 h-1.5 rounded-full mr-1.5 shrink-0"
-                  style={{ backgroundColor: task.styles?.backgroundColor || '#9ca3af' }}
-                />
-              )}
-              
-              <span 
-                className={`truncate text-[12px] ${
-                  isStrategy 
-                    ? 'font-semibold text-gray-900 dark:text-white' 
-                    : isProject 
-                      ? 'font-medium text-gray-700 dark:text-gray-200'
-                      : 'text-gray-600 dark:text-gray-400'
-                }`}
-                title={task.name}
-              >
-                {task.name}
-              </span>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
 
 interface DayItems {
   date: Date;
@@ -316,18 +197,12 @@ const CalendarView: React.FC<{
 export default function Timeline() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const ganttRef = useRef<GanttComponent | null>(null);
   
   const [viewType, setViewType] = useState<'timeline' | 'calendar'>('timeline');
   const [calendarMonth, setCalendarMonth] = useState(new Date());
-  const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Month);
+  const [timelineView, setTimelineView] = useState<'Day' | 'Week' | 'Month'>('Month');
   const [selectedPriorityIds, setSelectedPriorityIds] = useState<string[]>([]);
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
-    const stored = localStorage.getItem('gantt-expanded-rows');
-    return stored ? new Set(JSON.parse(stored)) : new Set();
-  });
-  const [barrierDialogOpen, setBarrierDialogOpen] = useState(false);
-  const [selectedProjectBarriers, setSelectedProjectBarriers] = useState<Barrier[]>([]);
-  const [selectedProjectTitle, setSelectedProjectTitle] = useState("");
   const [dayDetailsDialogOpen, setDayDetailsDialogOpen] = useState(false);
   const [selectedDayItems, setSelectedDayItems] = useState<DayItems | null>(null);
 
@@ -341,10 +216,6 @@ export default function Timeline() {
     setLocation(`/strategies?highlight=action-${actionId}&project=${projectId}`);
   };
 
-  useEffect(() => {
-    localStorage.setItem('gantt-expanded-rows', JSON.stringify(Array.from(expandedIds)));
-  }, [expandedIds]);
-
   const { data: strategies, isLoading: strategiesLoading } = useQuery<Strategy[]>({
     queryKey: ["/api/strategies"],
   });
@@ -355,10 +226,6 @@ export default function Timeline() {
 
   const { data: actions, isLoading: actionsLoading } = useQuery<Action[]>({
     queryKey: ["/api/actions"],
-  });
-
-  const { data: barriers } = useQuery<Barrier[]>({
-    queryKey: ["/api/barriers"],
   });
 
   const { data: dependencies } = useQuery<Dependency[]>({
@@ -415,49 +282,11 @@ export default function Timeline() {
     return actions.filter(a => a.projectId && projectIds.has(a.projectId));
   }, [actions, filteredProjects]);
 
-  const dependencyMap = useMemo(() => {
-    if (!dependencies) return new Map<string, string[]>();
-    
-    const map = new Map<string, string[]>();
-    
-    dependencies.forEach(dep => {
-      const targetId = `${dep.targetType}-${dep.targetId}`;
-      const sourceId = `${dep.sourceType}-${dep.sourceId}`;
-      
-      if (!map.has(targetId)) {
-        map.set(targetId, []);
-      }
-      map.get(targetId)!.push(sourceId);
-    });
-    
-    return map;
-  }, [dependencies]);
-
-  const allTasks: TaskWithMeta[] = useMemo(() => {
+  const ganttData = useMemo(() => {
     if (!filteredStrategies || !projects || !actions) return [];
 
-    const result: TaskWithMeta[] = [];
-
-    const getProjectStatusColor = (status: string) => {
-      switch (status) {
-        case "C": return "#22c55e";
-        case "OT": return "#eab308";
-        case "OH": return "#ef4444";
-        case "B": return "#f97316";
-        case "NYS": return "#9ca3af";
-        default: return "#6b7280";
-      }
-    };
-
-    const getActionStatusColor = (status: string) => {
-      switch (status) {
-        case "achieved": return "#86efac";
-        case "in_progress": return "#93c5fd";
-        case "at_risk": return "#fca5a5";
-        case "not_started": return "#d1d5db";
-        default: return "#e5e7eb";
-      }
-    };
+    const result: GanttDataItem[] = [];
+    const renderedTaskIds = new Set<string>();
 
     filteredStrategies.forEach(strategy => {
       const strategyProjects = projects
@@ -469,11 +298,9 @@ export default function Timeline() {
           return a.id.localeCompare(b.id);
         });
 
-      // Use strategy's own dates if available, otherwise fall back to project dates
       let strategyStart: Date | null = strategy.startDate ? new Date(strategy.startDate) : null;
       let strategyEnd: Date | null = strategy.targetDate ? new Date(strategy.targetDate) : null;
 
-      // If strategy doesn't have dates, calculate from projects
       if (!strategyStart || !strategyEnd) {
         const strategyStartDates: Date[] = [];
         const strategyEndDates: Date[] = [];
@@ -491,36 +318,16 @@ export default function Timeline() {
         }
       }
 
-      // Skip if we still don't have valid dates
       if (!strategyStart || !strategyEnd) {
         if (strategyProjects.length === 0) return;
-        // Use today as fallback
         strategyStart = strategyStart || new Date();
         strategyEnd = strategyEnd || new Date();
       }
 
-      const isStrategyExpanded = expandedIds.has(`strategy-${strategy.id}`);
       const strategyTaskId = `strategy-${strategy.id}`;
+      renderedTaskIds.add(strategyTaskId);
 
-      result.push({
-        start: strategyStart,
-        end: strategyEnd,
-        name: strategy.title,
-        id: strategyTaskId,
-        progress: strategy.progress || 0,
-        type: "project",
-        hideChildren: !isStrategyExpanded,
-        dependencies: dependencyMap.get(strategyTaskId) || [],
-        level: 0,
-        hasChildren: true,
-        colorCode: strategy.colorCode,
-        styles: {
-          backgroundColor: strategy.colorCode || "#1e3a8a",
-          backgroundSelectedColor: strategy.colorCode || "#1e3a8a",
-          progressColor: strategy.colorCode || "#1e3a8a",
-          progressSelectedColor: strategy.colorCode || "#1e3a8a",
-        },
-      });
+      const projectSubtasks: GanttDataItem[] = [];
 
       strategyProjects.forEach(project => {
         if (!project.startDate || !project.dueDate) return;
@@ -537,36 +344,10 @@ export default function Timeline() {
             return a.id.localeCompare(b.id);
           });
 
-        const hasActions = projectActions.length > 0;
-        const isProjectExpanded = expandedIds.has(`project-${project.id}`);
-
-        const projectBarriers = barriers?.filter(b => 
-          b.projectId === project.id && b.status !== 'resolved' && b.status !== 'closed'
-        ) || [];
-        const hasBarriers = projectBarriers.length > 0;
-
-        const projectColor = getProjectStatusColor(project.status);
         const projectTaskId = `project-${project.id}`;
+        renderedTaskIds.add(projectTaskId);
 
-        result.push({
-          start: projectStart,
-          end: projectEnd,
-          name: hasBarriers ? `⚠️ ${project.title}` : project.title,
-          id: projectTaskId,
-          progress: project.progress || 0,
-          type: hasActions ? "project" : "task",
-          project: strategyTaskId,
-          hideChildren: !isProjectExpanded,
-          dependencies: dependencyMap.get(projectTaskId) || [],
-          level: 1,
-          hasChildren: hasActions,
-          styles: {
-            backgroundColor: projectColor,
-            backgroundSelectedColor: projectColor,
-            progressColor: projectColor,
-            progressSelectedColor: projectColor,
-          },
-        });
+        const actionSubtasks: GanttDataItem[] = [];
 
         projectActions.forEach(action => {
           if (!action.dueDate) return;
@@ -575,65 +356,81 @@ export default function Timeline() {
           const actionStart = new Date(actionEnd);
           actionStart.setDate(actionStart.getDate() - 7);
 
-          const actionColor = getActionStatusColor(action.status);
           const actionTaskId = `action-${action.id}`;
+          renderedTaskIds.add(actionTaskId);
 
-          result.push({
-            start: actionStart,
-            end: actionEnd,
-            name: action.title,
-            id: actionTaskId,
-            progress: action.status === "achieved" ? 100 : action.status === "in_progress" ? 50 : 0,
-            type: "task",
-            project: projectTaskId,
-            dependencies: dependencyMap.get(actionTaskId) || [],
+          actionSubtasks.push({
+            TaskID: actionTaskId,
+            TaskName: action.title,
+            StartDate: actionStart,
+            EndDate: actionEnd,
+            Progress: action.status === "achieved" ? 100 : action.status === "in_progress" ? 50 : 0,
             level: 2,
-            hasChildren: false,
-            styles: {
-              backgroundColor: actionColor,
-              backgroundSelectedColor: actionColor,
-              progressColor: actionColor,
-              progressSelectedColor: actionColor,
-            },
+            entityType: 'action',
+            entityId: action.id,
           });
         });
+
+        projectSubtasks.push({
+          TaskID: projectTaskId,
+          TaskName: project.title,
+          StartDate: projectStart,
+          EndDate: projectEnd,
+          Progress: project.progress || 0,
+          level: 1,
+          entityType: 'project',
+          entityId: project.id,
+          subtasks: actionSubtasks.length > 0 ? actionSubtasks : undefined,
+        });
+      });
+
+      result.push({
+        TaskID: strategyTaskId,
+        TaskName: strategy.title,
+        StartDate: strategyStart,
+        EndDate: strategyEnd,
+        Progress: strategy.progress || 0,
+        level: 0,
+        colorCode: strategy.colorCode,
+        isParent: true,
+        entityType: 'priority',
+        entityId: strategy.id,
+        subtasks: projectSubtasks.length > 0 ? projectSubtasks : undefined,
       });
     });
+
+    if (dependencies && dependencies.length > 0) {
+      const addPredecessors = (items: GanttDataItem[]) => {
+        items.forEach(item => {
+          const predecessors: string[] = [];
+          dependencies.forEach(dep => {
+            const sourceTaskId = `${dep.sourceType}-${dep.sourceId}`;
+            const targetTaskId = `${dep.targetType}-${dep.targetId}`;
+            if (sourceTaskId === item.TaskID && renderedTaskIds.has(targetTaskId)) {
+              predecessors.push(targetTaskId);
+            }
+          });
+          if (predecessors.length > 0) {
+            item.Predecessor = predecessors.join(',');
+          }
+          if (item.subtasks) {
+            addPredecessors(item.subtasks);
+          }
+        });
+      };
+      addPredecessors(result);
+    }
 
     return result;
-  }, [filteredStrategies, projects, actions, barriers, expandedIds, dependencyMap]);
+  }, [filteredStrategies, projects, actions, dependencies]);
 
-
-  const handleExpanderClick = (task: Task) => {
-    setExpandedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(task.id)) {
-        next.delete(task.id);
-      } else {
-        next.add(task.id);
-      }
-      return next;
-    });
-  };
-
-  const handleDateChange = (task: Task) => {
-    const parts = task.id.split('-');
-    const type = parts[0];
-    const id = parts.slice(1).join('-');
-
-    if (type === 'project') {
-      updateProjectMutation.mutate({
-        id,
-        startDate: task.start,
-        dueDate: task.end,
-      });
-    } else if (type === 'action') {
-      updateActionMutation.mutate({
-        id,
-        dueDate: task.end,
-      });
+  useEffect(() => {
+    if (ganttRef.current && ganttData.length > 0) {
+      setTimeout(() => {
+        ganttRef.current?.scrollToDate(new Date().toISOString().split('T')[0]);
+      }, 500);
     }
-  };
+  }, [ganttData, viewType]);
 
   const handlePriorityFilterChange = (priorityId: string, checked: boolean) => {
     setSelectedPriorityIds(prev => {
@@ -645,24 +442,104 @@ export default function Timeline() {
     });
   };
 
-  const handleTaskClick = (task: Task) => {
-    const parts = task.id.split('-');
-    const type = parts[0];
-    const id = parts.slice(1).join('-');
+  const handleTaskbarEdited = (args: any) => {
+    if (args.data) {
+      const taskId = args.data.TaskID as string;
+      const parts = taskId.split('-');
+      const type = parts[0];
+      const id = parts.slice(1).join('-');
 
-    if (type === 'project') {
-      const projectBarriers = barriers?.filter(b => 
-        b.projectId === id && b.status !== 'resolved' && b.status !== 'closed'
-      ) || [];
-      
-      if (projectBarriers.length > 0) {
-        const project = projects?.find(p => p.id === id);
-        setSelectedProjectBarriers(projectBarriers);
-        setSelectedProjectTitle(project?.title || "Project");
-        setBarrierDialogOpen(true);
+      if (type === 'project') {
+        updateProjectMutation.mutate({
+          id,
+          startDate: new Date(args.data.StartDate),
+          dueDate: new Date(args.data.EndDate),
+        });
+      } else if (type === 'action') {
+        updateActionMutation.mutate({
+          id,
+          dueDate: new Date(args.data.EndDate),
+        });
       }
     }
   };
+
+  const queryTaskbarInfo = (args: any) => {
+    if (args.data && args.data.taskData) {
+      const taskData = args.data.taskData;
+      const level = taskData.level || 0;
+      
+      if (level === 0 && taskData.colorCode) {
+        args.taskbarBgColor = taskData.colorCode;
+        args.progressBarBgColor = taskData.colorCode;
+      } else if (level === 1) {
+        const progress = taskData.Progress || 0;
+        if (progress >= 100) {
+          args.taskbarBgColor = '#22c55e';
+        } else if (progress >= 75) {
+          args.taskbarBgColor = '#3b82f6';
+        } else if (progress >= 50) {
+          args.taskbarBgColor = '#eab308';
+        } else if (progress > 0) {
+          args.taskbarBgColor = '#f97316';
+        } else {
+          args.taskbarBgColor = '#6b7280';
+        }
+        args.progressBarBgColor = args.taskbarBgColor;
+      } else if (level === 2) {
+        const progress = taskData.Progress || 0;
+        if (progress >= 100) {
+          args.taskbarBgColor = '#86efac';
+        } else if (progress > 0) {
+          args.taskbarBgColor = '#93c5fd';
+        } else {
+          args.taskbarBgColor = '#d1d5db';
+        }
+        args.progressBarBgColor = args.taskbarBgColor;
+      }
+    }
+  };
+
+  const queryCellInfo = (args: any) => {
+    if (args.column && args.column.field === 'TaskName' && args.data) {
+      const level = args.data.level || args.data.taskData?.level || 0;
+      if (level === 0) {
+        args.cell.style.fontWeight = 'bold';
+        args.cell.style.fontSize = '13px';
+      }
+    }
+  };
+
+  const taskFields = {
+    id: 'TaskID',
+    name: 'TaskName',
+    startDate: 'StartDate',
+    endDate: 'EndDate',
+    progress: 'Progress',
+    child: 'subtasks',
+    dependency: 'Predecessor',
+  };
+
+  const timelineSettings = useMemo(() => {
+    switch (timelineView) {
+      case 'Day':
+        return {
+          topTier: { unit: 'Week', format: 'MMM dd, yyyy' },
+          bottomTier: { unit: 'Day', format: 'dd' },
+        };
+      case 'Week':
+        return {
+          topTier: { unit: 'Month', format: 'MMMM yyyy' },
+          bottomTier: { unit: 'Week', format: 'MMM dd' },
+        };
+      case 'Month':
+      default:
+        return {
+          topTier: { unit: 'Year', format: 'yyyy' },
+          bottomTier: { unit: 'Month', format: 'MMM' },
+        };
+    }
+  }, [timelineView]);
 
   if (strategiesLoading || projectsLoading || actionsLoading) {
     return (
@@ -679,8 +556,6 @@ export default function Timeline() {
   }
 
   const activeStrategies = strategies?.filter(s => s.status !== 'Archived') || [];
-
-  const columnWidth = viewMode === ViewMode.Day ? 40 : viewMode === ViewMode.Week ? 80 : 150;
 
   return (
     <div className="min-h-screen flex bg-gray-50 dark:bg-gray-950">
@@ -770,28 +645,28 @@ export default function Timeline() {
               {viewType === 'timeline' && (
                 <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-md p-0.5">
                   <Button
-                    variant={viewMode === ViewMode.Day ? "default" : "ghost"}
+                    variant={timelineView === 'Day' ? "default" : "ghost"}
                     size="sm"
                     className="h-7 px-2.5 text-xs"
-                    onClick={() => setViewMode(ViewMode.Day)}
+                    onClick={() => setTimelineView('Day')}
                     data-testid="button-scale-days"
                   >
                     Day
                   </Button>
                   <Button
-                    variant={viewMode === ViewMode.Week ? "default" : "ghost"}
+                    variant={timelineView === 'Week' ? "default" : "ghost"}
                     size="sm"
                     className="h-7 px-2.5 text-xs"
-                    onClick={() => setViewMode(ViewMode.Week)}
+                    onClick={() => setTimelineView('Week')}
                     data-testid="button-scale-weeks"
                   >
                     Week
                   </Button>
                   <Button
-                    variant={viewMode === ViewMode.Month ? "default" : "ghost"}
+                    variant={timelineView === 'Month' ? "default" : "ghost"}
                     size="sm"
                     className="h-7 px-2.5 text-xs"
-                    onClick={() => setViewMode(ViewMode.Month)}
+                    onClick={() => setTimelineView('Month')}
                     data-testid="button-scale-months"
                   >
                     Month
@@ -849,7 +724,7 @@ export default function Timeline() {
                 setDayDetailsDialogOpen(true);
               }}
             />
-          ) : allTasks.length === 0 ? (
+          ) : ganttData.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center py-12">
                 <Calendar className="w-10 h-10 text-gray-400 mx-auto mb-3" />
@@ -865,180 +740,40 @@ export default function Timeline() {
               </div>
             </div>
           ) : (
-            <div className="h-full gantt-container">
-              <style>{`
-                /* Grid background */
-                .gantt-container ._2dZTy {
-                  fill: #f9fafb;
-                }
-                .dark .gantt-container ._2dZTy {
-                  fill: #111827;
-                }
-                /* Grid lines */
-                .gantt-container ._3_ygE {
-                  stroke: #e5e7eb;
-                }
-                .dark .gantt-container ._3_ygE {
-                  stroke: #374151;
-                }
-                /* Header text */
-                .gantt-container ._9w8d5 {
-                  fill: #6b7280;
-                  font-size: 11px;
-                }
-                .dark .gantt-container ._9w8d5 {
-                  fill: #9ca3af;
-                }
-                /* Alternating row background */
-                .gantt-container ._3rUKi {
-                  fill: #f3f4f6;
-                }
-                .dark .gantt-container ._3rUKi {
-                  fill: #1f2937;
-                }
-                /* Row borders */
-                .gantt-container ._RuwuK {
-                  stroke: #e5e7eb;
-                }
-                .dark .gantt-container ._RuwuK {
-                  stroke: #374151;
-                }
-                .gantt-container svg {
-                  overflow: visible;
-                }
-                
-                /* === TASK BAR STYLING === */
-                /* All bars - flat modern look with subtle rounding */
-                .gantt-container g > rect {
-                  rx: 3px;
-                  ry: 3px;
-                }
-                
-                /* Hide ALL grey background rects - target by fill color */
-                .gantt-container svg rect[fill="#b8c2cc"],
-                .gantt-container svg rect[fill="rgb(184, 194, 204)"],
-                .gantt-container svg rect[fill="#aeb8c2"],
-                .gantt-container svg rect[fill="rgb(174, 184, 194)"] {
-                  fill: transparent !important;
-                  opacity: 0 !important;
-                }
-                
-                /* Universal: hide first rect in any bar group (background rect) */
-                .gantt-container svg g[cursor="pointer"] > rect:first-of-type {
-                  fill: transparent !important;
-                  stroke: none !important;
-                  opacity: 0 !important;
-                  visibility: hidden !important;
-                }
-                
-                /* Remove ALL filters and opacity changes globally */
-                .gantt-container svg g,
-                .gantt-container svg g *,
-                .gantt-container svg g:hover,
-                .gantt-container svg g:hover *,
-                .gantt-container svg g:focus,
-                .gantt-container svg g:focus *,
-                .gantt-container svg g:active,
-                .gantt-container svg g:active * {
-                  filter: none !important;
-                  opacity: 1 !important;
-                  transition: none !important;
-                }
-                
-                /* Override first-of-type to ensure background is hidden */
-                .gantt-container svg g[cursor="pointer"] > rect:first-of-type {
-                  opacity: 0 !important;
-                  visibility: hidden !important;
-                }
-                
-                /* Remove any strokes/borders from all rects */
-                .gantt-container svg g rect {
-                  stroke: none !important;
-                }
-                
-                /* Cursor for interactive bars */
-                .gantt-container g[cursor="pointer"] {
-                  cursor: pointer;
-                }
-              `}</style>
-              <Gantt
-                tasks={allTasks}
-                viewMode={viewMode}
-                onExpanderClick={handleExpanderClick}
-                onDateChange={handleDateChange}
-                onClick={handleTaskClick}
-                TaskListHeader={CustomTaskListHeader}
-                TaskListTable={CustomTaskListTable}
-                listCellWidth="230px"
-                columnWidth={columnWidth}
+            <div className="h-full w-full syncfusion-gantt-container">
+              <GanttComponent
+                ref={ganttRef}
+                dataSource={ganttData}
+                taskFields={taskFields}
+                height="100%"
+                width="100%"
+                highlightWeekends={true}
+                allowSelection={true}
+                allowResizing={true}
+                editSettings={{ allowTaskbarEditing: true, allowEditing: true }}
+                enableVirtualization={false}
+                showColumnMenu={false}
+                collapseAllParentTasks={false}
+                treeColumnIndex={0}
+                splitterSettings={{ position: '25%' }}
+                timelineSettings={timelineSettings as any}
+                taskbarEdited={handleTaskbarEdited}
+                queryTaskbarInfo={queryTaskbarInfo}
+                queryCellInfo={queryCellInfo}
+                dayWorkingTime={[{ from: 0, to: 24 }]}
+                includeWeekend={true}
                 rowHeight={36}
-                fontSize="12px"
-                headerHeight={40}
-                todayColor="rgba(239, 68, 68, 0.1)"
-                arrowColor="#94a3b8"
-                arrowIndent={15}
-                barBackgroundColor="transparent"
-                barBackgroundSelectedColor="transparent"
-                TooltipContent={({ task }) => {
-                  const parts = task.id.split('-');
-                  const type = parts[0];
-                  const typeLabel = type === 'strategy' ? 'Priority' : type === 'project' ? 'Project' : 'Action';
-                  
-                  return (
-                    <div className="bg-white dark:bg-gray-800 p-2.5 shadow-lg border border-gray-200 dark:border-gray-700 rounded-md text-xs max-w-xs">
-                      <p className="font-semibold text-gray-900 dark:text-white mb-0.5">{task.name}</p>
-                      <p className="text-gray-500 dark:text-gray-400 mb-1">{typeLabel}</p>
-                      <p className="text-gray-600 dark:text-gray-300">
-                        {task.start.toLocaleDateString()} → {task.end.toLocaleDateString()}
-                      </p>
-                      {task.progress > 0 && (
-                        <div className="mt-1.5 flex items-center gap-1.5">
-                          <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                            <div 
-                              className="bg-blue-500 h-1.5 rounded-full" 
-                              style={{ width: `${task.progress}%` }}
-                            />
-                          </div>
-                          <span className="text-gray-500 text-[10px]">{task.progress}%</span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                }}
-              />
+                taskbarHeight={24}
+              >
+                <ColumnsDirective>
+                  <ColumnDirective field="TaskName" headerText="Task Name" width="250" />
+                </ColumnsDirective>
+                <Inject services={[Edit, Selection, DayMarkers]} />
+              </GanttComponent>
             </div>
           )}
         </div>
       </main>
-
-      <Dialog open={barrierDialogOpen} onOpenChange={setBarrierDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <AlertTriangle className="w-4 h-4 text-orange-500" />
-              Barriers: {selectedProjectTitle}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-2 max-h-64 overflow-y-auto">
-            {selectedProjectBarriers.map(barrier => (
-              <div key={barrier.id} className="p-2.5 bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-md">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm text-gray-900 dark:text-white">{barrier.description}</p>
-                  <Badge 
-                    variant={barrier.severity === 'high' ? 'destructive' : barrier.severity === 'medium' ? 'default' : 'secondary'}
-                    className="text-[10px] h-5"
-                  >
-                    {barrier.severity}
-                  </Badge>
-                </div>
-              </div>
-            ))}
-            {selectedProjectBarriers.length === 0 && (
-              <p className="text-sm text-gray-500 text-center py-3">No active barriers</p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Day Details Dialog */}
       <Dialog open={dayDetailsDialogOpen} onOpenChange={setDayDetailsDialogOpen}>
@@ -1087,12 +822,10 @@ export default function Timeline() {
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
                             <Badge 
-                              variant={project.status === 'completed' ? 'default' : project.status === 'on_hold' ? 'secondary' : 'outline'}
+                              variant={project.status === 'C' ? 'default' : 'outline'}
                               className="text-xs capitalize"
                             >
-                              {project.status === 'on_hold' ? 'On Hold' : 
-                               project.status === 'completed' ? 'Completed' : 
-                               project.status === 'in_progress' ? 'In Progress' : 'Active'}
+                              {project.status}
                             </Badge>
                             <div className="text-right">
                               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -1124,7 +857,7 @@ export default function Timeline() {
                         key={action.id}
                         className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group"
                         style={{ borderLeft: `4px solid ${strategy?.colorCode || '#9ca3af'}` }}
-                        onClick={() => project && navigateToAction(action.id, project.id)}
+                        onClick={() => action.projectId && navigateToAction(action.id, action.projectId)}
                         data-testid={`day-action-${action.id}`}
                       >
                         <div className="flex items-start justify-between gap-2">
@@ -1136,24 +869,14 @@ export default function Timeline() {
                             {project && (
                               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                 {project.title}
-                                {strategy && ` • ${strategy.title}`}
                               </p>
                             )}
                           </div>
                           <Badge 
-                            variant={
-                              action.status === 'achieved' ? 'default' : 
-                              action.status === 'blocked' ? 'destructive' : 
-                              action.status === 'off_track' ? 'destructive' :
-                              'outline'
-                            }
-                            className="text-xs flex-shrink-0"
+                            variant={action.status === 'achieved' ? 'default' : action.status === 'at_risk' ? 'destructive' : 'outline'}
+                            className="text-xs capitalize"
                           >
-                            {action.status === 'achieved' ? 'Achieved' :
-                             action.status === 'on_track' ? 'On Track' :
-                             action.status === 'off_track' ? 'Off Track' :
-                             action.status === 'blocked' ? 'Blocked' :
-                             action.status === 'not_started' ? 'Not Started' : 'Not Started'}
+                            {action.status.replace('_', ' ')}
                           </Badge>
                         </div>
                       </div>
@@ -1161,11 +884,6 @@ export default function Timeline() {
                   })}
                 </div>
               </div>
-            )}
-
-            {/* Empty state */}
-            {selectedDayItems && selectedDayItems.projects.length === 0 && selectedDayItems.actions.length === 0 && (
-              <p className="text-sm text-gray-500 text-center py-6">No items due on this date</p>
             )}
           </div>
         </DialogContent>
