@@ -1,8 +1,8 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Sidebar } from "@/components/layout/sidebar";
-import { useMemo, useState, useEffect, useRef } from "react";
-import { GanttComponent, Inject, Edit, Selection, DayMarkers, ColumnsDirective, ColumnDirective } from "@syncfusion/ej2-react-gantt";
-import "@/styles/syncfusion-gantt.css";
+import { useMemo, useState, useEffect } from "react";
+import { Gantt, Task, ViewMode } from "gantt-task-react";
+import "gantt-task-react/dist/index.css";
 import type { Strategy, Project, Action, Dependency } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,41 +14,10 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 
-interface GanttDataItem {
-  TaskID: string;
-  TaskName: string;
-  StartDate: string;
-  EndDate: string;
-  Progress: number;
-  Duration: number;
-  Predecessor?: string;
-  subtasks?: GanttDataItem[];
-  isParent?: boolean;
-  level?: number;
-  colorCode?: string;
+interface ExtendedTask extends Task {
   entityType: 'priority' | 'project' | 'action';
   entityId: string;
-}
-
-function toISODateString(date: Date): string {
-  return date.toISOString().split('T')[0];
-}
-
-function calculateDurationDays(startStr: string, endStr: string): number {
-  const start = new Date(startStr);
-  const end = new Date(endStr);
-  const diffTime = end.getTime() - start.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return Math.max(1, diffDays);
-}
-
-function ensureDifferentDates(startStr: string, endStr: string): string {
-  if (startStr === endStr) {
-    const endDate = new Date(endStr);
-    endDate.setUTCDate(endDate.getUTCDate() + 1);
-    return endDate.toISOString().split('T')[0];
-  }
-  return endStr;
+  colorCode?: string;
 }
 
 interface DayItems {
@@ -218,7 +187,6 @@ const CalendarView: React.FC<{
 export default function Timeline() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const ganttRef = useRef<GanttComponent | null>(null);
   
   const [viewType, setViewType] = useState<'timeline' | 'calendar'>('timeline');
   const [calendarMonth, setCalendarMonth] = useState(new Date());
@@ -302,11 +270,10 @@ export default function Timeline() {
     return actions.filter(a => a.projectId && projectIds.has(a.projectId));
   }, [actions, filteredProjects]);
 
-  const ganttData = useMemo(() => {
+  const ganttTasks = useMemo((): ExtendedTask[] => {
     if (!filteredStrategies || !projects || !actions) return [];
 
-    const result: GanttDataItem[] = [];
-    const renderedTaskIds = new Set<string>();
+    const tasks: ExtendedTask[] = [];
 
     filteredStrategies.forEach(strategy => {
       const strategyProjects = projects
@@ -344,16 +311,52 @@ export default function Timeline() {
         strategyEnd = strategyEnd || new Date();
       }
 
-      const strategyTaskId = `strategy-${strategy.id}`;
-      renderedTaskIds.add(strategyTaskId);
+      if (strategyStart.getTime() === strategyEnd.getTime()) {
+        strategyEnd = new Date(strategyEnd.getTime() + 24 * 60 * 60 * 1000);
+      }
 
-      const projectSubtasks: GanttDataItem[] = [];
+      tasks.push({
+        id: `strategy-${strategy.id}`,
+        name: strategy.title,
+        start: strategyStart,
+        end: strategyEnd,
+        progress: strategy.progress || 0,
+        type: 'project',
+        hideChildren: false,
+        entityType: 'priority',
+        entityId: strategy.id,
+        colorCode: strategy.colorCode,
+        styles: {
+          backgroundColor: strategy.colorCode || '#3b82f6',
+          progressColor: strategy.colorCode || '#3b82f6',
+        },
+      });
 
       strategyProjects.forEach(project => {
         if (!project.startDate || !project.dueDate) return;
 
-        const projectStart = new Date(project.startDate);
-        const projectEnd = new Date(project.dueDate);
+        let projectStart = new Date(project.startDate);
+        let projectEnd = new Date(project.dueDate);
+
+        if (projectStart.getTime() === projectEnd.getTime()) {
+          projectEnd = new Date(projectEnd.getTime() + 24 * 60 * 60 * 1000);
+        }
+
+        tasks.push({
+          id: `project-${project.id}`,
+          name: project.title,
+          start: projectStart,
+          end: projectEnd,
+          progress: project.progress || 0,
+          type: 'task',
+          project: `strategy-${strategy.id}`,
+          entityType: 'project',
+          entityId: project.id,
+          styles: {
+            backgroundColor: '#60a5fa',
+            progressColor: '#3b82f6',
+          },
+        });
 
         const projectActions = actions
           .filter(a => a.projectId === project.id && a.dueDate)
@@ -364,104 +367,34 @@ export default function Timeline() {
             return a.id.localeCompare(b.id);
           });
 
-        const projectTaskId = `project-${project.id}`;
-        renderedTaskIds.add(projectTaskId);
-
-        const actionSubtasks: GanttDataItem[] = [];
-
         projectActions.forEach(action => {
           if (!action.dueDate) return;
 
-          const actionDateStr = toISODateString(new Date(action.dueDate));
+          const actionDate = new Date(action.dueDate);
 
-          const actionTaskId = `action-${action.id}`;
-          renderedTaskIds.add(actionTaskId);
-
-          actionSubtasks.push({
-            TaskID: actionTaskId,
-            TaskName: action.title,
-            StartDate: actionDateStr,
-            EndDate: actionDateStr,
-            Duration: 0,
-            Progress: action.status === "achieved" ? 100 : 0,
-            level: 2,
+          tasks.push({
+            id: `action-${action.id}`,
+            name: action.title,
+            start: actionDate,
+            end: actionDate,
+            progress: action.status === "achieved" ? 100 : 0,
+            type: 'milestone',
+            project: `project-${project.id}`,
             entityType: 'action',
             entityId: action.id,
+            styles: {
+              backgroundColor: '#9ca3af',
+              progressColor: '#6b7280',
+            },
           });
         });
-
-        const projectStartStr = toISODateString(projectStart);
-        const projectEndStr = toISODateString(projectEnd);
-        const adjustedProjectEndStr = ensureDifferentDates(projectStartStr, projectEndStr);
-        const projectDuration = calculateDurationDays(projectStartStr, adjustedProjectEndStr);
-        
-        projectSubtasks.push({
-          TaskID: projectTaskId,
-          TaskName: project.title,
-          StartDate: projectStartStr,
-          EndDate: adjustedProjectEndStr,
-          Duration: projectDuration,
-          Progress: project.progress || 0,
-          level: 1,
-          entityType: 'project',
-          entityId: project.id,
-          subtasks: actionSubtasks.length > 0 ? actionSubtasks : undefined,
-        });
-      });
-
-      const strategyStartStr = toISODateString(strategyStart);
-      const strategyEndStr = toISODateString(strategyEnd);
-      const adjustedStrategyEndStr = ensureDifferentDates(strategyStartStr, strategyEndStr);
-      const strategyDuration = calculateDurationDays(strategyStartStr, adjustedStrategyEndStr);
-      
-      result.push({
-        TaskID: strategyTaskId,
-        TaskName: strategy.title,
-        StartDate: strategyStartStr,
-        EndDate: adjustedStrategyEndStr,
-        Duration: strategyDuration,
-        Progress: strategy.progress || 0,
-        level: 0,
-        colorCode: strategy.colorCode,
-        isParent: true,
-        entityType: 'priority',
-        entityId: strategy.id,
-        subtasks: projectSubtasks.length > 0 ? projectSubtasks : undefined,
       });
     });
 
-    if (dependencies && dependencies.length > 0) {
-      const addPredecessors = (items: GanttDataItem[]) => {
-        items.forEach(item => {
-          const predecessors: string[] = [];
-          dependencies.forEach(dep => {
-            const sourceTaskId = `${dep.sourceType}-${dep.sourceId}`;
-            const targetTaskId = `${dep.targetType}-${dep.targetId}`;
-            if (sourceTaskId === item.TaskID && renderedTaskIds.has(targetTaskId)) {
-              predecessors.push(targetTaskId);
-            }
-          });
-          if (predecessors.length > 0) {
-            item.Predecessor = predecessors.join(',');
-          }
-          if (item.subtasks) {
-            addPredecessors(item.subtasks);
-          }
-        });
-      };
-      addPredecessors(result);
-    }
+    return tasks;
+  }, [filteredStrategies, projects, actions]);
 
-    return result;
-  }, [filteredStrategies, projects, actions, dependencies]);
-
-  useEffect(() => {
-    if (ganttRef.current && ganttData.length > 0) {
-      setTimeout(() => {
-        ganttRef.current?.scrollToDate(new Date().toISOString().split('T')[0]);
-      }, 500);
-    }
-  }, [ganttData]);
+  const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Week);
 
   const handlePriorityFilterChange = (priorityId: string, checked: boolean) => {
     setSelectedPriorityIds(prev => {
@@ -473,89 +406,36 @@ export default function Timeline() {
     });
   };
 
-  const handleTaskbarEdited = (args: any) => {
-    if (args.data) {
-      const taskId = args.data.TaskID as string;
-      const parts = taskId.split('-');
-      const type = parts[0];
-      const id = parts.slice(1).join('-');
+  const handleTaskChange = (task: Task) => {
+    const parts = task.id.split('-');
+    const type = parts[0];
+    const id = parts.slice(1).join('-');
 
-      if (type === 'project') {
-        updateProjectMutation.mutate({
-          id,
-          startDate: new Date(args.data.StartDate),
-          dueDate: new Date(args.data.EndDate),
-        });
-      } else if (type === 'action') {
-        updateActionMutation.mutate({
-          id,
-          dueDate: new Date(args.data.EndDate),
-        });
-      }
+    if (type === 'project') {
+      updateProjectMutation.mutate({
+        id,
+        startDate: task.start,
+        dueDate: task.end,
+      });
+    } else if (type === 'action') {
+      updateActionMutation.mutate({
+        id,
+        dueDate: task.end,
+      });
     }
   };
 
-  const queryTaskbarInfo = (args: any) => {
-    if (args.data && args.data.taskData) {
-      const taskData = args.data.taskData;
-      const level = taskData.level || 0;
-      
-      if (level === 0 && taskData.colorCode) {
-        args.taskbarBgColor = taskData.colorCode;
-        args.progressBarBgColor = taskData.colorCode;
-      } else if (level === 1) {
-        const progress = taskData.Progress || 0;
-        if (progress >= 100) {
-          args.taskbarBgColor = '#22c55e';
-        } else if (progress >= 75) {
-          args.taskbarBgColor = '#3b82f6';
-        } else if (progress >= 50) {
-          args.taskbarBgColor = '#eab308';
-        } else if (progress > 0) {
-          args.taskbarBgColor = '#f97316';
-        } else {
-          args.taskbarBgColor = '#6b7280';
-        }
-        args.progressBarBgColor = args.taskbarBgColor;
-      } else if (level === 2) {
-        const progress = taskData.Progress || 0;
-        if (progress >= 100) {
-          args.taskbarBgColor = '#86efac';
-        } else if (progress > 0) {
-          args.taskbarBgColor = '#93c5fd';
-        } else {
-          args.taskbarBgColor = '#d1d5db';
-        }
-        args.progressBarBgColor = args.taskbarBgColor;
+  const handleTaskClick = (task: Task) => {
+    const extTask = task as ExtendedTask;
+    if (extTask.entityType === 'project') {
+      navigateToProject(extTask.entityId);
+    } else if (extTask.entityType === 'action') {
+      const action = actions?.find(a => a.id === extTask.entityId);
+      if (action?.projectId) {
+        navigateToProject(action.projectId);
       }
     }
   };
-
-  const queryCellInfo = (args: any) => {
-    if (args.column && args.column.field === 'TaskName' && args.data) {
-      const level = args.data.level || args.data.taskData?.level || 0;
-      if (level === 0) {
-        args.cell.style.fontWeight = 'bold';
-        args.cell.style.fontSize = '13px';
-      }
-    }
-  };
-
-  const taskFields = {
-    id: 'TaskID',
-    name: 'TaskName',
-    startDate: 'StartDate',
-    endDate: 'EndDate',
-    duration: 'Duration',
-    progress: 'Progress',
-    child: 'subtasks',
-    dependency: 'Predecessor',
-  };
-
-  const labelSettings = {
-    leftLabel: 'TaskName',
-  };
-
 
   if (strategiesLoading || projectsLoading || actionsLoading) {
     return (
@@ -708,7 +588,7 @@ export default function Timeline() {
                 setDayDetailsDialogOpen(true);
               }}
             />
-          ) : ganttData.length === 0 ? (
+          ) : ganttTasks.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center py-12">
                 <Calendar className="w-10 h-10 text-gray-400 mx-auto mb-3" />
@@ -724,50 +604,44 @@ export default function Timeline() {
               </div>
             </div>
           ) : (
-            <div className="h-full w-full syncfusion-gantt-container">
-              <GanttComponent
-                ref={ganttRef}
-                dataSource={ganttData}
-                taskFields={taskFields}
-                labelSettings={labelSettings}
-                height="100%"
-                width="100%"
-                highlightWeekends={true}
-                allowSelection={true}
-                allowResizing={true}
-                editSettings={{ allowTaskbarEditing: true, allowEditing: false }}
-                enableVirtualization={false}
-                showColumnMenu={false}
-                collapseAllParentTasks={false}
-                treeColumnIndex={0}
-                splitterSettings={{ position: '35%' }}
-                taskbarEdited={handleTaskbarEdited}
-                queryTaskbarInfo={queryTaskbarInfo}
-                queryCellInfo={queryCellInfo}
-                dayWorkingTime={[{ from: 0, to: 24 }]}
-                includeWeekend={true}
-                rowHeight={36}
-                taskbarHeight={24}
-                allowUnscheduledTasks={false}
-                timelineSettings={{
-                  topTier: { unit: 'Week', format: 'MMM dd, yyyy' },
-                  bottomTier: { unit: 'Day', format: 'd' },
-                }}
-                eventMarkers={[
-                  {
-                    day: new Date(),
-                    label: 'Today',
-                    cssClass: 'e-custom-event-marker'
-                  }
-                ]}
-              >
-                <ColumnsDirective>
-                  <ColumnDirective field="TaskName" headerText="Task Name" width="200" />
-                  <ColumnDirective field="StartDate" headerText="Start Date" width="100" format="yMd" textAlign="Left" />
-                  <ColumnDirective field="EndDate" headerText="End Date" width="100" format="yMd" textAlign="Left" />
-                </ColumnsDirective>
-                <Inject services={[Edit, Selection, DayMarkers]} />
-              </GanttComponent>
+            <div className="h-full w-full p-4 overflow-auto bg-white dark:bg-gray-900">
+              <div className="flex items-center gap-2 mb-4">
+                <Button
+                  variant={viewMode === ViewMode.Day ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setViewMode(ViewMode.Day)}
+                  data-testid="button-view-day"
+                >
+                  Day
+                </Button>
+                <Button
+                  variant={viewMode === ViewMode.Week ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setViewMode(ViewMode.Week)}
+                  data-testid="button-view-week"
+                >
+                  Week
+                </Button>
+                <Button
+                  variant={viewMode === ViewMode.Month ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setViewMode(ViewMode.Month)}
+                  data-testid="button-view-month"
+                >
+                  Month
+                </Button>
+              </div>
+              <Gantt
+                tasks={ganttTasks}
+                viewMode={viewMode}
+                onDateChange={handleTaskChange}
+                onClick={handleTaskClick}
+                listCellWidth=""
+                columnWidth={viewMode === ViewMode.Month ? 300 : viewMode === ViewMode.Week ? 150 : 60}
+                rowHeight={40}
+                barCornerRadius={4}
+                todayColor="rgba(239, 68, 68, 0.3)"
+              />
             </div>
           )}
         </div>
