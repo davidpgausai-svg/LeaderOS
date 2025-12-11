@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Sidebar } from "@/components/layout/sidebar";
 import { useMemo, useState, useEffect, useRef } from "react";
 import { registerLicense } from "@syncfusion/ej2-base";
-import { GanttComponent, Inject, Edit, Selection, Toolbar, ColumnsDirective, ColumnDirective, DayMarkers } from "@syncfusion/ej2-react-gantt";
+import { GanttComponent, Inject, Selection, ColumnsDirective, ColumnDirective, DayMarkers } from "@syncfusion/ej2-react-gantt";
 import "@syncfusion/ej2-base/styles/material.css";
 import "@syncfusion/ej2-buttons/styles/material.css";
 import "@syncfusion/ej2-calendars/styles/material.css";
@@ -800,12 +800,13 @@ export default function Timeline() {
                 width="100%"
                 highlightWeekends={true}
                 allowSelection={true}
-                allowResizing={true}
+                allowResizing={false}
                 editSettings={{
-                  allowEditing: true,
-                  allowTaskbarEditing: true,
-                  mode: 'Auto'
+                  allowEditing: false,
+                  allowTaskbarEditing: false
                 }}
+                taskMode="Manual"
+                autoCalculateDateScheduling={false}
                 selectionSettings={{ mode: 'Row', type: 'Single' }}
                 timelineSettings={{
                   timelineViewMode: timelineView as any,
@@ -824,7 +825,6 @@ export default function Timeline() {
                 }}
                 projectStartDate={new Date(new Date().getFullYear(), 0, 1)}
                 projectEndDate={new Date(new Date().getFullYear() + 1, 11, 31)}
-                taskbarEdited={handleTaskbarEditing}
                 rowSelected={handleRecordClick}
                 queryTaskbarInfo={(args: any) => {
                   if (args.data && args.data.taskData && args.data.taskData.taskColor) {
@@ -839,7 +839,7 @@ export default function Timeline() {
                   <ColumnDirective field="EndDate" headerText="End" width="100" format="yMd" />
                   <ColumnDirective field="Progress" headerText="Progress" width="80" />
                 </ColumnsDirective>
-                <Inject services={[Edit, Selection, Toolbar, DayMarkers]} />
+                <Inject services={[Selection, DayMarkers]} />
               </GanttComponent>
             </div>
           )}
