@@ -369,8 +369,10 @@ export default function Timeline() {
           });
         });
 
+        const projectStartDateStr = projectStart.toISOString().split('T')[0];
+        const projectEndDateStr = projectEnd.toISOString().split('T')[0];
         let adjustedProjectEnd = projectEnd;
-        if (projectStart.getTime() === projectEnd.getTime()) {
+        if (projectStartDateStr === projectEndDateStr) {
           adjustedProjectEnd = new Date(projectEnd.getTime() + 24 * 60 * 60 * 1000);
         }
         const projectDuration = Math.max(1, Math.ceil((adjustedProjectEnd.getTime() - projectStart.getTime()) / (1000 * 60 * 60 * 24)));
@@ -389,8 +391,10 @@ export default function Timeline() {
         });
       });
 
+      const strategyStartDateStr = strategyStart.toISOString().split('T')[0];
+      const strategyEndDateStr = strategyEnd.toISOString().split('T')[0];
       let adjustedStrategyEnd = strategyEnd;
-      if (strategyStart.getTime() === strategyEnd.getTime()) {
+      if (strategyStartDateStr === strategyEndDateStr) {
         adjustedStrategyEnd = new Date(strategyEnd.getTime() + 24 * 60 * 60 * 1000);
       }
       const strategyDuration = Math.max(1, Math.ceil((adjustedStrategyEnd.getTime() - strategyStart.getTime()) / (1000 * 60 * 60 * 24)));
