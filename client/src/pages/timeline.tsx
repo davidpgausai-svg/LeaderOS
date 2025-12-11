@@ -369,18 +369,25 @@ export default function Timeline() {
           });
         });
 
-        const projectStartDateStr = projectStart.toISOString().split('T')[0];
-        const projectEndDateStr = projectEnd.toISOString().split('T')[0];
-        let adjustedProjectEnd = projectEnd;
-        if (projectStartDateStr === projectEndDateStr) {
-          adjustedProjectEnd = new Date(projectEnd.getTime() + 24 * 60 * 60 * 1000);
+        const normalizedProjectStart = new Date(projectStart);
+        normalizedProjectStart.setHours(0, 0, 0, 0);
+        
+        const normalizedProjectEnd = new Date(projectEnd);
+        normalizedProjectEnd.setHours(0, 0, 0, 0);
+        
+        let adjustedProjectEnd = normalizedProjectEnd;
+        if (normalizedProjectStart.getTime() === normalizedProjectEnd.getTime()) {
+          adjustedProjectEnd = new Date(normalizedProjectEnd);
+          adjustedProjectEnd.setDate(adjustedProjectEnd.getDate() + 1);
         }
-        const projectDuration = Math.max(1, Math.ceil((adjustedProjectEnd.getTime() - projectStart.getTime()) / (1000 * 60 * 60 * 24)));
+        adjustedProjectEnd.setHours(23, 59, 59, 999);
+        
+        const projectDuration = Math.max(1, Math.ceil((adjustedProjectEnd.getTime() - normalizedProjectStart.getTime()) / (1000 * 60 * 60 * 24)));
         
         projectSubtasks.push({
           TaskID: projectTaskId,
           TaskName: project.title,
-          StartDate: projectStart,
+          StartDate: normalizedProjectStart,
           EndDate: adjustedProjectEnd,
           Duration: projectDuration,
           Progress: project.progress || 0,
@@ -391,18 +398,25 @@ export default function Timeline() {
         });
       });
 
-      const strategyStartDateStr = strategyStart.toISOString().split('T')[0];
-      const strategyEndDateStr = strategyEnd.toISOString().split('T')[0];
-      let adjustedStrategyEnd = strategyEnd;
-      if (strategyStartDateStr === strategyEndDateStr) {
-        adjustedStrategyEnd = new Date(strategyEnd.getTime() + 24 * 60 * 60 * 1000);
+      const normalizedStrategyStart = new Date(strategyStart);
+      normalizedStrategyStart.setHours(0, 0, 0, 0);
+      
+      const normalizedStrategyEnd = new Date(strategyEnd);
+      normalizedStrategyEnd.setHours(0, 0, 0, 0);
+      
+      let adjustedStrategyEnd = normalizedStrategyEnd;
+      if (normalizedStrategyStart.getTime() === normalizedStrategyEnd.getTime()) {
+        adjustedStrategyEnd = new Date(normalizedStrategyEnd);
+        adjustedStrategyEnd.setDate(adjustedStrategyEnd.getDate() + 1);
       }
-      const strategyDuration = Math.max(1, Math.ceil((adjustedStrategyEnd.getTime() - strategyStart.getTime()) / (1000 * 60 * 60 * 24)));
+      adjustedStrategyEnd.setHours(23, 59, 59, 999);
+      
+      const strategyDuration = Math.max(1, Math.ceil((adjustedStrategyEnd.getTime() - normalizedStrategyStart.getTime()) / (1000 * 60 * 60 * 24)));
       
       result.push({
         TaskID: strategyTaskId,
         TaskName: strategy.title,
-        StartDate: strategyStart,
+        StartDate: normalizedStrategyStart,
         EndDate: adjustedStrategyEnd,
         Duration: strategyDuration,
         Progress: strategy.progress || 0,
