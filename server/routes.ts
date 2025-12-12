@@ -757,6 +757,14 @@ Respond ONLY with a valid JSON object in this exact format:
         completionDate: new Date(),
       });
 
+      // Remove all dependencies involving this strategy's projects and actions
+      const strategyProjects = await storage.getProjectsByStrategy(req.params.id);
+      const strategyActions = await storage.getActionsByStrategy(req.params.id);
+      
+      const projectIds = strategyProjects.map((p: any) => p.id);
+      const actionIds = strategyActions.map((a: any) => a.id);
+      await storage.deleteDependenciesForEntities(projectIds, actionIds, strategy.organizationId || undefined);
+
       res.json(updatedStrategy);
     } catch (error) {
       logger.error("Strategy completion failed", error);
@@ -811,6 +819,11 @@ Respond ONLY with a valid JSON object in this exact format:
       for (const action of strategyActions) {
         await storage.updateAction(action.id, { ...action, isArchived: 'true' });
       }
+
+      // Remove all dependencies involving archived projects and actions
+      const projectIds = strategyProjects.map((p: any) => p.id);
+      const actionIds = strategyActions.map((a: any) => a.id);
+      await storage.deleteDependenciesForEntities(projectIds, actionIds, strategy.organizationId || undefined);
 
       res.json({ message: "Strategy and related items archived successfully" });
     } catch (error) {

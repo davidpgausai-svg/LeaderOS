@@ -106,6 +106,7 @@ export interface IStorage {
   getDependenciesByTarget(targetType: string, targetId: string, organizationId?: string): Promise<Dependency[]>;
   createDependency(dependency: InsertDependency & { createdBy: string; organizationId?: string | null }): Promise<Dependency>;
   deleteDependency(id: string): Promise<boolean>;
+  deleteDependenciesForEntities(projectIds: string[], actionIds: string[], organizationId?: string): Promise<number>;
 
   // Template Type methods
   getAllTemplateTypes(): Promise<TemplateType[]>;

@@ -122,7 +122,7 @@ type ProjectTeamTag = {
 };
 
 export default function Reports() {
-  const [activeTab, setActiveTab] = useState("health");
+  const [activeTab, setActiveTab] = useState("capacity");
   const reportRef = useRef<HTMLDivElement>(null);
 
   const { data: strategies = [], isLoading: strategiesLoading } = useQuery<Strategy[]>({
@@ -397,7 +397,19 @@ export default function Reports() {
 
           {/* Tabbed Reports */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="print:hidden">
-            <TabsList className="mb-6">
+            <TabsList className="mb-6 flex-wrap h-auto gap-1 overflow-x-auto">
+              <TabsTrigger value="capacity" data-testid="tab-capacity">
+                <Users className="w-4 h-4 mr-2" />
+                Capacity
+              </TabsTrigger>
+              <TabsTrigger value="team-tags" data-testid="tab-team-tags">
+                <Hash className="w-4 h-4 mr-2" />
+                Team Tags
+              </TabsTrigger>
+              <TabsTrigger value="executive-goals" data-testid="tab-executive-goals">
+                <Tag className="w-4 h-4 mr-2" />
+                Executive Goals
+              </TabsTrigger>
               <TabsTrigger value="health" data-testid="tab-health">
                 <Target className="w-4 h-4 mr-2" />
                 Strategy Health
@@ -409,18 +421,6 @@ export default function Reports() {
               <TabsTrigger value="ownership" data-testid="tab-ownership">
                 <Users className="w-4 h-4 mr-2" />
                 Ownership
-              </TabsTrigger>
-              <TabsTrigger value="executive-goals" data-testid="tab-executive-goals">
-                <Tag className="w-4 h-4 mr-2" />
-                Executive Goals
-              </TabsTrigger>
-              <TabsTrigger value="team-tags" data-testid="tab-team-tags">
-                <Hash className="w-4 h-4 mr-2" />
-                Team Tags
-              </TabsTrigger>
-              <TabsTrigger value="capacity" data-testid="tab-capacity">
-                <Users className="w-4 h-4 mr-2" />
-                Capacity
               </TabsTrigger>
             </TabsList>
 

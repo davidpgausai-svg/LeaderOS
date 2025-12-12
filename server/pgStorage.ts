@@ -1,5 +1,5 @@
 import { db } from './db';
-import { eq, desc, and, sql, inArray } from 'drizzle-orm';
+import { eq, desc, and, sql, inArray, or } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import type { IStorage } from './storage';
 import {
@@ -682,6 +682,50 @@ export class PostgresStorage implements IStorage {
   async deleteDependency(id: string): Promise<boolean> {
     const result = await db.delete(dependencies).where(eq(dependencies.id, id)).returning();
     return result.length > 0;
+  }
+
+  async deleteDependenciesForEntities(projectIds: string[], actionIds: string[], organizationId?: string): Promise<number> {
+    if (projectIds.length === 0 && actionIds.length === 0) {
+      return 0;
+    }
+
+    const sourceConditions = [];
+    const targetConditions = [];
+
+    if (projectIds.length > 0) {
+      sourceConditions.push(
+        and(eq(dependencies.sourceType, 'project'), inArray(dependencies.sourceId, projectIds))
+      );
+      targetConditions.push(
+        and(eq(dependencies.targetType, 'project'), inArray(dependencies.targetId, projectIds))
+      );
+    }
+
+    if (actionIds.length > 0) {
+      sourceConditions.push(
+        and(eq(dependencies.sourceType, 'action'), inArray(dependencies.sourceId, actionIds))
+      );
+      targetConditions.push(
+        and(eq(dependencies.targetType, 'action'), inArray(dependencies.targetId, actionIds))
+      );
+    }
+
+    const allConditions = [...sourceConditions, ...targetConditions];
+
+    if (allConditions.length === 0) {
+      return 0;
+    }
+
+    const entityFilter = or(...allConditions);
+    const finalCondition = organizationId 
+      ? and(entityFilter, eq(dependencies.organizationId, organizationId))
+      : entityFilter;
+
+    const result = await db.delete(dependencies)
+      .where(finalCondition)
+      .returning();
+
+    return result.length;
   }
 
   async getAllTemplateTypes(): Promise<TemplateType[]> {
