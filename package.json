@@ -44,6 +44,7 @@
     "@radix-ui/react-tooltip": "^1.2.0",
     "@syncfusion/ej2-base": "^31.2.18",
     "@syncfusion/ej2-react-gantt": "^31.2.18",
+    "@syncfusion/ej2-react-schedule": "^31.2.15",
     "@tanstack/react-query": "^5.60.5",
     "@types/bcryptjs": "^2.4.6",
     "@types/better-sqlite3": "^7.6.13",
