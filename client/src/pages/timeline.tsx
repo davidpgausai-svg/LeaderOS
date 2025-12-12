@@ -38,6 +38,7 @@ interface SyncfusionTask {
   taskColor?: string;
   taskType?: 'strategy' | 'project' | 'action';
   hasBarriers?: boolean;
+  dependency?: string;
 }
 
 interface DayItems {
@@ -420,6 +421,13 @@ export default function Timeline() {
           const actionStart = new Date(actionEnd);
           actionStart.setDate(actionStart.getDate() - 7);
 
+          const actionDeps = dependencies?.filter(d => 
+            d.sourceType === 'action' && d.sourceId === action.id
+          ) || [];
+          const predecessorStr = actionDeps.map(d => 
+            `${d.targetType}-${d.targetId}FS`
+          ).join(',');
+
           return {
             TaskID: `action-${action.id}`,
             TaskName: action.title,
@@ -428,8 +436,16 @@ export default function Timeline() {
             Progress: action.status === "achieved" ? 100 : action.status === "in_progress" ? 50 : 0,
             taskColor: getActionStatusColor(action.status),
             taskType: 'action' as const,
+            Predecessor: predecessorStr || undefined,
           };
         });
+
+        const projectDeps = dependencies?.filter(d => 
+          d.sourceType === 'project' && d.sourceId === project.id
+        ) || [];
+        const projectPredecessorStr = projectDeps.map(d => 
+          `${d.targetType}-${d.targetId}FS`
+        ).join(',');
 
         projectSubtasks.push({
           TaskID: `project-${project.id}`,
@@ -441,6 +457,7 @@ export default function Timeline() {
           taskColor: getProjectStatusColor(project.status),
           taskType: 'project' as const,
           hasBarriers,
+          Predecessor: projectPredecessorStr || undefined,
         });
       });
 
@@ -457,7 +474,7 @@ export default function Timeline() {
     });
 
     return result;
-  }, [filteredStrategies, projects, actions, barriers]);
+  }, [filteredStrategies, projects, actions, barriers, dependencies]);
 
   const taskFields = {
     id: 'TaskID',
@@ -816,6 +833,16 @@ export default function Timeline() {
                   border-right: 4px solid transparent;
                   border-top: 6px solid #ef4444;
                 }
+                /* Grey dependency connector lines */
+                .e-gantt .e-connector-line {
+                  stroke: #9ca3af !important;
+                }
+                .e-gantt .e-connector-line-arrow {
+                  fill: #9ca3af !important;
+                }
+                .e-gantt .e-line {
+                  stroke: #9ca3af !important;
+                }
               `}</style>
               <GanttComponent
                 ref={ganttRef}
@@ -846,10 +873,60 @@ export default function Timeline() {
                 }}
                 treeColumnIndex={0}
                 labelSettings={{
-                  taskLabel: '${Progress}%'
+                  taskLabel: ''
                 }}
-                projectStartDate={new Date(new Date().getFullYear(), 0, 1)}
-                projectEndDate={new Date(new Date().getFullYear() + 1, 11, 31)}
+                projectStartDate={(() => {
+                  const MAX_DATE = new Date(8640000000000000);
+                  const minDate = ganttData.reduce((min, task) => {
+                    const checkDates = (t: SyncfusionTask): Date | null => {
+                      let taskMin: Date | null = t.StartDate || null;
+                      if (t.subtasks) {
+                        t.subtasks.forEach(sub => {
+                          const subMin = checkDates(sub);
+                          if (subMin && (!taskMin || subMin < taskMin)) taskMin = subMin;
+                        });
+                      }
+                      return taskMin;
+                    };
+                    const taskMin = checkDates(task);
+                    if (taskMin && taskMin < min) return taskMin;
+                    return min;
+                  }, MAX_DATE);
+                  if (minDate.getTime() === MAX_DATE.getTime()) {
+                    const fallback = new Date();
+                    fallback.setFullYear(fallback.getFullYear() - 1);
+                    return fallback;
+                  }
+                  const extendedDate = new Date(minDate);
+                  extendedDate.setMonth(extendedDate.getMonth() - 3);
+                  return extendedDate;
+                })()}
+                projectEndDate={(() => {
+                  const MIN_DATE = new Date(-8640000000000000);
+                  const maxDate = ganttData.reduce((max, task) => {
+                    const checkDates = (t: SyncfusionTask): Date | null => {
+                      let taskMax: Date | null = t.EndDate || null;
+                      if (t.subtasks) {
+                        t.subtasks.forEach(sub => {
+                          const subMax = checkDates(sub);
+                          if (subMax && (!taskMax || subMax > taskMax)) taskMax = subMax;
+                        });
+                      }
+                      return taskMax;
+                    };
+                    const taskMax = checkDates(task);
+                    if (taskMax && taskMax > max) return taskMax;
+                    return max;
+                  }, MIN_DATE);
+                  if (maxDate.getTime() === MIN_DATE.getTime()) {
+                    const fallback = new Date();
+                    fallback.setFullYear(fallback.getFullYear() + 3);
+                    return fallback;
+                  }
+                  const extendedDate = new Date(maxDate);
+                  extendedDate.setFullYear(extendedDate.getFullYear() + 2);
+                  return extendedDate;
+                })()}
                 rowSelected={handleRecordClick}
                 eventMarkers={[
                   {
@@ -866,17 +943,28 @@ export default function Timeline() {
                       args.progressBarBgColor = 'transparent';
                       args.taskbarBorderColor = '#000000';
                       if (args.taskbarElement) {
-                        args.taskbarElement.style.background = 'transparent';
-                        args.taskbarElement.style.borderLeft = '2px solid #000000';
-                        args.taskbarElement.style.borderRight = '2px solid #000000';
-                        args.taskbarElement.style.borderTop = 'none';
-                        args.taskbarElement.style.borderBottom = 'none';
-                        args.taskbarElement.style.height = '4px';
-                        args.taskbarElement.style.marginTop = '10px';
+                        args.taskbarElement.style.setProperty('background', 'transparent', 'important');
+                        args.taskbarElement.style.setProperty('border-left', '2px solid #000000', 'important');
+                        args.taskbarElement.style.setProperty('border-right', '2px solid #000000', 'important');
+                        args.taskbarElement.style.setProperty('border-top', 'none', 'important');
+                        args.taskbarElement.style.setProperty('border-bottom', 'none', 'important');
+                        args.taskbarElement.style.setProperty('height', '4px', 'important');
+                        args.taskbarElement.style.setProperty('margin-top', '10px', 'important');
                       }
-                    } else if (args.data.taskData.taskColor) {
-                      args.taskbarBgColor = args.data.taskData.taskColor;
-                      args.progressBarBgColor = args.data.taskData.taskColor;
+                    } else {
+                      const color = args.data.taskData.taskColor || '#6b7280';
+                      args.taskbarBgColor = color;
+                      args.progressBarBgColor = color;
+                      args.taskbarBorderColor = color;
+                      if (args.taskbarElement) {
+                        args.taskbarElement.style.setProperty('background', color, 'important');
+                        args.taskbarElement.style.removeProperty('border-left');
+                        args.taskbarElement.style.removeProperty('border-right');
+                        args.taskbarElement.style.removeProperty('border-top');
+                        args.taskbarElement.style.removeProperty('border-bottom');
+                        args.taskbarElement.style.removeProperty('height');
+                        args.taskbarElement.style.removeProperty('margin-top');
+                      }
                     }
                   }
                 }}
