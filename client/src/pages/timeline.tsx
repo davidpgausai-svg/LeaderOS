@@ -581,9 +581,10 @@ export default function Timeline() {
                   display: none !important;
                 }
                 /* Hide dependency connector points (grey half-circles at task corners) */
-                .e-gantt .e-connectorpoint-left,
-                .e-gantt .e-connectorpoint-right {
-                  display: none !important;
+                .e-gantt .e-connectorpoint-outer-div,
+                .e-gantt .e-connectorpoint-outer-div::before {
+                  background-color: transparent !important;
+                  border-color: transparent !important;
                 }
               `}</style>
               <GanttComponent
