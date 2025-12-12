@@ -440,9 +440,19 @@ export default function Strategies() {
 
   // Track previous filter to only reset collapse state when filter actually changes
   const previousFilterRef = useRef<string>(strategyFilter);
+  // Track whether initial collapse has been done
+  const initialCollapseRef = useRef<boolean>(false);
   
   // Auto-collapse all strategies when "All Strategies" filter is active
   useEffect(() => {
+    // On initial load with "all" filter, collapse all strategies
+    if (!initialCollapseRef.current && strategies && strategyFilter === "all") {
+      const allStrategyIds = new Set((strategies as any[]).map((s: any) => s.id));
+      setCollapsedStrategies(allStrategyIds);
+      initialCollapseRef.current = true;
+      return;
+    }
+    
     // Only reset collapse state when the filter actually changes, not on data refresh
     if (previousFilterRef.current !== strategyFilter) {
       previousFilterRef.current = strategyFilter;
