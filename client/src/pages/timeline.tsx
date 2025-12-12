@@ -838,14 +838,9 @@ export default function Timeline() {
                 }}
                 taskMode="Manual"
                 autoCalculateDateScheduling={false}
-                enablePredecessorValidation={true}
-                actionBegin={(args: any) => {
-                  if (args.requestType === 'validateLinkedTask') {
-                    args.validateMode.preserveLinkWithEditing = false;
-                    args.validateMode.respectLink = false;
-                    args.validateMode.removeLink = false;
-                  }
-                }}
+                taskbarHeight={25}
+                rowHeight={46}
+                gridLines="Both"
                 selectionSettings={{ mode: 'Row', type: 'Single' }}
                 timelineSettings={{
                   timelineViewMode: timelineView as any,
