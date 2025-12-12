@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Sidebar } from "@/components/layout/sidebar";
 import { useMemo, useState, useEffect, useRef } from "react";
 import { registerLicense } from "@syncfusion/ej2-base";
-import { GanttComponent, Inject, Selection, ColumnsDirective, ColumnDirective, DayMarkers } from "@syncfusion/ej2-react-gantt";
+import { GanttComponent, Inject, Selection, ColumnsDirective, ColumnDirective, DayMarkers, Edit } from "@syncfusion/ej2-react-gantt";
 import "@syncfusion/ej2-base/styles/material.css";
 import "@syncfusion/ej2-buttons/styles/material.css";
 import "@syncfusion/ej2-calendars/styles/material.css";
@@ -494,25 +494,28 @@ export default function Timeline() {
     dependency: 'Predecessor',
   };
 
-  const handleTaskbarEditing = (args: any) => {
-    if (args.data && args.data.taskData) {
-      const taskId = args.data.taskData.TaskID;
-      const parts = taskId.split('-');
-      const type = parts[0];
-      const id = parts.slice(1).join('-');
+  const handleTaskbarEditing = (record: any) => {
+    const taskData = record.taskData || record;
+    const ganttProps = record.ganttProperties || record;
+    
+    if (!taskData || !taskData.TaskID) return;
+    
+    const taskId = taskData.TaskID;
+    const parts = taskId.split('-');
+    const type = parts[0];
+    const id = parts.slice(1).join('-');
 
-      if (type === 'project') {
-        updateProjectMutation.mutate({
-          id,
-          startDate: args.data.ganttProperties.startDate,
-          dueDate: args.data.ganttProperties.endDate,
-        });
-      } else if (type === 'action') {
-        updateActionMutation.mutate({
-          id,
-          dueDate: args.data.ganttProperties.endDate,
-        });
-      }
+    if (type === 'project') {
+      updateProjectMutation.mutate({
+        id,
+        startDate: ganttProps.startDate,
+        dueDate: ganttProps.endDate,
+      });
+    } else if (type === 'action') {
+      updateActionMutation.mutate({
+        id,
+        dueDate: ganttProps.endDate,
+      });
     }
   };
 
@@ -829,10 +832,10 @@ export default function Timeline() {
                 width="100%"
                 highlightWeekends={true}
                 allowSelection={true}
-                allowResizing={false}
+                allowResizing={true}
                 editSettings={{
-                  allowEditing: false,
-                  allowTaskbarEditing: false
+                  allowEditing: true,
+                  allowTaskbarEditing: true
                 }}
                 taskMode="Manual"
                 autoCalculateDateScheduling={false}
@@ -905,6 +908,19 @@ export default function Timeline() {
                   return extendedDate;
                 })()}
                 rowSelected={handleRecordClick}
+                actionComplete={(args: any) => {
+                  if (args.requestType === 'save' && args.modifiedRecords && args.modifiedRecords.length > 0) {
+                    args.modifiedRecords.forEach((record: any) => handleTaskbarEditing(record));
+                  }
+                }}
+                taskbarEditing={(args: any) => {
+                  if (args.data && args.data.taskData) {
+                    const taskType = args.data.taskData.taskType;
+                    if (taskType === 'strategy') {
+                      args.cancel = true;
+                    }
+                  }
+                }}
                 eventMarkers={[
                   {
                     day: new Date(),
@@ -937,7 +953,7 @@ export default function Timeline() {
                   <ColumnDirective field="EndDate" headerText="End" width="100" format="yMd" />
                   <ColumnDirective field="Progress" headerText="Progress" width="80" />
                 </ColumnsDirective>
-                <Inject services={[Selection, DayMarkers]} />
+                <Inject services={[Selection, DayMarkers, Edit]} />
               </GanttComponent>
             </div>
           )}
