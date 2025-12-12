@@ -932,6 +932,7 @@ export default function Timeline() {
                 }}
               >
                 <ColumnsDirective>
+                  <ColumnDirective field="TaskID" headerText="ID" width="80" visible={false} isPrimaryKey={true} />
                   <ColumnDirective field="TaskName" headerText="Task Name" width="300" />
                   <ColumnDirective field="StartDate" headerText="Start" width="100" format="yMd" />
                   <ColumnDirective field="EndDate" headerText="End" width="100" format="yMd" />
