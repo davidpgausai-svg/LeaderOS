@@ -78,7 +78,7 @@ const reorderSchema = z.object({
 });
 
 const executiveGoalsUpdateSchema = z.object({
-  executiveGoalIds: z.array(z.number().int().positive())
+  executiveGoalIds: z.array(z.string())
 });
 
 const teamTagsUpdateSchema = z.object({

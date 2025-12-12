@@ -724,7 +724,7 @@ export default function Strategies() {
 
   const updateStrategyExecutiveGoalsMutation = useMutation({
     mutationFn: async ({ strategyId, goalIds }: { strategyId: string; goalIds: string[] }) => {
-      const response = await apiRequest("PUT", `/api/strategies/${strategyId}/executive-goals`, { goalIds });
+      const response = await apiRequest("PUT", `/api/strategies/${strategyId}/executive-goals`, { executiveGoalIds: goalIds });
       return response.json();
     },
     onSuccess: () => {
