@@ -215,31 +215,42 @@ export default function Timeline() {
           return a.id.localeCompare(b.id);
         });
 
-      let strategyStart: Date | null = strategy.startDate ? parseAsUTCDate(strategy.startDate) : null;
-      let strategyEnd: Date | null = strategy.targetDate ? parseAsUTCDate(strategy.targetDate) : null;
+      // Always derive strategy dates from child projects and actions
+      const strategyStartDates: Date[] = [];
+      const strategyEndDates: Date[] = [];
 
-      if (!strategyStart || !strategyEnd) {
-        const strategyStartDates: Date[] = [];
-        const strategyEndDates: Date[] = [];
+      // Collect dates from all projects
+      strategyProjects.forEach(p => {
+        if (p.startDate) strategyStartDates.push(parseAsUTCDate(p.startDate));
+        if (p.dueDate) strategyEndDates.push(parseAsUTCDate(p.dueDate));
+      });
 
-        strategyProjects.forEach(p => {
-          if (p.startDate) strategyStartDates.push(parseAsUTCDate(p.startDate));
-          if (p.dueDate) strategyEndDates.push(parseAsUTCDate(p.dueDate));
-        });
+      // Collect dates from all actions linked to this strategy (via projects OR directly)
+      const allStrategyActions = actions.filter(a => 
+        a.dueDate && (
+          strategyProjects.some(p => p.id === a.projectId) ||
+          (a as any).strategyId === strategy.id
+        )
+      );
+      allStrategyActions.forEach(action => {
+        const actionEnd = parseAsUTCDate(action.dueDate!);
+        const actionStart = new Date(actionEnd);
+        actionStart.setDate(actionStart.getDate() - 7);
+        strategyStartDates.push(actionStart);
+        strategyEndDates.push(actionEnd);
+      });
 
-        if (!strategyStart && strategyStartDates.length > 0) {
-          strategyStart = new Date(Math.min(...strategyStartDates.map(d => d.getTime())));
-        }
-        if (!strategyEnd && strategyEndDates.length > 0) {
-          strategyEnd = new Date(Math.max(...strategyEndDates.map(d => d.getTime())));
-        }
+      // Skip strategies with no dated children at all
+      if (strategyStartDates.length === 0 && strategyEndDates.length === 0) {
+        return;
       }
 
-      if (!strategyStart || !strategyEnd) {
-        if (strategyProjects.length === 0) return;
-        strategyStart = strategyStart || new Date();
-        strategyEnd = strategyEnd || new Date();
-      }
+      const strategyStart = strategyStartDates.length > 0 
+        ? new Date(Math.min(...strategyStartDates.map(d => d.getTime())))
+        : new Date();
+      const strategyEnd = strategyEndDates.length > 0 
+        ? new Date(Math.max(...strategyEndDates.map(d => d.getTime())))
+        : new Date();
 
       const projectSubtasks: SyncfusionTask[] = [];
 
