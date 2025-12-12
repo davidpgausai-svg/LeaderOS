@@ -841,7 +841,7 @@ export default function Timeline() {
                 autoCalculateDateScheduling={false}
                 taskbarHeight={25}
                 rowHeight={46}
-                gridLines="Both"
+                gridLines="Horizontal"
                 selectionSettings={{ mode: 'Row', type: 'Single' }}
                 timelineSettings={{
                   timelineViewMode: timelineView as any,
