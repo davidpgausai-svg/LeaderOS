@@ -759,7 +759,7 @@ export default function Strategies() {
 
   const updateProjectTeamTagsMutation = useMutation({
     mutationFn: async ({ projectId, tagIds }: { projectId: string; tagIds: string[] }) => {
-      const response = await apiRequest("PUT", `/api/projects/${projectId}/team-tags`, { tagIds });
+      const response = await apiRequest("PUT", `/api/projects/${projectId}/team-tags`, { teamTagIds: tagIds });
       return response.json();
     },
     onSuccess: () => {
