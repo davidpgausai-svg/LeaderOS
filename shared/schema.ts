@@ -184,6 +184,7 @@ export const projects = pgTable("projects", {
   startDate: timestamp("start_date").notNull(), // Component 8: Timeline - Start Date
   dueDate: timestamp("due_date").notNull(), // Component 8: Timeline - End Date
   status: text("status").notNull().default('NYS'), // Component 9: Status (C, OT, OH, B, NYS)
+  completionDate: timestamp("completion_date"), // When project status was set to 'C' (Complete)
   progress: integer("progress").notNull().default(0), // 0-100
   isArchived: text("is_archived").notNull().default('false'), // 'true' or 'false' for cascade archival
   documentFolderUrl: text("document_folder_url"), // OneDrive/Google Drive URL for project documents
@@ -233,6 +234,7 @@ export const actions = pgTable("actions", {
   currentValue: text("current_value"),
   measurementUnit: text("measurement_unit"),
   status: text("status").notNull().default('in_progress'), // 'in_progress', 'achieved', 'at_risk', 'not_started'
+  achievedDate: timestamp("achieved_date"), // When action status was set to 'achieved'
   dueDate: timestamp("due_date"),
   isArchived: text("is_archived").notNull().default('false'), // 'true' or 'false' for cascade archival
   documentFolderUrl: text("document_folder_url"), // External folder URL (ClickUp, OneDrive, etc.)

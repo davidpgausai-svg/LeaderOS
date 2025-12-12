@@ -1025,6 +1025,14 @@ Respond ONLY with a valid JSON object in this exact format:
         updateData.communicationUrl = null;
       }
       
+      // Set completionDate when status changes to 'C' (Complete)
+      if (updateData.status === 'C' && oldProject.status !== 'C') {
+        updateData.completionDate = new Date();
+      } else if (updateData.status && updateData.status !== 'C' && oldProject.status === 'C') {
+        // Clear completionDate if status changes away from Complete
+        updateData.completionDate = null;
+      }
+      
       const project = await storage.updateProject(req.params.id, updateData);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
@@ -1858,6 +1866,14 @@ Respond ONLY with a valid JSON object in this exact format:
         if (deletedCount > 0) {
           logger.info(`Deleted ${deletedCount} stale due-date notifications for action: ${oldAction.title}`);
         }
+      }
+      
+      // Set achievedDate when status changes to 'achieved'
+      if (updateData.status === 'achieved' && oldAction.status !== 'achieved') {
+        updateData.achievedDate = new Date();
+      } else if (updateData.status && updateData.status !== 'achieved' && oldAction.status === 'achieved') {
+        // Clear achievedDate if status changes away from achieved
+        updateData.achievedDate = null;
       }
       
       const action = await storage.updateAction(req.params.id, updateData);

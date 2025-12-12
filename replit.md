@@ -108,7 +108,21 @@ Strategies incorporate 9 mandatory change management fields (e.g., Case for Chan
 A project-level risk tracking system for barriers, including description, severity, status lifecycle, owner, and resolution notes. Barriers are visible on project cards and are integrated with the AI Chat Assistant for insights.
 
 ### Dependencies System
-Tracks and visualizes relationships between projects and actions across strategies, representing "blocks" or "depends_on." Features include DependencyTags, a dedicated graph visualization page, and activity logging.
+Tracks and visualizes relationships between projects and actions across strategies, representing "blocks" or "depends_on." Features include DependencyTags, a dedicated graph visualization page, and activity logging. **Automatic Cleanup**: Dependencies are automatically removed when strategies are archived or completed to prevent stale blockers from appearing on active items.
+
+### Completion Tracking
+- **Strategies**: Have `completionDate` timestamp set when status changes to 'Completed'
+- **Projects**: Have `completionDate` timestamp set when status changes to 'C' (Complete)
+- **Actions**: Have `achievedDate` timestamp set when status changes to 'achieved'
+These timestamps enable the Executive Goals report to show historical completions with accurate dates.
+
+### Executive Goals Report
+The Reports > Executive Goals tab displays a rolling 18-month lookback of completed items, grouped by Executive Goal then by Strategic Priority. Shows a flat table with:
+- All Executive Goal tags displayed at top
+- Type badge (Priority/Project/Action) with archived indicator
+- Item title, Strategic Priority (with color dot), and Project name
+- Completion date timestamp
+Includes completed strategies, projects, and actions from both active and archived strategies.
 
 ### View-Only Access
 Strategy and Project cards offer view-only access via dedicated buttons, displaying comprehensive details in read-only modals for all users.
