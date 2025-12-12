@@ -28,22 +28,15 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 
 interface SyncfusionTask {
-  TaskID: number;
+  TaskID: string;
   TaskName: string;
   StartDate: Date;
   EndDate: Date;
   Progress: number;
   subtasks?: SyncfusionTask[];
-  Predecessor?: string;
   taskColor?: string;
   taskType?: 'strategy' | 'project' | 'action';
   hasBarriers?: boolean;
-  domainId?: string;
-}
-
-interface TaskIdMapping {
-  numericToString: Map<number, { type: string; id: string }>;
-  stringToNumeric: Map<string, number>;
 }
 
 interface DayItems {
@@ -337,8 +330,8 @@ export default function Timeline() {
     return actions.filter(a => a.projectId && projectIds.has(a.projectId));
   }, [actions, filteredProjects]);
 
-  const ganttDataWithMapping = useMemo(() => {
-    if (!filteredStrategies || !projects || !actions) return { tasks: [] as SyncfusionTask[], idMapping: { numericToString: new Map<number, { type: string; id: string }>(), stringToNumeric: new Map<string, number>() } };
+  const ganttData: SyncfusionTask[] = useMemo(() => {
+    if (!filteredStrategies || !projects || !actions) return [];
 
     // Parse date as UTC and return a Date object that displays the same date in local timezone
     // This prevents timezone offset from shifting dates by a day
@@ -370,38 +363,6 @@ export default function Timeline() {
     };
 
     const result: SyncfusionTask[] = [];
-    const numericToString = new Map<number, { type: string; id: string }>();
-    const stringToNumeric = new Map<string, number>();
-    const includedTasks = new Set<string>();
-    let nextId = 1;
-
-    const assignNumericId = (type: string, id: string): number => {
-      const key = `${type}-${id}`;
-      if (stringToNumeric.has(key)) {
-        return stringToNumeric.get(key)!;
-      }
-      const numId = nextId++;
-      numericToString.set(numId, { type, id });
-      stringToNumeric.set(key, numId);
-      return numId;
-    };
-
-    filteredStrategies.forEach(strategy => {
-      assignNumericId('strategy', strategy.id);
-      includedTasks.add(`strategy-${strategy.id}`);
-    });
-    
-    const filteredStrategyIds = new Set(filteredStrategies.map(s => s.id));
-    projects.filter(p => filteredStrategyIds.has(p.strategyId) && p.startDate && p.dueDate).forEach(project => {
-      assignNumericId('project', project.id);
-      includedTasks.add(`project-${project.id}`);
-    });
-    
-    const includedProjectIds = new Set(projects.filter(p => filteredStrategyIds.has(p.strategyId) && p.startDate && p.dueDate).map(p => p.id));
-    actions.filter(a => a.projectId && includedProjectIds.has(a.projectId) && a.dueDate).forEach(action => {
-      assignNumericId('action', action.id);
-      includedTasks.add(`action-${action.id}`);
-    });
 
     filteredStrategies.forEach(strategy => {
       const strategyProjects = projects
@@ -467,19 +428,18 @@ export default function Timeline() {
           actionStart.setDate(actionStart.getDate() - 7);
 
           return {
-            TaskID: assignNumericId('action', action.id),
+            TaskID: `action-${action.id}`,
             TaskName: action.title,
             StartDate: actionStart,
             EndDate: actionEnd,
             Progress: action.status === "achieved" ? 100 : action.status === "in_progress" ? 50 : 0,
             taskColor: getActionStatusColor(action.status),
             taskType: 'action' as const,
-            domainId: action.id,
           };
         });
 
         projectSubtasks.push({
-          TaskID: assignNumericId('project', project.id),
+          TaskID: `project-${project.id}`,
           TaskName: hasBarriers ? `⚠️ ${project.title}` : project.title,
           StartDate: projectStart,
           EndDate: projectEnd,
@@ -488,12 +448,11 @@ export default function Timeline() {
           taskColor: getProjectStatusColor(project.status),
           taskType: 'project' as const,
           hasBarriers,
-          domainId: project.id,
         });
       });
 
       result.push({
-        TaskID: assignNumericId('strategy', strategy.id),
+        TaskID: `strategy-${strategy.id}`,
         TaskName: strategy.title,
         StartDate: strategyStart,
         EndDate: strategyEnd,
@@ -501,15 +460,11 @@ export default function Timeline() {
         subtasks: projectSubtasks.length > 0 ? projectSubtasks : undefined,
         taskColor: strategy.colorCode || "#1e3a8a",
         taskType: 'strategy' as const,
-        domainId: strategy.id,
       });
     });
 
-    return { tasks: result, idMapping: { numericToString, stringToNumeric } };
-  }, [filteredStrategies, projects, actions, barriers, dependencies]);
-
-  const ganttData = ganttDataWithMapping.tasks;
-  const taskIdMapping = ganttDataWithMapping.idMapping;
+    return result;
+  }, [filteredStrategies, projects, actions, barriers]);
 
   const taskFields = {
     id: 'TaskID',
@@ -524,13 +479,12 @@ export default function Timeline() {
     const taskData = record.taskData || record;
     const ganttProps = record.ganttProperties || record;
     
-    if (!taskData || taskData.TaskID === undefined) return;
+    if (!taskData || !taskData.TaskID) return;
     
-    const numericId = taskData.TaskID;
-    const mapping = taskIdMapping.numericToString.get(numericId);
-    if (!mapping) return;
-
-    const { type, id } = mapping;
+    const taskId = taskData.TaskID;
+    const parts = taskId.split('-');
+    const type = parts[0];
+    const id = parts.slice(1).join('-');
 
     if (type === 'project') {
       updateProjectMutation.mutate({
@@ -548,11 +502,10 @@ export default function Timeline() {
 
   const handleRecordClick = (args: any) => {
     if (args.data && args.data.taskData) {
-      const numericId = args.data.taskData.TaskID;
-      const mapping = taskIdMapping.numericToString.get(numericId);
-      if (!mapping) return;
-
-      const { type, id } = mapping;
+      const taskId = args.data.taskData.TaskID;
+      const parts = taskId.split('-');
+      const type = parts[0];
+      const id = parts.slice(1).join('-');
 
       if (type === 'project' && args.data.taskData.hasBarriers) {
         const projectBarriers = barriers?.filter(b => 
