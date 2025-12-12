@@ -821,6 +821,13 @@ export default function Timeline() {
                 .e-gantt .e-line {
                   stroke: #9ca3af !important;
                 }
+                /* Hide progress gripper (grey half-circle) */
+                .e-gantt .e-progressbar-handler,
+                .e-gantt .e-gantt-child-progressbar-inner-div,
+                .e-gantt .e-left-resize-gripper,
+                .e-gantt .e-right-resize-gripper {
+                  display: none !important;
+                }
               `}</style>
               <GanttComponent
                 ref={ganttRef}
