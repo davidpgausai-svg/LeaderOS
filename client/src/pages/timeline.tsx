@@ -33,6 +33,7 @@ interface SyncfusionTask {
   StartDate: Date;
   EndDate: Date;
   Progress: number;
+  Predecessor?: string;
   subtasks?: SyncfusionTask[];
   taskColor?: string;
   taskType?: 'strategy' | 'project' | 'action';
@@ -341,6 +342,24 @@ export default function Timeline() {
       return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
     };
 
+    // Build a map of predecessors: sourceTaskID -> array of targetTaskIDs
+    const predecessorMap = new Map<string, string[]>();
+    if (dependencies) {
+      dependencies.forEach(dep => {
+        const sourceTaskId = `${dep.sourceType}-${dep.sourceId}`;
+        const targetTaskId = `${dep.targetType}-${dep.targetId}`;
+        if (!predecessorMap.has(sourceTaskId)) {
+          predecessorMap.set(sourceTaskId, []);
+        }
+        predecessorMap.get(sourceTaskId)!.push(targetTaskId);
+      });
+    }
+
+    const getPredecessor = (taskId: string): string | undefined => {
+      const preds = predecessorMap.get(taskId);
+      return preds && preds.length > 0 ? preds.join(',') : undefined;
+    };
+
     const getProjectStatusColor = (status: string) => {
       switch (status) {
         case "C": return "#22c55e";
@@ -427,23 +446,27 @@ export default function Timeline() {
           const actionStart = new Date(actionEnd);
           actionStart.setDate(actionStart.getDate() - 7);
 
+          const actionTaskId = `action-${action.id}`;
           return {
-            TaskID: `action-${action.id}`,
+            TaskID: actionTaskId,
             TaskName: action.title,
             StartDate: actionStart,
             EndDate: actionEnd,
             Progress: action.status === "achieved" ? 100 : action.status === "in_progress" ? 50 : 0,
+            Predecessor: getPredecessor(actionTaskId),
             taskColor: getActionStatusColor(action.status),
             taskType: 'action' as const,
           };
         });
 
+        const projectTaskId = `project-${project.id}`;
         projectSubtasks.push({
-          TaskID: `project-${project.id}`,
+          TaskID: projectTaskId,
           TaskName: hasBarriers ? `⚠️ ${project.title}` : project.title,
           StartDate: projectStart,
           EndDate: projectEnd,
           Progress: project.progress || 0,
+          Predecessor: getPredecessor(projectTaskId),
           subtasks: actionSubtasks.length > 0 ? actionSubtasks : undefined,
           taskColor: getProjectStatusColor(project.status),
           taskType: 'project' as const,
@@ -464,7 +487,7 @@ export default function Timeline() {
     });
 
     return result;
-  }, [filteredStrategies, projects, actions, barriers]);
+  }, [filteredStrategies, projects, actions, barriers, dependencies]);
 
   const taskFields = {
     id: 'TaskID',
@@ -473,6 +496,7 @@ export default function Timeline() {
     endDate: 'EndDate',
     progress: 'Progress',
     child: 'subtasks',
+    dependency: 'Predecessor',
   };
 
   const handleTaskbarEditing = (record: any) => {
@@ -818,6 +842,8 @@ export default function Timeline() {
                   allowEditing: true,
                   allowTaskbarEditing: true
                 }}
+                enablePredecessorValidation={true}
+                validateManualTasksOnLinking={true}
                 taskMode="Manual"
                 autoCalculateDateScheduling={false}
                 taskbarHeight={25}
