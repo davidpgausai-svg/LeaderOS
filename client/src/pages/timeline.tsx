@@ -335,6 +335,14 @@ export default function Timeline() {
   const ganttData: SyncfusionTask[] = useMemo(() => {
     if (!filteredStrategies || !projects || !actions) return [];
 
+    // Parse date as UTC and return a Date object that displays the same date in local timezone
+    // This prevents timezone offset from shifting dates by a day
+    const parseAsUTCDate = (dateInput: Date | string): Date => {
+      const date = typeof dateInput === 'string' ? new Date(dateInput) : new Date(dateInput);
+      // Get UTC components and create local date with same values
+      return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+    };
+
     const getProjectStatusColor = (status: string) => {
       switch (status) {
         case "C": return "#22c55e";
@@ -368,16 +376,16 @@ export default function Timeline() {
           return a.id.localeCompare(b.id);
         });
 
-      let strategyStart: Date | null = strategy.startDate ? new Date(strategy.startDate) : null;
-      let strategyEnd: Date | null = strategy.targetDate ? new Date(strategy.targetDate) : null;
+      let strategyStart: Date | null = strategy.startDate ? parseAsUTCDate(strategy.startDate) : null;
+      let strategyEnd: Date | null = strategy.targetDate ? parseAsUTCDate(strategy.targetDate) : null;
 
       if (!strategyStart || !strategyEnd) {
         const strategyStartDates: Date[] = [];
         const strategyEndDates: Date[] = [];
 
         strategyProjects.forEach(p => {
-          if (p.startDate) strategyStartDates.push(new Date(p.startDate));
-          if (p.dueDate) strategyEndDates.push(new Date(p.dueDate));
+          if (p.startDate) strategyStartDates.push(parseAsUTCDate(p.startDate));
+          if (p.dueDate) strategyEndDates.push(parseAsUTCDate(p.dueDate));
         });
 
         if (!strategyStart && strategyStartDates.length > 0) {
@@ -399,8 +407,8 @@ export default function Timeline() {
       strategyProjects.forEach(project => {
         if (!project.startDate || !project.dueDate) return;
 
-        const projectStart = new Date(project.startDate);
-        const projectEnd = new Date(project.dueDate);
+        const projectStart = parseAsUTCDate(project.startDate);
+        const projectEnd = parseAsUTCDate(project.dueDate);
 
         const projectActions = actions
           .filter(a => a.projectId === project.id && a.dueDate)
@@ -417,7 +425,7 @@ export default function Timeline() {
         const hasBarriers = projectBarriers.length > 0;
 
         const actionSubtasks: SyncfusionTask[] = projectActions.map(action => {
-          const actionEnd = new Date(action.dueDate!);
+          const actionEnd = parseAsUTCDate(action.dueDate!);
           const actionStart = new Date(actionEnd);
           actionStart.setDate(actionStart.getDate() - 7);
 

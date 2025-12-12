@@ -632,10 +632,11 @@ export default function Strategies() {
     { value: 'C', label: 'Completed', shortLabel: 'C' },
   ];
 
-  // Format date for display
+  // Format date for display - use UTC to prevent timezone offset issues
   const formatDateShort = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[date.getUTCMonth()]} ${date.getUTCDate()}, ${date.getUTCFullYear()}`;
   };
 
   // Enhance strategies with projects
@@ -1447,12 +1448,6 @@ export default function Strategies() {
                       <div className="flex items-center justify-between gap-2 pl-8">
                         {/* Left side: meta info */}
                         <div className="flex flex-wrap items-center gap-2">
-                          {/* Date range */}
-                          <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                            <Calendar className="w-3 h-3" />
-                            <span className="whitespace-nowrap">{formatDateShort(strategy.startDate)} - {formatDateShort(strategy.targetDate)}</span>
-                          </div>
-                          
                           {/* Project count */}
                           <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
                             <FolderOpen className="w-3.5 h-3.5" />
@@ -1747,9 +1742,9 @@ export default function Strategies() {
                                           {/* Project dates */}
                                           {(project.startDate || project.dueDate) && (
                                             <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0 hidden sm:inline">
-                                              {project.startDate && new Date(project.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                              {project.startDate && formatDateShort(project.startDate)}
                                               {project.startDate && project.dueDate && ' - '}
-                                              {project.dueDate && new Date(project.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                              {project.dueDate && formatDateShort(project.dueDate)}
                                             </span>
                                           )}
                                           
