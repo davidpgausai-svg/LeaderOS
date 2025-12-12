@@ -580,6 +580,11 @@ export default function Timeline() {
                 .e-gantt .e-right-resize-gripper {
                   display: none !important;
                 }
+                /* Hide dependency connector points (grey half-circles at task corners) */
+                .e-gantt .e-connectorpoint-left,
+                .e-gantt .e-connectorpoint-right {
+                  display: none !important;
+                }
               `}</style>
               <GanttComponent
                 ref={ganttRef}
