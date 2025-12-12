@@ -648,6 +648,16 @@ Respond ONLY with a valid JSON object in this exact format:
         if (oldStrategy.riskExposureRating !== strategy.riskExposureRating) {
           await notifyRiskExposureChanged(strategy.id, strategy.title, oldStrategy.riskExposureRating, strategy.riskExposureRating, executiveUserIds);
         }
+        
+        // Clean up dependencies when strategy is archived or completed
+        if ((strategy.status === 'Archived' || strategy.status === 'Completed') && 
+            oldStrategy.status !== 'Archived' && oldStrategy.status !== 'Completed') {
+          const strategyProjects = await storage.getProjectsByStrategy(req.params.id);
+          const strategyActions = await storage.getActionsByStrategy(req.params.id);
+          const projectIds = strategyProjects.map((p: any) => p.id);
+          const actionIds = strategyActions.map((a: any) => a.id);
+          await storage.deleteDependenciesForEntities(projectIds, actionIds, strategy.organizationId || undefined);
+        }
       }
       
       res.json(strategy);
