@@ -325,70 +325,70 @@ export default function Reports() {
 
         <div ref={reportRef} className="p-6">
           {/* Summary Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-            <Card data-testid="card-active-strategies">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
-                  <Target className="w-4 h-4 mr-2" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <Card data-testid="card-active-strategies" className="py-2">
+              <CardHeader className="pb-1 pt-2 px-3">
+                <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400 flex items-center">
+                  <Target className="w-3 h-3 mr-1" />
                   Active Strategies
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-active-strategies">
+              <CardContent className="pb-2 px-3">
+                <div className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-active-strategies">
                   {activeStrategies}
                 </div>
-                <div className="text-xs text-gray-500 mt-1">
+                <div className="text-[10px] text-gray-500">
                   of {totalStrategies} total
                 </div>
               </CardContent>
             </Card>
 
-            <Card data-testid="card-at-risk">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
-                  <AlertTriangle className="w-4 h-4 mr-2 text-yellow-600" />
+            <Card data-testid="card-at-risk" className="py-2">
+              <CardHeader className="pb-1 pt-2 px-3">
+                <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400 flex items-center">
+                  <AlertTriangle className="w-3 h-3 mr-1 text-yellow-600" />
                   At Risk
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-yellow-600" data-testid="text-at-risk">
+              <CardContent className="pb-2 px-3">
+                <div className="text-2xl font-bold text-yellow-600" data-testid="text-at-risk">
                   {atRiskStrategies}
                 </div>
-                <div className="text-xs text-yellow-600 mt-1">
+                <div className="text-[10px] text-yellow-600">
                   strategies need attention
                 </div>
               </CardContent>
             </Card>
 
-            <Card data-testid="card-overdue-projects">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
-                  <XCircle className="w-4 h-4 mr-2 text-red-600" />
+            <Card data-testid="card-overdue-projects" className="py-2">
+              <CardHeader className="pb-1 pt-2 px-3">
+                <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400 flex items-center">
+                  <XCircle className="w-3 h-3 mr-1 text-red-600" />
                   Overdue Projects
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-red-600" data-testid="text-overdue-projects">
+              <CardContent className="pb-2 px-3">
+                <div className="text-2xl font-bold text-red-600" data-testid="text-overdue-projects">
                   {overdueProjects}
                 </div>
-                <div className="text-xs text-red-600 mt-1">
+                <div className="text-[10px] text-red-600">
                   past due date
                 </div>
               </CardContent>
             </Card>
 
-            <Card data-testid="card-completion-rate">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
-                  <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+            <Card data-testid="card-completion-rate" className="py-2">
+              <CardHeader className="pb-1 pt-2 px-3">
+                <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400 flex items-center">
+                  <CheckCircle className="w-3 h-3 mr-1 text-green-600" />
                   Actions Complete
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-green-600" data-testid="text-completion-rate">
+              <CardContent className="pb-2 px-3">
+                <div className="text-2xl font-bold text-green-600" data-testid="text-completion-rate">
                   {totalActions > 0 ? Math.round((achievedActions / totalActions) * 100) : 0}%
                 </div>
-                <div className="text-xs text-gray-500 mt-1">
+                <div className="text-[10px] text-gray-500">
                   {achievedActions} of {totalActions}
                 </div>
               </CardContent>
@@ -1819,16 +1819,12 @@ function CapacityReport({
   const getRelevantProjects = () => {
     if (viewMode === 'current') {
       return projects.filter(p => 
-        p.status === 'in_progress' || 
-        p.status === 'on_track' || 
-        p.status === 'behind' ||
-        p.status === 'at_risk'
+        p.status === 'OT' || 
+        p.status === 'B'
       );
     } else {
       return projects.filter(p => 
-        p.status !== 'completed' && 
-        p.status !== 'archived' &&
-        p.status !== 'cancelled'
+        p.status === 'NYS'
       );
     }
   };

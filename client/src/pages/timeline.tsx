@@ -664,37 +664,6 @@ export default function Timeline() {
                 </PopoverContent>
               </Popover>
 
-              {viewType === 'timeline' && (
-                <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-md p-0.5">
-                  <Button
-                    variant={timelineView === 'Day' ? "default" : "ghost"}
-                    size="sm"
-                    className="h-7 px-2.5 text-xs"
-                    onClick={() => setTimelineView('Day')}
-                    data-testid="button-scale-days"
-                  >
-                    Day
-                  </Button>
-                  <Button
-                    variant={timelineView === 'Week' ? "default" : "ghost"}
-                    size="sm"
-                    className="h-7 px-2.5 text-xs"
-                    onClick={() => setTimelineView('Week')}
-                    data-testid="button-scale-weeks"
-                  >
-                    Week
-                  </Button>
-                  <Button
-                    variant={timelineView === 'Month' ? "default" : "ghost"}
-                    size="sm"
-                    className="h-7 px-2.5 text-xs"
-                    onClick={() => setTimelineView('Month')}
-                    data-testid="button-scale-months"
-                  >
-                    Month
-                  </Button>
-                </div>
-              )}
 
               {viewType === 'calendar' && (
                 <div className="flex items-center gap-2">

@@ -145,3 +145,20 @@
     break-inside: avoid;
   }
 }
+
+/* Gantt Chart Today Marker Animation */
+.e-custom-event-marker .e-span-label {
+  animation: fadeOutLabel 3s ease-out forwards;
+}
+
+@keyframes fadeOutLabel {
+  0% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
