@@ -28,7 +28,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 
 interface SyncfusionTask {
-  TaskID: string;
+  TaskID: number;
   TaskName: string;
   StartDate: Date;
   EndDate: Date;
@@ -38,6 +38,12 @@ interface SyncfusionTask {
   taskColor?: string;
   taskType?: 'strategy' | 'project' | 'action';
   hasBarriers?: boolean;
+  domainId?: string;
+}
+
+interface TaskIdMapping {
+  numericToString: Map<number, { type: string; id: string }>;
+  stringToNumeric: Map<string, number>;
 }
 
 interface DayItems {
@@ -331,8 +337,8 @@ export default function Timeline() {
     return actions.filter(a => a.projectId && projectIds.has(a.projectId));
   }, [actions, filteredProjects]);
 
-  const ganttData: SyncfusionTask[] = useMemo(() => {
-    if (!filteredStrategies || !projects || !actions) return [];
+  const ganttDataWithMapping = useMemo(() => {
+    if (!filteredStrategies || !projects || !actions) return { tasks: [] as SyncfusionTask[], idMapping: { numericToString: new Map<number, { type: string; id: string }>(), stringToNumeric: new Map<string, number>() } };
 
     // Parse date as UTC and return a Date object that displays the same date in local timezone
     // This prevents timezone offset from shifting dates by a day
@@ -364,6 +370,30 @@ export default function Timeline() {
     };
 
     const result: SyncfusionTask[] = [];
+    const numericToString = new Map<number, { type: string; id: string }>();
+    const stringToNumeric = new Map<string, number>();
+    let nextId = 1;
+
+    const assignNumericId = (type: string, id: string): number => {
+      const key = `${type}-${id}`;
+      if (stringToNumeric.has(key)) {
+        return stringToNumeric.get(key)!;
+      }
+      const numId = nextId++;
+      numericToString.set(numId, { type, id });
+      stringToNumeric.set(key, numId);
+      return numId;
+    };
+
+    filteredStrategies.forEach(strategy => {
+      assignNumericId('strategy', strategy.id);
+    });
+    projects.forEach(project => {
+      assignNumericId('project', project.id);
+    });
+    actions.forEach(action => {
+      assignNumericId('action', action.id);
+    });
 
     filteredStrategies.forEach(strategy => {
       const strategyProjects = projects
@@ -431,18 +461,20 @@ export default function Timeline() {
           const actionDeps = dependencies?.filter(d => 
             d.sourceType === 'action' && d.sourceId === action.id
           ) || [];
-          const predecessorStr = actionDeps.map(d => 
-            `${d.targetType}-${d.targetId}FS`
-          ).join(',');
+          const predecessorStr = actionDeps.map(d => {
+            const targetNumId = stringToNumeric.get(`${d.targetType}-${d.targetId}`);
+            return targetNumId ? `${targetNumId}FS` : '';
+          }).filter(Boolean).join(',');
 
           return {
-            TaskID: `action-${action.id}`,
+            TaskID: assignNumericId('action', action.id),
             TaskName: action.title,
             StartDate: actionStart,
             EndDate: actionEnd,
             Progress: action.status === "achieved" ? 100 : action.status === "in_progress" ? 50 : 0,
             taskColor: getActionStatusColor(action.status),
             taskType: 'action' as const,
+            domainId: action.id,
             Predecessor: predecessorStr || undefined,
           };
         });
@@ -450,12 +482,13 @@ export default function Timeline() {
         const projectDeps = dependencies?.filter(d => 
           d.sourceType === 'project' && d.sourceId === project.id
         ) || [];
-        const projectPredecessorStr = projectDeps.map(d => 
-          `${d.targetType}-${d.targetId}FS`
-        ).join(',');
+        const projectPredecessorStr = projectDeps.map(d => {
+          const targetNumId = stringToNumeric.get(`${d.targetType}-${d.targetId}`);
+          return targetNumId ? `${targetNumId}FS` : '';
+        }).filter(Boolean).join(',');
 
         projectSubtasks.push({
-          TaskID: `project-${project.id}`,
+          TaskID: assignNumericId('project', project.id),
           TaskName: hasBarriers ? `⚠️ ${project.title}` : project.title,
           StartDate: projectStart,
           EndDate: projectEnd,
@@ -464,12 +497,13 @@ export default function Timeline() {
           taskColor: getProjectStatusColor(project.status),
           taskType: 'project' as const,
           hasBarriers,
+          domainId: project.id,
           Predecessor: projectPredecessorStr || undefined,
         });
       });
 
       result.push({
-        TaskID: `strategy-${strategy.id}`,
+        TaskID: assignNumericId('strategy', strategy.id),
         TaskName: strategy.title,
         StartDate: strategyStart,
         EndDate: strategyEnd,
@@ -477,11 +511,15 @@ export default function Timeline() {
         subtasks: projectSubtasks.length > 0 ? projectSubtasks : undefined,
         taskColor: strategy.colorCode || "#1e3a8a",
         taskType: 'strategy' as const,
+        domainId: strategy.id,
       });
     });
 
-    return result;
+    return { tasks: result, idMapping: { numericToString, stringToNumeric } };
   }, [filteredStrategies, projects, actions, barriers, dependencies]);
+
+  const ganttData = ganttDataWithMapping.tasks;
+  const taskIdMapping = ganttDataWithMapping.idMapping;
 
   const taskFields = {
     id: 'TaskID',
@@ -497,12 +535,13 @@ export default function Timeline() {
     const taskData = record.taskData || record;
     const ganttProps = record.ganttProperties || record;
     
-    if (!taskData || !taskData.TaskID) return;
+    if (!taskData || taskData.TaskID === undefined) return;
     
-    const taskId = taskData.TaskID;
-    const parts = taskId.split('-');
-    const type = parts[0];
-    const id = parts.slice(1).join('-');
+    const numericId = taskData.TaskID;
+    const mapping = taskIdMapping.numericToString.get(numericId);
+    if (!mapping) return;
+
+    const { type, id } = mapping;
 
     if (type === 'project') {
       updateProjectMutation.mutate({
@@ -520,10 +559,11 @@ export default function Timeline() {
 
   const handleRecordClick = (args: any) => {
     if (args.data && args.data.taskData) {
-      const taskId = args.data.taskData.TaskID;
-      const parts = taskId.split('-');
-      const type = parts[0];
-      const id = parts.slice(1).join('-');
+      const numericId = args.data.taskData.TaskID;
+      const mapping = taskIdMapping.numericToString.get(numericId);
+      if (!mapping) return;
+
+      const { type, id } = mapping;
 
       if (type === 'project' && args.data.taskData.hasBarriers) {
         const projectBarriers = barriers?.filter(b => 
@@ -838,6 +878,14 @@ export default function Timeline() {
                 }}
                 taskMode="Manual"
                 autoCalculateDateScheduling={false}
+                enablePredecessorValidation={true}
+                actionBegin={(args: any) => {
+                  if (args.requestType === 'validateLinkedTask') {
+                    args.validateMode.preserveLinkWithEditing = false;
+                    args.validateMode.respectLink = false;
+                    args.validateMode.removeLink = false;
+                  }
+                }}
                 taskbarHeight={25}
                 rowHeight={46}
                 gridLines="Both"
