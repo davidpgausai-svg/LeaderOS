@@ -1744,6 +1744,15 @@ export default function Strategies() {
                                           )}
                                           </div>
                                           
+                                          {/* Project dates */}
+                                          {(project.startDate || project.dueDate) && (
+                                            <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0 hidden sm:inline">
+                                              {project.startDate && new Date(project.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                              {project.startDate && project.dueDate && ' - '}
+                                              {project.dueDate && new Date(project.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                            </span>
+                                          )}
+                                          
                                           {/* Icon Bar - pushed to the right */}
                                           <div className="flex items-center gap-0.5 ml-auto flex-shrink-0">
                                             {/* Timeline - color coded (after status dropdown) */}

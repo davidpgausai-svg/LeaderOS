@@ -306,8 +306,8 @@ export default function Timeline() {
     const activeStrategies = strategies
       .filter(s => s.status !== 'Archived')
       .sort((a, b) => {
-        const dateA = new Date(a.startDate).getTime();
-        const dateB = new Date(b.startDate).getTime();
+        const dateA = a.startDate ? new Date(a.startDate).getTime() : Infinity;
+        const dateB = b.startDate ? new Date(b.startDate).getTime() : Infinity;
         if (dateA !== dateB) return dateA - dateB;
         return a.id.localeCompare(b.id);
       });
@@ -535,6 +535,16 @@ export default function Timeline() {
       };
     }
   }, [timelineView]);
+
+  useEffect(() => {
+    if (ganttRef.current && licenseRegistered && ganttData.length > 0) {
+      setTimeout(() => {
+        if (ganttRef.current) {
+          ganttRef.current.scrollToDate(new Date().toISOString().split('T')[0]);
+        }
+      }, 500);
+    }
+  }, [licenseRegistered, ganttData.length]);
 
   if (strategiesLoading || projectsLoading || actionsLoading || (!licenseRegistered && !licenseError)) {
     return (
@@ -791,6 +801,21 @@ export default function Timeline() {
                 .dark .e-gantt .e-rowcell {
                   color: #e5e7eb;
                 }
+                /* Red today line indicator */
+                .e-gantt .e-line-container-cell .e-gantt-chart-event-marker-line {
+                  border-left: 2px solid #ef4444 !important;
+                }
+                .e-gantt .e-line-container-cell .e-gantt-chart-event-marker-line::before {
+                  content: '';
+                  position: absolute;
+                  top: 0;
+                  left: -4px;
+                  width: 0;
+                  height: 0;
+                  border-left: 4px solid transparent;
+                  border-right: 4px solid transparent;
+                  border-top: 6px solid #ef4444;
+                }
               `}</style>
               <GanttComponent
                 ref={ganttRef}
@@ -826,10 +851,33 @@ export default function Timeline() {
                 projectStartDate={new Date(new Date().getFullYear(), 0, 1)}
                 projectEndDate={new Date(new Date().getFullYear() + 1, 11, 31)}
                 rowSelected={handleRecordClick}
+                eventMarkers={[
+                  {
+                    day: new Date(),
+                    label: 'Today',
+                    cssClass: 'e-custom-event-marker'
+                  }
+                ]}
                 queryTaskbarInfo={(args: any) => {
-                  if (args.data && args.data.taskData && args.data.taskData.taskColor) {
-                    args.taskbarBgColor = args.data.taskData.taskColor;
-                    args.progressBarBgColor = args.data.taskData.taskColor;
+                  if (args.data && args.data.taskData) {
+                    const taskType = args.data.taskData.taskType;
+                    if (taskType === 'strategy') {
+                      args.taskbarBgColor = 'transparent';
+                      args.progressBarBgColor = 'transparent';
+                      args.taskbarBorderColor = '#000000';
+                      if (args.taskbarElement) {
+                        args.taskbarElement.style.background = 'transparent';
+                        args.taskbarElement.style.borderLeft = '2px solid #000000';
+                        args.taskbarElement.style.borderRight = '2px solid #000000';
+                        args.taskbarElement.style.borderTop = 'none';
+                        args.taskbarElement.style.borderBottom = 'none';
+                        args.taskbarElement.style.height = '4px';
+                        args.taskbarElement.style.marginTop = '10px';
+                      }
+                    } else if (args.data.taskData.taskColor) {
+                      args.taskbarBgColor = args.data.taskData.taskColor;
+                      args.progressBarBgColor = args.data.taskData.taskColor;
+                    }
                   }
                 }}
               >

@@ -63,8 +63,8 @@ export function EditStrategyModal({ open, onOpenChange, strategy }: EditStrategy
       title: "",
       description: "",
       goal: "",
-      startDate: new Date(),
-      targetDate: new Date(),
+      startDate: null,
+      targetDate: null,
       metrics: "",
       status: "active",
       colorCode: "#3B82F6",
@@ -99,8 +99,8 @@ export function EditStrategyModal({ open, onOpenChange, strategy }: EditStrategy
         title: strategy.title,
         description: strategy.description,
         goal: strategy.goal || "",
-        startDate: new Date(strategy.startDate),
-        targetDate: new Date(strategy.targetDate),
+        startDate: strategy.startDate ? new Date(strategy.startDate) : null,
+        targetDate: strategy.targetDate ? new Date(strategy.targetDate) : null,
         metrics: strategy.metrics,
         status: strategy.status,
         colorCode: strategy.colorCode,
@@ -219,99 +219,6 @@ export function EditStrategyModal({ open, onOpenChange, strategy }: EditStrategy
                     </FormItem>
                   )}
                 />
-              </div>
-
-              {/* Timeline */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Timeline</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="startDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Start Date *</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                className={cn(
-                                  "w-full pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                                data-testid="button-edit-start-date"
-                              >
-                                {field.value ? (
-                                  format(field.value, "PPP")
-                                ) : (
-                                  <span>Pick start date</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              disabled={(date) =>
-                                date < new Date("1900-01-01")
-                              }
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="targetDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Target Date *</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                className={cn(
-                                  "w-full pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                                data-testid="button-edit-target-date"
-                              >
-                                {field.value ? (
-                                  format(field.value, "PPP")
-                                ) : (
-                                  <span>Pick target date</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              disabled={(date) =>
-                                date < new Date("1900-01-01")
-                              }
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
               </div>
 
               {/* Metrics and Status */}

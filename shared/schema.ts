@@ -148,8 +148,8 @@ export const strategies = pgTable("strategies", {
   title: text("title").notNull(),
   description: text("description").notNull(),
   goal: text("goal"), // Strategic goal statement
-  startDate: timestamp("start_date").notNull(),
-  targetDate: timestamp("target_date").notNull(),
+  startDate: timestamp("start_date"), // Optional - derived from child projects on Timeline
+  targetDate: timestamp("target_date"), // Optional - derived from child projects on Timeline
   metrics: text("metrics").notNull(),
   status: text("status").notNull().default('Active'), // 'Active', 'Completed', 'Archived'
   completionDate: timestamp("completion_date"),
@@ -306,8 +306,8 @@ export const insertStrategySchema = createInsertSchema(strategies).omit({
   id: true,
   createdAt: true,
 }).extend({
-  startDate: z.coerce.date(),
-  targetDate: z.coerce.date(),
+  startDate: z.coerce.date().optional().nullable(),
+  targetDate: z.coerce.date().optional().nullable(),
   // Change Continuum fields - optional with default fallback to "To be defined"
   caseForChange: z.string().optional().transform(val => val?.trim() || "To be defined"),
   visionStatement: z.string().optional().transform(val => val?.trim() || "To be defined"),
