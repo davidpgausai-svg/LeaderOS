@@ -466,16 +466,6 @@ export default function Timeline() {
           const actionStart = new Date(actionEnd);
           actionStart.setDate(actionStart.getDate() - 7);
 
-          const actionDeps = dependencies?.filter(d => 
-            d.sourceType === 'action' && d.sourceId === action.id
-          ) || [];
-          const predecessorStr = actionDeps.map(d => {
-            const targetKey = `${d.targetType}-${d.targetId}`;
-            if (!includedTasks.has(targetKey)) return '';
-            const targetNumId = stringToNumeric.get(targetKey);
-            return targetNumId ? `${targetNumId}FS` : '';
-          }).filter(Boolean).join(',');
-
           return {
             TaskID: assignNumericId('action', action.id),
             TaskName: action.title,
@@ -485,19 +475,8 @@ export default function Timeline() {
             taskColor: getActionStatusColor(action.status),
             taskType: 'action' as const,
             domainId: action.id,
-            Predecessor: predecessorStr || undefined,
           };
         });
-
-        const projectDeps = dependencies?.filter(d => 
-          d.sourceType === 'project' && d.sourceId === project.id
-        ) || [];
-        const projectPredecessorStr = projectDeps.map(d => {
-          const targetKey = `${d.targetType}-${d.targetId}`;
-          if (!includedTasks.has(targetKey)) return '';
-          const targetNumId = stringToNumeric.get(targetKey);
-          return targetNumId ? `${targetNumId}FS` : '';
-        }).filter(Boolean).join(',');
 
         projectSubtasks.push({
           TaskID: assignNumericId('project', project.id),
@@ -510,7 +489,6 @@ export default function Timeline() {
           taskType: 'project' as const,
           hasBarriers,
           domainId: project.id,
-          Predecessor: projectPredecessorStr || undefined,
         });
       });
 
@@ -540,7 +518,6 @@ export default function Timeline() {
     endDate: 'EndDate',
     progress: 'Progress',
     child: 'subtasks',
-    dependency: 'Predecessor',
   };
 
   const handleTaskbarEditing = (record: any) => {
