@@ -37,7 +37,6 @@ interface SyncfusionTask {
   subtasks?: SyncfusionTask[];
   taskColor?: string;
   taskType?: 'strategy' | 'project' | 'action';
-  hasBarriers?: boolean;
 }
 
 interface DayItems {
@@ -436,11 +435,6 @@ export default function Timeline() {
             return a.id.localeCompare(b.id);
           });
 
-        const projectBarriers = barriers?.filter(b => 
-          b.projectId === project.id && b.status !== 'resolved' && b.status !== 'closed'
-        ) || [];
-        const hasBarriers = projectBarriers.length > 0;
-
         const actionSubtasks: SyncfusionTask[] = projectActions.map(action => {
           const actionEnd = parseAsUTCDate(action.dueDate!);
           const actionStart = new Date(actionEnd);
@@ -462,7 +456,7 @@ export default function Timeline() {
         const projectTaskId = `project-${project.id}`;
         projectSubtasks.push({
           TaskID: projectTaskId,
-          TaskName: hasBarriers ? `⚠️ ${project.title}` : project.title,
+          TaskName: project.title,
           StartDate: projectStart,
           EndDate: projectEnd,
           Progress: project.progress || 0,
@@ -470,7 +464,6 @@ export default function Timeline() {
           subtasks: actionSubtasks.length > 0 ? actionSubtasks : undefined,
           taskColor: getProjectStatusColor(project.status),
           taskType: 'project' as const,
-          hasBarriers,
         });
       });
 
@@ -953,6 +946,35 @@ export default function Timeline() {
                     const progressBar = args.taskbarElement?.querySelector('.e-gantt-child-progress');
                     if (progressBar) {
                       progressBar.style.setProperty('background-color', color, 'important');
+                    }
+                  }
+                }}
+                rowDataBound={(args: any) => {
+                  if (args.data && args.data.taskData) {
+                    const taskType = args.data.taskData.taskType;
+                    const row = args.row as HTMLElement;
+                    if (row) {
+                      if (taskType === 'strategy') {
+                        row.style.setProperty('background-color', 'hsl(221.2, 83.2%, 53.3%)', 'important');
+                        row.style.setProperty('color', 'white', 'important');
+                        row.style.setProperty('font-weight', 'bold', 'important');
+                        const cells = row.querySelectorAll('td');
+                        cells.forEach((cell: HTMLElement) => {
+                          cell.style.setProperty('background-color', 'hsl(221.2, 83.2%, 53.3%)', 'important');
+                          cell.style.setProperty('color', 'white', 'important');
+                          cell.style.setProperty('font-weight', 'bold', 'important');
+                        });
+                      } else if (taskType === 'project') {
+                        const taskNameCell = row.querySelector('td[aria-colindex="2"]') as HTMLElement;
+                        if (taskNameCell) {
+                          taskNameCell.style.setProperty('padding-left', '24px', 'important');
+                        }
+                      } else if (taskType === 'action') {
+                        const taskNameCell = row.querySelector('td[aria-colindex="2"]') as HTMLElement;
+                        if (taskNameCell) {
+                          taskNameCell.style.setProperty('padding-left', '48px', 'important');
+                        }
+                      }
                     }
                   }
                 }}
