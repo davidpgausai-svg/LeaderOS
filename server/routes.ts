@@ -82,7 +82,7 @@ const executiveGoalsUpdateSchema = z.object({
 });
 
 const teamTagsUpdateSchema = z.object({
-  teamTagIds: z.array(z.number().int().positive())
+  teamTagIds: z.array(z.string())
 });
 
 // Validation helpers
