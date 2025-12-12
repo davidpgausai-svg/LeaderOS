@@ -34,6 +34,7 @@ interface SyncfusionTask {
   EndDate: Date;
   Progress: number;
   subtasks?: SyncfusionTask[];
+  Predecessor?: string;
   taskColor?: string;
   taskType?: 'strategy' | 'project' | 'action';
   hasBarriers?: boolean;
@@ -427,6 +428,13 @@ export default function Timeline() {
           const actionStart = new Date(actionEnd);
           actionStart.setDate(actionStart.getDate() - 7);
 
+          const actionDeps = dependencies?.filter(d => 
+            d.sourceType === 'action' && d.sourceId === action.id
+          ) || [];
+          const predecessorStr = actionDeps.map(d => 
+            `${d.targetType}-${d.targetId}FS`
+          ).join(',');
+
           return {
             TaskID: `action-${action.id}`,
             TaskName: action.title,
@@ -435,8 +443,16 @@ export default function Timeline() {
             Progress: action.status === "achieved" ? 100 : action.status === "in_progress" ? 50 : 0,
             taskColor: getActionStatusColor(action.status),
             taskType: 'action' as const,
+            Predecessor: predecessorStr || undefined,
           };
         });
+
+        const projectDeps = dependencies?.filter(d => 
+          d.sourceType === 'project' && d.sourceId === project.id
+        ) || [];
+        const projectPredecessorStr = projectDeps.map(d => 
+          `${d.targetType}-${d.targetId}FS`
+        ).join(',');
 
         projectSubtasks.push({
           TaskID: `project-${project.id}`,
@@ -448,6 +464,7 @@ export default function Timeline() {
           taskColor: getProjectStatusColor(project.status),
           taskType: 'project' as const,
           hasBarriers,
+          Predecessor: projectPredecessorStr || undefined,
         });
       });
 
@@ -473,6 +490,7 @@ export default function Timeline() {
     endDate: 'EndDate',
     progress: 'Progress',
     child: 'subtasks',
+    dependency: 'Predecessor',
   };
 
   const handleTaskbarEditing = (record: any) => {
@@ -820,6 +838,14 @@ export default function Timeline() {
                 }}
                 taskMode="Manual"
                 autoCalculateDateScheduling={false}
+                enablePredecessorValidation={true}
+                actionBegin={(args: any) => {
+                  if (args.requestType === 'validateLinkedTask') {
+                    args.validateMode.preserveLinkWithEditing = false;
+                    args.validateMode.respectLink = false;
+                    args.validateMode.removeLink = false;
+                  }
+                }}
                 selectionSettings={{ mode: 'Row', type: 'Single' }}
                 timelineSettings={{
                   timelineViewMode: timelineView as any,
