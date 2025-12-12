@@ -938,33 +938,18 @@ export default function Timeline() {
                 queryTaskbarInfo={(args: any) => {
                   if (args.data && args.data.taskData) {
                     const taskType = args.data.taskData.taskType;
-                    if (taskType === 'strategy') {
-                      args.taskbarBgColor = 'transparent';
-                      args.progressBarBgColor = 'transparent';
-                      args.taskbarBorderColor = '#000000';
-                      if (args.taskbarElement) {
-                        args.taskbarElement.style.setProperty('background', 'transparent', 'important');
-                        args.taskbarElement.style.setProperty('border-left', '2px solid #000000', 'important');
-                        args.taskbarElement.style.setProperty('border-right', '2px solid #000000', 'important');
-                        args.taskbarElement.style.setProperty('border-top', 'none', 'important');
-                        args.taskbarElement.style.setProperty('border-bottom', 'none', 'important');
-                        args.taskbarElement.style.setProperty('height', '4px', 'important');
-                        args.taskbarElement.style.setProperty('margin-top', '10px', 'important');
-                      }
-                    } else {
-                      const color = args.data.taskData.taskColor || '#6b7280';
-                      args.taskbarBgColor = color;
-                      args.progressBarBgColor = color;
-                      args.taskbarBorderColor = color;
-                      if (args.taskbarElement) {
-                        args.taskbarElement.style.setProperty('background', color, 'important');
-                        args.taskbarElement.style.removeProperty('border-left');
-                        args.taskbarElement.style.removeProperty('border-right');
-                        args.taskbarElement.style.removeProperty('border-top');
-                        args.taskbarElement.style.removeProperty('border-bottom');
-                        args.taskbarElement.style.removeProperty('height');
-                        args.taskbarElement.style.removeProperty('margin-top');
-                      }
+                    const color = args.data.taskData.taskColor || '#6b7280';
+                    args.taskbarBgColor = color;
+                    args.progressBarBgColor = color;
+                    args.taskbarBorderColor = color;
+                    if (args.taskbarElement) {
+                      args.taskbarElement.style.setProperty('background-color', color, 'important');
+                      args.taskbarElement.style.setProperty('box-sizing', 'border-box', 'important');
+                      args.taskbarElement.style.setProperty('overflow', 'hidden', 'important');
+                    }
+                    const progressBar = args.taskbarElement?.querySelector('.e-gantt-child-progress');
+                    if (progressBar) {
+                      progressBar.style.setProperty('background-color', color, 'important');
                     }
                   }
                 }}
