@@ -372,6 +372,7 @@ export default function Timeline() {
     const result: SyncfusionTask[] = [];
     const numericToString = new Map<number, { type: string; id: string }>();
     const stringToNumeric = new Map<string, number>();
+    const includedTasks = new Set<string>();
     let nextId = 1;
 
     const assignNumericId = (type: string, id: string): number => {
@@ -387,12 +388,19 @@ export default function Timeline() {
 
     filteredStrategies.forEach(strategy => {
       assignNumericId('strategy', strategy.id);
+      includedTasks.add(`strategy-${strategy.id}`);
     });
-    projects.forEach(project => {
+    
+    const filteredStrategyIds = new Set(filteredStrategies.map(s => s.id));
+    projects.filter(p => filteredStrategyIds.has(p.strategyId) && p.startDate && p.dueDate).forEach(project => {
       assignNumericId('project', project.id);
+      includedTasks.add(`project-${project.id}`);
     });
-    actions.forEach(action => {
+    
+    const includedProjectIds = new Set(projects.filter(p => filteredStrategyIds.has(p.strategyId) && p.startDate && p.dueDate).map(p => p.id));
+    actions.filter(a => a.projectId && includedProjectIds.has(a.projectId) && a.dueDate).forEach(action => {
       assignNumericId('action', action.id);
+      includedTasks.add(`action-${action.id}`);
     });
 
     filteredStrategies.forEach(strategy => {
@@ -462,7 +470,9 @@ export default function Timeline() {
             d.sourceType === 'action' && d.sourceId === action.id
           ) || [];
           const predecessorStr = actionDeps.map(d => {
-            const targetNumId = stringToNumeric.get(`${d.targetType}-${d.targetId}`);
+            const targetKey = `${d.targetType}-${d.targetId}`;
+            if (!includedTasks.has(targetKey)) return '';
+            const targetNumId = stringToNumeric.get(targetKey);
             return targetNumId ? `${targetNumId}FS` : '';
           }).filter(Boolean).join(',');
 
@@ -483,7 +493,9 @@ export default function Timeline() {
           d.sourceType === 'project' && d.sourceId === project.id
         ) || [];
         const projectPredecessorStr = projectDeps.map(d => {
-          const targetNumId = stringToNumeric.get(`${d.targetType}-${d.targetId}`);
+          const targetKey = `${d.targetType}-${d.targetId}`;
+          if (!includedTasks.has(targetKey)) return '';
+          const targetNumId = stringToNumeric.get(targetKey);
           return targetNumId ? `${targetNumId}FS` : '';
         }).filter(Boolean).join(',');
 
