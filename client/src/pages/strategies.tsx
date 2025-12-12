@@ -11,6 +11,7 @@ import { EditProjectModal } from "@/components/modals/edit-project-modal";
 import { ViewProjectModal } from "@/components/modals/view-project-modal";
 import { ManageBarriersModal } from "@/components/modals/manage-barriers-modal";
 import { CreateActionModal } from "@/components/modals/create-action-modal";
+import { EditActionModal } from "@/components/modals/edit-action-modal";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -1281,6 +1282,11 @@ export default function Strategies() {
     setIsViewProjectOpen(true);
   };
 
+  const handleEditAction = (action: any) => {
+    setEditingAction(action);
+    setIsEditActionOpen(true);
+  };
+
   const handleDeleteProject = (projectId: string) => {
     deleteProjectMutation.mutate(projectId);
   };
@@ -2161,6 +2167,13 @@ export default function Strategies() {
                                                     </DropdownMenuItem>
                                                     {canEditAllStrategies() && (
                                                       <>
+                                                        <DropdownMenuItem
+                                                          onClick={() => handleEditAction(action)}
+                                                          data-testid={`action-menu-edit-${action.id}`}
+                                                        >
+                                                          <Edit className="w-3.5 h-3.5 mr-2" />
+                                                          Edit Action
+                                                        </DropdownMenuItem>
                                                         <AlertDialog>
                                                           <AlertDialogTrigger asChild>
                                                             <DropdownMenuItem
@@ -3196,6 +3209,20 @@ export default function Strategies() {
             setBarriersProjectId(null);
           }}
           projectId={barriersProjectId}
+        />
+      )}
+
+      {/* Edit Action Modal */}
+      {editingAction && (
+        <EditActionModal
+          open={isEditActionOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setIsEditActionOpen(false);
+              setEditingAction(null);
+            }
+          }}
+          action={editingAction}
         />
       )}
 

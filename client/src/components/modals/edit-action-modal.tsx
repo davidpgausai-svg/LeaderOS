@@ -66,6 +66,7 @@ type Strategy = {
   id: string;
   title: string;
   colorCode: string;
+  status: string;
 };
 
 type Project = {
@@ -378,7 +379,7 @@ export function EditActionModal({ open, onOpenChange, action }: EditActionModalP
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="placeholder">Select a strategy</SelectItem>
-                          {(strategies as Strategy[])?.map((strategy) => (
+                          {(strategies as Strategy[])?.filter((s) => s.status !== 'Archived').map((strategy) => (
                             <SelectItem key={strategy.id} value={strategy.id}>
                               <div className="flex items-center space-x-2">
                                 <div 
