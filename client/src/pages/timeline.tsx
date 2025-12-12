@@ -22,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Filter, Calendar, AlertTriangle, ChevronRight, ChevronLeft, LayoutGrid, GanttChart, ExternalLink } from "lucide-react";
+import { Filter, Calendar, AlertTriangle, GanttChart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
@@ -39,184 +39,16 @@ interface SyncfusionTask {
   taskType?: 'strategy' | 'project' | 'action';
 }
 
-interface DayItems {
-  date: Date;
-  projects: Project[];
-  actions: Action[];
-}
-
-const CalendarView: React.FC<{
-  projects: Project[];
-  actions: Action[];
-  strategies: Strategy[];
-  calendarMonth: Date;
-  onDaySelect?: (dayItems: DayItems) => void;
-}> = ({ projects, actions, strategies, calendarMonth, onDaySelect }) => {
-  const year = calendarMonth.getFullYear();
-  const month = calendarMonth.getMonth();
-  
-  const firstDayOfMonth = new Date(year, month, 1);
-  const lastDayOfMonth = new Date(year, month + 1, 0);
-  const startDay = firstDayOfMonth.getDay();
-  const daysInMonth = lastDayOfMonth.getDate();
-  
-  const calendarDays: (number | null)[] = [];
-  for (let i = 0; i < startDay; i++) {
-    calendarDays.push(null);
-  }
-  for (let day = 1; day <= daysInMonth; day++) {
-    calendarDays.push(day);
-  }
-  while (calendarDays.length % 7 !== 0) {
-    calendarDays.push(null);
-  }
-
-  const strategyMap = new Map(strategies.map(s => [s.id, s]));
-
-  const getItemsForDate = (day: number) => {
-    const date = new Date(year, month, day);
-    const dateStr = date.toISOString().split('T')[0];
-    
-    const projectsOnDate = projects.filter(p => {
-      if (!p.dueDate) return false;
-      const dueDate = new Date(p.dueDate).toISOString().split('T')[0];
-      return dueDate === dateStr;
-    });
-    
-    const actionsOnDate = actions.filter(a => {
-      if (!a.dueDate) return false;
-      const dueDate = new Date(a.dueDate).toISOString().split('T')[0];
-      return dueDate === dateStr;
-    });
-    
-    return { projects: projectsOnDate, actions: actionsOnDate };
-  };
-
-  const today = new Date();
-  const isToday = (day: number) => 
-    today.getDate() === day && 
-    today.getMonth() === month && 
-    today.getFullYear() === year;
-
-  return (
-    <div className="h-full overflow-auto p-4 bg-white dark:bg-gray-900">
-      <div className="grid grid-cols-7 gap-px bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden">
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-          <div 
-            key={day} 
-            className="bg-gray-50 dark:bg-gray-800 p-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400"
-          >
-            {day}
-          </div>
-        ))}
-        
-        {calendarDays.map((day, index) => {
-          if (day === null) {
-            return (
-              <div 
-                key={`empty-${index}`} 
-                className="bg-gray-50 dark:bg-gray-800/50 min-h-[100px]"
-              />
-            );
-          }
-          
-          const items = getItemsForDate(day);
-          const hasItems = items.projects.length > 0 || items.actions.length > 0;
-          
-          const handleDayClick = () => {
-            if (onDaySelect && hasItems) {
-              onDaySelect({
-                date: new Date(year, month, day),
-                projects: items.projects,
-                actions: items.actions,
-              });
-            }
-          };
-
-          return (
-            <div
-              key={day}
-              className={`bg-white dark:bg-gray-900 min-h-[100px] p-1.5 ${
-                isToday(day) ? 'ring-2 ring-inset ring-blue-500' : ''
-              } ${hasItems ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors' : ''}`}
-              onClick={handleDayClick}
-              data-testid={`calendar-day-${year}-${month + 1}-${day}`}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className={`text-xs font-medium ${
-                  isToday(day) 
-                    ? 'text-blue-600 dark:text-blue-400' 
-                    : 'text-gray-700 dark:text-gray-300'
-                }`}>
-                  {day}
-                </span>
-                {hasItems && (
-                  <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
-                    {items.projects.length + items.actions.length}
-                  </Badge>
-                )}
-              </div>
-              
-              <div className="space-y-0.5 overflow-y-auto max-h-[80px]">
-                {items.projects.map(project => {
-                  const strategy = strategyMap.get(project.strategyId);
-                  return (
-                    <div 
-                      key={`p-${project.id}`}
-                      className="text-[10px] px-1 py-0.5 rounded truncate"
-                      style={{ 
-                        backgroundColor: strategy?.colorCode ? `${strategy.colorCode}20` : '#e5e7eb',
-                        color: strategy?.colorCode || '#374151',
-                        borderLeft: `2px solid ${strategy?.colorCode || '#6b7280'}`
-                      }}
-                      title={project.title}
-                    >
-                      [P] {project.title}
-                    </div>
-                  );
-                })}
-                
-                {items.actions.map(action => {
-                  const project = projects.find(p => p.id === action.projectId);
-                  const strategy = project ? strategyMap.get(project.strategyId) : undefined;
-                  return (
-                    <div 
-                      key={`a-${action.id}`}
-                      className="text-[10px] px-1 py-0.5 rounded truncate"
-                      style={{ 
-                        backgroundColor: strategy?.colorCode ? `${strategy.colorCode}15` : '#f3f4f6',
-                        color: strategy?.colorCode || '#4b5563',
-                        borderLeft: `2px solid ${strategy?.colorCode || '#9ca3af'}`
-                      }}
-                      title={action.title}
-                    >
-                      [A] {action.title}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
 export default function Timeline() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const ganttRef = useRef<GanttComponent>(null);
   
-  const [viewType, setViewType] = useState<'timeline' | 'calendar'>('timeline');
-  const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [timelineView, setTimelineView] = useState<'Day' | 'Week' | 'Month'>('Month');
   const [selectedPriorityIds, setSelectedPriorityIds] = useState<string[]>([]);
   const [barrierDialogOpen, setBarrierDialogOpen] = useState(false);
   const [selectedProjectBarriers, setSelectedProjectBarriers] = useState<Barrier[]>([]);
   const [selectedProjectTitle, setSelectedProjectTitle] = useState("");
-  const [dayDetailsDialogOpen, setDayDetailsDialogOpen] = useState(false);
-  const [selectedDayItems, setSelectedDayItems] = useState<DayItems | null>(null);
   const [licenseRegistered, setLicenseRegistered] = useState(false);
   const [licenseError, setLicenseError] = useState(false);
 
@@ -250,15 +82,6 @@ export default function Timeline() {
     loadLicense();
   }, [toast]);
 
-  const navigateToProject = (projectId: string) => {
-    setDayDetailsDialogOpen(false);
-    setLocation(`/strategies?highlight=project-${projectId}`);
-  };
-
-  const navigateToAction = (actionId: string, projectId: string) => {
-    setDayDetailsDialogOpen(false);
-    setLocation(`/strategies?highlight=action-${actionId}&project=${projectId}`);
-  };
 
   const { data: strategies, isLoading: strategiesLoading } = useQuery<Strategy[]>({
     queryKey: ["/api/strategies"],
@@ -601,29 +424,6 @@ export default function Timeline() {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-md p-0.5">
-                <Button
-                  variant={viewType === 'timeline' ? "default" : "ghost"}
-                  size="sm"
-                  className="h-7 px-2.5 text-xs gap-1.5"
-                  onClick={() => setViewType('timeline')}
-                  data-testid="button-view-timeline"
-                >
-                  <GanttChart className="w-3.5 h-3.5" />
-                  Timeline
-                </Button>
-                <Button
-                  variant={viewType === 'calendar' ? "default" : "ghost"}
-                  size="sm"
-                  className="h-7 px-2.5 text-xs gap-1.5"
-                  onClick={() => setViewType('calendar')}
-                  data-testid="button-view-calendar"
-                >
-                  <LayoutGrid className="w-3.5 h-3.5" />
-                  Calendar
-                </Button>
-              </div>
-
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-2 h-8" data-testid="button-priority-filter">
@@ -674,57 +474,12 @@ export default function Timeline() {
               </Popover>
 
 
-              {viewType === 'calendar' && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 w-7 p-0"
-                    onClick={() => setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
-                    data-testid="button-calendar-prev"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </Button>
-                  <span className="text-sm font-medium min-w-[120px] text-center">
-                    {calendarMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 w-7 p-0"
-                    onClick={() => setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
-                    data-testid="button-calendar-next"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={() => setCalendarMonth(new Date())}
-                    data-testid="button-calendar-today"
-                  >
-                    Today
-                  </Button>
-                </div>
-              )}
             </div>
           </div>
         </header>
 
         <div className="flex-1 overflow-hidden">
-          {viewType === 'calendar' ? (
-            <CalendarView 
-              projects={filteredProjects} 
-              actions={filteredActions} 
-              strategies={filteredStrategies}
-              calendarMonth={calendarMonth}
-              onDaySelect={(dayItems) => {
-                setSelectedDayItems(dayItems);
-                setDayDetailsDialogOpen(true);
-              }}
-            />
-          ) : licenseError ? (
+          {licenseError ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center py-12">
                 <AlertTriangle className="w-10 h-10 text-orange-400 mx-auto mb-3" />
@@ -733,9 +488,6 @@ export default function Timeline() {
                 </h3>
                 <p className="text-gray-500 dark:text-gray-400 text-sm">
                   The Gantt chart license could not be loaded. Please contact your administrator.
-                </p>
-                <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">
-                  You can still use the Calendar view above.
                 </p>
               </div>
             </div>
@@ -1029,132 +781,6 @@ export default function Timeline() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={dayDetailsDialogOpen} onOpenChange={setDayDetailsDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden flex flex-col" data-testid="day-details-dialog">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <Calendar className="w-4 h-4 text-blue-500" />
-              Due on {selectedDayItems?.date ? selectedDayItems.date.toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              }) : ''}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 overflow-y-auto space-y-4 pr-2">
-            {selectedDayItems && selectedDayItems.projects.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
-                  <div className="w-3 h-3 bg-blue-500 rounded-sm" />
-                  Projects ({selectedDayItems.projects.length})
-                </h4>
-                <div className="space-y-2">
-                  {selectedDayItems.projects.map(project => {
-                    const strategy = strategies?.find(s => s.id === project.strategyId);
-                    return (
-                      <div 
-                        key={project.id}
-                        className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group"
-                        style={{ borderLeft: `4px solid ${strategy?.colorCode || '#6b7280'}` }}
-                        onClick={() => navigateToProject(project.id)}
-                        data-testid={`day-project-${project.id}`}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 flex items-center gap-1.5">
-                              {project.title}
-                              <ExternalLink className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </p>
-                            {strategy && (
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                {strategy.title}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <Badge 
-                              variant={project.status === 'completed' ? 'default' : project.status === 'on_hold' ? 'secondary' : 'outline'}
-                              className="text-xs capitalize"
-                            >
-                              {project.status === 'on_hold' ? 'On Hold' : 
-                               project.status === 'completed' ? 'Completed' : 
-                               project.status === 'in_progress' ? 'In Progress' : 'Active'}
-                            </Badge>
-                            <div className="text-right">
-                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                {project.progress || 0}%
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {selectedDayItems && selectedDayItems.actions.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full" />
-                  Actions ({selectedDayItems.actions.length})
-                </h4>
-                <div className="space-y-2">
-                  {selectedDayItems.actions.map(action => {
-                    const project = projects?.find(p => p.id === action.projectId);
-                    const strategy = project ? strategies?.find(s => s.id === project.strategyId) : undefined;
-                    return (
-                      <div 
-                        key={action.id}
-                        className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group"
-                        style={{ borderLeft: `4px solid ${strategy?.colorCode || '#9ca3af'}` }}
-                        onClick={() => project && navigateToAction(action.id, project.id)}
-                        data-testid={`day-action-${action.id}`}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 flex items-center gap-1.5">
-                              {action.title}
-                              <ExternalLink className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </p>
-                            {project && (
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                {project.title}
-                                {strategy && ` • ${strategy.title}`}
-                              </p>
-                            )}
-                          </div>
-                          <Badge 
-                            variant={
-                              action.status === 'achieved' ? 'default' : 
-                              action.status === 'blocked' ? 'destructive' : 
-                              action.status === 'off_track' ? 'destructive' :
-                              'outline'
-                            }
-                            className="text-xs flex-shrink-0"
-                          >
-                            {action.status === 'achieved' ? 'Achieved' :
-                             action.status === 'on_track' ? 'On Track' :
-                             action.status === 'off_track' ? 'Off Track' :
-                             action.status === 'blocked' ? 'Blocked' :
-                             action.status === 'not_started' ? 'Not Started' : 'Not Started'}
-                          </Badge>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {selectedDayItems && selectedDayItems.projects.length === 0 && selectedDayItems.actions.length === 0 && (
-              <p className="text-sm text-gray-500 text-center py-6">No items due on this date</p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

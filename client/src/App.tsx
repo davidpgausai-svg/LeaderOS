@@ -12,6 +12,7 @@ import MeetingNotes from "@/pages/meeting-notes";
 import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
 import Timeline from "@/pages/timeline";
+import Calendar from "@/pages/calendar";
 import Graph from "@/pages/graph";
 import Documentation from "@/pages/documentation";
 import Templates from "@/pages/templates";
@@ -54,6 +55,7 @@ function Router() {
         <Route path="/" component={Dashboard} />
         <Route path="/strategies" component={Strategies} />
         <Route path="/timeline" component={Timeline} />
+        <Route path="/calendar" component={Calendar} />
         <Route path="/graph" component={Graph} />
         <Route path="/meeting-notes" component={MeetingNotes} />
         <Route path="/reports" component={Reports} />

@@ -21,6 +21,8 @@ import {
   BookOpen,
   GitBranch,
   LayoutTemplate,
+  CalendarDays,
+  GanttChart,
 } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import logoImage from "@assets/Strategy_Plan_Logo_2.0_-_dark_1764957298563.png";
@@ -31,7 +33,8 @@ const coreNavigation = [
 
 const secondaryNavigation = [
   { name: "Dashboard", href: "/", icon: ChartLine },
-  { name: "Timeline", href: "/timeline", icon: Calendar },
+  { name: "Timeline", href: "/timeline", icon: GanttChart },
+  { name: "Calendar", href: "/calendar", icon: CalendarDays },
   { name: "Graph", href: "/graph", icon: GitBranch },
   { name: "Meeting Notes", href: "/meeting-notes", icon: PenLine },
   { name: "Reports", href: "/reports", icon: BarChart3 },
