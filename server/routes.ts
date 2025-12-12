@@ -3354,9 +3354,10 @@ Available navigation: Dashboard, Strategies, Projects, Actions, Timeline, Meetin
         return res.status(403).json({ message: "Cannot modify strategies from other organizations" });
       }
 
-      const { goalIds } = req.body;
+      const { executiveGoalIds } = req.body;
+      const goalIds = executiveGoalIds;
       if (!Array.isArray(goalIds)) {
-        return res.status(400).json({ message: "goalIds must be an array" });
+        return res.status(400).json({ message: "executiveGoalIds must be an array" });
       }
 
       // Validate all goalIds belong to the user's organization
