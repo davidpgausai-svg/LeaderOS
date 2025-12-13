@@ -231,9 +231,10 @@
 }
 
 .apple-hig-schedule .e-schedule-toolbar .e-active-view .e-tbar-btn {
-  background-color: rgba(0, 0, 0, 0.08) !important;
-  color: #1D1D1F !important;
+  background-color: #007AFF !important;
+  color: #FFFFFF !important;
   font-weight: 600 !important;
+  border-radius: 8px !important;
 }
 
 /* Date Header Navigation */
@@ -295,6 +296,8 @@
   border: none !important;
   font-size: 11px;
   font-weight: 500;
+  background-color: #007AFF !important;
+  color: #FFFFFF !important;
 }
 
 .apple-hig-schedule .e-appointment-details {
@@ -453,7 +456,7 @@
 }
 
 .dark .apple-hig-schedule .e-schedule-toolbar .e-active-view .e-tbar-btn {
-  background-color: rgba(255, 255, 255, 0.12) !important;
+  background-color: #007AFF !important;
   color: #FFFFFF !important;
 }
 
