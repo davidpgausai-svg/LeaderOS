@@ -2931,6 +2931,18 @@ export default function Strategies() {
                     <Button
                       size="sm"
                       onClick={async () => {
+                        if (documentUrlInput) {
+                          try {
+                            new URL(documentUrlInput);
+                          } catch {
+                            toast({ 
+                              title: "Invalid URL format", 
+                              description: "Please enter a valid URL starting with https:// or http://",
+                              variant: "destructive" 
+                            });
+                            return;
+                          }
+                        }
                         setUrlSaving(true);
                         try {
                           await apiRequest("PATCH", `/api/projects/${documentsModalProject.id}`, { 
@@ -2956,12 +2968,21 @@ export default function Strategies() {
               ) : documentsModalProject.documentFolderUrl ? (
                 <div className="space-y-4">
                   <div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
-                    <img 
-                      src={`https://www.google.com/s2/favicons?domain=${new URL(documentsModalProject.documentFolderUrl).hostname}&sz=32`}
-                      alt=""
-                      className="w-6 h-6 mt-0.5 rounded"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                    />
+                    {(() => {
+                      try {
+                        const hostname = new URL(documentsModalProject.documentFolderUrl).hostname;
+                        return (
+                          <img 
+                            src={`https://www.google.com/s2/favicons?domain=${hostname}&sz=32`}
+                            alt=""
+                            className="w-6 h-6 mt-0.5 rounded"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        );
+                      } catch {
+                        return <FolderOpen className="w-6 h-6 mt-0.5 text-blue-500" />;
+                      }
+                    })()}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                         {(() => {
@@ -3111,6 +3132,18 @@ export default function Strategies() {
                     <Button
                       size="sm"
                       onClick={async () => {
+                        if (communicationUrlInput) {
+                          try {
+                            new URL(communicationUrlInput);
+                          } catch {
+                            toast({ 
+                              title: "Invalid URL format", 
+                              description: "Please enter a valid URL starting with https:// or http://",
+                              variant: "destructive" 
+                            });
+                            return;
+                          }
+                        }
                         setUrlSaving(true);
                         try {
                           await apiRequest("PATCH", `/api/projects/${communicationModalProject.id}`, { 
@@ -3136,12 +3169,21 @@ export default function Strategies() {
               ) : communicationModalProject.communicationUrl ? (
                 <div className="space-y-4">
                   <div className="flex items-start gap-3 p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg">
-                    <img 
-                      src={`https://www.google.com/s2/favicons?domain=${new URL(communicationModalProject.communicationUrl).hostname}&sz=32`}
-                      alt=""
-                      className="w-6 h-6 mt-0.5 rounded"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                    />
+                    {(() => {
+                      try {
+                        const hostname = new URL(communicationModalProject.communicationUrl).hostname;
+                        return (
+                          <img 
+                            src={`https://www.google.com/s2/favicons?domain=${hostname}&sz=32`}
+                            alt=""
+                            className="w-6 h-6 mt-0.5 rounded"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        );
+                      } catch {
+                        return <Megaphone className="w-6 h-6 mt-0.5 text-green-500" />;
+                      }
+                    })()}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                         {(() => {
