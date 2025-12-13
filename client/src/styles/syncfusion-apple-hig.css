@@ -158,6 +158,14 @@
   width: 2px !important;
 }
 
+/* Hide progress gripper and resize handles for cleaner look */
+.apple-hig-gantt .e-progressbar-handler,
+.apple-hig-gantt .e-gantt-child-progressbar-inner-div,
+.apple-hig-gantt .e-left-resize-gripper,
+.apple-hig-gantt .e-right-resize-gripper {
+  display: none !important;
+}
+
 /* Splitter */
 .apple-hig-gantt .e-split-bar {
   background-color: rgba(0, 0, 0, 0.05);

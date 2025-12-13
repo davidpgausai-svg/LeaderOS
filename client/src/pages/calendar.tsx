@@ -409,43 +409,7 @@ export default function Calendar() {
               <div className="text-gray-500">Loading Syncfusion license...</div>
             </div>
           ) : (
-            <div className="h-full bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-              <style>{`
-                .e-schedule .e-schedule-toolbar .e-toolbar-items {
-                  background-color: #f9fafb;
-                }
-                .dark .e-schedule .e-schedule-toolbar .e-toolbar-items {
-                  background-color: #1f2937;
-                }
-                .dark .e-schedule {
-                  background-color: #111827;
-                }
-                .dark .e-schedule .e-month-view .e-work-cells,
-                .dark .e-schedule .e-month-view .e-date-header-wrap table {
-                  background-color: #111827;
-                }
-                .dark .e-schedule .e-header-cells,
-                .dark .e-schedule .e-month-view .e-date-header {
-                  background-color: #1f2937;
-                  color: #e5e7eb;
-                }
-                .dark .e-schedule .e-month-view .e-work-cells {
-                  border-color: #374151;
-                }
-                .dark .e-schedule .e-appointment {
-                  border-radius: 4px;
-                }
-                .e-schedule .e-appointment {
-                  border-radius: 4px;
-                  font-size: 11px;
-                }
-                .dark .e-schedule .e-date-header-wrap {
-                  background-color: #1f2937;
-                }
-                .dark .e-schedule .e-content-wrap {
-                  background-color: #111827;
-                }
-              `}</style>
+            <div className="h-full overflow-hidden">
               <ScheduleComponent
                 ref={scheduleRef}
                 cssClass="apple-hig-schedule"
