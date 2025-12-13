@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { UserInitializer } from "@/components/user-initializer";
+import { GlobalUpgradeModal } from "@/components/global-upgrade-modal";
 import { useAuth } from "@/hooks/useAuth";
 import Dashboard from "@/pages/dashboard";
 import Strategies from "@/pages/strategies";
@@ -80,6 +81,7 @@ function App() {
       <UserInitializer>
         <TooltipProvider>
           <Toaster />
+          <GlobalUpgradeModal />
           <Router />
         </TooltipProvider>
       </UserInitializer>
