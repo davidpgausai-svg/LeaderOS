@@ -13,7 +13,6 @@ import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
 import Timeline from "@/pages/timeline";
 import Calendar from "@/pages/calendar";
-import Graph from "@/pages/graph";
 import Documentation from "@/pages/documentation";
 import Templates from "@/pages/templates";
 import SwotTemplate from "@/pages/templates/swot";
@@ -56,7 +55,8 @@ function Router() {
         <Route path="/strategies" component={Strategies} />
         <Route path="/timeline" component={Timeline} />
         <Route path="/calendar" component={Calendar} />
-        <Route path="/graph" component={Graph} />
+        {/* Graph moved to Reports tab - redirect for backward compatibility */}
+        <Route path="/graph">{() => { window.location.replace('/reports?tab=graph'); return null; }}</Route>
         <Route path="/meeting-notes" component={MeetingNotes} />
         <Route path="/reports" component={Reports} />
         <Route path="/templates" component={Templates} />
