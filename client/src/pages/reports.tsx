@@ -673,16 +673,23 @@ function StrategyHealthReport({ strategies, projects, actions, getRiskLevel, get
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        {strategies.map((strategy: any) => {
+        {[...strategies].sort((a, b) => {
+          const aArchived = a.status?.toLowerCase() === 'archived';
+          const bArchived = b.status?.toLowerCase() === 'archived';
+          if (aArchived && !bArchived) return 1;
+          if (!aArchived && bArchived) return -1;
+          return 0;
+        }).map((strategy: any) => {
           const strategyProjects = projects.filter((t: any) => t.strategyId === strategy.id);
           const strategyRisk = getRiskLevel(strategy, 'strategy', strategyProjects);
           const isOpen = openStrategies.has(strategy.id);
+          const isArchived = strategy.status?.toLowerCase() === 'archived';
 
           return (
-            <div key={strategy.id} className="border border-gray-200 dark:border-gray-700 rounded-lg" data-testid={`strategy-${strategy.id}`}>
+            <div key={strategy.id} className={`border rounded-lg ${isArchived ? 'border-gray-300 dark:border-gray-600 opacity-60' : 'border-gray-200 dark:border-gray-700'}`} data-testid={`strategy-${strategy.id}`}>
               <Collapsible open={isOpen} onOpenChange={() => toggleStrategy(strategy.id)}>
                 <CollapsibleTrigger className="w-full">
-                  <div className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                  <div className={`flex items-center justify-between p-4 transition-colors ${isArchived ? 'bg-gray-50 dark:bg-gray-800/50' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
                     <div className="flex items-center space-x-3 flex-1">
                       {isOpen ? (
                         <ChevronDown className="w-4 h-4 text-gray-500" />
@@ -690,17 +697,22 @@ function StrategyHealthReport({ strategies, projects, actions, getRiskLevel, get
                         <ChevronRight className="w-4 h-4 text-gray-500" />
                       )}
                       <div
-                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        className={`w-3 h-3 rounded-full flex-shrink-0 ${isArchived ? 'opacity-50' : ''}`}
                         style={{ backgroundColor: strategy.colorCode }}
                       />
                       <div className="text-left flex-1">
-                        <h3 className="font-semibold text-gray-900 dark:text-white">{strategy.title}</h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className={`font-semibold ${isArchived ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`}>{strategy.title}</h3>
+                          {isArchived && (
+                            <Badge variant="outline" className="text-xs text-gray-400 border-gray-300">Archived</Badge>
+                          )}
+                        </div>
                         <p className="text-sm text-gray-500">{strategyProjects.length} projects</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-4">
                       <div className="text-right mr-4">
-                        <Progress value={strategy.progress || 0} className="w-32 h-2" />
+                        <Progress value={strategy.progress || 0} className={`w-32 h-2 ${isArchived ? 'opacity-50' : ''}`} />
                         <span className="text-sm text-gray-600 dark:text-gray-400 mt-1 block">
                           {strategy.progress || 0}%
                         </span>
