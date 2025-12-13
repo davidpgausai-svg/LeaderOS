@@ -59,8 +59,9 @@ import {
   Copy,
   Check,
   Building2,
+  CalendarDays,
 } from "lucide-react";
-import type { TemplateType, Organization, ExecutiveGoal, TeamTag } from "@shared/schema";
+import type { TemplateType, Organization, ExecutiveGoal, TeamTag, PtoEntry } from "@shared/schema";
 import { Pencil, X, Hash } from "lucide-react";
 
 interface UserStrategyRowProps {
@@ -654,6 +655,241 @@ function TwoFactorSettings() {
             When enabled, you'll be asked to enter a verification code sent to your email each time you sign in.
           </p>
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PtoSettings({ userId }: { userId: string }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isAddingPto, setIsAddingPto] = useState(false);
+  const [editingPto, setEditingPto] = useState<PtoEntry | null>(null);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [notes, setNotes] = useState("");
+
+  const { data: ptoEntries = [], isLoading } = useQuery<PtoEntry[]>({
+    queryKey: ['/api/users', userId, 'pto'],
+    enabled: !!userId,
+  });
+
+  const createPtoMutation = useMutation({
+    mutationFn: async (data: { startDate: string; endDate: string; notes?: string }) => {
+      const response = await apiRequest("POST", `/api/users/${userId}/pto`, data);
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Time off added successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/users', userId, 'pto'] });
+      resetForm();
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to add time off", variant: "destructive" });
+    },
+  });
+
+  const updatePtoMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { startDate?: string; endDate?: string; notes?: string } }) => {
+      const response = await apiRequest("PATCH", `/api/pto/${id}`, data);
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Time off updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/users', userId, 'pto'] });
+      resetForm();
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update time off", variant: "destructive" });
+    },
+  });
+
+  const deletePtoMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/pto/${id}`);
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Time off deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/users', userId, 'pto'] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to delete time off", variant: "destructive" });
+    },
+  });
+
+  const resetForm = () => {
+    setIsAddingPto(false);
+    setEditingPto(null);
+    setStartDate("");
+    setEndDate("");
+    setNotes("");
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!startDate || !endDate) {
+      toast({ title: "Error", description: "Please select start and end dates", variant: "destructive" });
+      return;
+    }
+    if (new Date(startDate) > new Date(endDate)) {
+      toast({ title: "Error", description: "Start date must be before end date", variant: "destructive" });
+      return;
+    }
+
+    const data = { startDate, endDate, notes: notes || undefined };
+    if (editingPto) {
+      updatePtoMutation.mutate({ id: editingPto.id, data });
+    } else {
+      createPtoMutation.mutate(data);
+    }
+  };
+
+  const startEdit = (entry: PtoEntry) => {
+    setEditingPto(entry);
+    setStartDate(new Date(entry.startDate).toISOString().split('T')[0]);
+    setEndDate(new Date(entry.endDate).toISOString().split('T')[0]);
+    setNotes(entry.notes || "");
+    setIsAddingPto(true);
+  };
+
+  const formatDate = (date: Date | string) => {
+    return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  return (
+    <Card data-testid="card-pto">
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center">
+            <CalendarDays className="mr-2 h-5 w-5" />
+            Time Off
+          </div>
+          {!isAddingPto && (
+            <Button size="sm" onClick={() => setIsAddingPto(true)} data-testid="button-add-pto">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Time Off
+            </Button>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isAddingPto && (
+          <form onSubmit={handleSubmit} className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-800 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="start-date">Start Date</Label>
+                <Input
+                  id="start-date"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  data-testid="input-pto-start"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="end-date">End Date</Label>
+                <Input
+                  id="end-date"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  data-testid="input-pto-end"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes (optional)</Label>
+              <Input
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="e.g., Vacation, Doctor's appointment"
+                data-testid="input-pto-notes"
+              />
+            </div>
+            <div className="flex space-x-2">
+              <Button
+                type="submit"
+                disabled={createPtoMutation.isPending || updatePtoMutation.isPending}
+                data-testid="button-save-pto"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {editingPto ? 'Update' : 'Save'}
+              </Button>
+              <Button type="button" variant="outline" onClick={resetForm} data-testid="button-cancel-pto">
+                Cancel
+              </Button>
+            </div>
+          </form>
+        )}
+
+        {isLoading ? (
+          <div className="text-center text-gray-500 py-4">Loading...</div>
+        ) : ptoEntries.length === 0 ? (
+          <div className="text-center text-gray-500 py-8">
+            <CalendarDays className="h-12 w-12 mx-auto mb-2 opacity-50" />
+            <p>No time off scheduled</p>
+            <p className="text-sm">Click "Add Time Off" to schedule vacation or leave</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {ptoEntries.map((entry) => (
+              <div
+                key={entry.id}
+                className="flex items-center justify-between p-3 border rounded-lg bg-white dark:bg-gray-800"
+                data-testid={`pto-entry-${entry.id}`}
+              >
+                <div>
+                  <p className="font-medium">
+                    {formatDate(entry.startDate)} - {formatDate(entry.endDate)}
+                  </p>
+                  {entry.notes && (
+                    <p className="text-sm text-gray-500">{entry.notes}</p>
+                  )}
+                </div>
+                <div className="flex space-x-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => startEdit(entry)}
+                    data-testid={`button-edit-pto-${entry.id}`}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700"
+                        data-testid={`button-delete-pto-${entry.id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Time Off</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete this time off entry?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => deletePtoMutation.mutate(entry.id)}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -1471,10 +1707,14 @@ export default function Settings() {
           {/* User Settings */}
           {!activeTab.startsWith("admin") && (
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-              <TabsList className="grid grid-cols-3 w-full max-w-2xl">
+              <TabsList className="grid grid-cols-4 w-full max-w-2xl">
                 <TabsTrigger value="profile" className="flex items-center space-x-2" data-testid="tab-profile">
                   <User className="w-4 h-4" />
                   <span className="hidden sm:inline">Profile</span>
+                </TabsTrigger>
+                <TabsTrigger value="pto" className="flex items-center space-x-2" data-testid="tab-pto">
+                  <CalendarDays className="w-4 h-4" />
+                  <span className="hidden sm:inline">Time Off</span>
                 </TabsTrigger>
                 <TabsTrigger value="notifications" className="flex items-center space-x-2" data-testid="tab-notifications">
                   <Bell className="w-4 h-4" />
@@ -1604,6 +1844,11 @@ export default function Settings() {
               </Card>
 
               <TwoFactorSettings />
+            </TabsContent>
+
+            {/* PTO / Time Off */}
+            <TabsContent value="pto" className="space-y-6">
+              <PtoSettings userId={currentUser?.id || ''} />
             </TabsContent>
 
             {/* Notifications */}
