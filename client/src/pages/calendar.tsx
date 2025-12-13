@@ -229,6 +229,52 @@ export default function Calendar() {
 
   const isLoading = strategiesLoading || projectsLoading || actionsLoading || ptoLoading;
 
+  // Get set of dates that have PTO entries for visual indicator
+  const ptoDates = useMemo(() => {
+    const dates = new Set<string>();
+    ptoEntries?.forEach(pto => {
+      const start = new Date(pto.startDate);
+      const end = new Date(pto.endDate);
+      // Add all dates in the range (inclusive)
+      const current = new Date(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate());
+      const endDate = new Date(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate());
+      while (current <= endDate) {
+        dates.add(`${current.getFullYear()}-${current.getMonth()}-${current.getDate()}`);
+        current.setDate(current.getDate() + 1);
+      }
+    });
+    return dates;
+  }, [ptoEntries]);
+
+  // Render cell handler to add PTO icon indicator
+  const handleRenderCell = (args: any) => {
+    if (args.elementType === 'dateHeader' || args.elementType === 'monthCells') {
+      const cellDate = args.date as Date;
+      if (cellDate) {
+        const existingContent = args.element.querySelector('.e-date-header, .e-day');
+        if (existingContent) {
+          // Remove any existing PTO icon first to prevent duplicates
+          const existingIcon = existingContent.querySelector('[data-pto-indicator]');
+          if (existingIcon) {
+            existingIcon.remove();
+          }
+          
+          const dateKey = `${cellDate.getFullYear()}-${cellDate.getMonth()}-${cellDate.getDate()}`;
+          if (ptoDates.has(dateKey)) {
+            // Add PTO indicator icon next to the date
+            const ptoIcon = document.createElement('span');
+            ptoIcon.innerHTML = ' 🏖️';
+            ptoIcon.title = 'Team member time off';
+            ptoIcon.style.marginLeft = '2px';
+            ptoIcon.style.fontSize = '12px';
+            ptoIcon.setAttribute('data-pto-indicator', 'true');
+            existingContent.appendChild(ptoIcon);
+          }
+        }
+      }
+    }
+  };
+
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar />
@@ -299,6 +345,7 @@ export default function Calendar() {
                 readonly={true}
                 showQuickInfo={true}
                 eventClick={handleEventClick}
+                renderCell={handleRenderCell}
                 popupOpen={(args: any) => {
                   if (args.type === 'QuickInfo') {
                     args.cancel = false;
