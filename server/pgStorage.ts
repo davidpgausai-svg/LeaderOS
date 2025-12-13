@@ -7,7 +7,7 @@ import {
   actionDocuments, actionChecklistItems, userStrategyAssignments,
   meetingNotes, aiChatConversations, barriers, dependencies, templateTypes,
   organizations, passwordResetTokens, twoFactorCodes, executiveGoals, strategyExecutiveGoals,
-  teamTags, projectTeamTags, projectResourceAssignments, actionPeopleAssignments, ptoEntries,
+  teamTags, projectTeamTags, projectResourceAssignments, actionPeopleAssignments, ptoEntries, holidays,
   type User, type UpsertUser, type InsertUser,
   type Strategy, type InsertStrategy,
   type Project, type InsertProject,
@@ -31,7 +31,8 @@ import {
   type ProjectTeamTag,
   type ProjectResourceAssignment, type InsertProjectResourceAssignment,
   type ActionPeopleAssignment, type InsertActionPeopleAssignment,
-  type PtoEntry, type InsertPtoEntry
+  type PtoEntry, type InsertPtoEntry,
+  type Holiday, type InsertHoliday
 } from '@shared/schema';
 
 export class PostgresStorage implements IStorage {
@@ -984,6 +985,37 @@ export class PostgresStorage implements IStorage {
 
   async deletePtoEntry(id: string): Promise<boolean> {
     await db.delete(ptoEntries).where(eq(ptoEntries.id, id));
+    return true;
+  }
+
+  // Holiday methods
+  async getHolidaysByOrganization(organizationId: string): Promise<Holiday[]> {
+    return db.select().from(holidays).where(eq(holidays.organizationId, organizationId)).orderBy(desc(holidays.date));
+  }
+
+  async getHoliday(id: string): Promise<Holiday | undefined> {
+    const [holiday] = await db.select().from(holidays).where(eq(holidays.id, id));
+    return holiday || undefined;
+  }
+
+  async createHoliday(holiday: InsertHoliday & { organizationId: string }): Promise<Holiday> {
+    const [created] = await db.insert(holidays).values({
+      id: randomUUID(),
+      ...holiday,
+    }).returning();
+    return created;
+  }
+
+  async updateHoliday(id: string, updates: Partial<InsertHoliday>): Promise<Holiday | undefined> {
+    const [updated] = await db.update(holidays)
+      .set(updates)
+      .where(eq(holidays.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteHoliday(id: string): Promise<boolean> {
+    await db.delete(holidays).where(eq(holidays.id, id));
     return true;
   }
 }

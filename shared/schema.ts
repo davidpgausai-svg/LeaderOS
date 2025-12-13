@@ -593,3 +593,25 @@ export const insertPtoEntrySchema = createInsertSchema(ptoEntries).omit({
 
 export type InsertPtoEntry = z.infer<typeof insertPtoEntrySchema>;
 export type PtoEntry = typeof ptoEntries.$inferSelect;
+
+// Holidays - Organization-wide holidays
+export const holidays = pgTable("holidays", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull(),
+  date: timestamp("date").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+export const insertHolidaySchema = createInsertSchema(holidays).omit({
+  id: true,
+  createdAt: true,
+  organizationId: true,
+}).extend({
+  date: z.coerce.date(),
+  name: z.string().min(1, "Holiday name is required").max(255),
+});
+
+export type InsertHoliday = z.infer<typeof insertHolidaySchema>;
+export type Holiday = typeof holidays.$inferSelect;
