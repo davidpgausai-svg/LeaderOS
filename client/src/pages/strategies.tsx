@@ -1771,21 +1771,6 @@ export default function Strategies() {
                                           
                                           {/* Icon Bar - pushed to the right */}
                                           <div className="flex items-center gap-0.5 ml-auto flex-shrink-0">
-                                            {/* Timeline - color coded (after status dropdown) */}
-                                            <Button
-                                              variant="ghost"
-                                              size="sm"
-                                              className="h-6 w-6 p-0"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                setTimelineModalProject(project);
-                                              }}
-                                              title="View timeline"
-                                              data-testid={`button-timeline-${project.id}`}
-                                            >
-                                              <Calendar className={`w-3.5 h-3.5 ${getTimelineIconClass(project)}`} />
-                                            </Button>
-                                            
                                             {/* Leaders */}
                                             <Button
                                               variant="ghost"
@@ -1829,21 +1814,6 @@ export default function Strategies() {
                                               data-testid={`button-dependencies-${project.id}`}
                                             >
                                               <Link2 className={`w-3.5 h-3.5 ${projectHasDependencies(project.id) ? 'text-blue-500' : 'text-gray-400'}`} />
-                                            </Button>
-                                            
-                                            {/* KPI */}
-                                            <Button
-                                              variant="ghost"
-                                              size="sm"
-                                              className="h-6 w-6 p-0"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                setKpiModalProject(project);
-                                              }}
-                                              title="View KPIs"
-                                              data-testid={`button-kpi-${project.id}`}
-                                            >
-                                              <Target className="w-3.5 h-3.5 text-gray-500" />
                                             </Button>
                                             
                                             {/* Documents */}
@@ -2882,7 +2852,7 @@ export default function Strategies() {
           setDocumentUrlInput("");
         }
       }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FolderOpen className="h-5 w-5" />
@@ -3083,7 +3053,7 @@ export default function Strategies() {
           setCommunicationUrlInput("");
         }
       }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Megaphone className="h-5 w-5" />
