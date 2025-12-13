@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertStrategySchema, insertProjectSchema, insertActionSchema, insertActionDocumentSchema, insertActionChecklistItemSchema, insertMeetingNoteSchema, insertBarrierSchema, insertDependencySchema, insertTemplateTypeSchema, insertExecutiveGoalSchema, insertTeamTagSchema, insertUserStrategyAssignmentSchema, insertProjectResourceAssignmentSchema, insertActionPeopleAssignmentSchema, insertPtoEntrySchema } from "@shared/schema";
+import { insertStrategySchema, insertProjectSchema, insertActionSchema, insertActionDocumentSchema, insertActionChecklistItemSchema, insertMeetingNoteSchema, insertBarrierSchema, insertDependencySchema, insertTemplateTypeSchema, insertExecutiveGoalSchema, insertTeamTagSchema, insertUserStrategyAssignmentSchema, insertProjectResourceAssignmentSchema, insertActionPeopleAssignmentSchema, insertPtoEntrySchema, insertHolidaySchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./jwtAuth";
 import { z, ZodSchema, ZodError } from "zod";
 import { logger } from "./logger";
@@ -4234,6 +4234,128 @@ Available navigation: Dashboard, Strategies, Projects, Actions, Timeline, Meetin
     } catch (error) {
       logger.error("Failed to delete PTO entry", error);
       res.status(500).json({ message: "Failed to delete PTO entry" });
+    }
+  });
+
+  // Holiday routes - Organization-wide holidays (admin only)
+  
+  // Get all holidays for the organization
+  app.get("/api/holidays", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      const holidays = await storage.getHolidaysByOrganization(user.organizationId);
+      res.json(holidays);
+    } catch (error) {
+      logger.error("Failed to fetch holidays", error);
+      res.status(500).json({ message: "Failed to fetch holidays" });
+    }
+  });
+
+  // Create a holiday (admin only)
+  app.post("/api/holidays", isAuthenticated, validateBody(insertHolidaySchema), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      // Only administrators can create holidays
+      if (user.role !== 'administrator') {
+        return res.status(403).json({ message: "Only administrators can create holidays" });
+      }
+
+      const holiday = await storage.createHoliday({
+        ...req.body,
+        organizationId: user.organizationId,
+      });
+      res.status(201).json(holiday);
+    } catch (error) {
+      logger.error("Failed to create holiday", error);
+      res.status(500).json({ message: "Failed to create holiday" });
+    }
+  });
+
+  // Update a holiday (admin only)
+  app.patch("/api/holidays/:id", isAuthenticated, validateBody(insertHolidaySchema.partial()), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      // Only administrators can update holidays
+      if (user.role !== 'administrator') {
+        return res.status(403).json({ message: "Only administrators can update holidays" });
+      }
+
+      const holiday = await storage.getHoliday(req.params.id);
+      if (!holiday) {
+        return res.status(404).json({ message: "Holiday not found" });
+      }
+
+      if (holiday.organizationId !== user.organizationId) {
+        return res.status(403).json({ message: "Cannot modify holidays from other organizations" });
+      }
+
+      const updated = await storage.updateHoliday(req.params.id, req.body);
+      res.json(updated);
+    } catch (error) {
+      logger.error("Failed to update holiday", error);
+      res.status(500).json({ message: "Failed to update holiday" });
+    }
+  });
+
+  // Delete a holiday (admin only)
+  app.delete("/api/holidays/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      // Only administrators can delete holidays
+      if (user.role !== 'administrator') {
+        return res.status(403).json({ message: "Only administrators can delete holidays" });
+      }
+
+      const holiday = await storage.getHoliday(req.params.id);
+      if (!holiday) {
+        return res.status(404).json({ message: "Holiday not found" });
+      }
+
+      if (holiday.organizationId !== user.organizationId) {
+        return res.status(403).json({ message: "Cannot delete holidays from other organizations" });
+      }
+
+      await storage.deleteHoliday(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      logger.error("Failed to delete holiday", error);
+      res.status(500).json({ message: "Failed to delete holiday" });
     }
   });
 
