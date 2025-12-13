@@ -3009,21 +3009,21 @@ export default function Strategies() {
                   </Button>
                   
                   {canEditAllStrategies() && (
-                    <div className="flex gap-2 pt-2 border-t">
+                    <div className="flex gap-2 pt-2 border-t overflow-hidden">
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex-1"
+                        className="flex-1 min-w-0"
                         onClick={() => setDocumentUrlEditing(true)}
                         data-testid="button-edit-document-url"
                       >
-                        <Edit className="w-3.5 h-3.5 mr-1.5" />
-                        Edit Link
+                        <Edit className="w-3.5 h-3.5 mr-1.5 flex-shrink-0" />
+                        <span className="truncate">Edit Link</span>
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
                         onClick={async () => {
                           setUrlSaving(true);
                           try {
@@ -3210,21 +3210,21 @@ export default function Strategies() {
                   </Button>
                   
                   {canEditAllStrategies() && (
-                    <div className="flex gap-2 pt-2 border-t">
+                    <div className="flex gap-2 pt-2 border-t overflow-hidden">
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex-1"
+                        className="flex-1 min-w-0"
                         onClick={() => setCommunicationUrlEditing(true)}
                         data-testid="button-edit-communication-url"
                       >
-                        <Edit className="w-3.5 h-3.5 mr-1.5" />
-                        Edit Link
+                        <Edit className="w-3.5 h-3.5 mr-1.5 flex-shrink-0" />
+                        <span className="truncate">Edit Link</span>
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
                         onClick={async () => {
                           setUrlSaving(true);
                           try {
