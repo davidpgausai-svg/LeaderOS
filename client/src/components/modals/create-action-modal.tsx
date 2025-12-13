@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -85,6 +85,16 @@ export function CreateActionModal({ open, onOpenChange, strategyId, projectId }:
       createdBy: currentUser?.id || "",
     },
   });
+
+  // Auto-select the strategy and project when modal opens with props
+  useEffect(() => {
+    if (open && strategyId) {
+      form.setValue("strategyId", strategyId);
+    }
+    if (open && projectId) {
+      form.setValue("projectId", projectId);
+    }
+  }, [open, strategyId, projectId, form]);
 
   const createActionMutation = useMutation({
     mutationFn: async (data: InsertAction) => {
