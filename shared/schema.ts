@@ -337,8 +337,8 @@ export const insertProjectSchema = createInsertSchema(projects).omit({
       return JSON.stringify([str]);
     }
   }),
-  documentFolderUrl: z.string().nullable().optional(),
-  communicationUrl: z.string().nullable().optional(),
+  documentFolderUrl: z.string().url("Invalid document folder URL format").nullable().optional().or(z.literal('')).transform(val => val || null),
+  communicationUrl: z.string().url("Invalid communication URL format").nullable().optional().or(z.literal('')).transform(val => val || null),
 });
 
 export const insertActivitySchema = createInsertSchema(activities).omit({
@@ -351,7 +351,7 @@ export const insertActionSchema = createInsertSchema(actions).omit({
   createdAt: true,
 }).extend({
   dueDate: z.coerce.date().optional(),
-  documentFolderUrl: z.string().nullable().optional(),
+  documentFolderUrl: z.string().url("Invalid document folder URL format").nullable().optional().or(z.literal('')).transform(val => val || null),
 });
 
 export const insertNotificationSchema = createInsertSchema(notifications).omit({
