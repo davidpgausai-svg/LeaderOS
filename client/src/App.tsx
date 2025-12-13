@@ -27,6 +27,7 @@ import Landing from "@/pages/landing";
 import Register from "@/pages/register";
 import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
+import SuperAdmin from "@/pages/super-admin";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -69,6 +70,7 @@ function Router() {
         <Route path="/templates/first-principles" component={FirstPrinciplesTemplate} />
         <Route path="/documentation" component={Documentation} />
         <Route path="/settings" component={Settings} />
+        <Route path="/super-admin" component={SuperAdmin} />
         <Route component={NotFound} />
       </Switch>
     </>

@@ -4334,6 +4334,96 @@ ${outputTemplate}`;
     }
   });
 
+  // =================== SUPER ADMIN ROUTES ===================
+  
+  // Get all organizations with details (Super Admin only)
+  app.get("/api/super-admin/organizations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || user.isSuperAdmin !== 'true') {
+        return res.status(403).json({ message: "Super Admin access required" });
+      }
+
+      const { getAllOrganizationsWithDetails } = await import('./pgStorage');
+      const organizations = await getAllOrganizationsWithDetails();
+      res.json(organizations);
+    } catch (error) {
+      logger.error("Failed to fetch organizations", error);
+      res.status(500).json({ message: "Failed to fetch organizations" });
+    }
+  });
+
+  // Get organization stats (Super Admin only)
+  app.get("/api/super-admin/stats", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || user.isSuperAdmin !== 'true') {
+        return res.status(403).json({ message: "Super Admin access required" });
+      }
+
+      const { getOrganizationStats } = await import('./pgStorage');
+      const stats = await getOrganizationStats();
+      res.json(stats);
+    } catch (error) {
+      logger.error("Failed to fetch organization stats", error);
+      res.status(500).json({ message: "Failed to fetch organization stats" });
+    }
+  });
+
+  // Get billing history for a specific organization (Super Admin only)
+  app.get("/api/super-admin/organizations/:orgId/billing-history", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || user.isSuperAdmin !== 'true') {
+        return res.status(403).json({ message: "Super Admin access required" });
+      }
+
+      const { getBillingHistoryByOrganization } = await import('./pgStorage');
+      const history = await getBillingHistoryByOrganization(req.params.orgId);
+      res.json(history);
+    } catch (error) {
+      logger.error("Failed to fetch billing history", error);
+      res.status(500).json({ message: "Failed to fetch billing history" });
+    }
+  });
+
+  // Mark all organizations as legacy (Super Admin only) - one-time migration
+  app.post("/api/super-admin/mark-legacy", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || user.isSuperAdmin !== 'true') {
+        return res.status(403).json({ message: "Super Admin access required" });
+      }
+
+      const { markAllOrganizationsAsLegacy } = await import('./pgStorage');
+      const count = await markAllOrganizationsAsLegacy();
+      res.json({ success: true, count, message: `Marked ${count} organizations as legacy` });
+    } catch (error) {
+      logger.error("Failed to mark organizations as legacy", error);
+      res.status(500).json({ message: "Failed to mark organizations as legacy" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
