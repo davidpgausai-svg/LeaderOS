@@ -134,6 +134,56 @@ class BillingService {
     return await stripe.checkout.sessions.create(sessionParams);
   }
 
+  async createAnonymousCheckoutSession(
+    priceId: string,
+    successUrl: string,
+    cancelUrl: string,
+    options: {
+      trialDays?: number;
+    } = {}
+  ): Promise<Stripe.Checkout.Session> {
+    const stripe = await getUncachableStripeClient();
+
+    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+      { price: priceId, quantity: 1 }
+    ];
+
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
+      payment_method_types: ['card'],
+      line_items: lineItems,
+      mode: 'subscription',
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      customer_creation: 'always',
+      metadata: {
+        flow: 'new_customer_purchase',
+      },
+      subscription_data: {
+        metadata: {
+          flow: 'new_customer_purchase',
+        },
+      },
+    };
+
+    if (options.trialDays && options.trialDays > 0) {
+      sessionParams.subscription_data!.trial_period_days = options.trialDays;
+    }
+
+    return await stripe.checkout.sessions.create(sessionParams);
+  }
+
+  async retrieveCheckoutSession(sessionId: string): Promise<Stripe.Checkout.Session | null> {
+    try {
+      const stripe = await getUncachableStripeClient();
+      return await stripe.checkout.sessions.retrieve(sessionId, {
+        expand: ['subscription', 'customer'],
+      });
+    } catch (error) {
+      console.error('[Billing] Error retrieving checkout session:', error);
+      return null;
+    }
+  }
+
   async createCustomerPortalSession(
     organizationId: string,
     returnUrl: string

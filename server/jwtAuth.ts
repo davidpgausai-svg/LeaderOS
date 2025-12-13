@@ -221,6 +221,145 @@ export async function setupAuth(app: Express) {
     }
   });
 
+  // Post-purchase registration (for customers who paid via Stripe first)
+  app.post('/api/auth/register/purchase', authLimiter, async (req, res) => {
+    try {
+      const { sessionId, password, firstName, lastName, organizationName } = req.body;
+
+      if (!sessionId || !password || !organizationName) {
+        return res.status(400).json({ error: 'Session ID, password, and organization name are required' });
+      }
+
+      const passwordValidation = validatePasswordComplexity(password);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({ error: passwordValidation.error });
+      }
+
+      // Verify the checkout session
+      const { billingService, PRICE_IDS } = await import('./billingService');
+      const session = await billingService.retrieveCheckoutSession(sessionId);
+
+      if (!session) {
+        return res.status(400).json({ error: 'Invalid checkout session' });
+      }
+
+      if (session.payment_status !== 'paid' && session.status !== 'complete') {
+        return res.status(400).json({ error: 'Payment not completed' });
+      }
+
+      const customerEmail = session.customer_details?.email;
+      if (!customerEmail) {
+        return res.status(400).json({ error: 'No email found in checkout session' });
+      }
+
+      // Check if user already exists
+      const existingUsers = await storage.getAllUsers();
+      if (existingUsers.some((u: any) => u.email?.toLowerCase() === customerEmail.toLowerCase())) {
+        return res.status(409).json({ error: 'An account with this email already exists. Please log in.' });
+      }
+
+      // Get Stripe client for additional API calls if needed
+      const stripe = await (await import('./stripeClient')).getUncachableStripeClient();
+
+      // Get customer ID
+      const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
+      if (!customerId) {
+        return res.status(400).json({ error: 'No customer found in checkout session' });
+      }
+
+      // Get subscription - may need to fetch separately if not expanded
+      let subscription = session.subscription as any;
+      let subscriptionId: string;
+      
+      if (typeof subscription === 'string') {
+        // Subscription was not expanded, fetch it
+        subscriptionId = subscription;
+        subscription = await stripe.subscriptions.retrieve(subscriptionId, {
+          expand: ['items.data.price'],
+        });
+      } else if (subscription?.id) {
+        subscriptionId = subscription.id;
+      } else {
+        return res.status(400).json({ error: 'No subscription found in checkout session' });
+      }
+
+      // Determine the plan from the price ID
+      const priceId = subscription?.items?.data?.[0]?.price?.id;
+      if (!priceId) {
+        return res.status(400).json({ error: 'Could not determine subscription plan' });
+      }
+      
+      let plan: 'starter' | 'leaderpro' | 'team' = 'starter';
+      if (priceId === PRICE_IDS.team.monthly || priceId === PRICE_IDS.team.annual) {
+        plan = 'team';
+      } else if (priceId === PRICE_IDS.leaderpro.monthly || priceId === PRICE_IDS.leaderpro.annual) {
+        plan = 'leaderpro';
+      }
+
+      // Create the organization with the purchased plan
+      const org = await createOrganization(organizationName);
+      
+      // Update organization with Stripe details
+      const { updateOrganizationSubscription } = await import('./pgStorage');
+      await updateOrganizationSubscription(org.id, {
+        stripeCustomerId: customerId,
+        stripeSubscriptionId: subscriptionId,
+        stripePriceId: priceId,
+        subscriptionPlan: plan,
+        subscriptionStatus: subscription?.status === 'trialing' ? 'trialing' : 'active',
+        currentPeriodEnd: subscription?.current_period_end 
+          ? new Date(subscription.current_period_end * 1000).toISOString()
+          : null,
+      });
+
+      // Update Stripe subscription with organization ID
+      await stripe.subscriptions.update(subscriptionId, {
+        metadata: { organizationId: org.id },
+      });
+      await stripe.customers.update(customerId, {
+        metadata: { organizationId: org.id },
+      });
+
+      // Create the user
+      const passwordHash = await bcrypt.hash(password, 10);
+      const isFirstUserEver = existingUsers.length === 0;
+
+      const user = await storage.upsertUser({
+        email: customerEmail.toLowerCase(),
+        firstName: firstName || null,
+        lastName: lastName || null,
+        role: 'administrator',
+        organizationId: org.id,
+        isSuperAdmin: isFirstUserEver ? 'true' : 'false',
+      });
+
+      await updateUserPassword(user.id, passwordHash);
+
+      const token = generateToken({ userId: user.id, email: user.email! });
+      const csrfToken = generateCsrfToken();
+      setAuthCookie(res, token);
+      setCsrfCookie(res, csrfToken);
+
+      logger.info(`[SECURITY] Post-purchase registration: user ${user.id} (${user.email}) in org ${org.id}, plan: ${plan}`);
+
+      res.status(201).json({ 
+        success: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          organizationId: org.id,
+          organizationName: org.name,
+        }
+      });
+    } catch (error) {
+      logger.error('[SECURITY] Post-purchase registration failed', error);
+      res.status(500).json({ error: 'Registration failed. Please try again.' });
+    }
+  });
+
   // Get registration token for current user's organization
   app.get('/api/admin/registration-token', isAuthenticated, async (req: any, res) => {
     try {

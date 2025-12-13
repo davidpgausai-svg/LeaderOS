@@ -4186,6 +4186,71 @@ ${outputTemplate}`;
     }
   });
 
+  // Create a Stripe checkout session for new customers (no authentication required)
+  app.post("/api/billing/create-anonymous-checkout", async (req, res) => {
+    try {
+      const { priceId, trialDays } = req.body;
+      if (!priceId) {
+        return res.status(400).json({ message: "Price ID is required" });
+      }
+
+      const { billingService } = await import('./billingService');
+      
+      const baseUrl = process.env.APP_URL || (process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : 'http://localhost:5000');
+      
+      const session = await billingService.createAnonymousCheckoutSession(
+        priceId,
+        `${baseUrl}/register/purchase?session_id={CHECKOUT_SESSION_ID}`,
+        `${baseUrl}/pricing?checkout=canceled`,
+        { trialDays: trialDays || 0 }
+      );
+
+      res.json({ url: session.url, sessionId: session.id });
+    } catch (error) {
+      logger.error("Failed to create anonymous checkout session", error);
+      res.status(500).json({ message: "Failed to create checkout session" });
+    }
+  });
+
+  // Retrieve checkout session details (for post-purchase registration)
+  app.get("/api/billing/checkout-session/:sessionId", async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      if (!sessionId) {
+        return res.status(400).json({ message: "Session ID is required" });
+      }
+
+      const { billingService } = await import('./billingService');
+      const session = await billingService.retrieveCheckoutSession(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({ message: "Checkout session not found" });
+      }
+
+      if (session.payment_status !== 'paid' && session.status !== 'complete') {
+        return res.status(400).json({ message: "Payment not completed" });
+      }
+
+      const subscription = session.subscription as any;
+      const customer = session.customer as any;
+
+      res.json({
+        customerEmail: session.customer_details?.email || customer?.email,
+        customerName: session.customer_details?.name || customer?.name,
+        customerId: typeof session.customer === 'string' ? session.customer : session.customer?.id,
+        subscriptionId: typeof subscription === 'string' ? subscription : subscription?.id,
+        priceId: subscription?.items?.data?.[0]?.price?.id || null,
+        status: session.status,
+        paymentStatus: session.payment_status,
+      });
+    } catch (error) {
+      logger.error("Failed to retrieve checkout session", error);
+      res.status(500).json({ message: "Failed to retrieve checkout session" });
+    }
+  });
+
   // Create a Stripe customer portal session
   app.post("/api/billing/create-portal-session", isAuthenticated, async (req: any, res) => {
     try {

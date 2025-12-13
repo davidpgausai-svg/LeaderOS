@@ -25,6 +25,7 @@ import FirstPrinciplesTemplate from "@/pages/templates/first-principles";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Register from "@/pages/register";
+import RegisterPurchase from "@/pages/register-purchase";
 import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
 import SuperAdmin from "@/pages/super-admin";
@@ -41,6 +42,7 @@ function Router() {
     return (
       <Switch>
         <Route path="/register/:token" component={Register} />
+        <Route path="/register/purchase" component={RegisterPurchase} />
         <Route path="/forgot-password" component={ForgotPassword} />
         <Route path="/reset-password" component={ResetPassword} />
         <Route path="/landing" component={Landing} />
