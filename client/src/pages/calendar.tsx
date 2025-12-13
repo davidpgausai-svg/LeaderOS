@@ -261,11 +261,15 @@ export default function Calendar() {
     return dates;
   }, [holidays]);
 
-  // Render cell handler to add PTO and Holiday icon indicators
+  // Render cell handler to add PTO icons and Holiday green background
   const handleRenderCell = (args: any) => {
     if (args.elementType === 'dateHeader' || args.elementType === 'monthCells') {
       const cellDate = args.date as Date;
       if (cellDate) {
+        // Reset background color first (Syncfusion reuses DOM nodes)
+        args.element.style.backgroundColor = '';
+        args.element.title = '';
+        
         const existingContent = args.element.querySelector('.e-date-header, .e-day');
         if (existingContent) {
           // Remove any existing indicators first to prevent duplicates
@@ -273,27 +277,19 @@ export default function Calendar() {
           if (existingPtoIcon) {
             existingPtoIcon.remove();
           }
-          const existingHolidayIcon = existingContent.querySelector('[data-holiday-indicator]');
-          if (existingHolidayIcon) {
-            existingHolidayIcon.remove();
-          }
           
           const dateKey = `${cellDate.getFullYear()}-${cellDate.getMonth()}-${cellDate.getDate()}`;
           const utcDateKey = `${cellDate.getUTCFullYear()}-${cellDate.getUTCMonth()}-${cellDate.getUTCDate()}`;
           
-          // Add Holiday indicator (gold star) - use UTC key since holidays are stored as dates
+          // Add Holiday indicator - green background on the cell
           const holidayName = holidayDates.get(utcDateKey);
           if (holidayName) {
-            const holidayIcon = document.createElement('span');
-            holidayIcon.innerHTML = ' 🌟';
-            holidayIcon.title = holidayName;
-            holidayIcon.style.marginLeft = '2px';
-            holidayIcon.style.fontSize = '12px';
-            holidayIcon.setAttribute('data-holiday-indicator', 'true');
-            existingContent.appendChild(holidayIcon);
+            const isDarkMode = document.documentElement.classList.contains('dark');
+            args.element.style.backgroundColor = isDarkMode ? '#14532d' : '#dcfce7';
+            args.element.title = holidayName;
           }
           
-          // Add PTO indicator
+          // Add PTO indicator (beach umbrella icon)
           if (ptoDates.has(dateKey)) {
             const ptoIcon = document.createElement('span');
             ptoIcon.innerHTML = ' 🏖️';
@@ -317,6 +313,16 @@ export default function Calendar() {
             <div>
               <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Calendar</h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">View projects and actions by due date</p>
+            </div>
+            <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400" data-testid="calendar-legend">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-green-200 dark:bg-green-800 border border-green-300 dark:border-green-700"></div>
+                <span>Holiday</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-base">🏖️</span>
+                <span>Paid Time Off</span>
+              </div>
             </div>
           </div>
         </div>
