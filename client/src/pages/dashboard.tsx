@@ -194,7 +194,7 @@ export default function Dashboard() {
                     {todoCount} {todoCount === 1 ? 'action' : 'actions'}
                   </span>
                 </div>
-                <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+                <div className="space-y-3 max-h-[600px] overflow-y-auto p-1 -m-1">
                   {todoCount > 0 ? (
                     myTodos?.map((todo) => {
                       const daysOverdue = getDaysOverdue(todo.dueDate);
@@ -203,17 +203,17 @@ export default function Dashboard() {
                       return (
                         <div
                           key={todo.id}
-                          className="p-4 rounded-xl transition-all cursor-pointer"
+                          className="p-4 rounded-xl transition-all duration-200 cursor-pointer hover:scale-[1.01]"
                           style={{ 
                             backgroundColor: '#FFFFFF',
-                            border: '1px solid rgba(0, 0, 0, 0.06)',
+                            border: '2px solid transparent',
                           }}
                           onMouseEnter={(e) => {
                             e.currentTarget.style.borderColor = '#007AFF';
-                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 122, 255, 0.12)';
+                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 122, 255, 0.15)';
                           }}
                           onMouseLeave={(e) => {
-                            e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.06)';
+                            e.currentTarget.style.borderColor = 'transparent';
                             e.currentTarget.style.boxShadow = 'none';
                           }}
                           onClick={() => navigateToAction(todo.id, todo.projectId)}
@@ -337,7 +337,7 @@ export default function Dashboard() {
                     {projectCount} {projectCount === 1 ? 'project' : 'projects'}
                   </span>
                 </div>
-                <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+                <div className="space-y-3 max-h-[600px] overflow-y-auto p-1 -m-1">
                   {projectCount > 0 ? (
                     myProjects?.map((project) => {
                       const daysOverdue = getDaysOverdue(project.dueDate);
@@ -347,17 +347,17 @@ export default function Dashboard() {
                       return (
                         <div
                           key={project.id}
-                          className="p-4 rounded-xl transition-all cursor-pointer"
+                          className="p-4 rounded-xl transition-all duration-200 cursor-pointer hover:scale-[1.01]"
                           style={{ 
                             backgroundColor: '#FFFFFF',
-                            border: '1px solid rgba(0, 0, 0, 0.06)',
+                            border: '2px solid transparent',
                           }}
                           onMouseEnter={(e) => {
                             e.currentTarget.style.borderColor = '#AF52DE';
-                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(175, 82, 222, 0.12)';
+                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(175, 82, 222, 0.15)';
                           }}
                           onMouseLeave={(e) => {
-                            e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.06)';
+                            e.currentTarget.style.borderColor = 'transparent';
                             e.currentTarget.style.boxShadow = 'none';
                           }}
                           onClick={() => navigateToProject(project.id)}
