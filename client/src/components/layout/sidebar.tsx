@@ -44,6 +44,13 @@ export function Sidebar() {
   const [location] = useLocation();
   const { currentRole, currentUser } = useRole();
   const { user, logout } = useAuth();
+
+  const isActiveRoute = (href: string) => {
+    if (href === "/") {
+      return location === "/";
+    }
+    return location === href || location.startsWith(href + "/") || location.startsWith(href + "?");
+  };
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const stored = localStorage.getItem('sidebar-collapsed');
     return stored ? JSON.parse(stored) : true;
@@ -95,7 +102,7 @@ export function Sidebar() {
         {/* Dashboard - Top item */}
         {(() => {
           const dashboardItem = secondaryNavigation[0];
-          const isActive = location === dashboardItem.href;
+          const isActive = isActiveRoute(dashboardItem.href);
           const Icon = dashboardItem.icon;
           
           const linkContent = (
@@ -150,7 +157,7 @@ export function Sidebar() {
           )}
           <div className="flex flex-col gap-1">
             {coreNavigation.map((item) => {
-              const isActive = location === item.href;
+              const isActive = isActiveRoute(item.href);
               const Icon = item.icon;
               
               const linkContent = (
@@ -195,7 +202,7 @@ export function Sidebar() {
 
         {/* Secondary Navigation */}
         {secondaryNavigation.slice(1).map((item) => {
-          const isActive = location === item.href;
+          const isActive = isActiveRoute(item.href);
           const Icon = item.icon;
           
           const linkContent = (
@@ -239,47 +246,52 @@ export function Sidebar() {
         </div>
         
         {/* Documentation Link */}
-        <Link href="/documentation">
-          {isCollapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
+        {(() => {
+          const isDocActive = isActiveRoute("/documentation");
+          return (
+            <Link href="/documentation">
+              {isCollapsed ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div
+                      className={`flex items-center justify-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
+                        isDocActive
+                          ? "shadow-sm"
+                          : "hover:bg-black/5"
+                      }`}
+                      style={{
+                        backgroundColor: isDocActive ? '#FFFFFF' : 'transparent',
+                        color: isDocActive ? '#007AFF' : '#1D1D1F',
+                      }}
+                      data-testid="link-documentation"
+                    >
+                      <BookOpen className="h-4 w-4" style={{ color: isDocActive ? '#007AFF' : '#86868B' }} />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    Documentation
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
                 <div
-                  className={`flex items-center justify-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
-                    location === "/documentation"
+                  className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
+                    isDocActive
                       ? "shadow-sm"
                       : "hover:bg-black/5"
                   }`}
                   style={{
-                    backgroundColor: location === "/documentation" ? '#FFFFFF' : 'transparent',
-                    color: location === "/documentation" ? '#007AFF' : '#1D1D1F',
+                    backgroundColor: isDocActive ? '#FFFFFF' : 'transparent',
+                    color: isDocActive ? '#007AFF' : '#1D1D1F',
                   }}
                   data-testid="link-documentation"
                 >
-                  <BookOpen className="h-4 w-4" style={{ color: location === "/documentation" ? '#007AFF' : '#86868B' }} />
+                  <BookOpen className="mr-3 h-4 w-4" style={{ color: isDocActive ? '#007AFF' : '#86868B' }} />
+                  Documentation
                 </div>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                Documentation
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <div
-              className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
-                location === "/documentation"
-                  ? "shadow-sm"
-                  : "hover:bg-black/5"
-              }`}
-              style={{
-                backgroundColor: location === "/documentation" ? '#FFFFFF' : 'transparent',
-                color: location === "/documentation" ? '#007AFF' : '#1D1D1F',
-              }}
-              data-testid="link-documentation"
-            >
-              <BookOpen className="mr-3 h-4 w-4" style={{ color: location === "/documentation" ? '#007AFF' : '#86868B' }} />
-              Documentation
-            </div>
-          )}
-        </Link>
+              )}
+            </Link>
+          );
+        })()}
       </nav>
       
       {/* User Profile */}
