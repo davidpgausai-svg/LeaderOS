@@ -408,12 +408,12 @@ export default function Timeline() {
 
   if (strategiesLoading || projectsLoading || actionsLoading || (!licenseRegistered && !licenseError)) {
     return (
-      <div className="min-h-screen flex">
+      <div className="min-h-screen flex" style={{ backgroundColor: '#F5F5F7' }}>
         <Sidebar />
         <main className="flex-1 p-6">
           <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2 mb-6"></div>
+            <div className="h-8 rounded-xl w-1/4 mb-2" style={{ backgroundColor: 'rgba(0, 0, 0, 0.05)' }}></div>
+            <div className="h-4 rounded-xl w-1/2 mb-6" style={{ backgroundColor: 'rgba(0, 0, 0, 0.05)' }}></div>
           </div>
         </main>
       </div>
@@ -423,25 +423,53 @@ export default function Timeline() {
   const activeStrategies = strategies?.filter(s => s.status !== 'Archived') || [];
 
   return (
-    <div className="min-h-screen flex bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen flex" style={{ backgroundColor: '#F5F5F7' }}>
       <Sidebar />
       <main className="flex-1 overflow-hidden flex flex-col">
-        <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3">
+        {/* Header - Apple HIG Glassmorphism */}
+        <header 
+          className="px-6 py-5"
+          style={{ 
+            backgroundColor: 'rgba(255, 255, 255, 0.7)', 
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            borderBottom: '1px solid rgba(0, 0, 0, 0.1)'
+          }}
+        >
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Strategic Roadmap</h2>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">
-                Priorities, Projects, and Actions timeline
-              </p>
+            <div className="flex items-center gap-4">
+              <div 
+                className="w-12 h-12 rounded-2xl flex items-center justify-center"
+                style={{ backgroundColor: '#AF52DE' }}
+              >
+                <GanttChart className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold" style={{ color: '#1D1D1F' }}>Strategic Roadmap</h2>
+                <p className="text-sm" style={{ color: '#86868B' }}>
+                  Priorities, Projects, and Actions timeline
+                </p>
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2 h-8" data-testid="button-priority-filter">
-                    <Filter className="w-3.5 h-3.5" />
-                    Filter
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-2 h-9 rounded-full border-0"
+                    style={{ backgroundColor: 'rgba(0, 0, 0, 0.04)' }}
+                    data-testid="button-priority-filter"
+                  >
+                    <Filter className="w-3.5 h-3.5" style={{ color: '#007AFF' }} />
+                    <span style={{ color: '#1D1D1F' }}>Filter</span>
                     {selectedPriorityIds.length > 0 && (
-                      <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">{selectedPriorityIds.length}</Badge>
+                      <Badge 
+                        className="ml-1 h-5 px-1.5 text-xs text-white"
+                        style={{ backgroundColor: '#007AFF' }}
+                      >
+                        {selectedPriorityIds.length}
+                      </Badge>
                     )}
                   </Button>
                 </PopoverTrigger>

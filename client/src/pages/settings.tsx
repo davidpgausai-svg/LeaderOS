@@ -1916,15 +1916,29 @@ export default function Settings() {
   };
 
   return (
-    <div className="min-h-screen flex bg-white dark:bg-black">
+    <div className="min-h-screen flex" style={{ backgroundColor: '#F5F5F7' }}>
       <Sidebar />
       <main className="flex-1 overflow-auto">
-        {/* Header */}
-        <header className="bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800 px-6 py-4">
-          <div className="flex items-center justify-between">
+        {/* Header - Apple HIG Glassmorphism */}
+        <header 
+          className="sticky top-0 z-10 px-6 py-5"
+          style={{ 
+            backgroundColor: 'rgba(255, 255, 255, 0.7)', 
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            borderBottom: '1px solid rgba(0, 0, 0, 0.1)'
+          }}
+        >
+          <div className="flex items-center gap-4">
+            <div 
+              className="w-12 h-12 rounded-2xl flex items-center justify-center"
+              style={{ backgroundColor: '#8E8E93' }}
+            >
+              <SettingsIcon className="w-6 h-6 text-white" />
+            </div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h2>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
+              <h2 className="text-2xl font-bold" style={{ color: '#1D1D1F' }}>Settings</h2>
+              <p style={{ color: '#86868B' }}>
                 {!activeTab.startsWith("admin") 
                   ? "Manage your personal preferences and profile settings"
                   : "Manage organization-wide settings and user permissions"

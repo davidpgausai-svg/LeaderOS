@@ -358,18 +358,35 @@ export default function Calendar() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex h-screen" style={{ backgroundColor: '#F5F5F7' }}>
       <Sidebar />
       <main className="flex-1 flex flex-col overflow-hidden">
-        <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
+        {/* Header - Apple HIG Glassmorphism */}
+        <header
+          className="px-6 py-5"
+          style={{ 
+            backgroundColor: 'rgba(255, 255, 255, 0.7)', 
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            borderBottom: '1px solid rgba(0, 0, 0, 0.1)'
+          }}
+        >
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Calendar</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">View projects and actions by due date</p>
+            <div className="flex items-center gap-4">
+              <div 
+                className="w-12 h-12 rounded-2xl flex items-center justify-center"
+                style={{ backgroundColor: '#FF9500' }}
+              >
+                <Calendar className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold" style={{ color: '#1D1D1F' }}>Calendar</h1>
+                <p className="text-sm" style={{ color: '#86868B' }}>View projects and actions by due date</p>
+              </div>
             </div>
-            <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400" data-testid="calendar-legend">
+            <div className="flex items-center gap-4 text-sm" style={{ color: '#86868B' }} data-testid="calendar-legend">
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-green-200 dark:bg-green-800 border border-green-300 dark:border-green-700"></div>
+                <div className="w-4 h-4 rounded-lg" style={{ backgroundColor: '#34C759' }}></div>
                 <span>Holiday</span>
               </div>
               <div className="flex items-center gap-2">
@@ -378,7 +395,7 @@ export default function Calendar() {
               </div>
             </div>
           </div>
-        </div>
+        </header>
 
         <div className="flex-1 overflow-hidden p-4">
           {isLoading ? (

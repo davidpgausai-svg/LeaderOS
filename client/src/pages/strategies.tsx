@@ -1327,12 +1327,12 @@ export default function Strategies() {
 
   if (strategiesLoading) {
     return (
-      <div className="min-h-screen flex">
+      <div className="min-h-screen flex" style={{ backgroundColor: '#F5F5F7' }}>
         <Sidebar />
         <main className="flex-1 p-6">
           <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2 mb-6"></div>
+            <div className="h-8 rounded-xl w-1/4 mb-2" style={{ backgroundColor: 'rgba(0, 0, 0, 0.05)' }}></div>
+            <div className="h-4 rounded-xl w-1/2 mb-6" style={{ backgroundColor: 'rgba(0, 0, 0, 0.05)' }}></div>
           </div>
         </main>
       </div>
@@ -1340,20 +1340,41 @@ export default function Strategies() {
   }
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex" style={{ backgroundColor: '#F5F5F7' }}>
       <Sidebar />
       <main className="flex-1 overflow-auto">
-        {/* Header */}
-        <header className="bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800 px-6 py-4">
+        {/* Header - Apple HIG Glassmorphism */}
+        <header 
+          className="sticky top-0 z-10 px-6 py-5"
+          style={{ 
+            backgroundColor: 'rgba(255, 255, 255, 0.7)', 
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            borderBottom: '1px solid rgba(0, 0, 0, 0.1)'
+          }}
+        >
           <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Strategic Priority</h2>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
-                Manage and track strategic initiatives
-              </p>
+            <div className="flex items-center gap-4">
+              <div 
+                className="w-12 h-12 rounded-2xl flex items-center justify-center"
+                style={{ backgroundColor: '#007AFF' }}
+              >
+                <Target className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold" style={{ color: '#1D1D1F' }}>Strategic Priority</h2>
+                <p className="mt-0.5" style={{ color: '#86868B' }}>
+                  Manage and track strategic initiatives
+                </p>
+              </div>
             </div>
             {canCreateStrategies() && (
-              <Button onClick={() => setIsCreateStrategyOpen(true)} data-testid="button-create-strategy">
+              <Button 
+                onClick={() => setIsCreateStrategyOpen(true)} 
+                className="rounded-full px-5"
+                style={{ backgroundColor: '#007AFF' }}
+                data-testid="button-create-strategy"
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 New Strategic Priority
               </Button>
@@ -1362,24 +1383,25 @@ export default function Strategies() {
         </header>
 
         {/* Filters */}
-        <div className="p-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+        <div className="px-6 py-4" style={{ backgroundColor: 'rgba(255, 255, 255, 0.5)' }}>
           <div className="flex items-center space-x-4">
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" style={{ color: '#86868B' }} />
               <Input
                 placeholder="Search strategies..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 rounded-xl border-0"
+                style={{ backgroundColor: 'rgba(0, 0, 0, 0.04)' }}
                 data-testid="input-search-strategies"
               />
             </div>
             <Select value={strategyFilter} onValueChange={handleStrategyFilterChange}>
-              <SelectTrigger className="w-48" data-testid="select-strategy-filter">
-                <Target className="w-4 h-4 mr-2" />
+              <SelectTrigger className="w-48 rounded-xl border-0" style={{ backgroundColor: 'rgba(0, 0, 0, 0.04)' }} data-testid="select-strategy-filter">
+                <Target className="w-4 h-4 mr-2" style={{ color: '#007AFF' }} />
                 <SelectValue placeholder="Filter by strategy" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="rounded-xl">
                 <SelectItem value="all">All Strategies</SelectItem>
                 {(strategies as any[])?.filter(s => s.status !== 'Archived').map((strategy: any) => (
                   <SelectItem key={strategy.id} value={strategy.id}>
@@ -1395,17 +1417,25 @@ export default function Strategies() {
         <div className="p-6">
           {filteredStrategies.length === 0 ? (
             <div className="text-center py-12">
-              <div className="w-12 h-12 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <Search className="h-6 w-6 text-gray-400" />
+              <div 
+                className="w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-4"
+                style={{ backgroundColor: 'rgba(0, 122, 255, 0.1)' }}
+              >
+                <Search className="h-7 w-7" style={{ color: '#007AFF' }} />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No strategic priorities found</h3>
-              <p className="text-gray-500 mb-4">
+              <h3 className="text-lg font-semibold mb-2" style={{ color: '#1D1D1F' }}>No strategic priorities found</h3>
+              <p className="mb-4" style={{ color: '#86868B' }}>
                 {searchTerm || strategyFilter !== "all"
                   ? "Try adjusting your search or filters"
                   : "Get started by creating your first strategic priority"}
               </p>
               {canCreateStrategies() && !searchTerm && strategyFilter === "all" && (
-                <Button onClick={() => setIsCreateStrategyOpen(true)} data-testid="button-create-first-strategy">
+                <Button 
+                  onClick={() => setIsCreateStrategyOpen(true)} 
+                  className="rounded-full px-5"
+                  style={{ backgroundColor: '#007AFF' }}
+                  data-testid="button-create-first-strategy"
+                >
                   <Plus className="mr-2 h-4 w-4" />
                   New Strategic Priority
                 </Button>
@@ -1418,10 +1448,19 @@ export default function Strategies() {
                 const strategyProgress = strategy.progress || 0;
                 
                 return (
-                <Card key={strategy.id} className="overflow-hidden" style={{ borderLeft: `4px solid ${strategy.colorCode}` }}>
+                <Card 
+                  key={strategy.id} 
+                  className="overflow-hidden border-0 rounded-2xl"
+                  style={{ 
+                    borderLeft: `4px solid ${strategy.colorCode}`,
+                    backgroundColor: 'white',
+                    boxShadow: '0 4px 24px rgba(0, 0, 0, 0.06)'
+                  }}
+                >
                   {/* Compact Header - Always Visible */}
                   <CardHeader 
-                    className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors py-3 px-4"
+                    className="cursor-pointer transition-colors py-3 px-4"
+                    style={{ backgroundColor: 'transparent' }}
                     onClick={() => toggleStrategyCollapse(strategy.id)}
                   >
                     <div className="flex flex-col gap-2">
@@ -1464,7 +1503,7 @@ export default function Strategies() {
                           className="w-3 h-3 rounded-full flex-shrink-0"
                           style={{ backgroundColor: strategy.colorCode }}
                         />
-                        <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white flex-1">
+                        <h3 className="text-base sm:text-lg font-bold flex-1" style={{ color: '#1D1D1F' }}>
                           {strategy.title}
                         </h3>
                       </div>

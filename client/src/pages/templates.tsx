@@ -111,23 +111,44 @@ export default function Templates() {
     : templates.filter(t => t.category === selectedCategory);
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="flex min-h-screen" style={{ backgroundColor: '#F5F5F7' }}>
       <Sidebar />
-      <main className="flex-1 p-6 overflow-auto">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Templates</h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
-                Strategic planning, project management, and productivity frameworks
-              </p>
+      <main className="flex-1 overflow-auto">
+        {/* Header - Apple HIG Glassmorphism */}
+        <header
+          className="px-6 py-5 sticky top-0 z-10"
+          style={{ 
+            backgroundColor: 'rgba(255, 255, 255, 0.7)', 
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            borderBottom: '1px solid rgba(0, 0, 0, 0.1)'
+          }}
+        >
+          <div className="max-w-6xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div 
+                className="w-12 h-12 rounded-2xl flex items-center justify-center"
+                style={{ backgroundColor: '#5856D6' }}
+              >
+                <LayoutGrid className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold" style={{ color: '#1D1D1F' }}>Templates</h1>
+                <p style={{ color: '#86868B' }}>
+                  Strategic planning, project management, and productivity frameworks
+                </p>
+              </div>
             </div>
             
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-[200px]" data-testid="select-template-category">
+              <SelectTrigger 
+                className="w-[200px] rounded-xl border-0" 
+                style={{ backgroundColor: 'rgba(0, 0, 0, 0.04)' }}
+                data-testid="select-template-category"
+              >
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="rounded-xl">
                 {allCategories.map((category) => (
                   <SelectItem key={category} value={category}>
                     {category}
@@ -136,14 +157,20 @@ export default function Templates() {
               </SelectContent>
             </Select>
           </div>
+        </header>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="p-6">
+          <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredTemplates.map((template) => {
               const Icon = template.icon;
               return (
                 <Link key={template.id} href={template.path}>
                   <Card 
-                    className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-primary/50 dark:hover:border-primary/50 group h-full"
+                    className="cursor-pointer transition-all duration-200 hover:shadow-lg group h-full border-0 rounded-2xl"
+                    style={{ 
+                      backgroundColor: 'white',
+                      boxShadow: '0 4px 24px rgba(0, 0, 0, 0.06)'
+                    }}
                     data-testid={`card-template-${template.id}`}
                   >
                     <CardHeader className="pb-3">

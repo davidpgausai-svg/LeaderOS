@@ -164,11 +164,11 @@ export default function MeetingNotes() {
 
   if (notesLoading) {
     return (
-      <div className="flex h-screen">
+      <div className="flex h-screen" style={{ backgroundColor: '#F5F5F7' }}>
         <Sidebar />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <p className="text-gray-500 dark:text-gray-400">Loading meeting notes...</p>
+            <p style={{ color: '#86868B' }}>Loading meeting notes...</p>
           </div>
         </div>
       </div>
@@ -176,32 +176,52 @@ export default function MeetingNotes() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex h-screen" style={{ backgroundColor: '#F5F5F7' }}>
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <main className="flex-1 overflow-y-auto">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="mb-8 flex items-center justify-between">
+        {/* Header - Apple HIG Glassmorphism */}
+        <header
+          className="px-6 py-5"
+          style={{ 
+            backgroundColor: 'rgba(255, 255, 255, 0.7)', 
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            borderBottom: '1px solid rgba(0, 0, 0, 0.1)'
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div 
+                className="w-12 h-12 rounded-2xl flex items-center justify-center"
+                style={{ backgroundColor: '#34C759' }}
+              >
+                <FileText className="w-6 h-6 text-white" />
+              </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                <h1 className="text-2xl font-bold" style={{ color: '#1D1D1F' }}>
                   Meeting Notes
                 </h1>
-                <p className="text-gray-600 dark:text-gray-400">
+                <p style={{ color: '#86868B' }}>
                   View and manage report-out meeting notes
                 </p>
               </div>
-              {canEdit && (
-                <Button
-                  onClick={() => setIsCreateOpen(true)}
-                  className="flex items-center gap-2"
-                  data-testid="button-create-meeting-note"
-                >
-                  <Plus className="w-4 h-4" />
-                  New Meeting Note
-                </Button>
-              )}
             </div>
+            {canEdit && (
+              <Button
+                onClick={() => setIsCreateOpen(true)}
+                className="flex items-center gap-2 rounded-full px-5"
+                style={{ backgroundColor: '#007AFF' }}
+                data-testid="button-create-meeting-note"
+              >
+                <Plus className="w-4 h-4" />
+                New Meeting Note
+              </Button>
+            )}
+          </div>
+        </header>
 
+        <main className="flex-1 overflow-y-auto">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {/* Strategy Filter */}
             <div className="mb-6 flex items-center gap-3">
               <Filter className="w-4 h-4 text-gray-500" />
