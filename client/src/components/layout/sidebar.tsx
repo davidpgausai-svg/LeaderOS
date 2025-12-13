@@ -27,7 +27,7 @@ import { NotificationBell } from "@/components/notifications/notification-bell";
 import logoImage from "@assets/Strategy_Plan_Logo_2.0_-_dark_1764957298563.png";
 
 const coreNavigation = [
-  { name: "Priorities", href: "/strategies", icon: Target, iconColor: "text-indigo-500" },
+  { name: "Priorities", href: "/strategies", icon: Target, iconColor: "#007AFF" },
 ];
 
 const secondaryNavigation = [
@@ -62,7 +62,15 @@ export function Sidebar() {
   };
 
   return (
-    <aside className={`${isCollapsed ? 'w-20' : 'w-64'} bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-300`}>
+    <aside 
+      className={`${isCollapsed ? 'w-20' : 'w-64'} flex flex-col transition-all duration-300 border-r`}
+      style={{ 
+        backgroundColor: 'rgba(255, 255, 255, 0.7)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderColor: 'rgba(0, 0, 0, 0.1)'
+      }}
+    >
       {/* Header with Toggle */}
       <div className={`${isCollapsed ? 'p-3' : 'p-6'} flex items-center ${isCollapsed ? 'flex-col gap-2' : 'justify-between'}`}>
         <div className={`flex items-center ${isCollapsed ? 'justify-center' : ''}`}>
@@ -72,19 +80,18 @@ export function Sidebar() {
             className={isCollapsed ? "h-10 w-10 object-contain" : "h-10 w-auto"} 
           />
         </div>
-        <Button
+        <button
           onClick={toggleSidebar}
-          variant="ghost"
-          size="sm"
-          className="text-gray-500 hover:text-gray-900 dark:hover:text-white"
+          className="p-2 rounded-full transition-all duration-200 hover:bg-black/5"
+          style={{ color: '#86868B' }}
           data-testid="button-toggle-sidebar"
         >
           {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-        </Button>
+        </button>
       </div>
       
       {/* Navigation Menu */}
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 p-4 space-y-1">
         {/* Dashboard - Top item */}
         {(() => {
           const dashboardItem = secondaryNavigation[0];
@@ -93,13 +100,17 @@ export function Sidebar() {
           
           const linkContent = (
             <div
-              className={`flex items-center ${isCollapsed ? 'justify-center px-3' : 'px-3'} py-2 text-sm font-medium rounded-md transition-colors ${
+              className={`flex items-center ${isCollapsed ? 'justify-center' : ''} px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
                 isActive
-                  ? "text-white bg-primary"
-                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  ? "shadow-sm"
+                  : "hover:bg-black/5"
               }`}
+              style={{
+                backgroundColor: isActive ? '#FFFFFF' : 'transparent',
+                color: isActive ? '#007AFF' : '#1D1D1F',
+              }}
             >
-              <Icon className={`${isCollapsed ? '' : 'mr-3'} h-4 w-4`} />
+              <Icon className={`${isCollapsed ? '' : 'mr-3'} h-4 w-4`} style={{ color: isActive ? '#007AFF' : '#86868B' }} />
               {!isCollapsed && dashboardItem.name}
             </div>
           );
@@ -123,10 +134,16 @@ export function Sidebar() {
         })()}
 
         {/* Core Navigation - Visual Group */}
-        <div className={`${isCollapsed ? 'py-2 px-1' : 'p-2'} bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-lg border border-slate-200 dark:border-slate-700`}>
+        <div 
+          className={`${isCollapsed ? 'py-2 px-1' : 'p-2'} rounded-2xl my-2`}
+          style={{ backgroundColor: 'rgba(0, 122, 255, 0.08)' }}
+        >
           {!isCollapsed && (
             <div className="px-2 pb-1.5 mb-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <span 
+                className="text-[10px] font-semibold uppercase tracking-wider"
+                style={{ color: '#007AFF' }}
+              >
                 Core
               </span>
             </div>
@@ -138,15 +155,21 @@ export function Sidebar() {
               
               const linkContent = (
                 <div
-                  className={`flex items-center ${isCollapsed ? 'justify-center px-2' : 'px-2'} py-2 text-sm font-medium rounded-md transition-colors ${
+                  className={`flex items-center ${isCollapsed ? 'justify-center px-2' : 'px-2'} py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 ${
                     isActive
-                      ? "bg-white dark:bg-slate-700 shadow-md ring-2 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-800"
-                      : "text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm"
+                      ? "shadow-sm"
+                      : "hover:bg-white/60"
                   }`}
-                  style={isActive ? { '--tw-ring-color': '#0A0E27' } as React.CSSProperties : undefined}
+                  style={{
+                    backgroundColor: isActive ? '#FFFFFF' : 'transparent',
+                    color: isActive ? '#007AFF' : '#1D1D1F',
+                  }}
                 >
-                  <Icon className={`${isCollapsed ? '' : 'mr-3'} h-5 w-5 ${item.iconColor}`} />
-                  {!isCollapsed && <span className={`font-semibold ${isActive ? 'text-gray-900 dark:text-white' : ''}`}>{item.name}</span>}
+                  <Icon 
+                    className={`${isCollapsed ? '' : 'mr-3'} h-5 w-5`} 
+                    style={{ color: item.iconColor }}
+                  />
+                  {!isCollapsed && <span>{item.name}</span>}
                 </div>
               );
 
@@ -177,13 +200,17 @@ export function Sidebar() {
           
           const linkContent = (
             <div
-              className={`flex items-center ${isCollapsed ? 'justify-center px-3' : 'px-3'} py-2 text-sm font-medium rounded-md transition-colors ${
+              className={`flex items-center ${isCollapsed ? 'justify-center' : ''} px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
                 isActive
-                  ? "text-white bg-primary"
-                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  ? "shadow-sm"
+                  : "hover:bg-black/5"
               }`}
+              style={{
+                backgroundColor: isActive ? '#FFFFFF' : 'transparent',
+                color: isActive ? '#007AFF' : '#1D1D1F',
+              }}
             >
-              <Icon className={`${isCollapsed ? '' : 'mr-3'} h-4 w-4`} />
+              <Icon className={`${isCollapsed ? '' : 'mr-3'} h-4 w-4`} style={{ color: isActive ? '#007AFF' : '#86868B' }} />
               {!isCollapsed && item.name}
             </div>
           );
@@ -217,14 +244,18 @@ export function Sidebar() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <div
-                  className={`flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  className={`flex items-center justify-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
                     location === "/documentation"
-                      ? "text-white bg-primary"
-                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      ? "shadow-sm"
+                      : "hover:bg-black/5"
                   }`}
+                  style={{
+                    backgroundColor: location === "/documentation" ? '#FFFFFF' : 'transparent',
+                    color: location === "/documentation" ? '#007AFF' : '#1D1D1F',
+                  }}
                   data-testid="link-documentation"
                 >
-                  <BookOpen className="h-4 w-4" />
+                  <BookOpen className="h-4 w-4" style={{ color: location === "/documentation" ? '#007AFF' : '#86868B' }} />
                 </div>
               </TooltipTrigger>
               <TooltipContent side="right">
@@ -233,14 +264,18 @@ export function Sidebar() {
             </Tooltip>
           ) : (
             <div
-              className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+              className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
                 location === "/documentation"
-                  ? "text-white bg-primary"
-                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  ? "shadow-sm"
+                  : "hover:bg-black/5"
               }`}
+              style={{
+                backgroundColor: location === "/documentation" ? '#FFFFFF' : 'transparent',
+                color: location === "/documentation" ? '#007AFF' : '#1D1D1F',
+              }}
               data-testid="link-documentation"
             >
-              <BookOpen className="mr-3 h-4 w-4" />
+              <BookOpen className="mr-3 h-4 w-4" style={{ color: location === "/documentation" ? '#007AFF' : '#86868B' }} />
               Documentation
             </div>
           )}
@@ -248,36 +283,41 @@ export function Sidebar() {
       </nav>
       
       {/* User Profile */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-800 space-y-3">
+      <div 
+        className="p-4 border-t space-y-3"
+        style={{ borderColor: 'rgba(0, 0, 0, 0.1)' }}
+      >
         {isCollapsed ? (
           <>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="w-8 h-8 mx-auto bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium cursor-pointer">
+                <div 
+                  className="w-10 h-10 mx-auto rounded-full flex items-center justify-center text-white text-sm font-semibold cursor-pointer"
+                  style={{ backgroundColor: '#007AFF' }}
+                >
                   {user?.firstName?.[0] || user?.lastName?.[0] || "U"}
                 </div>
               </TooltipTrigger>
               <TooltipContent side="right">
-                <p className="font-medium">
+                <p className="font-medium" style={{ color: '#1D1D1F' }}>
                   {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.email || "User"}
                 </p>
-                <p className="text-xs capitalize">{user?.role || currentRole}</p>
+                <p className="text-xs capitalize" style={{ color: '#86868B' }}>{user?.role || currentRole}</p>
                 {user?.organizationName && (
-                  <p className="text-xs text-gray-400">{user.organizationName}</p>
+                  <p className="text-xs" style={{ color: '#86868B' }}>{user.organizationName}</p>
                 )}
               </TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
+                <button
                   onClick={handleLogout}
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-center text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                  className="w-full flex items-center justify-center p-2.5 rounded-xl transition-all duration-200 hover:bg-black/5"
+                  style={{ color: '#86868B' }}
                   data-testid="button-logout"
                 >
                   <LogOut className="h-4 w-4" />
-                </Button>
+                </button>
               </TooltipTrigger>
               <TooltipContent side="right">
                 Sign Out
@@ -287,29 +327,31 @@ export function Sidebar() {
         ) : (
           <>
             <div className="flex items-center">
-              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
+              <div 
+                className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold"
+                style={{ backgroundColor: '#007AFF' }}
+              >
                 {user?.firstName?.[0] || user?.lastName?.[0] || "U"}
               </div>
               <div className="ml-3 flex-1">
-                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                <p className="text-sm font-semibold" style={{ color: '#1D1D1F' }}>
                   {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.email || "User"}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{user?.role || currentRole}</p>
+                <p className="text-xs capitalize" style={{ color: '#86868B' }}>{user?.role || currentRole}</p>
                 {user?.organizationName && (
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{user.organizationName}</p>
+                  <p className="text-xs mt-0.5" style={{ color: '#86868B' }}>{user.organizationName}</p>
                 )}
               </div>
             </div>
-            <Button
+            <button
               onClick={handleLogout}
-              variant="outline"
-              size="sm"
-              className="w-full justify-start text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+              className="w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 hover:bg-black/5"
+              style={{ color: '#86868B' }}
               data-testid="button-logout"
             >
               <LogOut className="mr-2 h-4 w-4" />
               Sign Out
-            </Button>
+            </button>
           </>
         )}
       </div>

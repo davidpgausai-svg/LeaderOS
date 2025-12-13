@@ -1,0 +1,33 @@
+I need you to refactor the UI/UX of this application to strictly follow Apple's Human Interface Guidelines (HIG) and the "Apple Design Resources" aesthetic.
+
+Act as a Senior Frontend Engineer and Apple Design Expert. 
+
+Please enforce the following design system rules across the entire app using Tailwind CSS:
+
+1. TYPOGRAPHY & HIERARCHY
+   - Font Family: Use the system font stack (`font-sans`) to mimic San Francisco.
+   - Headings: Use heavy font weights (Bold/Black) for large titles (e.g., `text-4xl font-bold tracking-tight text-gray-900`) but keep body text legible and breathable.
+   - Contrast: Use high-contrast dark gray (`text-gray-900`) for primary text and lighter gray (`text-gray-500`) for secondary text. Never use pure black (#000000) for backgrounds; use off-whites (#F5F5F7) for app backgrounds.
+
+2. SHAPE & SURFACE
+   - Containers: Use "Cards" with high border radius (approx `rounded-2xl` or `rounded-3xl`).
+   - Shadows: Use ultra-soft, diffused shadows (e.g., `shadow-sm` or a custom large diffuse shadow) rather than harsh outlines.
+   - Borders: Minimize borders. If needed, use extremely subtle borders (`border-gray-200`).
+
+3. GLASSMORPHISM & MATERIALS
+   - Navigation & Overlays: Apply the "Frosted Glass" effect. Use `bg-white/70 backdrop-blur-md border-b border-gray-200` for sticky headers or sidebars.
+   - Modals: Ensure modals have a deep blur backdrop.
+
+4. INTERACTIVITY & COLOR
+   - Accent Color: Pick a single "System Blue" (`text-blue-500` / `bg-blue-600`) for primary actions.
+   - Buttons:
+     - Primary: Pill-shaped (`rounded-full`), solid blue background, white text, subtle hover lift.
+     - Secondary: Plain text buttons or light gray backgrounds (`bg-gray-100` hover `bg-gray-200`) with dark text.
+   - Active States: Ensure all interactive elements have immediate visual feedback (opacity change or scale on click).
+
+5. LAYOUT
+   - Whitespace: Increase padding significantly. Don't crowd elements. Use `p-6` or `p-8` for main content areas.
+   - Grid: Align content to a center max-width container (e.g., `max-w-5xl mx-auto`).
+
+**Action Plan:**
+Start by updating the global layout wrapper and the main navigation bar to match this style, then apply these rules to the dashboard/landing page components.
