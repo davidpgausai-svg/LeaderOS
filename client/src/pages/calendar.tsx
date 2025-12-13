@@ -285,7 +285,7 @@ export default function Calendar() {
           const holidayName = holidayDates.get(utcDateKey);
           if (holidayName) {
             const holidayIcon = document.createElement('span');
-            holidayIcon.innerHTML = ' ⭐';
+            holidayIcon.innerHTML = ' 🌟';
             holidayIcon.title = holidayName;
             holidayIcon.style.marginLeft = '2px';
             holidayIcon.style.fontSize = '12px';
