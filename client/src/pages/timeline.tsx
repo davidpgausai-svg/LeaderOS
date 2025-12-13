@@ -691,7 +691,7 @@ export default function Timeline() {
                 eventMarkers={[
                   {
                     day: new Date(),
-                    label: 'Today',
+                    label: '',
                     cssClass: 'e-custom-event-marker'
                   }
                 ]}
