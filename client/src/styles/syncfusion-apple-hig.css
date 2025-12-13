@@ -5,7 +5,7 @@
 /* GANTT CHART - Timeline Page */
 /* ================================== */
 
-.apple-hig-gantt.e-gantt {
+.apple-hig-gantt .e-gantt {
   background-color: #FFFFFF;
   border-radius: 16px;
   overflow: hidden;
@@ -230,7 +230,10 @@
   color: #007AFF;
 }
 
-.apple-hig-schedule .e-schedule-toolbar .e-active-view .e-tbar-btn {
+.apple-hig-schedule .e-schedule-toolbar .e-active-view .e-tbar-btn,
+.apple-hig-schedule .e-schedule-toolbar .e-active-view .e-tbar-btn .e-tbar-btn-text,
+.apple-hig-schedule .e-schedule-toolbar .e-active-view .e-tbar-btn .e-btn-icon,
+.apple-hig-schedule .e-schedule-toolbar .e-active-view .e-tbar-btn span {
   background-color: #007AFF !important;
   color: #FFFFFF !important;
   font-weight: 600 !important;
@@ -375,7 +378,7 @@
 /* ================================== */
 
 /* Gantt Dark Mode */
-.dark .apple-hig-gantt.e-gantt {
+.dark .apple-hig-gantt .e-gantt {
   background-color: #1C1C1E;
   border-color: rgba(255, 255, 255, 0.1);
 }
@@ -455,7 +458,10 @@
   color: #98989D;
 }
 
-.dark .apple-hig-schedule .e-schedule-toolbar .e-active-view .e-tbar-btn {
+.dark .apple-hig-schedule .e-schedule-toolbar .e-active-view .e-tbar-btn,
+.dark .apple-hig-schedule .e-schedule-toolbar .e-active-view .e-tbar-btn .e-tbar-btn-text,
+.dark .apple-hig-schedule .e-schedule-toolbar .e-active-view .e-tbar-btn .e-btn-icon,
+.dark .apple-hig-schedule .e-schedule-toolbar .e-active-view .e-tbar-btn span {
   background-color: #007AFF !important;
   color: #FFFFFF !important;
 }

@@ -547,10 +547,9 @@ export default function Timeline() {
               </div>
             </div>
           ) : (
-            <div className="h-full w-full">
+            <div className="h-full w-full apple-hig-gantt">
               <GanttComponent
                 ref={ganttRef}
-                cssClass="apple-hig-gantt"
                 dataSource={ganttData}
                 taskFields={taskFields}
                 height="100%"
@@ -565,8 +564,8 @@ export default function Timeline() {
                 enablePredecessorValidation={true}
                 validateManualTasksOnLinking={true}
                 autoCalculateDateScheduling={false}
-                taskbarHeight={25}
-                rowHeight={46}
+                taskbarHeight={22}
+                rowHeight={40}
                 gridLines="Horizontal"
                 selectionSettings={{ mode: 'Row', type: 'Single' }}
                 timelineSettings={{
