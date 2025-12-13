@@ -107,7 +107,7 @@ export function Sidebar() {
           
           const linkContent = (
             <div
-              className={`flex items-center ${isCollapsed ? 'justify-center' : ''} px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
+              className={`flex items-center ${isCollapsed ? 'justify-center' : ''} px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm ${
                 isActive
                   ? "shadow-sm"
                   : "hover:bg-black/5"
@@ -162,7 +162,7 @@ export function Sidebar() {
               
               const linkContent = (
                 <div
-                  className={`flex items-center ${isCollapsed ? 'justify-center px-2' : 'px-2'} py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 ${
+                  className={`flex items-center ${isCollapsed ? 'justify-center px-2' : 'px-2'} py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm ${
                     isActive
                       ? "shadow-sm"
                       : "hover:bg-white/60"
@@ -207,7 +207,7 @@ export function Sidebar() {
           
           const linkContent = (
             <div
-              className={`flex items-center ${isCollapsed ? 'justify-center' : ''} px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
+              className={`flex items-center ${isCollapsed ? 'justify-center' : ''} px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm ${
                 isActive
                   ? "shadow-sm"
                   : "hover:bg-black/5"
@@ -254,7 +254,7 @@ export function Sidebar() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div
-                      className={`flex items-center justify-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
+                      className={`flex items-center justify-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm ${
                         isDocActive
                           ? "shadow-sm"
                           : "hover:bg-black/5"
@@ -274,7 +274,7 @@ export function Sidebar() {
                 </Tooltip>
               ) : (
                 <div
-                  className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
+                  className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm ${
                     isDocActive
                       ? "shadow-sm"
                       : "hover:bg-black/5"
