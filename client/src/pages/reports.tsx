@@ -318,14 +318,15 @@ export default function Reports() {
     );
   };
 
-  // Calculate metrics - exclude archived items from all counts
-  const nonArchivedStrategies = strategies.filter(s => s.status !== 'archived');
+  // Calculate metrics - exclude archived items from all counts (case-insensitive status comparison)
+  const nonArchivedStrategies = strategies.filter(s => s.status?.toLowerCase() !== 'archived');
   const nonArchivedProjects = projects.filter(p => p.isArchived !== 'true');
   const nonArchivedActions = actions.filter(a => a.isArchived !== 'true');
 
   const totalStrategies = nonArchivedStrategies.length;
-  const activeStrategies = nonArchivedStrategies.filter(s => s.status === 'active').length;
+  const activeStrategies = nonArchivedStrategies.filter(s => s.status?.toLowerCase() === 'active').length;
   const atRiskStrategies = nonArchivedStrategies.filter(s => {
+    if (s.status?.toLowerCase() !== 'active') return false;
     const strategyProjects = nonArchivedProjects.filter((t: any) => t.strategyId === s.id);
     const risk = getRiskLevel(s, 'strategy', strategyProjects);
     return risk === 'at-risk' || risk === 'critical';
@@ -392,7 +393,7 @@ export default function Reports() {
               <CardHeader className="pb-1 pt-2 px-3">
                 <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400 flex items-center">
                   <Target className="w-3 h-3 mr-1" />
-                  Active Strategies
+                  Active Priorities
                 </CardTitle>
               </CardHeader>
               <CardContent className="pb-2 px-3">
@@ -417,7 +418,7 @@ export default function Reports() {
                   {atRiskStrategies}
                 </div>
                 <div className="text-[10px] text-yellow-600">
-                  strategies need attention
+                  priorities need attention
                 </div>
               </CardContent>
             </Card>
