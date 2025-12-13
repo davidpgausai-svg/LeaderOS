@@ -262,6 +262,7 @@ export function CreateProjectModal({ isOpen, onClose, strategyId }: CreateProjec
                       <Input
                         placeholder="e.g., Number of partnerships established"
                         {...field}
+                        value={field.value || ""}
                         data-testid="input-kpi"
                       />
                     </FormControl>

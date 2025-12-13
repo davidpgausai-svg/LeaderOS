@@ -178,7 +178,7 @@ export const projects = pgTable("projects", {
   title: text("title").notNull(), // Component 2: Project name
   description: text("description").notNull(), // Component 3: Project description
   strategyId: varchar("strategy_id").notNull(), // Component 1: Strategy it is linked to
-  kpi: text("kpi").notNull(), // Component 4: Key Performance Indicator
+  kpi: text("kpi"), // Component 4: Key Performance Indicator (optional)
   kpiTracking: text("kpi_tracking"), // Component 5: Tracking the KPI (current value/measurement)
   accountableLeaders: text("accountable_leaders").notNull(), // Component 6: Accountable Leaders (JSON array of user IDs)
   resourcesRequired: text("resources_required"), // Component 7: Resources Required (open text field)
