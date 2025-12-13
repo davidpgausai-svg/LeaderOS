@@ -614,13 +614,21 @@ export default function Timeline() {
                   taskLabel: ''
                 }}
                 tooltipSettings={{
-                  showTooltip: true,
-                  taskbar: '<div style="padding: 8px; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">' +
-                    '<div style="font-weight: 600; margin-bottom: 4px;">${TaskName}</div>' +
-                    '<div style="font-size: 12px; color: #666;">Start Date: ${StartDate.toLocaleDateString()}</div>' +
-                    '<div style="font-size: 12px; color: #666;">End Date: ${EndDate.toLocaleDateString()}</div>' +
-                    '<div style="font-size: 12px; color: #666;">Status: ${statusText || "N/A"}</div>' +
-                    '</div>'
+                  showTooltip: true
+                }}
+                beforeTooltipRender={(args: any) => {
+                  if (args.data && args.data.taskData) {
+                    const taskData = args.data.taskData;
+                    const startDate = taskData.StartDate ? new Date(taskData.StartDate).toLocaleDateString() : 'N/A';
+                    const endDate = taskData.EndDate ? new Date(taskData.EndDate).toLocaleDateString() : 'N/A';
+                    const status = taskData.statusText || 'N/A';
+                    args.content = `<div style="padding: 8px; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
+                      <div style="font-weight: 600; margin-bottom: 4px;">${taskData.TaskName}</div>
+                      <div style="font-size: 12px;">Start Date: ${startDate}</div>
+                      <div style="font-size: 12px;">End Date: ${endDate}</div>
+                      <div style="font-size: 12px;">Status: ${status}</div>
+                    </div>`;
+                  }
                 }}
                 projectStartDate={(() => {
                   const MAX_DATE = new Date(8640000000000000);
