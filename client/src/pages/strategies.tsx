@@ -2033,7 +2033,22 @@ export default function Strategies() {
                                                   </Badge>
                                                 )}
                                                 
-                                                {/* Dependencies */}
+                                                {/* People assigned - 1st */}
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className="h-5 w-5 p-0"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setActionPeopleModalAction(action);
+                                                  }}
+                                                  title={actionHasPeople(action.id) ? "View assigned people" : "Assign people"}
+                                                  data-testid={`action-people-${action.id}`}
+                                                >
+                                                  <Users className={`w-3 h-3 ${actionHasPeople(action.id) ? 'text-blue-500' : 'text-gray-400'}`} />
+                                                </Button>
+                                                
+                                                {/* Dependencies - 2nd */}
                                                 <Button
                                                   variant="ghost"
                                                   size="sm"
@@ -2048,7 +2063,7 @@ export default function Strategies() {
                                                   <Link2 className={`w-3 h-3 ${actionHasDependencies(action.id) ? 'text-blue-500' : 'text-gray-400'}`} />
                                                 </Button>
                                                 
-                                                {/* Checklist */}
+                                                {/* Checklist - 3rd */}
                                                 <Button
                                                   variant="ghost"
                                                   size="sm"
@@ -2063,23 +2078,7 @@ export default function Strategies() {
                                                   <ListChecks className={`w-3 h-3 ${actionHasIncompleteChecklist(action.id) ? 'text-yellow-500' : getActionChecklistItems(action.id).length > 0 ? 'text-green-500' : 'text-gray-400'}`} />
                                                 </Button>
                                                 
-                                                {/* Notes */}
-                                                <Button
-                                                  variant="ghost"
-                                                  size="sm"
-                                                  className="h-5 w-5 p-0"
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setNotesModalAction(action);
-                                                    setActionNotes(action.notes || "");
-                                                  }}
-                                                  title={action.notes ? "View notes" : "Add notes"}
-                                                  data-testid={`action-notes-${action.id}`}
-                                                >
-                                                  <StickyNote className={`w-3 h-3 ${action.notes ? 'text-blue-500' : 'text-gray-400'}`} />
-                                                </Button>
-                                                
-                                                {/* Folder link */}
+                                                {/* Folder link - 4th */}
                                                 <Button
                                                   variant="ghost"
                                                   size="sm"
@@ -2096,22 +2095,23 @@ export default function Strategies() {
                                                   <FolderOpen className={`w-3 h-3 ${action.documentFolderUrl ? 'text-blue-500' : 'text-gray-400'}`} />
                                                 </Button>
                                                 
-                                                {/* People assigned */}
+                                                {/* Notes - 5th */}
                                                 <Button
                                                   variant="ghost"
                                                   size="sm"
                                                   className="h-5 w-5 p-0"
                                                   onClick={(e) => {
                                                     e.stopPropagation();
-                                                    setActionPeopleModalAction(action);
+                                                    setNotesModalAction(action);
+                                                    setActionNotes(action.notes || "");
                                                   }}
-                                                  title={actionHasPeople(action.id) ? "View assigned people" : "Assign people"}
-                                                  data-testid={`action-people-${action.id}`}
+                                                  title={action.notes ? "View notes" : "Add notes"}
+                                                  data-testid={`action-notes-${action.id}`}
                                                 >
-                                                  <Users className={`w-3 h-3 ${actionHasPeople(action.id) ? 'text-blue-500' : 'text-gray-400'}`} />
+                                                  <StickyNote className={`w-3 h-3 ${action.notes ? 'text-blue-500' : 'text-gray-400'}`} />
                                                 </Button>
                                                 
-                                                {/* Three dots menu */}
+                                                {/* Three dots menu - 6th (last) */}
                                                 <DropdownMenu>
                                                   <DropdownMenuTrigger asChild>
                                                     <Button
