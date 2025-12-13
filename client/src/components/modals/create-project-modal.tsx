@@ -211,7 +211,7 @@ export function CreateProjectModal({ isOpen, onClose, strategyId }: CreateProjec
                 name="strategyId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Strategy *</FormLabel>
+                    <FormLabel>Priority *</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger data-testid="select-strategy">
@@ -250,7 +250,7 @@ export function CreateProjectModal({ isOpen, onClose, strategyId }: CreateProjec
                 name="kpi"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>KPI *</FormLabel>
+                    <FormLabel>KPI (Optional)</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="e.g., Number of partnerships established"

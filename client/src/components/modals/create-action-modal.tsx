@@ -116,7 +116,17 @@ export function CreateActionModal({ open, onOpenChange, strategyId, projectId }:
     if (!data.strategyId || data.strategyId === "placeholder") {
       toast({
         title: "Error",
-        description: "Please select a strategy",
+        description: "Please select a priority",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Ensure projectId is provided (required field)
+    if (!data.projectId || data.projectId === "none") {
+      toast({
+        title: "Error",
+        description: "Please select a related project",
         variant: "destructive",
       });
       return;
@@ -125,7 +135,7 @@ export function CreateActionModal({ open, onOpenChange, strategyId, projectId }:
     // Filter out empty optional fields
     const cleanData = {
       ...data,
-      projectId: data.projectId === "none" ? undefined : data.projectId || undefined,
+      projectId: data.projectId,
       dueDate: data.dueDate || undefined,
     };
     createActionMutation.mutate(cleanData);
@@ -192,7 +202,7 @@ export function CreateActionModal({ open, onOpenChange, strategyId, projectId }:
                   name="strategyId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Strategy</FormLabel>
+                      <FormLabel>Priority *</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value || "placeholder"}>
                         <FormControl>
                           <SelectTrigger data-testid="select-action-strategy">
@@ -224,19 +234,18 @@ export function CreateActionModal({ open, onOpenChange, strategyId, projectId }:
                   name="projectId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Related Project (Optional)</FormLabel>
+                      <FormLabel>Related Project *</FormLabel>
                       <Select 
                         onValueChange={field.onChange} 
-                        defaultValue={field.value || "none"}
+                        value={field.value || ""}
                         disabled={!selectedStrategy || filteredProjects.length === 0}
                       >
                         <FormControl>
                           <SelectTrigger data-testid="select-action-project">
-                            <SelectValue placeholder="Select a related project (optional)" />
+                            <SelectValue placeholder="Select a related project" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="none">No specific project</SelectItem>
                           {filteredProjects.map((project) => (
                             <SelectItem key={project.id} value={project.id}>
                               {project.title}
