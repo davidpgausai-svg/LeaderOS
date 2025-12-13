@@ -210,6 +210,26 @@ class BillingService {
     });
   }
 
+  async cancelPendingDowngrade(organizationId: string): Promise<void> {
+    const org = await pgFunctions.getOrganization(organizationId);
+    
+    if (!org?.pendingDowngradePlan) {
+      throw new Error('No pending downgrade to cancel');
+    }
+
+    await pgFunctions.updateOrganizationSubscription(organizationId, {
+      pendingDowngradePlan: null,
+    });
+
+    await pgFunctions.createBillingHistoryEntry({
+      organizationId,
+      eventType: 'downgrade_cancelled',
+      description: `Cancelled pending downgrade to ${org.pendingDowngradePlan}`,
+      planBefore: org.subscriptionPlan,
+      planAfter: org.subscriptionPlan,
+    });
+  }
+
   async handleSubscriptionChange(subscription: Stripe.Subscription): Promise<void> {
     const organizationId = subscription.metadata?.organizationId;
     
@@ -455,6 +475,62 @@ class BillingService {
     }
 
     return { allowed: true, limit: null, current: 0 };
+  }
+
+  async getEditableStrategyIds(organizationId: string): Promise<{
+    editableIds: string[];
+    readOnlyIds: string[];
+    limit: number | null;
+    total: number;
+  }> {
+    const org = await pgFunctions.getOrganization(organizationId);
+    
+    if (!org) {
+      return { editableIds: [], readOnlyIds: [], limit: 0, total: 0 };
+    }
+
+    if (org.isLegacy === 'true') {
+      const strategies = await pgStorage.getStrategiesByOrganization(organizationId);
+      const activeStrategies = strategies.filter((s: any) => s.status !== 'Archived');
+      return {
+        editableIds: activeStrategies.map((s: any) => s.id),
+        readOnlyIds: [],
+        limit: null,
+        total: activeStrategies.length
+      };
+    }
+
+    const plan = org.subscriptionPlan as SubscriptionPlan;
+    const limits = PLAN_LIMITS[plan];
+    const strategies = await pgStorage.getStrategiesByOrganization(organizationId);
+    const activeStrategies = strategies
+      .filter((s: any) => s.status !== 'Archived')
+      .sort((a: any, b: any) => {
+        const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return aTime - bTime;
+      });
+    
+    const limit = limits.maxStrategies;
+    
+    if (limit === null) {
+      return {
+        editableIds: activeStrategies.map((s: any) => s.id),
+        readOnlyIds: [],
+        limit: null,
+        total: activeStrategies.length
+      };
+    }
+
+    const editableStrategies = activeStrategies.slice(0, limit);
+    const readOnlyStrategies = activeStrategies.slice(limit);
+
+    return {
+      editableIds: editableStrategies.map((s: any) => s.id),
+      readOnlyIds: readOnlyStrategies.map((s: any) => s.id),
+      limit,
+      total: activeStrategies.length
+    };
   }
 
   async addTeamSeats(organizationId: string, seatsToAdd: number): Promise<void> {

@@ -592,6 +592,17 @@ Respond ONLY with a valid JSON object in this exact format:
       if (oldStrategy && user.isSuperAdmin !== 'true' && user.organizationId !== oldStrategy.organizationId) {
         return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
       }
+
+      // Check if strategy is read-only due to plan limits (unless Super Admin)
+      if (user.isSuperAdmin !== 'true' && user.organizationId) {
+        const { billingService } = await import('./billingService');
+        const permissions = await billingService.getEditableStrategyIds(user.organizationId);
+        if (permissions.readOnlyIds.includes(req.params.id)) {
+          return res.status(403).json({ 
+            message: "This strategic priority is read-only due to your plan limits. Upgrade to edit it." 
+          });
+        }
+      }
       
       // Use partial schema for PATCH to allow updating individual fields
       const validatedData = insertStrategySchema.partial().parse(req.body);
@@ -746,6 +757,17 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
       }
 
+      // Check if strategy is read-only due to plan limits (unless Super Admin)
+      if (user.isSuperAdmin !== 'true' && user.organizationId) {
+        const { billingService } = await import('./billingService');
+        const permissions = await billingService.getEditableStrategyIds(user.organizationId);
+        if (permissions.readOnlyIds.includes(req.params.id)) {
+          return res.status(403).json({ 
+            message: "This strategic priority is read-only due to your plan limits. Upgrade to modify it." 
+          });
+        }
+      }
+
       // Only update status and completionDate, keep other fields unchanged
       const updatedStrategy = await storage.updateStrategy(req.params.id, {
         ...strategy,
@@ -786,6 +808,17 @@ Respond ONLY with a valid JSON object in this exact format:
       // Verify organization ownership (unless Super Admin)
       if (user.isSuperAdmin !== 'true' && user.organizationId !== strategy.organizationId) {
         return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
+      }
+
+      // Check if strategy is read-only due to plan limits (unless Super Admin)
+      if (user.isSuperAdmin !== 'true' && user.organizationId) {
+        const { billingService } = await import('./billingService');
+        const permissions = await billingService.getEditableStrategyIds(user.organizationId);
+        if (permissions.readOnlyIds.includes(req.params.id)) {
+          return res.status(403).json({ 
+            message: "This strategic priority is read-only due to your plan limits. Upgrade to modify it." 
+          });
+        }
       }
 
       if (strategy.status !== 'Completed') {
@@ -938,6 +971,12 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(403).json({ message: "Forbidden: View users cannot create projects" });
       }
       
+      // Check if strategy is read-only due to plan limits (for downgrades)
+      const strategyPerms = await billingService.getEditableStrategyIds(user.organizationId);
+      if (strategyPerms.readOnlyIds.includes(validatedData.strategyId)) {
+        return res.status(403).json({ message: "This strategic priority is read-only due to your current plan. Upgrade to edit." });
+      }
+      
       // Validate date range
       if (validatedData.startDate && validatedData.dueDate && 
           !validateDateRange(validatedData.startDate, validatedData.dueDate)) {
@@ -993,6 +1032,12 @@ Respond ONLY with a valid JSON object in this exact format:
         if (!assignedStrategyIds.includes(oldProject.strategyId)) {
           return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
         }
+      }
+      
+      // Check if strategy is read-only due to plan limits (for downgrades)
+      const strategyPerms = await billingService.getEditableStrategyIds(user.organizationId);
+      if (strategyPerms.readOnlyIds.includes(oldProject.strategyId)) {
+        return res.status(403).json({ message: "This strategic priority is read-only due to your current plan. Upgrade to edit." });
       }
       
       // Process the update data - convert date strings to Date objects
@@ -1093,6 +1138,12 @@ Respond ONLY with a valid JSON object in this exact format:
         if (!assignedStrategyIds.includes(project.strategyId)) {
           return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
         }
+      }
+      
+      // Check if strategy is read-only due to plan limits (for downgrades)
+      const strategyPerms = await billingService.getEditableStrategyIds(user.organizationId);
+      if (strategyPerms.readOnlyIds.includes(project.strategyId)) {
+        return res.status(403).json({ message: "This strategic priority is read-only due to your current plan. Upgrade to edit." });
       }
 
       const deleted = await storage.deleteProject(req.params.id);
@@ -1765,6 +1816,12 @@ Respond ONLY with a valid JSON object in this exact format:
         }
       }
       
+      // Check if strategy is read-only due to plan limits (for downgrades)
+      const strategyPerms = await billingService.getEditableStrategyIds(user.organizationId);
+      if (strategyPerms.readOnlyIds.includes(validatedData.strategyId)) {
+        return res.status(403).json({ message: "This strategic priority is read-only due to your current plan. Upgrade to edit." });
+      }
+      
       const action = await storage.createAction({
         ...validatedData,
         organizationId: user.organizationId,
@@ -1830,6 +1887,12 @@ Respond ONLY with a valid JSON object in this exact format:
         if (!assignedStrategyIds.includes(oldAction.strategyId)) {
           return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
         }
+      }
+      
+      // Check if strategy is read-only due to plan limits (for downgrades)
+      const strategyPerms = await billingService.getEditableStrategyIds(user.organizationId);
+      if (strategyPerms.readOnlyIds.includes(oldAction.strategyId)) {
+        return res.status(403).json({ message: "This strategic priority is read-only due to your current plan. Upgrade to edit." });
       }
       
       // Process the update data - support partial updates like the project endpoint
@@ -1944,6 +2007,12 @@ Respond ONLY with a valid JSON object in this exact format:
         if (!assignedStrategyIds.includes(action.strategyId)) {
           return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
         }
+      }
+      
+      // Check if strategy is read-only due to plan limits (for downgrades)
+      const strategyPerms = await billingService.getEditableStrategyIds(user.organizationId);
+      if (strategyPerms.readOnlyIds.includes(action.strategyId)) {
+        return res.status(403).json({ message: "This strategic priority is read-only due to your current plan. Upgrade to edit." });
       }
 
       const deleted = await storage.deleteAction(req.params.id);
@@ -3035,6 +3104,15 @@ ${outputTemplate}`;
 
       if (strategy.organizationId !== user.organizationId) {
         return res.status(403).json({ message: "Cannot modify strategies from other organizations" });
+      }
+
+      // Check if strategy is read-only due to plan limits
+      const { billingService } = await import('./billingService');
+      const permissions = await billingService.getEditableStrategyIds(user.organizationId);
+      if (permissions.readOnlyIds.includes(req.params.id)) {
+        return res.status(403).json({ 
+          message: "This strategic priority is read-only due to your plan limits. Upgrade to modify it." 
+        });
       }
 
       const { executiveGoalIds } = req.body;
@@ -4203,6 +4281,56 @@ ${outputTemplate}`;
     } catch (error) {
       logger.error("Failed to reactivate subscription", error);
       res.status(500).json({ message: "Failed to reactivate subscription" });
+    }
+  });
+
+  // Get editable strategy IDs based on plan limits
+  app.get("/api/billing/strategy-permissions", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      const { billingService } = await import('./billingService');
+      const permissions = await billingService.getEditableStrategyIds(user.organizationId);
+
+      res.json(permissions);
+    } catch (error) {
+      logger.error("Failed to fetch strategy permissions", error);
+      res.status(500).json({ message: "Failed to fetch strategy permissions" });
+    }
+  });
+
+  // Cancel pending downgrade
+  app.post("/api/billing/cancel-downgrade", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      if (user.role !== 'administrator') {
+        return res.status(403).json({ message: "Only administrators can manage billing" });
+      }
+
+      const { billingService } = await import('./billingService');
+      await billingService.cancelPendingDowngrade(user.organizationId);
+
+      res.json({ success: true, message: "Pending downgrade has been cancelled" });
+    } catch (error) {
+      logger.error("Failed to cancel pending downgrade", error);
+      res.status(500).json({ message: "Failed to cancel pending downgrade" });
     }
   });
 

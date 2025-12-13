@@ -1078,6 +1078,69 @@ function UpgradeModal({ isOpen, onClose, currentPlan, isLegacy, triggerReason, l
   );
 }
 
+interface DowngradeCountdownAlertProps {
+  pendingPlan: string;
+  currentPeriodEnd: string;
+  onCancelDowngrade: () => void;
+  isLoading: boolean;
+}
+
+function DowngradeCountdownAlert({ pendingPlan, currentPeriodEnd, onCancelDowngrade, isLoading }: DowngradeCountdownAlertProps) {
+  const periodEndDate = new Date(currentPeriodEnd);
+  const now = new Date();
+  const daysRemaining = Math.max(0, Math.ceil((periodEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+  
+  const pendingPlanDetails = PLAN_DETAILS[pendingPlan as keyof typeof PLAN_DETAILS];
+  const pendingPlanName = pendingPlanDetails?.name || pendingPlan;
+  
+  const getLimitsInfo = () => {
+    if (pendingPlan === 'starter') {
+      return 'You will be limited to 1 strategic priority and 4 projects.';
+    } else if (pendingPlan === 'leaderpro') {
+      return 'You will retain unlimited priorities and projects, but lose team features and be limited to 1 user.';
+    }
+    return '';
+  };
+
+  return (
+    <div className="p-4 border rounded-lg bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800" data-testid="alert-downgrade-countdown">
+      <div className="flex items-start space-x-3">
+        <div className="flex-shrink-0 mt-0.5">
+          <div className="relative">
+            <Clock className="h-5 w-5 text-amber-600" />
+            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white">
+              {daysRemaining}
+            </span>
+          </div>
+        </div>
+        <div className="flex-1">
+          <h4 className="font-medium text-amber-800 dark:text-amber-200">
+            Downgrade to {pendingPlanName} in {daysRemaining} day{daysRemaining !== 1 ? 's' : ''}
+          </h4>
+          <p className="text-sm text-amber-600 dark:text-amber-300 mt-1">
+            Your plan will change to {pendingPlanName} on {periodEndDate.toLocaleDateString()}.
+            {getLimitsInfo() && ` ${getLimitsInfo()}`}
+          </p>
+          <p className="text-sm text-amber-600 dark:text-amber-300 mt-1">
+            Any excess strategic priorities will become read-only when the downgrade takes effect.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-3 border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900"
+            onClick={onCancelDowngrade}
+            disabled={isLoading}
+            data-testid="button-cancel-downgrade"
+          >
+            <X className="w-4 h-4 mr-2" />
+            Cancel Downgrade
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BillingSettings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -1210,6 +1273,40 @@ function BillingSettings() {
       toast({
         title: 'Error',
         description: 'Failed to reactivate subscription. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const cancelPendingDowngrade = async () => {
+    setIsLoading(true);
+    try {
+      const csrfToken = document.cookie.match(/csrf_token=([^;]+)/)?.[1];
+      const response = await fetch('/api/billing/cancel-downgrade', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to cancel pending downgrade');
+      }
+      
+      toast({
+        title: 'Downgrade Cancelled',
+        description: 'Your plan will no longer change at the end of the billing period.',
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['/api/billing/info'] });
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'Failed to cancel pending downgrade. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -1390,6 +1487,16 @@ function BillingSettings() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Pending downgrade countdown */}
+        {billingInfo?.pendingDowngrade && billingInfo?.currentPeriodEnd && (
+          <DowngradeCountdownAlert
+            pendingPlan={billingInfo.pendingDowngrade}
+            currentPeriodEnd={billingInfo.currentPeriodEnd}
+            onCancelDowngrade={cancelPendingDowngrade}
+            isLoading={isLoading}
+          />
         )}
 
         {/* Upgrade Options (show only if not on legacy or team plan) */}
