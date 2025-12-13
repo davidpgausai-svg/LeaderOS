@@ -71,6 +71,30 @@ const app = express();
 // Trust proxy - necessary for rate limiting behind reverse proxy (Replit)
 app.set('trust proxy', 1);
 
+// CORS for external marketing site (leaderos.app) - specific endpoints only
+const ALLOWED_CORS_ORIGINS = ['https://leaderos.app', 'https://www.leaderos.app'];
+const CORS_ALLOWED_ENDPOINTS = ['/api/billing/create-anonymous-checkout'];
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const fullPath = req.originalUrl || req.path;
+  
+  // Only allow CORS for specific endpoints from allowed origins
+  if (origin && ALLOWED_CORS_ORIGINS.includes(origin) && CORS_ALLOWED_ENDPOINTS.some(ep => fullPath.startsWith(ep))) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Max-Age', '86400');
+    
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+      return res.status(204).end();
+    }
+  }
+  
+  next();
+});
+
 // Cookie parser for HTTP-only auth cookies
 app.use(cookieParser());
 
