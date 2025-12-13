@@ -887,6 +887,11 @@ export const validateCsrf: RequestHandler = (req: any, res, next) => {
     return next();
   }
   
+  // Skip CSRF for Stripe webhook (uses its own signature verification)
+  if (fullPath.startsWith('/api/stripe/webhook')) {
+    return next();
+  }
+  
   const csrfCookie = req.cookies?.[CSRF_COOKIE_NAME];
   const csrfHeader = req.headers[CSRF_HEADER_NAME];
   

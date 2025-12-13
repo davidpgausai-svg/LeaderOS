@@ -2,6 +2,9 @@ import { storage } from "./storage";
 import { notifyActionDueSoon, notifyActionOverdue } from "./notifications";
 import { logger } from "./logger";
 import { differenceInDays } from "date-fns";
+import { sendPaymentFailedEmail } from "./email";
+import * as pgFunctions from "./pgStorage";
+import { PostgresStorage } from "./pgStorage";
 
 // Track which actions have already been notified for which thresholds
 // to prevent duplicate notifications
@@ -103,4 +106,89 @@ export function startDueDateScheduler(intervalMinutes: number = 60) {
   setInterval(checkDueDateNotifications, intervalMs);
   
   logger.info(`Due date notification scheduler started (checking every ${intervalMinutes} minutes)`);
+}
+
+const pgStorage = new PostgresStorage();
+
+/**
+ * Check for organizations with failed payments and send reminder emails
+ * Sends reminders every 3 days during the 30-day grace period
+ */
+export async function checkPaymentReminderNotifications() {
+  try {
+    const organizations = await pgFunctions.getAllOrganizations();
+    const now = new Date();
+    const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+
+    for (const org of organizations) {
+      // Skip if no payment failure or if legacy org
+      if (!org.paymentFailedAt || org.isLegacy === 'true') {
+        continue;
+      }
+
+      const paymentFailedAt = new Date(org.paymentFailedAt);
+      const gracePeriodEndsAt = new Date(paymentFailedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+      // Skip if grace period has ended
+      if (now > gracePeriodEndsAt) {
+        continue;
+      }
+
+      // Check if we should send a reminder (every 3 days)
+      const lastReminder = org.lastPaymentReminderAt 
+        ? new Date(org.lastPaymentReminderAt) 
+        : paymentFailedAt;
+      
+      const timeSinceLastReminder = now.getTime() - lastReminder.getTime();
+
+      if (timeSinceLastReminder >= THREE_DAYS_MS) {
+        // Get admin users to notify
+        const users = await pgStorage.getUsersByOrganization(org.id);
+        const admins = users.filter((u: { role: string }) => u.role === 'administrator');
+
+        // Get the latest payment failure for amount info
+        const failures = await pgFunctions.getPaymentFailuresByOrganization(org.id);
+        const latestFailure = failures[0];
+
+        for (const admin of admins) {
+          if (admin.email) {
+            await sendPaymentFailedEmail(
+              admin.email,
+              org.name,
+              latestFailure?.amountCents || 0,
+              gracePeriodEndsAt,
+              admin.firstName
+            );
+          }
+        }
+
+        // Update last reminder timestamp
+        await pgFunctions.updateOrganizationSubscription(org.id, {
+          lastPaymentReminderAt: now,
+        });
+
+        logger.info(`Sent payment reminder for organization: ${org.name}`);
+      }
+    }
+
+    logger.info("Payment reminder check completed");
+  } catch (error) {
+    logger.error("Error checking payment reminders", error);
+  }
+}
+
+/**
+ * Start the billing scheduler
+ * Checks for payment reminders every 4 hours
+ */
+export function startBillingScheduler(intervalMinutes: number = 240) {
+  const intervalMs = intervalMinutes * 60 * 1000;
+  
+  // Run immediately on startup
+  checkPaymentReminderNotifications();
+  
+  // Then run on schedule
+  setInterval(checkPaymentReminderNotifications, intervalMs);
+  
+  logger.info(`Billing scheduler started (checking every ${intervalMinutes} minutes)`);
 }

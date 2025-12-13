@@ -2,9 +2,12 @@ import express, { type Request, Response, NextFunction } from "express";
 import cookieParser from "cookie-parser";
 import { rateLimit } from "express-rate-limit";
 import { registerRoutes } from "./routes";
-import { startDueDateScheduler } from "./scheduler";
+import { startDueDateScheduler, startBillingScheduler } from "./scheduler";
 import { validateCsrf } from "./jwtAuth";
 import { logger } from "./logger";
+import { runMigrations } from 'stripe-replit-sync';
+import { getStripeSync } from './stripeClient';
+import { WebhookHandlers } from './webhookHandlers';
 import fs from "fs";
 import path from "path";
 
@@ -89,6 +92,34 @@ function log(message: string, source = "express") {
   });
   console.log(`${formattedTime} [${source}] ${message}`);
 }
+
+// Stripe webhook route - MUST be before express.json() middleware
+// Uses raw body for signature verification
+app.post(
+  '/api/stripe/webhook/:uuid',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    const signature = req.headers['stripe-signature'];
+    if (!signature) {
+      return res.status(400).json({ error: 'Missing stripe-signature' });
+    }
+
+    try {
+      const sig = Array.isArray(signature) ? signature[0] : signature;
+      if (!Buffer.isBuffer(req.body)) {
+        console.error('Webhook error: req.body is not a Buffer');
+        return res.status(500).json({ error: 'Webhook processing error' });
+      }
+
+      const { uuid } = req.params;
+      await WebhookHandlers.processWebhook(req.body as Buffer, sig, uuid);
+      res.status(200).json({ received: true });
+    } catch (error: any) {
+      console.error('Webhook error:', error.message);
+      res.status(400).json({ error: 'Webhook processing error' });
+    }
+  }
+);
 
 // Security headers
 app.use((req, res, next) => {
@@ -188,8 +219,43 @@ function serveStatic(app: express.Express) {
   });
 }
 
+async function initStripe() {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    console.log('DATABASE_URL not set, skipping Stripe initialization');
+    return;
+  }
+
+  try {
+    console.log('Initializing Stripe schema...');
+    await runMigrations({ databaseUrl, schema: 'stripe' });
+    
+    const stripeSync = await getStripeSync();
+    
+    const replitDomains = process.env.REPLIT_DOMAINS;
+    if (!replitDomains) {
+      console.log('REPLIT_DOMAINS not set, skipping webhook registration');
+      return;
+    }
+    
+    const webhookBaseUrl = `https://${replitDomains.split(',')[0]}`;
+    const { webhook } = await stripeSync.findOrCreateManagedWebhook(
+      `${webhookBaseUrl}/api/stripe/webhook`,
+      { enabled_events: ['*'] }
+    );
+    console.log(`Stripe webhook configured: ${webhook.url}`);
+    
+    stripeSync.syncBackfill().then(() => console.log('Stripe data synced')).catch(console.error);
+  } catch (error) {
+    console.error('Failed to initialize Stripe:', error);
+  }
+}
+
 (async () => {
   // SQLite tables are created automatically in sqlite.ts on import
+  
+  // Initialize Stripe schema and webhooks
+  await initStripe();
   
   const server = await registerRoutes(app);
 
@@ -215,6 +281,10 @@ function serveStatic(app: express.Express) {
   // Start the due date notification scheduler
   // Check every hour for actions that are due soon or overdue
   startDueDateScheduler(60);
+  
+  // Start the billing scheduler
+  // Check every 4 hours for payment reminders
+  startBillingScheduler(240);
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
   // Other ports are firewalled. Default to 5000 if not specified.

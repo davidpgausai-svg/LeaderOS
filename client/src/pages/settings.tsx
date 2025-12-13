@@ -61,6 +61,11 @@ import {
   Building2,
   CalendarDays,
   Star,
+  CreditCard,
+  ExternalLink,
+  AlertTriangle,
+  Clock,
+  Zap,
 } from "lucide-react";
 import type { TemplateType, Organization, ExecutiveGoal, TeamTag, PtoEntry, Holiday } from "@shared/schema";
 import { Pencil, X, Hash } from "lucide-react";
@@ -675,6 +680,531 @@ function TwoFactorSettings() {
             When enabled, you'll be asked to enter a verification code sent to your email each time you sign in.
           </p>
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+interface BillingInfo {
+  organization: any;
+  currentPlan: string;
+  status: string;
+  interval: string;
+  isLegacy: boolean;
+  userCount: number;
+  maxUsers: number;
+  extraSeats: number;
+  limits: {
+    maxStrategies: number | null;
+    maxProjects: number | null;
+    maxUsers: number;
+    smeTagging: boolean;
+    teamFeatures: boolean;
+  };
+  trialEndsAt: string | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+  pendingDowngrade: string | null;
+  paymentFailed: boolean;
+  billingHistory: Array<{
+    id: string;
+    eventType: string;
+    description: string;
+    createdAt: string;
+    amountCents?: number;
+    currency?: string;
+  }>;
+}
+
+const PLAN_DETAILS = {
+  starter: {
+    name: 'Starter',
+    monthlyPrice: 1,
+    description: 'For individuals getting started',
+    features: ['1 strategic priority', '4 projects', '1 user', 'Basic reporting']
+  },
+  leaderpro: {
+    name: 'LeaderPro',
+    monthlyPrice: 12,
+    annualPrice: 120,
+    description: 'For power users who want unlimited access',
+    features: ['Unlimited priorities', 'Unlimited projects', '1 user', 'SME tagging', 'Advanced reporting']
+  },
+  team: {
+    name: 'Team',
+    monthlyPrice: 22,
+    annualPrice: 220,
+    description: 'For organizations that collaborate',
+    features: ['Unlimited priorities', 'Unlimited projects', '6 users included', 'Add extra seats ($6/mo each)', 'Team features', 'SME tagging']
+  },
+  legacy: {
+    name: 'Legacy (Free)',
+    monthlyPrice: 0,
+    description: 'Grandfathered access for early users',
+    features: ['Unlimited priorities', 'Unlimited projects', '6 users', 'All Team features included']
+  }
+};
+
+const PRICE_IDS = {
+  starter: {
+    monthly: 'price_1SdxDMAPmlCUuC3zt16HQ6hR',
+  },
+  leaderpro: {
+    monthly: 'price_1SdxDMAPmlCUuC3zrwwZFojc',
+    annual: 'price_1SdxDMAPmlCUuC3z1eidVw7P',
+  },
+  team: {
+    monthly: 'price_1SdxDNAPmlCUuC3zCMeKd0bV',
+    annual: 'price_1SdxDNAPmlCUuC3zOcpRsQ3S',
+  },
+};
+
+function BillingSettings() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const { data: billingInfo, isLoading: isFetchingBilling, error } = useQuery<BillingInfo>({
+    queryKey: ['/api/billing/info'],
+  });
+
+  const createCheckoutSession = async (priceId: string, trialDays?: number) => {
+    setIsLoading(true);
+    try {
+      const csrfToken = document.cookie.match(/csrf_token=([^;]+)/)?.[1];
+      const response = await fetch('/api/billing/create-checkout-session', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
+        },
+        body: JSON.stringify({ priceId, trialDays }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create checkout session');
+      }
+      
+      const { url } = await response.json();
+      window.location.href = url;
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'Failed to start checkout. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const openCustomerPortal = async () => {
+    setIsLoading(true);
+    try {
+      const csrfToken = document.cookie.match(/csrf_token=([^;]+)/)?.[1];
+      const response = await fetch('/api/billing/create-portal-session', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to open billing portal');
+      }
+      
+      const { url } = await response.json();
+      window.location.href = url;
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'Failed to open billing portal. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const cancelSubscription = async () => {
+    setIsLoading(true);
+    try {
+      const csrfToken = document.cookie.match(/csrf_token=([^;]+)/)?.[1];
+      const response = await fetch('/api/billing/cancel', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to cancel subscription');
+      }
+      
+      toast({
+        title: 'Subscription Canceled',
+        description: 'Your subscription will end at the current billing period.',
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['/api/billing/info'] });
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'Failed to cancel subscription. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const reactivateSubscription = async () => {
+    setIsLoading(true);
+    try {
+      const csrfToken = document.cookie.match(/csrf_token=([^;]+)/)?.[1];
+      const response = await fetch('/api/billing/reactivate', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to reactivate subscription');
+      }
+      
+      toast({
+        title: 'Subscription Reactivated',
+        description: 'Your subscription has been reactivated.',
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['/api/billing/info'] });
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'Failed to reactivate subscription. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isFetchingBilling) {
+    return (
+      <Card data-testid="card-billing-settings">
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <CreditCard className="mr-2 h-5 w-5" />
+            Billing & Subscription
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center space-x-2 text-gray-500">
+            <RefreshCw className="h-4 w-4 animate-spin" />
+            <span>Loading billing information...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card data-testid="card-billing-settings">
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <CreditCard className="mr-2 h-5 w-5" />
+            Billing & Subscription
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="p-4 border rounded-lg bg-red-50 dark:bg-red-900/20">
+            <div className="flex items-center space-x-2 text-red-600">
+              <AlertTriangle className="h-4 w-4" />
+              <span>Failed to load billing information. Please try again later.</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const currentPlanDetails = PLAN_DETAILS[billingInfo?.currentPlan as keyof typeof PLAN_DETAILS] || PLAN_DETAILS.starter;
+  const isLegacy = billingInfo?.isLegacy;
+  const hasActiveSubscription = billingInfo?.status === 'active' || billingInfo?.status === 'trialing';
+
+  return (
+    <Card data-testid="card-billing-settings">
+      <CardHeader>
+        <CardTitle className="flex items-center">
+          <CreditCard className="mr-2 h-5 w-5" />
+          Billing & Subscription
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Current Plan */}
+        <div className="p-4 border rounded-lg">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h4 className="font-medium flex items-center gap-2">
+                Current Plan
+                {isLegacy && (
+                  <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                    Legacy
+                  </Badge>
+                )}
+              </h4>
+              <p className="text-2xl font-bold mt-1">{currentPlanDetails.name}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{currentPlanDetails.description}</p>
+            </div>
+            <div className="text-right">
+              {!isLegacy && billingInfo?.currentPlan !== 'legacy' && (
+                <>
+                  <p className="text-2xl font-bold">
+                    ${currentPlanDetails.monthlyPrice}
+                    <span className="text-sm font-normal text-gray-500">/mo</span>
+                  </p>
+                  {billingInfo?.interval === 'annual' && (
+                    <p className="text-sm text-green-600">Billed annually (save 17%)</p>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Status indicators */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {billingInfo?.status === 'trialing' && (
+              <Badge variant="outline" className="border-blue-300 text-blue-700 dark:border-blue-700 dark:text-blue-300">
+                <Clock className="w-3 h-3 mr-1" />
+                Trial ends {billingInfo.trialEndsAt ? new Date(billingInfo.trialEndsAt).toLocaleDateString() : 'soon'}
+              </Badge>
+            )}
+            {billingInfo?.status === 'past_due' && (
+              <Badge variant="destructive">
+                <AlertTriangle className="w-3 h-3 mr-1" />
+                Payment Failed
+              </Badge>
+            )}
+            {billingInfo?.cancelAtPeriodEnd && (
+              <Badge variant="outline" className="border-orange-300 text-orange-700 dark:border-orange-700 dark:text-orange-300">
+                <Clock className="w-3 h-3 mr-1" />
+                Cancels {billingInfo.currentPeriodEnd ? new Date(billingInfo.currentPeriodEnd).toLocaleDateString() : 'at period end'}
+              </Badge>
+            )}
+          </div>
+
+          {/* Usage */}
+          <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <div className="text-center">
+              <p className="text-sm text-gray-500">Users</p>
+              <p className="font-bold">{billingInfo?.userCount || 0} / {billingInfo?.maxUsers || 1}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-gray-500">Priorities</p>
+              <p className="font-bold">{billingInfo?.limits.maxStrategies ?? 'Unlimited'}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-gray-500">Projects</p>
+              <p className="font-bold">{billingInfo?.limits.maxProjects ?? 'Unlimited'}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Payment Failed Alert */}
+        {billingInfo?.paymentFailed && (
+          <div className="p-4 border rounded-lg bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
+            <div className="flex items-start space-x-3">
+              <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />
+              <div>
+                <h4 className="font-medium text-red-800 dark:text-red-200">Payment Failed</h4>
+                <p className="text-sm text-red-600 dark:text-red-300 mt-1">
+                  We couldn't process your last payment. Please update your payment method to avoid service interruption.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 border-red-300 text-red-700 hover:bg-red-100"
+                  onClick={openCustomerPortal}
+                  disabled={isLoading}
+                  data-testid="button-update-payment-method"
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Update Payment Method
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Cancellation pending alert */}
+        {billingInfo?.cancelAtPeriodEnd && (
+          <div className="p-4 border rounded-lg bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800">
+            <div className="flex items-start space-x-3">
+              <Clock className="h-5 w-5 text-orange-600 mt-0.5" />
+              <div>
+                <h4 className="font-medium text-orange-800 dark:text-orange-200">Subscription Ending</h4>
+                <p className="text-sm text-orange-600 dark:text-orange-300 mt-1">
+                  Your subscription is set to cancel on {billingInfo.currentPeriodEnd ? new Date(billingInfo.currentPeriodEnd).toLocaleDateString() : 'the end of your billing period'}. 
+                  You'll continue to have access until then.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 border-orange-300 text-orange-700 hover:bg-orange-100"
+                  onClick={reactivateSubscription}
+                  disabled={isLoading}
+                  data-testid="button-reactivate-subscription"
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                  Reactivate Subscription
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Upgrade Options (show only if not on legacy or team plan) */}
+        {!isLegacy && billingInfo?.currentPlan !== 'team' && (
+          <div className="p-4 border rounded-lg">
+            <h4 className="font-medium mb-4 flex items-center gap-2">
+              <Zap className="w-4 h-4 text-yellow-500" />
+              Upgrade Your Plan
+            </h4>
+            <div className="grid gap-4 md:grid-cols-2">
+              {billingInfo?.currentPlan === 'starter' && (
+                <div className="p-4 border rounded-lg hover:border-blue-500 transition-colors">
+                  <h5 className="font-medium">LeaderPro</h5>
+                  <p className="text-2xl font-bold mt-1">$12<span className="text-sm font-normal text-gray-500">/mo</span></p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Unlimited priorities & projects</p>
+                  <Button
+                    className="w-full mt-4"
+                    onClick={() => createCheckoutSession(PRICE_IDS.leaderpro.monthly)}
+                    disabled={isLoading}
+                    data-testid="button-upgrade-leaderpro"
+                  >
+                    {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Upgrade to LeaderPro'}
+                  </Button>
+                </div>
+              )}
+              <div className="p-4 border rounded-lg hover:border-blue-500 transition-colors">
+                <h5 className="font-medium">Team</h5>
+                <p className="text-2xl font-bold mt-1">$22<span className="text-sm font-normal text-gray-500">/mo</span></p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">6 users included + team features</p>
+                <Button
+                  className="w-full mt-4"
+                  onClick={() => createCheckoutSession(PRICE_IDS.team.monthly)}
+                  disabled={isLoading}
+                  data-testid="button-upgrade-team"
+                >
+                  {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Upgrade to Team'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Manage Subscription */}
+        {hasActiveSubscription && !isLegacy && !billingInfo?.cancelAtPeriodEnd && (
+          <div className="p-4 border rounded-lg">
+            <h4 className="font-medium mb-4">Manage Subscription</h4>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                variant="outline"
+                onClick={openCustomerPortal}
+                disabled={isLoading}
+                data-testid="button-manage-billing"
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Manage Billing
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-950"
+                    disabled={isLoading}
+                    data-testid="button-cancel-subscription"
+                  >
+                    Cancel Subscription
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Cancel Subscription?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Your subscription will remain active until the end of your current billing period 
+                      ({billingInfo?.currentPeriodEnd ? new Date(billingInfo.currentPeriodEnd).toLocaleDateString() : 'period end'}). 
+                      After that, you'll lose access to premium features.
+                      <br /><br />
+                      You can reactivate anytime before the cancellation date.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep Subscription</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={cancelSubscription}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      Cancel Subscription
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </div>
+        )}
+
+        {/* Billing History */}
+        {billingInfo?.billingHistory && billingInfo.billingHistory.length > 0 && (
+          <div className="p-4 border rounded-lg">
+            <h4 className="font-medium mb-4">Recent Billing Activity</h4>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {billingInfo.billingHistory.map((entry) => (
+                <div
+                  key={entry.id}
+                  className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded text-sm"
+                  data-testid={`billing-history-${entry.id}`}
+                >
+                  <div>
+                    <p className="font-medium">{entry.description}</p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(entry.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  {entry.amountCents && (
+                    <span className={`font-medium ${entry.eventType === 'payment_failed' ? 'text-red-600' : 'text-green-600'}`}>
+                      ${(entry.amountCents / 100).toFixed(2)}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Legacy Plan Notice */}
+        {isLegacy && (
+          <div className="p-4 border rounded-lg bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800">
+            <div className="flex items-start space-x-3">
+              <Star className="h-5 w-5 text-purple-600 mt-0.5" />
+              <div>
+                <h4 className="font-medium text-purple-800 dark:text-purple-200">Legacy Plan</h4>
+                <p className="text-sm text-purple-600 dark:text-purple-300 mt-1">
+                  You have grandfathered access to all Team features at no cost. Thank you for being an early supporter!
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -2296,7 +2826,7 @@ export default function Settings() {
           {/* Administrator Settings */}
           {canManageUsers() && activeTab.startsWith("admin") && (
             <Tabs value={adminActiveTab} onValueChange={setAdminActiveTab} className="space-y-6">
-              <TabsList className={`grid w-full max-w-4xl ${isSuperAdmin() ? 'grid-cols-6' : 'grid-cols-5'}`}>
+              <TabsList className={`grid w-full max-w-5xl ${isSuperAdmin() ? 'grid-cols-7' : 'grid-cols-6'}`}>
                 {isSuperAdmin() && (
                   <TabsTrigger value="organizations" className="flex items-center space-x-2" data-testid="tab-admin-organizations">
                     <Building2 className="w-4 h-4" />
@@ -2318,6 +2848,10 @@ export default function Settings() {
                 <TabsTrigger value="security" className="flex items-center space-x-2" data-testid="tab-admin-security">
                   <Shield className="w-4 h-4" />
                   <span className="hidden sm:inline">Security</span>
+                </TabsTrigger>
+                <TabsTrigger value="billing" className="flex items-center space-x-2" data-testid="tab-admin-billing">
+                  <CreditCard className="w-4 h-4" />
+                  <span className="hidden sm:inline">Billing</span>
                 </TabsTrigger>
                 <TabsTrigger value="data" className="flex items-center space-x-2" data-testid="tab-admin-data">
                   <SettingsIcon className="w-4 h-4" />
@@ -2729,6 +3263,11 @@ export default function Settings() {
                     </div>
                   </CardContent>
                 </Card>
+              </TabsContent>
+
+              {/* Administrator Billing */}
+              <TabsContent value="billing" className="space-y-6">
+                <BillingSettings />
               </TabsContent>
 
               {/* Administrator Data Management */}

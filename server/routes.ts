@@ -4045,6 +4045,167 @@ ${outputTemplate}`;
     }
   });
 
+  // =================== BILLING ROUTES ===================
+  
+  // Get billing info for the user's organization
+  app.get("/api/billing/info", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      // Only administrators can view billing info
+      if (user.role !== 'administrator') {
+        return res.status(403).json({ message: "Only administrators can view billing information" });
+      }
+
+      const { billingService } = await import('./billingService');
+      const billingInfo = await billingService.getOrganizationBillingInfo(user.organizationId);
+      res.json(billingInfo);
+    } catch (error) {
+      logger.error("Failed to fetch billing info", error);
+      res.status(500).json({ message: "Failed to fetch billing information" });
+    }
+  });
+
+  // Create a Stripe checkout session for subscription
+  app.post("/api/billing/create-checkout-session", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      if (user.role !== 'administrator') {
+        return res.status(403).json({ message: "Only administrators can manage billing" });
+      }
+
+      const { priceId, trialDays } = req.body;
+      if (!priceId) {
+        return res.status(400).json({ message: "Price ID is required" });
+      }
+
+      const { billingService } = await import('./billingService');
+      
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : 'http://localhost:5000';
+      
+      const session = await billingService.createCheckoutSession(
+        user.organizationId,
+        priceId,
+        `${baseUrl}/settings?billing=success`,
+        `${baseUrl}/settings?billing=canceled`,
+        { trialDays: trialDays || 0 }
+      );
+
+      res.json({ url: session.url });
+    } catch (error) {
+      logger.error("Failed to create checkout session", error);
+      res.status(500).json({ message: "Failed to create checkout session" });
+    }
+  });
+
+  // Create a Stripe customer portal session
+  app.post("/api/billing/create-portal-session", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      if (user.role !== 'administrator') {
+        return res.status(403).json({ message: "Only administrators can manage billing" });
+      }
+
+      const { billingService } = await import('./billingService');
+      
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : 'http://localhost:5000';
+      
+      const session = await billingService.createCustomerPortalSession(
+        user.organizationId,
+        `${baseUrl}/settings`
+      );
+
+      res.json({ url: session.url });
+    } catch (error) {
+      logger.error("Failed to create portal session", error);
+      res.status(500).json({ message: "Failed to create billing portal session" });
+    }
+  });
+
+  // Cancel subscription
+  app.post("/api/billing/cancel", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      if (user.role !== 'administrator') {
+        return res.status(403).json({ message: "Only administrators can manage billing" });
+      }
+
+      const { billingService } = await import('./billingService');
+      await billingService.cancelSubscription(user.organizationId, true);
+
+      res.json({ success: true, message: "Subscription will be canceled at the end of the billing period" });
+    } catch (error) {
+      logger.error("Failed to cancel subscription", error);
+      res.status(500).json({ message: "Failed to cancel subscription" });
+    }
+  });
+
+  // Reactivate canceled subscription
+  app.post("/api/billing/reactivate", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      if (user.role !== 'administrator') {
+        return res.status(403).json({ message: "Only administrators can manage billing" });
+      }
+
+      const { billingService } = await import('./billingService');
+      await billingService.reactivateSubscription(user.organizationId);
+
+      res.json({ success: true, message: "Subscription has been reactivated" });
+    } catch (error) {
+      logger.error("Failed to reactivate subscription", error);
+      res.status(500).json({ message: "Failed to reactivate subscription" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
