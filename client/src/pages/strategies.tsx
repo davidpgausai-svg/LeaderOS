@@ -1712,6 +1712,14 @@ export default function Strategies() {
                                       
                                       {/* Project title, status badge, and action count */}
                                       <div className="min-w-0 flex-1">
+                                        {/* Project dates - above the title */}
+                                        {(project.startDate || project.dueDate) && (
+                                          <span className="text-xs text-gray-500 dark:text-gray-400 block mb-0.5">
+                                            {project.startDate && formatDateShort(project.startDate)}
+                                            {project.startDate && project.dueDate && ' - '}
+                                            {project.dueDate && formatDateShort(project.dueDate)}
+                                          </span>
+                                        )}
                                         <div className="flex items-center gap-2">
                                           {/* Title and Status - left side */}
                                           <div className="flex items-center gap-1.5 min-w-0 flex-shrink">
@@ -1759,15 +1767,6 @@ export default function Strategies() {
                                             </Badge>
                                           )}
                                           </div>
-                                          
-                                          {/* Project dates */}
-                                          {(project.startDate || project.dueDate) && (
-                                            <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0 hidden sm:inline">
-                                              {project.startDate && formatDateShort(project.startDate)}
-                                              {project.startDate && project.dueDate && ' - '}
-                                              {project.dueDate && formatDateShort(project.dueDate)}
-                                            </span>
-                                          )}
                                           
                                           {/* Icon Bar - pushed to the right */}
                                           <div className="flex items-center gap-0.5 ml-auto flex-shrink-0">
