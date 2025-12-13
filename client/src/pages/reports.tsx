@@ -343,14 +343,14 @@ export default function Reports() {
 
   if (strategiesLoading || projectsLoading || actionsLoading) {
     return (
-      <div className="min-h-screen flex bg-white dark:bg-gray-900">
+      <div className="min-h-screen flex" style={{ backgroundColor: '#F5F5F7' }}>
         <Sidebar />
-        <main className="flex-1 p-6">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-6"></div>
-            <div className="grid grid-cols-4 gap-6">
+        <main className="flex-1 p-8">
+          <div className="max-w-6xl mx-auto animate-pulse">
+            <div className="h-8 bg-gray-200 rounded-xl w-1/4 mb-6"></div>
+            <div className="grid grid-cols-4 gap-4">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div key={i} className="h-28 bg-white rounded-2xl" style={{ boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)' }}></div>
               ))}
             </div>
           </div>
@@ -360,24 +360,44 @@ export default function Reports() {
   }
 
   return (
-    <div className="min-h-screen flex bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen flex" style={{ backgroundColor: '#F5F5F7' }}>
       <Sidebar />
       <main className="flex-1 overflow-auto">
-        {/* Header */}
-        <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 print:border-0">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-reports-header">
-                Reports & Analytics
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
-                Strategic planning insights and performance tracking
-              </p>
+        {/* Glassmorphism Header */}
+        <header 
+          className="sticky top-0 z-10 px-8 py-6 border-b print:border-0"
+          style={{ 
+            backgroundColor: 'rgba(255, 255, 255, 0.7)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            borderColor: 'rgba(0, 0, 0, 0.1)'
+          }}
+        >
+          <div className="max-w-6xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div 
+                className="w-12 h-12 rounded-2xl flex items-center justify-center"
+                style={{ backgroundColor: '#007AFF' }}
+              >
+                <BarChart3 className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 
+                  className="text-3xl font-bold tracking-tight"
+                  style={{ color: '#1D1D1F' }}
+                  data-testid="text-reports-header"
+                >
+                  Reports & Analytics
+                </h1>
+                <p style={{ color: '#86868B' }} className="mt-0.5">
+                  Strategic planning insights and performance tracking
+                </p>
+              </div>
             </div>
             <Button 
               onClick={handlePrint} 
-              variant="outline"
-              className="print:hidden"
+              className="print:hidden rounded-full px-5"
+              style={{ backgroundColor: '#007AFF', color: '#FFFFFF' }}
               data-testid="button-export-pdf"
             >
               <FileDown className="w-4 h-4 mr-2" />
@@ -386,110 +406,125 @@ export default function Reports() {
           </div>
         </header>
 
-        <div ref={reportRef} className="p-6">
-          {/* Summary Metrics */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-            <Card data-testid="card-active-strategies" className="py-2">
-              <CardHeader className="pb-1 pt-2 px-3">
-                <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400 flex items-center">
-                  <Target className="w-3 h-3 mr-1" />
-                  Active Priorities
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pb-2 px-3">
-                <div className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-active-strategies">
-                  {activeStrategies}
+        <div ref={reportRef} className="p-8">
+          <div className="max-w-6xl mx-auto">
+          {/* Summary Metrics - Apple HIG Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div 
+              className="rounded-2xl p-4"
+              style={{ backgroundColor: '#FFFFFF', boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)' }}
+              data-testid="card-active-strategies"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#007AFF' }}>
+                  <Target className="w-4 h-4 text-white" />
                 </div>
-                <div className="text-[10px] text-gray-500">
-                  of {totalStrategies} total
-                </div>
-              </CardContent>
-            </Card>
+                <span className="text-sm font-medium" style={{ color: '#86868B' }}>Active Priorities</span>
+              </div>
+              <div className="text-3xl font-bold" style={{ color: '#1D1D1F' }} data-testid="text-active-strategies">
+                {activeStrategies}
+              </div>
+              <div className="text-xs mt-1" style={{ color: '#86868B' }}>
+                of {totalStrategies} total
+              </div>
+            </div>
 
-            <Card data-testid="card-at-risk" className="py-2">
-              <CardHeader className="pb-1 pt-2 px-3">
-                <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400 flex items-center">
-                  <AlertTriangle className="w-3 h-3 mr-1 text-yellow-600" />
-                  At Risk
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pb-2 px-3">
-                <div className="text-2xl font-bold text-yellow-600" data-testid="text-at-risk">
-                  {atRiskStrategies}
+            <div 
+              className="rounded-2xl p-4"
+              style={{ backgroundColor: '#FFFFFF', boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)' }}
+              data-testid="card-at-risk"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#FF9500' }}>
+                  <AlertTriangle className="w-4 h-4 text-white" />
                 </div>
-                <div className="text-[10px] text-yellow-600">
-                  priorities need attention
-                </div>
-              </CardContent>
-            </Card>
+                <span className="text-sm font-medium" style={{ color: '#86868B' }}>At Risk</span>
+              </div>
+              <div className="text-3xl font-bold" style={{ color: '#FF9500' }} data-testid="text-at-risk">
+                {atRiskStrategies}
+              </div>
+              <div className="text-xs mt-1" style={{ color: '#FF9500' }}>
+                priorities need attention
+              </div>
+            </div>
 
-            <Card data-testid="card-overdue-projects" className="py-2">
-              <CardHeader className="pb-1 pt-2 px-3">
-                <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400 flex items-center">
-                  <XCircle className="w-3 h-3 mr-1 text-red-600" />
-                  Overdue Projects
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pb-2 px-3">
-                <div className="text-2xl font-bold text-red-600" data-testid="text-overdue-projects">
-                  {overdueProjects}
+            <div 
+              className="rounded-2xl p-4"
+              style={{ backgroundColor: '#FFFFFF', boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)' }}
+              data-testid="card-overdue-projects"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#FF3B30' }}>
+                  <XCircle className="w-4 h-4 text-white" />
                 </div>
-                <div className="text-[10px] text-red-600">
-                  past due date
-                </div>
-              </CardContent>
-            </Card>
+                <span className="text-sm font-medium" style={{ color: '#86868B' }}>Overdue Projects</span>
+              </div>
+              <div className="text-3xl font-bold" style={{ color: '#FF3B30' }} data-testid="text-overdue-projects">
+                {overdueProjects}
+              </div>
+              <div className="text-xs mt-1" style={{ color: '#FF3B30' }}>
+                past due date
+              </div>
+            </div>
 
-            <Card data-testid="card-completion-rate" className="py-2">
-              <CardHeader className="pb-1 pt-2 px-3">
-                <CardTitle className="text-xs font-medium text-gray-600 dark:text-gray-400 flex items-center">
-                  <CheckCircle className="w-3 h-3 mr-1 text-green-600" />
-                  Actions Complete
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pb-2 px-3">
-                <div className="text-2xl font-bold text-green-600" data-testid="text-completion-rate">
-                  {totalActions > 0 ? Math.round((achievedActions / totalActions) * 100) : 0}%
+            <div 
+              className="rounded-2xl p-4"
+              style={{ backgroundColor: '#FFFFFF', boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)' }}
+              data-testid="card-completion-rate"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#34C759' }}>
+                  <CheckCircle className="w-4 h-4 text-white" />
                 </div>
-                <div className="text-[10px] text-gray-500">
-                  {achievedActions} of {totalActions}
-                </div>
-              </CardContent>
-            </Card>
+                <span className="text-sm font-medium" style={{ color: '#86868B' }}>Actions Complete</span>
+              </div>
+              <div className="text-3xl font-bold" style={{ color: '#34C759' }} data-testid="text-completion-rate">
+                {totalActions > 0 ? Math.round((achievedActions / totalActions) * 100) : 0}%
+              </div>
+              <div className="text-xs mt-1" style={{ color: '#86868B' }}>
+                {achievedActions} of {totalActions}
+              </div>
+            </div>
           </div>
 
-          {/* Tabbed Reports */}
+          {/* Tabbed Reports - Apple HIG Pill Navigation */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="print:hidden">
-            <TabsList className="mb-6 flex-wrap h-auto gap-1 overflow-x-auto">
-              <TabsTrigger value="capacity" data-testid="tab-capacity">
-                <Users className="w-4 h-4 mr-2" />
-                Capacity
-              </TabsTrigger>
-              <TabsTrigger value="team-tags" data-testid="tab-team-tags">
-                <Hash className="w-4 h-4 mr-2" />
-                Team Tags
-              </TabsTrigger>
-              <TabsTrigger value="executive-goals" data-testid="tab-executive-goals">
-                <Tag className="w-4 h-4 mr-2" />
-                Executive Goals
-              </TabsTrigger>
-              <TabsTrigger value="health" data-testid="tab-health">
-                <Target className="w-4 h-4 mr-2" />
-                Strategy Health
-              </TabsTrigger>
-              <TabsTrigger value="timeline" data-testid="tab-timeline">
-                <Calendar className="w-4 h-4 mr-2" />
-                Timeline Risk
-              </TabsTrigger>
-              <TabsTrigger value="ownership" data-testid="tab-ownership">
-                <Users className="w-4 h-4 mr-2" />
-                Ownership
-              </TabsTrigger>
-              <TabsTrigger value="graph" data-testid="tab-graph">
-                <GitBranch className="w-4 h-4 mr-2" />
-                Graph
-              </TabsTrigger>
-            </TabsList>
+            <div 
+              className="flex flex-wrap gap-2 mb-6 p-2 rounded-2xl"
+              style={{ backgroundColor: 'rgba(0, 0, 0, 0.05)' }}
+            >
+              {[
+                { value: 'capacity', icon: Users, label: 'Capacity' },
+                { value: 'team-tags', icon: Hash, label: 'Team Tags' },
+                { value: 'executive-goals', icon: Tag, label: 'Executive Goals' },
+                { value: 'health', icon: Target, label: 'Strategy Health' },
+                { value: 'timeline', icon: Calendar, label: 'Timeline Risk' },
+                { value: 'ownership', icon: Users, label: 'Ownership' },
+                { value: 'graph', icon: GitBranch, label: 'Graph' },
+              ].map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.value;
+                return (
+                  <button
+                    key={tab.value}
+                    onClick={() => setActiveTab(tab.value)}
+                    className={`
+                      flex items-center gap-2 px-4 py-2.5 rounded-full font-medium text-sm
+                      transition-all duration-200 ease-out
+                      ${isActive ? 'shadow-sm' : 'hover:bg-white/50'}
+                    `}
+                    style={{
+                      backgroundColor: isActive ? '#FFFFFF' : 'transparent',
+                      color: isActive ? '#007AFF' : '#86868B',
+                    }}
+                    data-testid={`tab-${tab.value}`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
 
             {/* Strategy Health Overview */}
             <TabsContent value="health" className="space-y-4">
@@ -570,9 +605,10 @@ export default function Reports() {
               />
             </TabsContent>
           </Tabs>
+          </div>
 
           {/* Print view - show all reports */}
-          <div className="hidden print:block space-y-8">
+          <div className="hidden print:block space-y-8 max-w-6xl mx-auto">
             <div>
               <h2 className="text-xl font-bold mb-4">Strategy Health Overview</h2>
               <StrategyHealthReport
