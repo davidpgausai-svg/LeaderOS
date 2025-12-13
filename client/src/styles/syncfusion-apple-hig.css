@@ -1,0 +1,501 @@
+/* Apple HIG Styling for Syncfusion Components */
+/* Colors: Blue #007AFF, Background #F5F5F7, Primary Text #1D1D1F, Secondary Text #86868B */
+
+/* ================================== */
+/* GANTT CHART - Timeline Page */
+/* ================================== */
+
+.apple-hig-gantt.e-gantt {
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Toolbar */
+.apple-hig-gantt .e-gantt-toolbar {
+  background-color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  padding: 8px 12px;
+}
+
+.apple-hig-gantt .e-gantt-toolbar .e-toolbar-items {
+  background-color: transparent;
+}
+
+.apple-hig-gantt .e-gantt-toolbar .e-toolbar-item .e-tbar-btn {
+  background-color: rgba(0, 0, 0, 0.04);
+  border-radius: 8px;
+  border: none;
+  color: #1D1D1F;
+  transition: all 0.2s ease;
+}
+
+.apple-hig-gantt .e-gantt-toolbar .e-toolbar-item .e-tbar-btn:hover {
+  background-color: rgba(0, 122, 255, 0.1);
+  color: #007AFF;
+}
+
+/* Grid Header */
+.apple-hig-gantt .e-gridheader {
+  background-color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.apple-hig-gantt .e-headercell {
+  background-color: transparent;
+  color: #86868B;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-right: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.apple-hig-gantt .e-headercelldiv {
+  color: #86868B;
+}
+
+/* Timeline Header */
+.apple-hig-gantt .e-timeline-header-container {
+  background-color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.apple-hig-gantt .e-timeline-header-table-container .e-header-cell-label {
+  color: #1D1D1F;
+  font-weight: 500;
+}
+
+.apple-hig-gantt .e-timeline-top-header-cell,
+.apple-hig-gantt .e-timeline-single-header-cell {
+  background-color: transparent;
+  border-right: 1px solid rgba(0, 0, 0, 0.05);
+  color: #1D1D1F;
+}
+
+/* Grid Content */
+.apple-hig-gantt .e-content {
+  background-color: #FFFFFF;
+}
+
+.apple-hig-gantt .e-row {
+  background-color: #FFFFFF;
+  transition: background-color 0.15s ease;
+}
+
+.apple-hig-gantt .e-row:hover {
+  background-color: rgba(0, 122, 255, 0.04);
+}
+
+.apple-hig-gantt .e-rowcell {
+  color: #1D1D1F;
+  border-right: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  font-size: 13px;
+}
+
+.apple-hig-gantt .e-altrow {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* Selected Row */
+.apple-hig-gantt .e-selectionbackground {
+  background-color: rgba(0, 122, 255, 0.1) !important;
+}
+
+/* Chart Area */
+.apple-hig-gantt .e-gantt-chart {
+  background-color: #FFFFFF;
+}
+
+.apple-hig-gantt .e-chart-root-container {
+  background-color: #FFFFFF;
+}
+
+.apple-hig-gantt .e-chart-row-cell {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Taskbars */
+.apple-hig-gantt .e-gantt-parent-taskbar-inner-div {
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.apple-hig-gantt .e-gantt-child-taskbar {
+  border-radius: 6px !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.apple-hig-gantt .e-gantt-child-progressbar {
+  border-radius: 6px !important;
+}
+
+.apple-hig-gantt .e-gantt-milestone {
+  border-radius: 4px !important;
+  transform: rotate(45deg);
+}
+
+/* Connector Lines (Dependencies) */
+.apple-hig-gantt .e-connector-line {
+  stroke: #007AFF !important;
+  stroke-width: 1.5px !important;
+}
+
+.apple-hig-gantt .e-connector-line-arrow {
+  fill: #007AFF !important;
+}
+
+/* Today Line */
+.apple-hig-gantt .e-gantt-chart-event-marker-line {
+  background-color: #FF3B30 !important;
+  width: 2px !important;
+}
+
+/* Splitter */
+.apple-hig-gantt .e-split-bar {
+  background-color: rgba(0, 0, 0, 0.05);
+  width: 4px;
+}
+
+.apple-hig-gantt .e-split-bar:hover {
+  background-color: #007AFF;
+}
+
+/* Scrollbars */
+.apple-hig-gantt ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.apple-hig-gantt ::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 4px;
+}
+
+.apple-hig-gantt ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.apple-hig-gantt ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* ================================== */
+/* SCHEDULER - Calendar Page */
+/* ================================== */
+
+.apple-hig-schedule.e-schedule {
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Toolbar */
+.apple-hig-schedule .e-schedule-toolbar {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.apple-hig-schedule .e-schedule-toolbar .e-toolbar-items {
+  background-color: transparent !important;
+}
+
+.apple-hig-schedule .e-schedule-toolbar .e-toolbar-item .e-tbar-btn {
+  background-color: rgba(0, 0, 0, 0.04);
+  border-radius: 8px;
+  border: none;
+  color: #1D1D1F;
+  transition: all 0.2s ease;
+}
+
+.apple-hig-schedule .e-schedule-toolbar .e-toolbar-item .e-tbar-btn:hover {
+  background-color: rgba(0, 122, 255, 0.1);
+  color: #007AFF;
+}
+
+.apple-hig-schedule .e-schedule-toolbar .e-active-view .e-tbar-btn {
+  background-color: #007AFF !important;
+  color: #FFFFFF !important;
+}
+
+/* Date Header Navigation */
+.apple-hig-schedule .e-date-header-wrap {
+  background-color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.apple-hig-schedule .e-header-cells {
+  background-color: transparent;
+  color: #86868B;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.apple-hig-schedule .e-header-date {
+  color: #1D1D1F;
+  font-weight: 500;
+}
+
+/* Month View Cells */
+.apple-hig-schedule .e-month-view .e-work-cells {
+  background-color: #FFFFFF;
+  border-color: rgba(0, 0, 0, 0.05);
+  transition: background-color 0.15s ease;
+}
+
+.apple-hig-schedule .e-month-view .e-work-cells:hover {
+  background-color: rgba(0, 122, 255, 0.04);
+}
+
+.apple-hig-schedule .e-month-view .e-date-header {
+  color: #1D1D1F;
+  font-weight: 500;
+  background-color: transparent;
+}
+
+.apple-hig-schedule .e-month-view .e-other-month {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.apple-hig-schedule .e-month-view .e-other-month .e-date-header {
+  color: #86868B;
+}
+
+/* Current Date Highlight */
+.apple-hig-schedule .e-current-date .e-date-header {
+  background-color: #007AFF !important;
+  color: #FFFFFF !important;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Appointments/Events */
+.apple-hig-schedule .e-appointment {
+  border-radius: 6px !important;
+  border: none !important;
+  font-size: 11px;
+  font-weight: 500;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.apple-hig-schedule .e-appointment:hover {
+  transform: scale(1.02);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.apple-hig-schedule .e-appointment-details {
+  padding: 4px 8px;
+}
+
+/* Quick Info Popup */
+.apple-hig-schedule .e-quick-popup-wrapper {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.apple-hig-schedule .e-event-popup .e-popup-header {
+  background-color: #007AFF;
+}
+
+.apple-hig-schedule .e-event-popup .e-subject {
+  color: #1D1D1F;
+  font-weight: 600;
+}
+
+/* Day/Week/WorkWeek Views */
+.apple-hig-schedule .e-time-cells-wrap {
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+.apple-hig-schedule .e-time-slots {
+  color: #86868B;
+  font-size: 11px;
+}
+
+.apple-hig-schedule .e-work-hours {
+  background-color: #FFFFFF;
+}
+
+.apple-hig-schedule .e-alternate-cells {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* Agenda View */
+.apple-hig-schedule .e-agenda-view .e-agenda-item {
+  background-color: #FFFFFF;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  transition: background-color 0.15s ease;
+}
+
+.apple-hig-schedule .e-agenda-view .e-agenda-item:hover {
+  background-color: rgba(0, 122, 255, 0.04);
+}
+
+.apple-hig-schedule .e-agenda-view .e-date-column {
+  background-color: rgba(255, 255, 255, 0.9);
+  border-right: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Scrollbars */
+.apple-hig-schedule ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.apple-hig-schedule ::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 4px;
+}
+
+.apple-hig-schedule ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.apple-hig-schedule ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* ================================== */
+/* DARK MODE OVERRIDES */
+/* ================================== */
+
+/* Gantt Dark Mode */
+.dark .apple-hig-gantt.e-gantt {
+  background-color: #1C1C1E;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .apple-hig-gantt .e-gantt-toolbar,
+.dark .apple-hig-gantt .e-gridheader,
+.dark .apple-hig-gantt .e-timeline-header-container {
+  background-color: rgba(28, 28, 30, 0.9);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .apple-hig-gantt .e-content,
+.dark .apple-hig-gantt .e-row,
+.dark .apple-hig-gantt .e-gantt-chart,
+.dark .apple-hig-gantt .e-chart-root-container {
+  background-color: #1C1C1E;
+}
+
+.dark .apple-hig-gantt .e-headercell,
+.dark .apple-hig-gantt .e-headercelldiv {
+  color: #98989D;
+}
+
+.dark .apple-hig-gantt .e-rowcell,
+.dark .apple-hig-gantt .e-timeline-header-table-container .e-header-cell-label {
+  color: #FFFFFF;
+}
+
+.dark .apple-hig-gantt .e-row:hover {
+  background-color: rgba(0, 122, 255, 0.1);
+}
+
+.dark .apple-hig-gantt .e-altrow {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.dark .apple-hig-gantt .e-rowcell,
+.dark .apple-hig-gantt .e-chart-row-cell {
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Schedule Dark Mode */
+.dark .apple-hig-schedule.e-schedule {
+  background-color: #1C1C1E;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .apple-hig-schedule .e-schedule-toolbar,
+.dark .apple-hig-schedule .e-date-header-wrap {
+  background-color: rgba(28, 28, 30, 0.9) !important;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .apple-hig-schedule .e-schedule-toolbar .e-toolbar-items {
+  background-color: transparent !important;
+}
+
+.dark .apple-hig-schedule .e-header-cells {
+  color: #98989D;
+}
+
+.dark .apple-hig-schedule .e-month-view .e-work-cells {
+  background-color: #1C1C1E;
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+.dark .apple-hig-schedule .e-month-view .e-other-month {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.dark .apple-hig-schedule .e-month-view .e-date-header,
+.dark .apple-hig-schedule .e-header-date {
+  color: #FFFFFF;
+}
+
+.dark .apple-hig-schedule .e-month-view .e-other-month .e-date-header {
+  color: #98989D;
+}
+
+.dark .apple-hig-schedule .e-month-view .e-work-cells:hover {
+  background-color: rgba(0, 122, 255, 0.1);
+}
+
+.dark .apple-hig-schedule .e-time-cells-wrap {
+  background-color: rgba(28, 28, 30, 0.9);
+}
+
+.dark .apple-hig-schedule .e-time-slots {
+  color: #98989D;
+}
+
+.dark .apple-hig-schedule .e-work-hours {
+  background-color: #1C1C1E;
+}
+
+.dark .apple-hig-schedule .e-alternate-cells {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.dark .apple-hig-schedule .e-agenda-view .e-agenda-item {
+  background-color: #1C1C1E;
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+.dark .apple-hig-schedule .e-agenda-view .e-agenda-item:hover {
+  background-color: rgba(0, 122, 255, 0.1);
+}
+
+.dark .apple-hig-schedule .e-quick-popup-wrapper {
+  background-color: #2C2C2E;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .apple-hig-schedule .e-event-popup .e-subject {
+  color: #FFFFFF;
+}

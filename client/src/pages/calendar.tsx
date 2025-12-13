@@ -24,6 +24,7 @@ import "@syncfusion/ej2-navigations/styles/material.css";
 import "@syncfusion/ej2-popups/styles/material.css";
 import "@syncfusion/ej2-splitbuttons/styles/material.css";
 import "@syncfusion/ej2-react-schedule/styles/material.css";
+import "@/styles/syncfusion-apple-hig.css";
 import type { Strategy, Project, Action, Holiday } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -447,6 +448,7 @@ export default function Calendar() {
               `}</style>
               <ScheduleComponent
                 ref={scheduleRef}
+                cssClass="apple-hig-schedule"
                 height="100%"
                 width="100%"
                 selectedDate={new Date()}

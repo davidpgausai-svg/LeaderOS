@@ -16,6 +16,7 @@ import "@syncfusion/ej2-splitbuttons/styles/material.css";
 import "@syncfusion/ej2-grids/styles/material.css";
 import "@syncfusion/ej2-treegrid/styles/material.css";
 import "@syncfusion/ej2-react-gantt/styles/material.css";
+import "@/styles/syncfusion-apple-hig.css";
 import type { Strategy, Project, Action, Barrier, Dependency } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -622,6 +623,7 @@ export default function Timeline() {
                               `}</style>
               <GanttComponent
                 ref={ganttRef}
+                cssClass="apple-hig-gantt"
                 dataSource={ganttData}
                 taskFields={taskFields}
                 height="100%"
