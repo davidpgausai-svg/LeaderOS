@@ -318,23 +318,27 @@ export default function Reports() {
     );
   };
 
-  // Calculate metrics
-  const totalStrategies = strategies.length;
-  const activeStrategies = strategies.filter(s => s.status === 'active').length;
-  const atRiskStrategies = strategies.filter(s => {
-    const strategyProjects = projects.filter((t: any) => t.strategyId === s.id);
+  // Calculate metrics - exclude archived items from all counts
+  const nonArchivedStrategies = strategies.filter(s => s.status !== 'archived');
+  const nonArchivedProjects = projects.filter(p => p.isArchived !== 'true');
+  const nonArchivedActions = actions.filter(a => a.isArchived !== 'true');
+
+  const totalStrategies = nonArchivedStrategies.length;
+  const activeStrategies = nonArchivedStrategies.filter(s => s.status === 'active').length;
+  const atRiskStrategies = nonArchivedStrategies.filter(s => {
+    const strategyProjects = nonArchivedProjects.filter((t: any) => t.strategyId === s.id);
     const risk = getRiskLevel(s, 'strategy', strategyProjects);
     return risk === 'at-risk' || risk === 'critical';
   }).length;
 
-  const totalProjects = projects.length;
-  const overdueProjects = projects.filter(t => {
+  const totalProjects = nonArchivedProjects.length;
+  const overdueProjects = nonArchivedProjects.filter(t => {
     const dueDate = safeDate(t.dueDate);
     return dueDate && isPast(dueDate) && t.progress < 100;
   }).length;
 
-  const totalActions = actions.length;
-  const achievedActions = actions.filter(o => o.status === 'achieved').length;
+  const totalActions = nonArchivedActions.length;
+  const achievedActions = nonArchivedActions.filter(o => o.status === 'achieved').length;
 
   if (strategiesLoading || projectsLoading || actionsLoading) {
     return (
