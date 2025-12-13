@@ -105,6 +105,11 @@ export default function Strategies() {
   const [kpiModalProject, setKpiModalProject] = useState<any>(null);
   const [documentsModalProject, setDocumentsModalProject] = useState<any>(null);
   const [communicationModalProject, setCommunicationModalProject] = useState<any>(null);
+  const [documentUrlInput, setDocumentUrlInput] = useState("");
+  const [documentUrlEditing, setDocumentUrlEditing] = useState(false);
+  const [communicationUrlInput, setCommunicationUrlInput] = useState("");
+  const [communicationUrlEditing, setCommunicationUrlEditing] = useState(false);
+  const [urlSaving, setUrlSaving] = useState(false);
   const [dependenciesModalProject, setDependenciesModalProject] = useState<any>(null);
   const [selectedDependencyType, setSelectedDependencyType] = useState<"project" | "action" | null>(null);
   const [editingProject, setEditingProject] = useState<any>(null);
@@ -1848,13 +1853,11 @@ export default function Strategies() {
                                               className="h-6 w-6 p-0"
                                               onClick={(e) => {
                                                 e.stopPropagation();
-                                                if (project.documentFolderUrl) {
-                                                  window.open(project.documentFolderUrl, '_blank');
-                                                } else {
-                                                  setDocumentsModalProject(project);
-                                                }
+                                                setDocumentUrlInput(project.documentFolderUrl || "");
+                                                setDocumentUrlEditing(!project.documentFolderUrl && canEditAllStrategies());
+                                                setDocumentsModalProject(project);
                                               }}
-                                              title={project.documentFolderUrl ? "Open project documents" : "No documents linked"}
+                                              title={project.documentFolderUrl ? "Manage project documents" : "Add documents link"}
                                               data-testid={`button-documents-${project.id}`}
                                             >
                                               <FolderOpen className={`w-3.5 h-3.5 ${project.documentFolderUrl ? 'text-blue-500' : 'text-gray-400'}`} />
@@ -1867,13 +1870,11 @@ export default function Strategies() {
                                               className="h-6 w-6 p-0"
                                               onClick={(e) => {
                                                 e.stopPropagation();
-                                                if (project.communicationUrl) {
-                                                  window.open(project.communicationUrl, '_blank');
-                                                } else {
-                                                  setCommunicationModalProject(project);
-                                                }
+                                                setCommunicationUrlInput(project.communicationUrl || "");
+                                                setCommunicationUrlEditing(!project.communicationUrl && canEditAllStrategies());
+                                                setCommunicationModalProject(project);
                                               }}
-                                              title={project.communicationUrl ? "Open communication plan" : "No communication plan linked"}
+                                              title={project.communicationUrl ? "Manage communication plan" : "Add communication link"}
                                               data-testid={`button-communication-${project.id}`}
                                             >
                                               <Megaphone className={`w-3.5 h-3.5 ${project.communicationUrl ? 'text-blue-500' : 'text-gray-400'}`} />
@@ -2873,8 +2874,14 @@ export default function Strategies() {
         </DialogContent>
       </Dialog>
 
-      {/* Documents Modal (No folder linked) */}
-      <Dialog open={!!documentsModalProject} onOpenChange={(open) => !open && setDocumentsModalProject(null)}>
+      {/* Documents Modal */}
+      <Dialog open={!!documentsModalProject} onOpenChange={(open) => {
+        if (!open) {
+          setDocumentsModalProject(null);
+          setDocumentUrlEditing(false);
+          setDocumentUrlInput("");
+        }
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -2890,18 +2897,171 @@ export default function Strategies() {
                 </h3>
               </div>
               
-              <div className="text-center py-6 text-gray-500 dark:text-gray-400">
-                <FolderOpen className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p className="text-sm font-medium">No document folder linked</p>
-                <p className="text-xs mt-1">Edit the project to add a document folder URL</p>
-              </div>
+              {documentUrlEditing ? (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">
+                      Document Folder URL
+                    </label>
+                    <input
+                      type="url"
+                      value={documentUrlInput}
+                      onChange={(e) => setDocumentUrlInput(e.target.value)}
+                      placeholder="https://drive.google.com/... or https://onedrive.com/..."
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      data-testid="input-document-url"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Paste a link to your document folder (Google Drive, OneDrive, SharePoint, etc.)
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setDocumentUrlEditing(false);
+                        setDocumentUrlInput(documentsModalProject.documentFolderUrl || "");
+                      }}
+                      disabled={urlSaving}
+                      data-testid="button-cancel-document-url"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={async () => {
+                        setUrlSaving(true);
+                        try {
+                          await apiRequest("PATCH", `/api/projects/${documentsModalProject.id}`, { 
+                            documentFolderUrl: documentUrlInput || null 
+                          });
+                          queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+                          toast({ title: "Document folder URL saved" });
+                          setDocumentsModalProject({ ...documentsModalProject, documentFolderUrl: documentUrlInput || null });
+                          setDocumentUrlEditing(false);
+                        } catch (error) {
+                          toast({ title: "Failed to save URL", variant: "destructive" });
+                        } finally {
+                          setUrlSaving(false);
+                        }
+                      }}
+                      disabled={urlSaving}
+                      data-testid="button-save-document-url"
+                    >
+                      {urlSaving ? "Saving..." : "Save"}
+                    </Button>
+                  </div>
+                </div>
+              ) : documentsModalProject.documentFolderUrl ? (
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <img 
+                      src={`https://www.google.com/s2/favicons?domain=${new URL(documentsModalProject.documentFolderUrl).hostname}&sz=32`}
+                      alt=""
+                      className="w-6 h-6 mt-0.5 rounded"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        {(() => {
+                          try {
+                            return new URL(documentsModalProject.documentFolderUrl).hostname;
+                          } catch {
+                            return "Document Folder";
+                          }
+                        })()}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        {documentsModalProject.documentFolderUrl}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <Button
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                    onClick={() => window.open(documentsModalProject.documentFolderUrl, '_blank')}
+                    data-testid="button-open-document-url"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Open Document Folder
+                  </Button>
+                  
+                  {canEditAllStrategies() && (
+                    <div className="flex gap-2 pt-2 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => setDocumentUrlEditing(true)}
+                        data-testid="button-edit-document-url"
+                      >
+                        <Edit className="w-3.5 h-3.5 mr-1.5" />
+                        Edit Link
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={async () => {
+                          setUrlSaving(true);
+                          try {
+                            await apiRequest("PATCH", `/api/projects/${documentsModalProject.id}`, { 
+                              documentFolderUrl: null 
+                            });
+                            queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+                            toast({ title: "Document folder link removed" });
+                            setDocumentsModalProject({ ...documentsModalProject, documentFolderUrl: null });
+                            setDocumentUrlInput("");
+                            setDocumentUrlEditing(true);
+                          } catch (error) {
+                            toast({ title: "Failed to remove link", variant: "destructive" });
+                          } finally {
+                            setUrlSaving(false);
+                          }
+                        }}
+                        disabled={urlSaving}
+                        data-testid="button-remove-document-url"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                        Remove
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                  <FolderOpen className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm font-medium">No document folder linked</p>
+                  {canEditAllStrategies() ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-3"
+                      onClick={() => setDocumentUrlEditing(true)}
+                      data-testid="button-add-document-url"
+                    >
+                      <Plus className="w-4 h-4 mr-1.5" />
+                      Add Document Link
+                    </Button>
+                  ) : (
+                    <p className="text-xs mt-1">Contact an administrator to add a document folder URL</p>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* Communication Modal (No plan linked) */}
-      <Dialog open={!!communicationModalProject} onOpenChange={(open) => !open && setCommunicationModalProject(null)}>
+      {/* Communication Modal */}
+      <Dialog open={!!communicationModalProject} onOpenChange={(open) => {
+        if (!open) {
+          setCommunicationModalProject(null);
+          setCommunicationUrlEditing(false);
+          setCommunicationUrlInput("");
+        }
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -2917,11 +3077,158 @@ export default function Strategies() {
                 </h3>
               </div>
               
-              <div className="text-center py-6 text-gray-500 dark:text-gray-400">
-                <Megaphone className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p className="text-sm font-medium">No communication plan linked</p>
-                <p className="text-xs mt-1">Edit the project to add a communication plan URL</p>
-              </div>
+              {communicationUrlEditing ? (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">
+                      Communication Plan URL
+                    </label>
+                    <input
+                      type="url"
+                      value={communicationUrlInput}
+                      onChange={(e) => setCommunicationUrlInput(e.target.value)}
+                      placeholder="https://docs.google.com/... or https://sharepoint.com/..."
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      data-testid="input-communication-url"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Paste a link to your communication plan document or folder
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setCommunicationUrlEditing(false);
+                        setCommunicationUrlInput(communicationModalProject.communicationUrl || "");
+                      }}
+                      disabled={urlSaving}
+                      data-testid="button-cancel-communication-url"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={async () => {
+                        setUrlSaving(true);
+                        try {
+                          await apiRequest("PATCH", `/api/projects/${communicationModalProject.id}`, { 
+                            communicationUrl: communicationUrlInput || null 
+                          });
+                          queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+                          toast({ title: "Communication plan URL saved" });
+                          setCommunicationModalProject({ ...communicationModalProject, communicationUrl: communicationUrlInput || null });
+                          setCommunicationUrlEditing(false);
+                        } catch (error) {
+                          toast({ title: "Failed to save URL", variant: "destructive" });
+                        } finally {
+                          setUrlSaving(false);
+                        }
+                      }}
+                      disabled={urlSaving}
+                      data-testid="button-save-communication-url"
+                    >
+                      {urlSaving ? "Saving..." : "Save"}
+                    </Button>
+                  </div>
+                </div>
+              ) : communicationModalProject.communicationUrl ? (
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3 p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg">
+                    <img 
+                      src={`https://www.google.com/s2/favicons?domain=${new URL(communicationModalProject.communicationUrl).hostname}&sz=32`}
+                      alt=""
+                      className="w-6 h-6 mt-0.5 rounded"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        {(() => {
+                          try {
+                            return new URL(communicationModalProject.communicationUrl).hostname;
+                          } catch {
+                            return "Communication Plan";
+                          }
+                        })()}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        {communicationModalProject.communicationUrl}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <Button
+                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                    onClick={() => window.open(communicationModalProject.communicationUrl, '_blank')}
+                    data-testid="button-open-communication-url"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Open Communication Plan
+                  </Button>
+                  
+                  {canEditAllStrategies() && (
+                    <div className="flex gap-2 pt-2 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => setCommunicationUrlEditing(true)}
+                        data-testid="button-edit-communication-url"
+                      >
+                        <Edit className="w-3.5 h-3.5 mr-1.5" />
+                        Edit Link
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={async () => {
+                          setUrlSaving(true);
+                          try {
+                            await apiRequest("PATCH", `/api/projects/${communicationModalProject.id}`, { 
+                              communicationUrl: null 
+                            });
+                            queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+                            toast({ title: "Communication plan link removed" });
+                            setCommunicationModalProject({ ...communicationModalProject, communicationUrl: null });
+                            setCommunicationUrlInput("");
+                            setCommunicationUrlEditing(true);
+                          } catch (error) {
+                            toast({ title: "Failed to remove link", variant: "destructive" });
+                          } finally {
+                            setUrlSaving(false);
+                          }
+                        }}
+                        disabled={urlSaving}
+                        data-testid="button-remove-communication-url"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                        Remove
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                  <Megaphone className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm font-medium">No communication plan linked</p>
+                  {canEditAllStrategies() ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-3"
+                      onClick={() => setCommunicationUrlEditing(true)}
+                      data-testid="button-add-communication-url"
+                    >
+                      <Plus className="w-4 h-4 mr-1.5" />
+                      Add Communication Link
+                    </Button>
+                  ) : (
+                    <p className="text-xs mt-1">Contact an administrator to add a communication plan URL</p>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
