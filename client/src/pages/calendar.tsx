@@ -27,6 +27,7 @@ import "@syncfusion/ej2-react-schedule/styles/material.css";
 import type { Strategy, Project, Action, Holiday } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { Calendar as CalendarIcon } from "lucide-react";
 
 interface ScheduleEvent {
   Id: string;
@@ -377,7 +378,7 @@ export default function Calendar() {
                 className="w-12 h-12 rounded-2xl flex items-center justify-center"
                 style={{ backgroundColor: '#FF9500' }}
               >
-                <Calendar className="w-6 h-6 text-white" />
+                <CalendarIcon className="w-6 h-6 text-white" />
               </div>
               <div>
                 <h1 className="text-xl font-bold" style={{ color: '#1D1D1F' }}>Calendar</h1>
