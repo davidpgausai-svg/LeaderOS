@@ -230,29 +230,6 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
               )}
             />
 
-            <div className="flex justify-center py-2">
-              <Button
-                type="button"
-                onClick={handleGenerateContinuum}
-                disabled={isGenerating}
-                variant="outline"
-                className="w-full md:w-auto"
-                data-testid="button-generate-continuum"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Generating Change Continuum...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Generate Change Continuum with AI
-                  </>
-                )}
-              </Button>
-            </div>
-
             <FormField
               control={form.control}
               name="metrics"
@@ -323,12 +300,35 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
               )}
             />
 
+            <div className="flex justify-center py-2">
+              <Button
+                type="button"
+                onClick={handleGenerateContinuum}
+                disabled={isGenerating}
+                variant="outline"
+                className="w-full md:w-auto"
+                data-testid="button-generate-continuum"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generating Change Continuum...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Generate Change Continuum with AI
+                  </>
+                )}
+              </Button>
+            </div>
+
             <div className="border-t pt-6 space-y-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Change Continuum (Required)
+                Change Continuum
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Complete all fields to define the change management framework for this priority.
+                Define the change management framework for this priority.
               </p>
 
               <FormField
@@ -336,7 +336,7 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
                 name="caseForChange"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Case for Change *</FormLabel>
+                    <FormLabel>Case for Change</FormLabel>
                     <FormControl>
                       <Textarea
                         rows={2}
@@ -354,7 +354,7 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
                 name="visionStatement"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Vision Statement *</FormLabel>
+                    <FormLabel>Vision Statement</FormLabel>
                     <FormControl>
                       <Textarea
                         rows={2}
@@ -372,7 +372,7 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
                 name="successMetrics"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Success Metrics *</FormLabel>
+                    <FormLabel>Success Metrics</FormLabel>
                     <FormControl>
                       <Textarea
                         rows={2}
@@ -390,7 +390,7 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
                 name="stakeholderMap"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Stakeholder Map *</FormLabel>
+                    <FormLabel>Stakeholder Map</FormLabel>
                     <FormControl>
                       <Textarea
                         rows={2}
@@ -408,7 +408,7 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
                 name="readinessRating"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Readiness Rating (RAG) *</FormLabel>
+                    <FormLabel>Readiness Rating (RAG)</FormLabel>
                     <FormControl>
                       <Textarea
                         rows={2}
@@ -426,7 +426,7 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
                 name="riskExposureRating"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Risk Exposure Rating *</FormLabel>
+                    <FormLabel>Risk Exposure Rating</FormLabel>
                     <FormControl>
                       <Textarea
                         rows={2}
@@ -444,7 +444,7 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
                 name="changeChampionAssignment"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Change Champion Assignment *</FormLabel>
+                    <FormLabel>Change Champion Assignment</FormLabel>
                     <FormControl>
                       <Textarea
                         rows={2}
@@ -462,7 +462,7 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
                 name="reinforcementPlan"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Reinforcement Plan *</FormLabel>
+                    <FormLabel>Reinforcement Plan</FormLabel>
                     <FormControl>
                       <Textarea
                         rows={2}
@@ -480,7 +480,7 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
                 name="benefitsRealizationPlan"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Benefits Realization Plan *</FormLabel>
+                    <FormLabel>Benefits Realization Plan</FormLabel>
                     <FormControl>
                       <Textarea
                         rows={2}
