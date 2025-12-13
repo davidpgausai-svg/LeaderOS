@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertStrategySchema, insertProjectSchema, insertActionSchema, insertActionDocumentSchema, insertActionChecklistItemSchema, insertMeetingNoteSchema, insertBarrierSchema, insertDependencySchema, insertTemplateTypeSchema, insertExecutiveGoalSchema, insertTeamTagSchema, insertUserStrategyAssignmentSchema, insertProjectResourceAssignmentSchema, insertActionPeopleAssignmentSchema } from "@shared/schema";
+import { insertStrategySchema, insertProjectSchema, insertActionSchema, insertActionDocumentSchema, insertActionChecklistItemSchema, insertMeetingNoteSchema, insertBarrierSchema, insertDependencySchema, insertTemplateTypeSchema, insertExecutiveGoalSchema, insertTeamTagSchema, insertUserStrategyAssignmentSchema, insertProjectResourceAssignmentSchema, insertActionPeopleAssignmentSchema, insertPtoEntrySchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./jwtAuth";
 import { z, ZodSchema, ZodError } from "zod";
 import { logger } from "./logger";
@@ -4064,6 +4064,176 @@ Available navigation: Dashboard, Strategies, Projects, Actions, Timeline, Meetin
     } catch (error) {
       logger.error("Failed to fetch user's projects", error);
       res.status(500).json({ message: "Failed to fetch projects" });
+    }
+  });
+
+  // PTO Entry Routes
+
+  // Get current user's PTO entries
+  app.get("/api/users/:id/pto", isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUserId = req.user?.claims?.sub;
+      if (!currentUserId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const currentUser = await storage.getUser(currentUserId);
+      if (!currentUser || !currentUser.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      const targetUserId = req.params.id;
+      const targetUser = await storage.getUser(targetUserId);
+      if (!targetUser || targetUser.organizationId !== currentUser.organizationId) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const entries = await storage.getPtoEntriesByUser(targetUserId);
+      res.json(entries);
+    } catch (error) {
+      logger.error("Failed to fetch PTO entries", error);
+      res.status(500).json({ message: "Failed to fetch PTO entries" });
+    }
+  });
+
+  // Create PTO entry for a user
+  app.post("/api/users/:id/pto", isAuthenticated, validateBody(insertPtoEntrySchema), async (req: any, res) => {
+    try {
+      const currentUserId = req.user?.claims?.sub;
+      if (!currentUserId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const currentUser = await storage.getUser(currentUserId);
+      if (!currentUser || !currentUser.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      const targetUserId = req.params.id;
+      
+      // Users can only create PTO for themselves, or admins can create for anyone
+      if (currentUserId !== targetUserId && currentUser.role !== 'administrator') {
+        return res.status(403).json({ message: "You can only create PTO entries for yourself" });
+      }
+
+      const targetUser = await storage.getUser(targetUserId);
+      if (!targetUser || targetUser.organizationId !== currentUser.organizationId) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const entry = await storage.createPtoEntry({
+        ...req.body,
+        userId: targetUserId,
+        organizationId: currentUser.organizationId,
+      });
+      res.status(201).json(entry);
+    } catch (error) {
+      logger.error("Failed to create PTO entry", error);
+      res.status(500).json({ message: "Failed to create PTO entry" });
+    }
+  });
+
+  // Get all PTO entries for the organization (for calendar view)
+  app.get("/api/pto", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      const entries = await storage.getPtoEntriesByOrganization(user.organizationId);
+      
+      // Join with user data for display
+      const users = await storage.getUsersByOrganization(user.organizationId);
+      const userMap = new Map(users.map(u => [u.id, u]));
+      
+      const entriesWithUsers = entries.map(entry => {
+        const entryUser = userMap.get(entry.userId);
+        return {
+          ...entry,
+          userName: entryUser ? `${entryUser.firstName || ''} ${entryUser.lastName || ''}`.trim() || entryUser.email : 'Unknown'
+        };
+      });
+      
+      res.json(entriesWithUsers);
+    } catch (error) {
+      logger.error("Failed to fetch organization PTO entries", error);
+      res.status(500).json({ message: "Failed to fetch PTO entries" });
+    }
+  });
+
+  // Update PTO entry
+  app.patch("/api/pto/:id", isAuthenticated, validateBody(insertPtoEntrySchema.partial()), async (req: any, res) => {
+    try {
+      const currentUserId = req.user?.claims?.sub;
+      if (!currentUserId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const currentUser = await storage.getUser(currentUserId);
+      if (!currentUser || !currentUser.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      const entry = await storage.getPtoEntry(req.params.id);
+      if (!entry) {
+        return res.status(404).json({ message: "PTO entry not found" });
+      }
+
+      if (entry.organizationId !== currentUser.organizationId) {
+        return res.status(403).json({ message: "Cannot modify PTO entries from other organizations" });
+      }
+
+      // Users can only update their own PTO, or admins can update anyone's
+      if (entry.userId !== currentUserId && currentUser.role !== 'administrator') {
+        return res.status(403).json({ message: "You can only update your own PTO entries" });
+      }
+
+      const updated = await storage.updatePtoEntry(req.params.id, req.body);
+      res.json(updated);
+    } catch (error) {
+      logger.error("Failed to update PTO entry", error);
+      res.status(500).json({ message: "Failed to update PTO entry" });
+    }
+  });
+
+  // Delete PTO entry
+  app.delete("/api/pto/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUserId = req.user?.claims?.sub;
+      if (!currentUserId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const currentUser = await storage.getUser(currentUserId);
+      if (!currentUser || !currentUser.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      const entry = await storage.getPtoEntry(req.params.id);
+      if (!entry) {
+        return res.status(404).json({ message: "PTO entry not found" });
+      }
+
+      if (entry.organizationId !== currentUser.organizationId) {
+        return res.status(403).json({ message: "Cannot delete PTO entries from other organizations" });
+      }
+
+      // Users can only delete their own PTO, or admins can delete anyone's
+      if (entry.userId !== currentUserId && currentUser.role !== 'administrator') {
+        return res.status(403).json({ message: "You can only delete your own PTO entries" });
+      }
+
+      await storage.deletePtoEntry(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      logger.error("Failed to delete PTO entry", error);
+      res.status(500).json({ message: "Failed to delete PTO entry" });
     }
   });
 
