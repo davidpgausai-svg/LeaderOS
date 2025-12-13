@@ -417,7 +417,7 @@ export default function Calendar() {
                 width="100%"
                 selectedDate={new Date()}
                 eventSettings={eventSettings}
-                currentView="Week"
+                currentView="Month"
                 readonly={true}
                 showQuickInfo={true}
                 eventClick={handleEventClick}
