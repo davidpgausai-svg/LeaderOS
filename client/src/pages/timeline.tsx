@@ -753,7 +753,7 @@ export default function Timeline() {
                   <ColumnDirective field="TaskName" headerText="Task Name" width="300" />
                   <ColumnDirective field="StartDate" headerText="Start" width="100" format="yMd" />
                   <ColumnDirective field="EndDate" headerText="End" width="100" format="yMd" />
-                  <ColumnDirective field="Progress" headerText="Progress" width="80" />
+                  <ColumnDirective field="Progress" headerText="Progress" width="80" visible={false} />
                 </ColumnsDirective>
                 <Inject services={[Selection, DayMarkers, Edit]} />
               </GanttComponent>
