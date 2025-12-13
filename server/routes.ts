@@ -3589,20 +3589,20 @@ Available navigation: Dashboard, Strategies, Projects, Actions, Timeline, Meetin
         return res.status(403).json({ message: "Cannot update projects from other organizations" });
       }
 
-      const { tagIds } = req.body;
-      if (!Array.isArray(tagIds)) {
-        return res.status(400).json({ message: "tagIds must be an array" });
+      const { teamTagIds } = req.body;
+      if (!Array.isArray(teamTagIds)) {
+        return res.status(400).json({ message: "teamTagIds must be an array" });
       }
 
       // Verify all tags belong to the same organization
-      for (const tagId of tagIds) {
+      for (const tagId of teamTagIds) {
         const tag = await storage.getTeamTag(tagId);
         if (!tag || tag.organizationId !== user.organizationId) {
           return res.status(400).json({ message: "Invalid tag ID or tag from another organization" });
         }
       }
 
-      const assignments = await storage.setProjectTeamTags(req.params.id, tagIds, user.organizationId);
+      const assignments = await storage.setProjectTeamTags(req.params.id, teamTagIds, user.organizationId);
       res.json(assignments);
     } catch (error) {
       logger.error("Failed to set project team tags", error);
