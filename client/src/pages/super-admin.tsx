@@ -202,7 +202,7 @@ export default function SuperAdmin() {
 
   const filteredOrgs = organizations.filter(org =>
     org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    org.adminEmails.some(email => email.toLowerCase().includes(searchTerm.toLowerCase()))
+    (org.adminEmails || []).some(email => email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const isLoading = statsLoading || orgsLoading;
@@ -406,7 +406,7 @@ export default function SuperAdmin() {
                                 )}
                               </div>
                               <div className="text-xs text-gray-500">
-                                {org.adminEmails.length > 0 ? org.adminEmails[0] : 'No admin'}
+                                {org.adminEmails?.length > 0 ? org.adminEmails[0] : 'No admin'}
                               </div>
                             </div>
                           </TableCell>
@@ -543,9 +543,9 @@ export default function SuperAdmin() {
               </div>
               <div>
                 <h4 className="text-sm font-medium text-gray-500 mb-1">Admin Emails</h4>
-                {selectedOrg.adminEmails.length > 0 ? (
+                {(selectedOrg.adminEmails || []).length > 0 ? (
                   <div className="space-y-1">
-                    {selectedOrg.adminEmails.map((email, i) => (
+                    {(selectedOrg.adminEmails || []).map((email, i) => (
                       <p key={i} className="text-sm">{email}</p>
                     ))}
                   </div>
