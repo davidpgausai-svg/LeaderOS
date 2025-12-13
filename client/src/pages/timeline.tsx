@@ -41,6 +41,7 @@ interface SyncfusionTask {
   isMilestone?: boolean;
   Duration?: number;
   actionStatus?: string;
+  statusText?: string;
 }
 
 export default function Timeline() {
@@ -273,6 +274,27 @@ export default function Timeline() {
             return a.id.localeCompare(b.id);
           });
 
+        const getActionStatusText = (status: string) => {
+          switch (status) {
+            case 'achieved': return 'Achieved';
+            case 'in_progress': return 'In Progress';
+            case 'at_risk': return 'At Risk';
+            case 'not_started': return 'Not Started';
+            default: return status;
+          }
+        };
+
+        const getProjectStatusText = (status: string) => {
+          switch (status) {
+            case 'C': return 'Complete';
+            case 'OT': return 'On Track';
+            case 'OH': return 'On Hold';
+            case 'B': return 'Behind';
+            case 'NYS': return 'Not Yet Started';
+            default: return status;
+          }
+        };
+
         const actionSubtasks: SyncfusionTask[] = projectActions.map(action => {
           const actionDate = parseAsUTCDate(action.dueDate!);
 
@@ -288,6 +310,7 @@ export default function Timeline() {
             taskType: 'action' as const,
             isMilestone: true,
             actionStatus: action.status,
+            statusText: getActionStatusText(action.status),
           };
         });
 
@@ -302,6 +325,7 @@ export default function Timeline() {
           subtasks: actionSubtasks.length > 0 ? actionSubtasks : undefined,
           taskColor: getProjectStatusColor(project.status),
           taskType: 'project' as const,
+          statusText: getProjectStatusText(project.status),
         });
       });
 
@@ -314,6 +338,7 @@ export default function Timeline() {
         subtasks: projectSubtasks.length > 0 ? projectSubtasks : undefined,
         taskColor: strategy.colorCode || "#1e3a8a",
         taskType: 'strategy' as const,
+        statusText: strategy.status || 'Active',
       });
     });
 
@@ -587,6 +612,15 @@ export default function Timeline() {
                 treeColumnIndex={0}
                 labelSettings={{
                   taskLabel: ''
+                }}
+                tooltipSettings={{
+                  showTooltip: true,
+                  taskbar: '<div style="padding: 8px; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">' +
+                    '<div style="font-weight: 600; margin-bottom: 4px;">${TaskName}</div>' +
+                    '<div style="font-size: 12px; color: #666;">Start Date: ${StartDate.toLocaleDateString()}</div>' +
+                    '<div style="font-size: 12px; color: #666;">End Date: ${EndDate.toLocaleDateString()}</div>' +
+                    '<div style="font-size: 12px; color: #666;">Status: ${statusText || "N/A"}</div>' +
+                    '</div>'
                 }}
                 projectStartDate={(() => {
                   const MAX_DATE = new Date(8640000000000000);
