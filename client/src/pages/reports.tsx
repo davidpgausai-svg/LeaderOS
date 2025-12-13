@@ -1119,9 +1119,9 @@ function ExecutiveGoalsReport({
   };
 
   const formatCompletionDate = (dateStr: string | null) => {
-    if (!dateStr) return '-';
+    if (!dateStr) return 'Date not recorded';
     const date = safeDate(dateStr);
-    if (!date) return '-';
+    if (!date) return 'Date not recorded';
     return format(date, 'MMM dd, yyyy');
   };
 
@@ -1152,54 +1152,66 @@ function ExecutiveGoalsReport({
       const strategy = strategies.find((s: any) => s.id === mapping.strategyId);
       if (!strategy) return;
 
-      if ((strategy.status === 'Completed' || strategy.status === 'Archived') && 
-          strategy.completionDate && isWithinLookback(strategy.completionDate)) {
-        completionsByGoal[goalId].items.push({
-          id: strategy.id,
-          type: 'strategy',
-          title: strategy.title,
-          completionDate: safeDate(strategy.completionDate),
-          completionDateStr: strategy.completionDate,
-          strategyId: strategy.id,
-          strategyTitle: strategy.title,
-          strategyColor: strategy.colorCode,
-          isArchived: strategy.status === 'Archived',
-        });
+      const strategyStatus = strategy.status?.toLowerCase();
+      if (strategyStatus === 'completed' || strategyStatus === 'archived') {
+        const hasDateInRange = strategy.completionDate && isWithinLookback(strategy.completionDate);
+        const hasNoDateButCompleted = !strategy.completionDate;
+        if (hasDateInRange || hasNoDateButCompleted) {
+          completionsByGoal[goalId].items.push({
+            id: strategy.id,
+            type: 'strategy',
+            title: strategy.title,
+            completionDate: strategy.completionDate ? safeDate(strategy.completionDate) : null,
+            completionDateStr: strategy.completionDate || null,
+            strategyId: strategy.id,
+            strategyTitle: strategy.title,
+            strategyColor: strategy.colorCode,
+            isArchived: strategyStatus === 'archived',
+          });
+        }
       }
 
       const strategyProjects = projects.filter((p: any) => p.strategyId === strategy.id);
       strategyProjects.forEach((project: any) => {
-        if (project.status === 'C' && project.completionDate && isWithinLookback(project.completionDate)) {
-          completionsByGoal[goalId].items.push({
-            id: project.id,
-            type: 'project',
-            title: project.title,
-            completionDate: safeDate(project.completionDate),
-            completionDateStr: project.completionDate,
-            strategyId: strategy.id,
-            strategyTitle: strategy.title,
-            strategyColor: strategy.colorCode,
-            isArchived: project.isArchived === 'true',
-          });
+        if (project.status === 'C') {
+          const hasDateInRange = project.completionDate && isWithinLookback(project.completionDate);
+          const hasNoDateButCompleted = !project.completionDate;
+          if (hasDateInRange || hasNoDateButCompleted) {
+            completionsByGoal[goalId].items.push({
+              id: project.id,
+              type: 'project',
+              title: project.title,
+              completionDate: project.completionDate ? safeDate(project.completionDate) : null,
+              completionDateStr: project.completionDate || null,
+              strategyId: strategy.id,
+              strategyTitle: strategy.title,
+              strategyColor: strategy.colorCode,
+              isArchived: project.isArchived === 'true',
+            });
+          }
         }
       });
 
       const strategyActions = actions.filter((a: any) => a.strategyId === strategy.id);
       strategyActions.forEach((action: any) => {
-        if (action.status === 'achieved' && action.achievedDate && isWithinLookback(action.achievedDate)) {
-          const project = projects.find((p: any) => p.id === action.projectId);
-          completionsByGoal[goalId].items.push({
-            id: action.id,
-            type: 'action',
-            title: action.title,
-            completionDate: safeDate(action.achievedDate),
-            completionDateStr: action.achievedDate,
-            strategyId: strategy.id,
-            strategyTitle: strategy.title,
-            strategyColor: strategy.colorCode,
-            projectTitle: project?.title,
-            isArchived: action.isArchived === 'true',
-          });
+        if (action.status?.toLowerCase() === 'achieved') {
+          const hasDateInRange = action.achievedDate && isWithinLookback(action.achievedDate);
+          const hasNoDateButAchieved = !action.achievedDate;
+          if (hasDateInRange || hasNoDateButAchieved) {
+            const project = projects.find((p: any) => p.id === action.projectId);
+            completionsByGoal[goalId].items.push({
+              id: action.id,
+              type: 'action',
+              title: action.title,
+              completionDate: action.achievedDate ? safeDate(action.achievedDate) : null,
+              completionDateStr: action.achievedDate || null,
+              strategyId: strategy.id,
+              strategyTitle: strategy.title,
+              strategyColor: strategy.colorCode,
+              projectTitle: project?.title,
+              isArchived: action.isArchived === 'true',
+            });
+          }
         }
       });
 
