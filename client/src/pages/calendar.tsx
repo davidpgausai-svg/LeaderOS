@@ -250,47 +250,86 @@ export default function Calendar() {
     return dates;
   }, [ptoEntries]);
 
-  // Get set of dates that have holidays for visual indicator
+  // Get set of dates that have holidays for visual indicator (using local date keys)
   const holidayDates = useMemo(() => {
     const dates = new Map<string, string>();
     holidays?.forEach(holiday => {
       const date = new Date(holiday.date);
-      const dateKey = `${date.getUTCFullYear()}-${date.getUTCMonth()}-${date.getUTCDate()}`;
+      // Use UTC values to construct a local midnight date to avoid timezone shifts
+      const localDate = new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+      const dateKey = `${localDate.getFullYear()}-${localDate.getMonth()}-${localDate.getDate()}`;
       dates.set(dateKey, holiday.name);
     });
     return dates;
   }, [holidays]);
 
+  // Helper to check if a date is a holiday or has PTO (using local date keys consistently)
+  const getDateIndicators = (cellDate: Date) => {
+    const dateKey = `${cellDate.getFullYear()}-${cellDate.getMonth()}-${cellDate.getDate()}`;
+    const holidayName = holidayDates.get(dateKey);
+    const hasPto = ptoDates.has(dateKey);
+    return { holidayName, hasPto, dateKey };
+  };
+
+  // Agenda view date template to show holiday/PTO indicators
+  const agendaDateTemplate = (props: { date: Date }) => {
+    const cellDate = props.date;
+    const { holidayName, hasPto } = getDateIndicators(cellDate);
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    
+    const dayOfWeek = cellDate.toLocaleDateString('en-US', { weekday: 'short' });
+    const dayNum = cellDate.getDate();
+    const month = cellDate.toLocaleDateString('en-US', { month: 'short' });
+    
+    return (
+      <div 
+        className="flex flex-col items-center justify-center h-full w-full p-2"
+        style={{ 
+          backgroundColor: holidayName ? (isDarkMode ? '#14532d' : '#dcfce7') : 'transparent',
+          minWidth: '60px'
+        }}
+        title={holidayName || ''}
+      >
+        <div className="text-xs text-gray-500 dark:text-gray-400">{dayOfWeek}</div>
+        <div className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-1">
+          {dayNum}
+          {hasPto && <span title="Team member time off">🏖️</span>}
+        </div>
+        <div className="text-xs text-gray-500 dark:text-gray-400">{month}</div>
+      </div>
+    );
+  };
+
   // Render cell handler to add PTO icons and Holiday green background
   const handleRenderCell = (args: any) => {
-    if (args.elementType === 'dateHeader' || args.elementType === 'monthCells') {
+    const cellTypes = ['dateHeader', 'monthCells', 'workCells', 'allDayCells'];
+    
+    if (cellTypes.includes(args.elementType)) {
       const cellDate = args.date as Date;
       if (cellDate) {
         // Reset background color first (Syncfusion reuses DOM nodes)
         args.element.style.backgroundColor = '';
         args.element.title = '';
         
-        const existingContent = args.element.querySelector('.e-date-header, .e-day');
-        if (existingContent) {
-          // Remove any existing indicators first to prevent duplicates
-          const existingPtoIcon = existingContent.querySelector('[data-pto-indicator]');
-          if (existingPtoIcon) {
-            existingPtoIcon.remove();
-          }
-          
-          const dateKey = `${cellDate.getFullYear()}-${cellDate.getMonth()}-${cellDate.getDate()}`;
-          const utcDateKey = `${cellDate.getUTCFullYear()}-${cellDate.getUTCMonth()}-${cellDate.getUTCDate()}`;
-          
-          // Add Holiday indicator - green background on the cell
-          const holidayName = holidayDates.get(utcDateKey);
-          if (holidayName) {
-            const isDarkMode = document.documentElement.classList.contains('dark');
-            args.element.style.backgroundColor = isDarkMode ? '#14532d' : '#dcfce7';
-            args.element.title = holidayName;
-          }
-          
-          // Add PTO indicator (beach umbrella icon)
-          if (ptoDates.has(dateKey)) {
+        // Remove any existing PTO indicators
+        const existingPtoIcon = args.element.querySelector('[data-pto-indicator]');
+        if (existingPtoIcon) {
+          existingPtoIcon.remove();
+        }
+        
+        const { holidayName, hasPto } = getDateIndicators(cellDate);
+        const isDarkMode = document.documentElement.classList.contains('dark');
+        
+        // Add Holiday indicator - green background on the cell
+        if (holidayName) {
+          args.element.style.backgroundColor = isDarkMode ? '#14532d' : '#dcfce7';
+          args.element.title = holidayName;
+        }
+        
+        // Add PTO indicator (beach umbrella icon) for month view date headers
+        if (hasPto && (args.elementType === 'monthCells' || args.elementType === 'dateHeader')) {
+          const existingContent = args.element.querySelector('.e-date-header, .e-day');
+          if (existingContent) {
             const ptoIcon = document.createElement('span');
             ptoIcon.innerHTML = ' 🏖️';
             ptoIcon.title = 'Team member time off';
@@ -299,6 +338,20 @@ export default function Calendar() {
             ptoIcon.setAttribute('data-pto-indicator', 'true');
             existingContent.appendChild(ptoIcon);
           }
+        }
+      }
+    }
+    
+    // Handle view header for Day/Week/WorkWeek views (the date header row)
+    if (args.elementType === 'majorSlot' || args.elementType === 'minorSlot') {
+      // Time slots in day/week views - apply holiday background
+      const cellDate = args.date as Date;
+      if (cellDate) {
+        args.element.style.backgroundColor = '';
+        const { holidayName } = getDateIndicators(cellDate);
+        if (holidayName) {
+          const isDarkMode = document.documentElement.classList.contains('dark');
+          args.element.style.backgroundColor = isDarkMode ? '#14532d' : '#dcfce7';
         }
       }
     }
@@ -399,7 +452,7 @@ export default function Calendar() {
                   <ViewDirective option="Week" />
                   <ViewDirective option="WorkWeek" />
                   <ViewDirective option="Month" />
-                  <ViewDirective option="Agenda" />
+                  <ViewDirective option="Agenda" dateHeaderTemplate={agendaDateTemplate} />
                 </ViewsDirective>
                 <Inject services={[Day, Week, WorkWeek, Month, Agenda]} />
               </ScheduleComponent>
