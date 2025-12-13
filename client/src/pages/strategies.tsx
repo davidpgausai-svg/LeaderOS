@@ -131,6 +131,8 @@ export default function Strategies() {
   const [selectedProjectIdForAction, setSelectedProjectIdForAction] = useState<string | null>(null);
   const [selectedStrategyIdForAction, setSelectedStrategyIdForAction] = useState<string | null>(null);
   const [actionFolderUrl, setActionFolderUrl] = useState("");
+  const [actionFolderUrlEditing, setActionFolderUrlEditing] = useState(false);
+  const [actionFolderUrlSaving, setActionFolderUrlSaving] = useState(false);
   const [newChecklistItem, setNewChecklistItem] = useState("");
   const [editingChecklistItemId, setEditingChecklistItemId] = useState<string | null>(null);
   const [editingChecklistItemTitle, setEditingChecklistItemTitle] = useState("");
@@ -2084,14 +2086,11 @@ export default function Strategies() {
                                                   className="h-5 w-5 p-0"
                                                   onClick={(e) => {
                                                     e.stopPropagation();
-                                                    if (action.documentFolderUrl) {
-                                                      window.open(action.documentFolderUrl, '_blank');
-                                                    } else {
-                                                      setFolderUrlModalAction(action);
-                                                      setActionFolderUrl(action.documentFolderUrl || "");
-                                                    }
+                                                    setActionFolderUrl(action.documentFolderUrl || "");
+                                                    setActionFolderUrlEditing(!action.documentFolderUrl && canEditAllStrategies());
+                                                    setFolderUrlModalAction(action);
                                                   }}
-                                                  title={action.documentFolderUrl ? "Open folder" : "Add folder link"}
+                                                  title={action.documentFolderUrl ? "Manage folder link" : "Add folder link"}
                                                   data-testid={`action-folder-${action.id}`}
                                                 >
                                                   <FolderOpen className={`w-3 h-3 ${action.documentFolderUrl ? 'text-blue-500' : 'text-gray-400'}`} />
@@ -3844,10 +3843,11 @@ export default function Strategies() {
           if (!open) {
             setFolderUrlModalAction(null);
             setActionFolderUrl("");
+            setActionFolderUrlEditing(false);
           }
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FolderOpen className="h-5 w-5" />
@@ -3861,39 +3861,180 @@ export default function Strategies() {
                   {folderUrlModalAction.title}
                 </h3>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="action-folder-url">Folder URL (ClickUp, OneDrive, etc.)</Label>
-                <Input
-                  id="action-folder-url"
-                  placeholder="https://..."
-                  value={actionFolderUrl}
-                  onChange={(e) => setActionFolderUrl(e.target.value)}
-                  data-testid="input-action-folder-url"
-                />
-              </div>
-              <div className="flex gap-2 justify-end">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setFolderUrlModalAction(null);
-                    setActionFolderUrl("");
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={() => {
-                    updateActionFolderUrlMutation.mutate({ 
-                      action: folderUrlModalAction, 
-                      folderUrl: actionFolderUrl 
-                    });
-                  }}
-                  disabled={updateActionFolderUrlMutation.isPending}
-                  data-testid="button-save-action-folder-url"
-                >
-                  Save
-                </Button>
-              </div>
+              
+              {actionFolderUrlEditing ? (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">
+                      Folder URL (ClickUp, OneDrive, Google Drive, etc.)
+                    </label>
+                    <input
+                      type="url"
+                      value={actionFolderUrl}
+                      onChange={(e) => setActionFolderUrl(e.target.value)}
+                      placeholder="https://drive.google.com/... or https://onedrive.com/..."
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      data-testid="input-action-folder-url"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Paste a link to your folder (Google Drive, OneDrive, ClickUp, SharePoint, etc.)
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setActionFolderUrlEditing(false);
+                        setActionFolderUrl(folderUrlModalAction.documentFolderUrl || "");
+                      }}
+                      disabled={actionFolderUrlSaving}
+                      data-testid="button-cancel-action-folder-url"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={async () => {
+                        if (actionFolderUrl) {
+                          try {
+                            new URL(actionFolderUrl);
+                          } catch {
+                            toast({ 
+                              title: "Invalid URL format", 
+                              description: "Please enter a valid URL starting with https:// or http://",
+                              variant: "destructive" 
+                            });
+                            return;
+                          }
+                        }
+                        setActionFolderUrlSaving(true);
+                        try {
+                          await apiRequest("PATCH", `/api/actions/${folderUrlModalAction.id}`, { 
+                            documentFolderUrl: actionFolderUrl || null 
+                          });
+                          queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+                          toast({ title: "Folder link saved" });
+                          setFolderUrlModalAction({ ...folderUrlModalAction, documentFolderUrl: actionFolderUrl || null });
+                          setActionFolderUrlEditing(false);
+                        } catch (error) {
+                          toast({ title: "Failed to save URL", variant: "destructive" });
+                        } finally {
+                          setActionFolderUrlSaving(false);
+                        }
+                      }}
+                      disabled={actionFolderUrlSaving}
+                      data-testid="button-save-action-folder-url"
+                    >
+                      {actionFolderUrlSaving ? "Saving..." : "Save"}
+                    </Button>
+                  </div>
+                </div>
+              ) : folderUrlModalAction.documentFolderUrl ? (
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    {(() => {
+                      try {
+                        const hostname = new URL(folderUrlModalAction.documentFolderUrl).hostname;
+                        return (
+                          <img 
+                            src={`https://www.google.com/s2/favicons?domain=${hostname}&sz=32`}
+                            alt=""
+                            className="w-6 h-6 mt-0.5 rounded"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        );
+                      } catch {
+                        return <FolderOpen className="w-6 h-6 mt-0.5 text-blue-500" />;
+                      }
+                    })()}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        {(() => {
+                          try {
+                            return new URL(folderUrlModalAction.documentFolderUrl).hostname;
+                          } catch {
+                            return "Folder Link";
+                          }
+                        })()}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        {folderUrlModalAction.documentFolderUrl}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <Button
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                    onClick={() => window.open(folderUrlModalAction.documentFolderUrl, '_blank')}
+                    data-testid="button-open-action-folder-url"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Open Folder
+                  </Button>
+                  
+                  {canEditAllStrategies() && (
+                    <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full sm:flex-1"
+                        onClick={() => setActionFolderUrlEditing(true)}
+                        data-testid="button-edit-action-folder-url"
+                      >
+                        <Edit className="w-3.5 h-3.5 mr-1.5" />
+                        Edit Link
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full sm:flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={async () => {
+                          setActionFolderUrlSaving(true);
+                          try {
+                            await apiRequest("PATCH", `/api/actions/${folderUrlModalAction.id}`, { 
+                              documentFolderUrl: null 
+                            });
+                            queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+                            toast({ title: "Folder link removed" });
+                            setFolderUrlModalAction({ ...folderUrlModalAction, documentFolderUrl: null });
+                            setActionFolderUrl("");
+                            setActionFolderUrlEditing(true);
+                          } catch (error) {
+                            toast({ title: "Failed to remove link", variant: "destructive" });
+                          } finally {
+                            setActionFolderUrlSaving(false);
+                          }
+                        }}
+                        disabled={actionFolderUrlSaving}
+                        data-testid="button-remove-action-folder-url"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                        Remove
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                  <FolderOpen className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm font-medium">No folder linked</p>
+                  {canEditAllStrategies() ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-3"
+                      onClick={() => setActionFolderUrlEditing(true)}
+                      data-testid="button-add-action-folder-url"
+                    >
+                      <Plus className="w-4 h-4 mr-1.5" />
+                      Add Folder Link
+                    </Button>
+                  ) : (
+                    <p className="text-xs mt-1">Contact an administrator to add a folder link</p>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
