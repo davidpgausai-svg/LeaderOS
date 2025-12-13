@@ -704,7 +704,7 @@ function StrategyHealthReport({ strategies, projects, actions, getRiskLevel, get
                         <div className="flex items-center gap-2">
                           <h3 className={`font-semibold ${isArchived ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`}>{strategy.title}</h3>
                           {isArchived && (
-                            <Badge variant="outline" className="text-xs text-gray-400 border-gray-300">Archived</Badge>
+                            <Badge variant="outline" className="text-xs text-gray-600 dark:text-gray-300 border-gray-400 bg-white dark:bg-gray-700 opacity-100 relative z-10">Archived</Badge>
                           )}
                         </div>
                         <p className="text-sm text-gray-500">{strategyProjects.length} projects</p>
