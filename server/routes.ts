@@ -122,15 +122,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let users;
       
-      // Super Admins can see all users across all organizations
-      if (user.isSuperAdmin === 'true') {
-        users = await storage.getAllUsers();
-      } else {
-        // Regular users only see users in their organization
-        users = user.organizationId 
-          ? await storage.getUsersByOrganization(user.organizationId)
-          : [];
-      }
+      // All users (including Super Admins) see only users in their organization for the main views
+      // Super Admins can see all users via the /api/super-admin/organizations endpoint
+      users = user.organizationId 
+        ? await storage.getUsersByOrganization(user.organizationId)
+        : [];
       
       res.json(users);
     } catch (error) {
@@ -362,10 +358,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let strategies;
       
-      // Super Admins can see all strategies across all organizations
-      if (user.isSuperAdmin === 'true') {
-        strategies = await storage.getAllStrategies();
-      } else if (user.role === 'administrator') {
+      // All users (including Super Admins) see only strategies in their organization for main views
+      // Super Admins can see cross-org data via /api/super-admin/* endpoints
+      if (user.role === 'administrator' || user.isSuperAdmin === 'true') {
         // Administrators see all strategies in their organization
         strategies = user.organizationId 
           ? await storage.getStrategiesByOrganization(user.organizationId)
@@ -875,10 +870,8 @@ Respond ONLY with a valid JSON object in this exact format:
       let projects;
       
       // First get the base set of projects based on organization and role
-      if (user.isSuperAdmin === 'true') {
-        // Super Admins see all projects across all organizations
-        projects = await storage.getAllProjects();
-      } else if (user.organizationId) {
+      // All users (including Super Admins) are scoped to their organization for main views
+      if (user.organizationId) {
         // All other users are limited to their organization first
         projects = await storage.getProjectsByOrganization(user.organizationId);
         
@@ -1768,10 +1761,8 @@ Respond ONLY with a valid JSON object in this exact format:
 
       let actions;
       
-      // Super Admins see all actions across all organizations
-      if (user.isSuperAdmin === 'true') {
-        actions = await storage.getAllActions();
-      } else if (user.role === 'administrator') {
+      // All users (including Super Admins) see only actions in their organization for main views
+      if (user.role === 'administrator' || user.isSuperAdmin === 'true') {
         // Administrators see all actions in their organization
         actions = user.organizationId 
           ? await storage.getActionsByOrganization(user.organizationId)
