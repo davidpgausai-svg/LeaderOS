@@ -83,7 +83,7 @@ Email-based password reset flow using Resend for transactional emails. Users can
 Registration requires an organization-specific secret token in the URL (`/register/:token`). Administrators can manage tokens, and the first registrant for an organization becomes an Administrator. Super Admins can be designated via the `SUPER_ADMIN_EMAILS` environment variable.
 
 ### Key Data Models
-Core entities include Organizations (for multi-tenancy), Users (with organization membership and optional super_admin status), User Strategy Assignments, Strategies (with Change Continuum Framework), Projects (with communication URL), Actions, Barriers, Dependencies, Meeting Notes, Activities, AI Chat Conversations, Template Types, and Action People Assignments (for to-do list tagging). All tables include organization_id for data isolation.
+Core entities include Organizations (for multi-tenancy), Users (with organization membership and optional super_admin status), User Strategy Assignments, Strategies (with Change Continuum Framework), Projects (with communication URL), Actions, Barriers, Dependencies, Meeting Notes, Activities, Template Types, and Action People Assignments (for to-do list tagging). All tables include organization_id for data isolation.
 
 ### Personalized Dashboard
 The main dashboard shows a personalized "Welcome back, [Name]" greeting with two cards:
@@ -105,7 +105,7 @@ Strategies follow an Active → Completed → Archived lifecycle, with cascading
 Strategies incorporate 9 mandatory change management fields (e.g., Case for Change, Vision Statement), enforced for completion and supporting AI generation with data sanitization.
 
 ### Barriers System
-A project-level risk tracking system for barriers, including description, severity, status lifecycle, owner, and resolution notes. Barriers are visible on project cards and are integrated with the AI Chat Assistant for insights.
+A project-level risk tracking system for barriers, including description, severity, status lifecycle, owner, and resolution notes. Barriers are visible on project cards.
 
 ### Dependencies System
 Tracks and visualizes relationships between projects and actions across strategies, representing "blocks" or "depends_on." Features include DependencyTags, a dedicated graph visualization page, and activity logging. **Automatic Cleanup**: Dependencies are automatically removed when strategies are archived or completed to prevent stale blockers from appearing on active items.
@@ -132,9 +132,6 @@ A real-time notification system for action completions, project progress, strate
 
 ### Meeting Notes (Report-Out Meetings)
 Allows creation and management of report-out meeting notes tied to strategies, with dynamic selection of projects and actions, rich text fields, PDF export, and authorization controls.
-
-### AI Chat Assistant
-A floating "Strategic AI Assistant" provides contextual help, real-time status updates with live data, and copy writing assistance. It has access to user-assigned strategies and persists chat history. Supports OpenAI (GPT-4o) and Google Gemini (Gemini 2.0 Flash) based on environment variable configuration.
 
 ### Templates Feature
 A collection of strategic planning, project management, and productivity templates (e.g., Strategy on a Page, PESTLE Analysis, SWOT Analysis) accessible via the sidebar. All templates support Word document export, and administrators can manage custom template categories.
