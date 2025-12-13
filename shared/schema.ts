@@ -44,6 +44,7 @@ export const users = pgTable("users", {
   isSuperAdmin: text("is_super_admin").notNull().default('false'), // 'true' or 'false' - Super Admin can manage all organizations
   fte: text("fte").default('1.0'), // Full-time equivalent (1.0 = 40 hours/week, 0.5 = 20 hours/week)
   salary: integer("salary"), // Annual salary for cost calculations (nullable for future use)
+  serviceDeliveryHours: text("service_delivery_hours").default('0'), // Hours for individual contributor work, meetings, etc.
   twoFactorEnabled: text("two_factor_enabled").notNull().default('false'), // 'true' or 'false' - 2FA via email
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
