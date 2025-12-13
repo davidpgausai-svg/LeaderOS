@@ -7,7 +7,7 @@ import {
   actionDocuments, actionChecklistItems, userStrategyAssignments,
   meetingNotes, aiChatConversations, barriers, dependencies, templateTypes,
   organizations, passwordResetTokens, twoFactorCodes, executiveGoals, strategyExecutiveGoals,
-  teamTags, projectTeamTags, projectResourceAssignments, actionPeopleAssignments,
+  teamTags, projectTeamTags, projectResourceAssignments, actionPeopleAssignments, ptoEntries,
   type User, type UpsertUser, type InsertUser,
   type Strategy, type InsertStrategy,
   type Project, type InsertProject,
@@ -30,7 +30,8 @@ import {
   type TeamTag, type InsertTeamTag,
   type ProjectTeamTag,
   type ProjectResourceAssignment, type InsertProjectResourceAssignment,
-  type ActionPeopleAssignment, type InsertActionPeopleAssignment
+  type ActionPeopleAssignment, type InsertActionPeopleAssignment,
+  type PtoEntry, type InsertPtoEntry
 } from '@shared/schema';
 
 export class PostgresStorage implements IStorage {
@@ -949,6 +950,40 @@ export class PostgresStorage implements IStorage {
         eq(actionPeopleAssignments.actionId, actionId),
         eq(actionPeopleAssignments.userId, userId)
       ));
+    return true;
+  }
+
+  async getPtoEntriesByUser(userId: string): Promise<PtoEntry[]> {
+    return db.select().from(ptoEntries).where(eq(ptoEntries.userId, userId)).orderBy(desc(ptoEntries.startDate));
+  }
+
+  async getPtoEntriesByOrganization(organizationId: string): Promise<PtoEntry[]> {
+    return db.select().from(ptoEntries).where(eq(ptoEntries.organizationId, organizationId)).orderBy(desc(ptoEntries.startDate));
+  }
+
+  async getPtoEntry(id: string): Promise<PtoEntry | undefined> {
+    const [entry] = await db.select().from(ptoEntries).where(eq(ptoEntries.id, id));
+    return entry || undefined;
+  }
+
+  async createPtoEntry(entry: InsertPtoEntry & { userId: string; organizationId: string }): Promise<PtoEntry> {
+    const [created] = await db.insert(ptoEntries).values({
+      id: randomUUID(),
+      ...entry,
+    }).returning();
+    return created;
+  }
+
+  async updatePtoEntry(id: string, updates: Partial<InsertPtoEntry>): Promise<PtoEntry | undefined> {
+    const [updated] = await db.update(ptoEntries)
+      .set(updates)
+      .where(eq(ptoEntries.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deletePtoEntry(id: string): Promise<boolean> {
+    await db.delete(ptoEntries).where(eq(ptoEntries.id, id));
     return true;
   }
 }

@@ -1,4 +1,4 @@
-import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Project, type InsertProject, type Activity, type InsertActivity, type Action, type InsertAction, type Notification, type InsertNotification, type ActionDocument, type InsertActionDocument, type ActionChecklistItem, type InsertActionChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, type AiChatConversation, type InsertAiChatConversation, type Barrier, type InsertBarrier, type Dependency, type InsertDependency, type TemplateType, type InsertTemplateType, type ExecutiveGoal, type InsertExecutiveGoal, type StrategyExecutiveGoal, type TeamTag, type InsertTeamTag, type ProjectTeamTag, type ProjectResourceAssignment, type InsertProjectResourceAssignment, type ActionPeopleAssignment, type InsertActionPeopleAssignment } from "@shared/schema";
+import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Project, type InsertProject, type Activity, type InsertActivity, type Action, type InsertAction, type Notification, type InsertNotification, type ActionDocument, type InsertActionDocument, type ActionChecklistItem, type InsertActionChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, type AiChatConversation, type InsertAiChatConversation, type Barrier, type InsertBarrier, type Dependency, type InsertDependency, type TemplateType, type InsertTemplateType, type ExecutiveGoal, type InsertExecutiveGoal, type StrategyExecutiveGoal, type TeamTag, type InsertTeamTag, type ProjectTeamTag, type ProjectResourceAssignment, type InsertProjectResourceAssignment, type ActionPeopleAssignment, type InsertActionPeopleAssignment, type PtoEntry, type InsertPtoEntry } from "@shared/schema";
 
 export interface IStorage {
   // User methods
@@ -149,6 +149,14 @@ export interface IStorage {
   getActionPeopleAssignmentsByUser(userId: string, organizationId: string): Promise<ActionPeopleAssignment[]>;
   createActionPeopleAssignment(assignment: InsertActionPeopleAssignment): Promise<ActionPeopleAssignment>;
   deleteActionPeopleAssignment(actionId: string, userId: string): Promise<boolean>;
+
+  // PTO Entry methods
+  getPtoEntriesByUser(userId: string): Promise<PtoEntry[]>;
+  getPtoEntriesByOrganization(organizationId: string): Promise<PtoEntry[]>;
+  getPtoEntry(id: string): Promise<PtoEntry | undefined>;
+  createPtoEntry(entry: InsertPtoEntry & { userId: string; organizationId: string }): Promise<PtoEntry>;
+  updatePtoEntry(id: string, updates: Partial<InsertPtoEntry>): Promise<PtoEntry | undefined>;
+  deletePtoEntry(id: string): Promise<boolean>;
 }
 
 // Use PostgreSQL storage

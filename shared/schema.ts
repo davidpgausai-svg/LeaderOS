@@ -569,3 +569,27 @@ export const insertProjectTeamTagSchema = createInsertSchema(projectTeamTags).om
 
 export type InsertProjectTeamTag = z.infer<typeof insertProjectTeamTagSchema>;
 export type ProjectTeamTag = typeof projectTeamTags.$inferSelect;
+
+// PTO Entries - Track time off for users
+export const ptoEntries = pgTable("pto_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+export const insertPtoEntrySchema = createInsertSchema(ptoEntries).omit({
+  id: true,
+  createdAt: true,
+  userId: true,
+  organizationId: true,
+}).extend({
+  startDate: z.coerce.date(),
+  endDate: z.coerce.date(),
+});
+
+export type InsertPtoEntry = z.infer<typeof insertPtoEntrySchema>;
+export type PtoEntry = typeof ptoEntries.$inferSelect;
