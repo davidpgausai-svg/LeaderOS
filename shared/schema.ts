@@ -3,21 +3,101 @@ import { pgTable, text, varchar, timestamp, integer, jsonb, index, unique, seria
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Organizations table for multi-tenancy
+// Subscription plan types
+export const subscriptionPlanEnum = ['starter', 'leaderpro', 'team', 'legacy'] as const;
+export type SubscriptionPlan = typeof subscriptionPlanEnum[number];
+
+export const subscriptionStatusEnum = ['active', 'trialing', 'past_due', 'canceled', 'suspended'] as const;
+export type SubscriptionStatus = typeof subscriptionStatusEnum[number];
+
+export const billingIntervalEnum = ['monthly', 'annual'] as const;
+export type BillingInterval = typeof billingIntervalEnum[number];
+
+// Organizations table for multi-tenancy with subscription info
 export const organizations = pgTable("organizations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   registrationToken: text("registration_token").notNull().unique(),
+  subscriptionPlan: text("subscription_plan").notNull().default('starter'),
+  subscriptionStatus: text("subscription_status").notNull().default('active'),
+  billingInterval: text("billing_interval").notNull().default('monthly'),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  stripePriceId: text("stripe_price_id"),
+  currentPeriodStart: timestamp("current_period_start"),
+  currentPeriodEnd: timestamp("current_period_end"),
+  trialEndsAt: timestamp("trial_ends_at"),
+  cancelAtPeriodEnd: text("cancel_at_period_end").notNull().default('false'),
+  pendingDowngradePlan: text("pending_downgrade_plan"),
+  maxUsers: integer("max_users").notNull().default(1),
+  extraSeats: integer("extra_seats").notNull().default(0),
+  pendingExtraSeats: integer("pending_extra_seats"),
+  isLegacy: text("is_legacy").notNull().default('false'),
+  paymentFailedAt: timestamp("payment_failed_at"),
+  lastPaymentReminderAt: timestamp("last_payment_reminder_at"),
   createdAt: timestamp("created_at").default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
 });
 
 export const insertOrganizationSchema = createInsertSchema(organizations).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
 });
 
 export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
 export type Organization = typeof organizations.$inferSelect;
+
+// Billing History - Track all billing events
+export const billingHistory = pgTable("billing_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull(),
+  eventType: text("event_type").notNull(),
+  description: text("description").notNull(),
+  amountCents: integer("amount_cents"),
+  currency: text("currency").default('usd'),
+  stripeInvoiceId: text("stripe_invoice_id"),
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
+  planBefore: text("plan_before"),
+  planAfter: text("plan_after"),
+  seatsBefore: integer("seats_before"),
+  seatsAfter: integer("seats_after"),
+  metadata: text("metadata"),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+export const insertBillingHistorySchema = createInsertSchema(billingHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertBillingHistory = z.infer<typeof insertBillingHistorySchema>;
+export type BillingHistory = typeof billingHistory.$inferSelect;
+
+// Payment Failures - Track failed payments and retry attempts
+export const paymentFailures = pgTable("payment_failures", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull(),
+  stripeInvoiceId: text("stripe_invoice_id"),
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
+  amountCents: integer("amount_cents").notNull(),
+  currency: text("currency").default('usd'),
+  failureReason: text("failure_reason"),
+  remindersSent: integer("reminders_sent").notNull().default(0),
+  lastReminderAt: timestamp("last_reminder_at"),
+  gracePeriodEndsAt: timestamp("grace_period_ends_at").notNull(),
+  resolvedAt: timestamp("resolved_at"),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+export const insertPaymentFailureSchema = createInsertSchema(paymentFailures).omit({
+  id: true,
+  createdAt: true,
+  remindersSent: true,
+});
+
+export type InsertPaymentFailure = z.infer<typeof insertPaymentFailureSchema>;
+export type PaymentFailure = typeof paymentFailures.$inferSelect;
 
 // Session storage table for Replit Auth
 export const sessions = pgTable(
