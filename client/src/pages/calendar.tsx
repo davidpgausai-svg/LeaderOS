@@ -36,9 +36,20 @@ interface ScheduleEvent {
   IsAllDay: boolean;
   CategoryColor: string;
   Description?: string;
-  EventType: 'project' | 'action';
+  EventType: 'project' | 'action' | 'pto';
   StrategyId?: string;
   ProjectId?: string;
+}
+
+interface PtoEntryWithUser {
+  id: string;
+  userId: string;
+  organizationId: string;
+  startDate: Date | string;
+  endDate: Date | string;
+  notes: string | null;
+  createdAt: Date | string | null;
+  userName: string;
 }
 
 export default function Calendar() {
@@ -81,6 +92,10 @@ export default function Calendar() {
 
   const { data: actions, isLoading: actionsLoading } = useQuery<Action[]>({
     queryKey: ["/api/actions"],
+  });
+
+  const { data: ptoEntries, isLoading: ptoLoading } = useQuery<PtoEntryWithUser[]>({
+    queryKey: ["/api/pto"],
   });
 
   const filteredStrategies = useMemo(() => {
@@ -163,8 +178,26 @@ export default function Calendar() {
       });
     });
 
+    // Add PTO entries
+    ptoEntries?.forEach(pto => {
+      const startDate = parseAsUTCDate(pto.startDate);
+      const endDate = parseAsUTCDate(pto.endDate);
+      endDate.setDate(endDate.getDate() + 1); // Add 1 day for inclusive end date display
+      
+      events.push({
+        Id: `pto-${pto.id}`,
+        Subject: `🏖️ ${pto.userName} - Time Off`,
+        StartTime: startDate,
+        EndTime: endDate,
+        IsAllDay: true,
+        CategoryColor: '#10b981', // Green color for PTO
+        Description: `${pto.userName} - Time Off${pto.notes ? `\n${pto.notes}` : ''}`,
+        EventType: 'pto',
+      });
+    });
+
     return events;
-  }, [filteredProjects, filteredActions, strategyMap, projectMap]);
+  }, [filteredProjects, filteredActions, strategyMap, projectMap, ptoEntries]);
 
   const eventSettings: EventSettingsModel = {
     dataSource: scheduleData,
@@ -194,7 +227,7 @@ export default function Calendar() {
     }
   };
 
-  const isLoading = strategiesLoading || projectsLoading || actionsLoading;
+  const isLoading = strategiesLoading || projectsLoading || actionsLoading || ptoLoading;
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
