@@ -4201,6 +4201,7 @@ ${outputTemplate}`;
     'price_1Sdzk1H5ttU72wpZ1mDifc7R', // LeaderPro annual (live)
     'price_1Sdzl2H5ttU72wpZhrhH2ifK', // Team monthly (live)
     'price_1SdzmTH5ttU72wpZukNez9ok', // Team annual (live)
+    'price_1Se1VpH5ttU72wpZ2PeWFafx', // Team seat add-on (live) - $6/mo per additional member
   ]);
 
   app.post("/api/billing/create-anonymous-checkout", async (req, res) => {

@@ -30,6 +30,7 @@ export const PRICE_IDS = {
   teamSeat: {
     monthly: 'price_1SdxDOAPmlCUuC3z1JC3NDy2',
     annual: 'price_1SdxDOAPmlCUuC3zgGeGd9sp',
+    monthlyLive: 'price_1Se1VpH5ttU72wpZ2PeWFafx', // live - $6/mo per additional team member
   },
 };
 
