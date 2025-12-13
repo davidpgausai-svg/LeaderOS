@@ -22,7 +22,7 @@ export const organizations = pgTable("organizations", {
   subscriptionStatus: text("subscription_status").notNull().default('active'),
   billingInterval: text("billing_interval").notNull().default('monthly'),
   stripeCustomerId: text("stripe_customer_id"),
-  stripeSubscriptionId: text("stripe_subscription_id"),
+  stripeSubscriptionId: text("stripe_subscription_id").unique(),
   stripePriceId: text("stripe_price_id"),
   currentPeriodStart: timestamp("current_period_start"),
   currentPeriodEnd: timestamp("current_period_end"),

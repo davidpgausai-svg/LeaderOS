@@ -154,7 +154,6 @@ class BillingService {
       mode: 'subscription',
       success_url: successUrl,
       cancel_url: cancelUrl,
-      customer_creation: 'always',
       metadata: {
         flow: 'new_customer_purchase',
       },

@@ -4187,11 +4187,25 @@ ${outputTemplate}`;
   });
 
   // Create a Stripe checkout session for new customers (no authentication required)
+  // Allowlist of valid price IDs for anonymous purchase
+  const VALID_ANONYMOUS_PRICE_IDS = new Set([
+    'price_1SdxDMAPmlCUuC3zt16HQ6hR', // Starter monthly
+    'price_1SdxDMAPmlCUuC3zrwwZFojc', // LeaderPro monthly
+    'price_1SdxDMAPmlCUuC3z1eidVw7P', // LeaderPro annual
+    'price_1SdxDNAPmlCUuC3zCMeKd0bV', // Team monthly
+    'price_1SdxDNAPmlCUuC3zOcpRsQ3S', // Team annual
+  ]);
+
   app.post("/api/billing/create-anonymous-checkout", async (req, res) => {
     try {
       const { priceId, trialDays } = req.body;
       if (!priceId) {
         return res.status(400).json({ message: "Price ID is required" });
+      }
+
+      // Validate price ID against allowlist
+      if (!VALID_ANONYMOUS_PRICE_IDS.has(priceId)) {
+        return res.status(400).json({ message: "Invalid price ID" });
       }
 
       const { billingService } = await import('./billingService');

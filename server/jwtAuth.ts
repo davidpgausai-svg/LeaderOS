@@ -296,6 +296,14 @@ export async function setupAuth(app: Express) {
         plan = 'leaderpro';
       }
 
+      // Replay protection: Check if this subscription is already linked to an organization
+      const allOrgs = await getAllOrganizations();
+      const existingOrg = allOrgs.find((o: any) => o.stripeSubscriptionId === subscriptionId);
+      if (existingOrg) {
+        logger.warn(`[SECURITY] Replay attack attempt: subscription ${subscriptionId} already linked to org ${existingOrg.id}`);
+        return res.status(409).json({ error: 'This subscription has already been used. Please log in to your existing account.' });
+      }
+
       // Create the organization with the purchased plan
       const org = await createOrganization(organizationName);
       
@@ -354,7 +362,12 @@ export async function setupAuth(app: Express) {
           organizationName: org.name,
         }
       });
-    } catch (error) {
+    } catch (error: any) {
+      // Handle unique constraint violation (race condition on subscription ID)
+      if (error?.code === '23505' || error?.message?.includes('unique constraint')) {
+        logger.warn(`[SECURITY] Duplicate subscription ID detected (race condition): ${error.message}`);
+        return res.status(409).json({ error: 'This subscription has already been used. Please log in to your existing account.' });
+      }
       logger.error('[SECURITY] Post-purchase registration failed', error);
       res.status(500).json({ error: 'Registration failed. Please try again.' });
     }
@@ -1028,6 +1041,11 @@ export const validateCsrf: RequestHandler = (req: any, res, next) => {
   
   // Skip CSRF for Stripe webhook (uses its own signature verification)
   if (fullPath.startsWith('/api/stripe/webhook')) {
+    return next();
+  }
+  
+  // Skip CSRF for anonymous checkout (used by marketing pages for new customers)
+  if (fullPath === '/api/billing/create-anonymous-checkout') {
     return next();
   }
   
