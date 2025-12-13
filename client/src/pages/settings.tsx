@@ -60,8 +60,9 @@ import {
   Check,
   Building2,
   CalendarDays,
+  Star,
 } from "lucide-react";
-import type { TemplateType, Organization, ExecutiveGoal, TeamTag, PtoEntry } from "@shared/schema";
+import type { TemplateType, Organization, ExecutiveGoal, TeamTag, PtoEntry, Holiday } from "@shared/schema";
 import { Pencil, X, Hash } from "lucide-react";
 
 interface UserStrategyRowProps {
@@ -878,6 +879,243 @@ function PtoSettings({ userId }: { userId: string }) {
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={() => deletePtoMutation.mutate(entry.id)}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function HolidaysSettings() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isAddingHoliday, setIsAddingHoliday] = useState(false);
+  const [editingHoliday, setEditingHoliday] = useState<Holiday | null>(null);
+  const [holidayDate, setHolidayDate] = useState("");
+  const [holidayName, setHolidayName] = useState("");
+  const [holidayDescription, setHolidayDescription] = useState("");
+
+  const { data: holidays = [], isLoading } = useQuery<Holiday[]>({
+    queryKey: ['/api/holidays'],
+  });
+
+  const createHolidayMutation = useMutation({
+    mutationFn: async (data: { date: string; name: string; description?: string }) => {
+      const response = await apiRequest("POST", "/api/holidays", data);
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Holiday added successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/holidays'] });
+      resetForm();
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to add holiday", variant: "destructive" });
+    },
+  });
+
+  const updateHolidayMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { date?: string; name?: string; description?: string } }) => {
+      const response = await apiRequest("PATCH", `/api/holidays/${id}`, data);
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Holiday updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/holidays'] });
+      resetForm();
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update holiday", variant: "destructive" });
+    },
+  });
+
+  const deleteHolidayMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/holidays/${id}`);
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Holiday deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/holidays'] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to delete holiday", variant: "destructive" });
+    },
+  });
+
+  const resetForm = () => {
+    setIsAddingHoliday(false);
+    setEditingHoliday(null);
+    setHolidayDate("");
+    setHolidayName("");
+    setHolidayDescription("");
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!holidayDate || !holidayName.trim()) {
+      toast({ title: "Error", description: "Please enter a date and name for the holiday", variant: "destructive" });
+      return;
+    }
+
+    const data = { date: holidayDate, name: holidayName.trim(), description: holidayDescription || undefined };
+    if (editingHoliday) {
+      updateHolidayMutation.mutate({ id: editingHoliday.id, data });
+    } else {
+      createHolidayMutation.mutate(data);
+    }
+  };
+
+  const startEdit = (holiday: Holiday) => {
+    setEditingHoliday(holiday);
+    setHolidayDate(new Date(holiday.date).toISOString().split('T')[0]);
+    setHolidayName(holiday.name);
+    setHolidayDescription(holiday.description || "");
+    setIsAddingHoliday(true);
+  };
+
+  const formatDate = (date: Date | string) => {
+    return new Date(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  return (
+    <Card data-testid="card-holidays">
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center">
+            <Star className="mr-2 h-5 w-5 text-yellow-500" />
+            Holidays
+          </div>
+          {!isAddingHoliday && (
+            <Button size="sm" onClick={() => setIsAddingHoliday(true)} data-testid="button-add-holiday">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Holiday
+            </Button>
+          )}
+        </CardTitle>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Organization-wide holidays appear on all team members' calendars with a gold star.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isAddingHoliday && (
+          <form onSubmit={handleSubmit} className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-800 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="holiday-date">Date</Label>
+                <Input
+                  id="holiday-date"
+                  type="date"
+                  value={holidayDate}
+                  onChange={(e) => setHolidayDate(e.target.value)}
+                  data-testid="input-holiday-date"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="holiday-name">Holiday Name</Label>
+                <Input
+                  id="holiday-name"
+                  value={holidayName}
+                  onChange={(e) => setHolidayName(e.target.value)}
+                  placeholder="e.g., New Year's Day, Independence Day"
+                  data-testid="input-holiday-name"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="holiday-description">Description (optional)</Label>
+              <Input
+                id="holiday-description"
+                value={holidayDescription}
+                onChange={(e) => setHolidayDescription(e.target.value)}
+                placeholder="e.g., Office closed"
+                data-testid="input-holiday-description"
+              />
+            </div>
+            <div className="flex space-x-2">
+              <Button
+                type="submit"
+                disabled={createHolidayMutation.isPending || updateHolidayMutation.isPending}
+                data-testid="button-save-holiday"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {editingHoliday ? 'Update' : 'Save'}
+              </Button>
+              <Button type="button" variant="outline" onClick={resetForm} data-testid="button-cancel-holiday">
+                Cancel
+              </Button>
+            </div>
+          </form>
+        )}
+
+        {isLoading ? (
+          <div className="text-center text-gray-500 py-4">Loading...</div>
+        ) : holidays.length === 0 ? (
+          <div className="text-center text-gray-500 py-8">
+            <Star className="h-12 w-12 mx-auto mb-2 opacity-50 text-yellow-400" />
+            <p>No holidays scheduled</p>
+            <p className="text-sm">Click "Add Holiday" to add organization-wide holidays</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {holidays.map((holiday) => (
+              <div
+                key={holiday.id}
+                className="flex items-center justify-between p-3 border rounded-lg bg-white dark:bg-gray-700"
+                data-testid={`holiday-entry-${holiday.id}`}
+              >
+                <div className="flex items-center space-x-3">
+                  <Star className="h-5 w-5 text-yellow-500" />
+                  <div>
+                    <p className="font-medium">{holiday.name}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {formatDate(holiday.date)}
+                    </p>
+                    {holiday.description && (
+                      <p className="text-sm text-gray-400 dark:text-gray-500">{holiday.description}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex space-x-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => startEdit(holiday)}
+                    data-testid={`button-edit-holiday-${holiday.id}`}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700"
+                        data-testid={`button-delete-holiday-${holiday.id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Holiday</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete "{holiday.name}"?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => deleteHolidayMutation.mutate(holiday.id)}
                           className="bg-red-600 hover:bg-red-700"
                         >
                           Delete
@@ -2025,7 +2263,7 @@ export default function Settings() {
           {/* Administrator Settings */}
           {canManageUsers() && activeTab.startsWith("admin") && (
             <Tabs value={adminActiveTab} onValueChange={setAdminActiveTab} className="space-y-6">
-              <TabsList className={`grid w-full max-w-3xl ${isSuperAdmin() ? 'grid-cols-5' : 'grid-cols-4'}`}>
+              <TabsList className={`grid w-full max-w-4xl ${isSuperAdmin() ? 'grid-cols-6' : 'grid-cols-5'}`}>
                 {isSuperAdmin() && (
                   <TabsTrigger value="organizations" className="flex items-center space-x-2" data-testid="tab-admin-organizations">
                     <Building2 className="w-4 h-4" />
@@ -2035,6 +2273,10 @@ export default function Settings() {
                 <TabsTrigger value="user-management" className="flex items-center space-x-2" data-testid="tab-admin-users">
                   <Users className="w-4 h-4" />
                   <span className="hidden sm:inline">User Roles</span>
+                </TabsTrigger>
+                <TabsTrigger value="holidays" className="flex items-center space-x-2" data-testid="tab-admin-holidays">
+                  <Star className="w-4 h-4" />
+                  <span className="hidden sm:inline">Holidays</span>
                 </TabsTrigger>
                 <TabsTrigger value="framework-management" className="flex items-center space-x-2" data-testid="tab-admin-frameworks">
                   <Target className="w-4 h-4" />
@@ -2237,6 +2479,11 @@ export default function Settings() {
                     </div>
                   </CardContent>
                 </Card>
+              </TabsContent>
+
+              {/* Holidays Management */}
+              <TabsContent value="holidays" className="space-y-6">
+                <HolidaysSettings />
               </TabsContent>
 
               {/* Strategy Management */}

@@ -24,7 +24,7 @@ import "@syncfusion/ej2-navigations/styles/material.css";
 import "@syncfusion/ej2-popups/styles/material.css";
 import "@syncfusion/ej2-splitbuttons/styles/material.css";
 import "@syncfusion/ej2-react-schedule/styles/material.css";
-import type { Strategy, Project, Action } from "@shared/schema";
+import type { Strategy, Project, Action, Holiday } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 
@@ -96,6 +96,10 @@ export default function Calendar() {
 
   const { data: ptoEntries, isLoading: ptoLoading } = useQuery<PtoEntryWithUser[]>({
     queryKey: ["/api/pto"],
+  });
+
+  const { data: holidays, isLoading: holidaysLoading } = useQuery<Holiday[]>({
+    queryKey: ["/api/holidays"],
   });
 
   const filteredStrategies = useMemo(() => {
@@ -227,7 +231,7 @@ export default function Calendar() {
     }
   };
 
-  const isLoading = strategiesLoading || projectsLoading || actionsLoading || ptoLoading;
+  const isLoading = strategiesLoading || projectsLoading || actionsLoading || ptoLoading || holidaysLoading;
 
   // Get set of dates that have PTO entries for visual indicator
   const ptoDates = useMemo(() => {
@@ -246,22 +250,51 @@ export default function Calendar() {
     return dates;
   }, [ptoEntries]);
 
-  // Render cell handler to add PTO icon indicator
+  // Get set of dates that have holidays for visual indicator
+  const holidayDates = useMemo(() => {
+    const dates = new Map<string, string>();
+    holidays?.forEach(holiday => {
+      const date = new Date(holiday.date);
+      const dateKey = `${date.getUTCFullYear()}-${date.getUTCMonth()}-${date.getUTCDate()}`;
+      dates.set(dateKey, holiday.name);
+    });
+    return dates;
+  }, [holidays]);
+
+  // Render cell handler to add PTO and Holiday icon indicators
   const handleRenderCell = (args: any) => {
     if (args.elementType === 'dateHeader' || args.elementType === 'monthCells') {
       const cellDate = args.date as Date;
       if (cellDate) {
         const existingContent = args.element.querySelector('.e-date-header, .e-day');
         if (existingContent) {
-          // Remove any existing PTO icon first to prevent duplicates
-          const existingIcon = existingContent.querySelector('[data-pto-indicator]');
-          if (existingIcon) {
-            existingIcon.remove();
+          // Remove any existing indicators first to prevent duplicates
+          const existingPtoIcon = existingContent.querySelector('[data-pto-indicator]');
+          if (existingPtoIcon) {
+            existingPtoIcon.remove();
+          }
+          const existingHolidayIcon = existingContent.querySelector('[data-holiday-indicator]');
+          if (existingHolidayIcon) {
+            existingHolidayIcon.remove();
           }
           
           const dateKey = `${cellDate.getFullYear()}-${cellDate.getMonth()}-${cellDate.getDate()}`;
+          const utcDateKey = `${cellDate.getUTCFullYear()}-${cellDate.getUTCMonth()}-${cellDate.getUTCDate()}`;
+          
+          // Add Holiday indicator (gold star) - use UTC key since holidays are stored as dates
+          const holidayName = holidayDates.get(utcDateKey);
+          if (holidayName) {
+            const holidayIcon = document.createElement('span');
+            holidayIcon.innerHTML = ' ⭐';
+            holidayIcon.title = holidayName;
+            holidayIcon.style.marginLeft = '2px';
+            holidayIcon.style.fontSize = '12px';
+            holidayIcon.setAttribute('data-holiday-indicator', 'true');
+            existingContent.appendChild(holidayIcon);
+          }
+          
+          // Add PTO indicator
           if (ptoDates.has(dateKey)) {
-            // Add PTO indicator icon next to the date
             const ptoIcon = document.createElement('span');
             ptoIcon.innerHTML = ' 🏖️';
             ptoIcon.title = 'Team member time off';
