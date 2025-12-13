@@ -38,6 +38,8 @@ interface SyncfusionTask {
   subtasks?: SyncfusionTask[];
   taskColor?: string;
   taskType?: 'strategy' | 'project' | 'action';
+  isMilestone?: boolean;
+  Duration?: number;
 }
 
 export default function Timeline() {
@@ -271,20 +273,20 @@ export default function Timeline() {
           });
 
         const actionSubtasks: SyncfusionTask[] = projectActions.map(action => {
-          const actionEnd = parseAsUTCDate(action.dueDate!);
-          const actionStart = new Date(actionEnd);
-          actionStart.setDate(actionStart.getDate() - 7);
+          const actionDate = parseAsUTCDate(action.dueDate!);
 
           const actionTaskId = `action-${action.id}`;
           return {
             TaskID: actionTaskId,
             TaskName: action.title,
-            StartDate: actionStart,
-            EndDate: actionEnd,
+            StartDate: actionDate,
+            EndDate: actionDate,
+            Duration: 0,
             Progress: action.status === "achieved" ? 100 : action.status === "in_progress" ? 50 : 0,
             Predecessor: getPredecessor(actionTaskId),
             taskColor: getActionStatusColor(action.status),
             taskType: 'action' as const,
+            isMilestone: true,
           };
         });
 
@@ -322,9 +324,11 @@ export default function Timeline() {
     name: 'TaskName',
     startDate: 'StartDate',
     endDate: 'EndDate',
+    duration: 'Duration',
     progress: 'Progress',
     child: 'subtasks',
     dependency: 'Predecessor',
+    milestone: 'isMilestone',
   };
 
   const handleTaskbarEditing = (record: any) => {

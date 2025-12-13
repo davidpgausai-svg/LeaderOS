@@ -122,22 +122,22 @@
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-/* Taskbars */
+/* Taskbars - Pill shaped edges */
 .apple-hig-gantt .e-gantt-parent-taskbar-inner-div {
-  border-radius: 6px !important;
+  border-radius: 100px !important;
 }
 
 .apple-hig-gantt .e-gantt-child-taskbar {
-  border-radius: 4px !important;
+  border-radius: 100px !important;
 }
 
 .apple-hig-gantt .e-gantt-child-progressbar {
-  border-radius: 6px !important;
+  border-radius: 100px !important;
 }
 
 .apple-hig-gantt .e-gantt-milestone {
-  border-radius: 4px !important;
-  transform: rotate(45deg);
+  border-radius: 50% !important;
+  transform: none !important;
 }
 
 /* Connector Lines (Dependencies) */
