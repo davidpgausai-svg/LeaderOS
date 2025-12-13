@@ -845,6 +845,7 @@ export default function Strategies() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/action-people-assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/my-todos"] });
       toast({
         title: "Success",
         description: "Person assigned to action",
@@ -866,6 +867,7 @@ export default function Strategies() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/action-people-assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/my-todos"] });
       toast({
         title: "Success",
         description: "Person removed from action",

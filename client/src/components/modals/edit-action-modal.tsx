@@ -137,6 +137,7 @@ export function EditActionModal({ open, onOpenChange, action }: EditActionModalP
       queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/my-todos"] });
       toast({
         title: "Success",
         description: "Action updated successfully",
