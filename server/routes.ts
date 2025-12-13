@@ -3947,7 +3947,7 @@ Available navigation: Dashboard, Strategies, Projects, Actions, Timeline, Meetin
         return res.status(403).json({ message: "Cannot modify users from other organizations" });
       }
 
-      const { fte, salary } = req.body;
+      const { fte, salary, serviceDeliveryHours } = req.body;
       const updates: any = {};
       
       if (fte !== undefined) {
@@ -3955,6 +3955,9 @@ Available navigation: Dashboard, Strategies, Projects, Actions, Timeline, Meetin
       }
       if (salary !== undefined) {
         updates.salary = salary === null ? null : Number(salary);
+      }
+      if (serviceDeliveryHours !== undefined) {
+        updates.serviceDeliveryHours = String(serviceDeliveryHours);
       }
 
       const updatedUser = await storage.updateUser(req.params.id, updates);

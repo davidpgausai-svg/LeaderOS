@@ -72,7 +72,7 @@ interface UserStrategyRowProps {
   onRoleChange: (userId: string, newRole: string) => void;
   onStrategyToggle: (userId: string, strategyId: string, isAssigned: boolean) => void;
   onDelete: (userId: string, userName: string) => void;
-  onCapacityUpdate: (userId: string, fte: string, salary: number | null) => void;
+  onCapacityUpdate: (userId: string, fte: string, salary: number | null, serviceDeliveryHours: string) => void;
 }
 
 function UserStrategyRow({ user, strategies, currentUserId, onRoleChange, onStrategyToggle, onDelete, onCapacityUpdate }: UserStrategyRowProps) {
@@ -81,6 +81,7 @@ function UserStrategyRow({ user, strategies, currentUserId, onRoleChange, onStra
   const [isCapacityOpen, setIsCapacityOpen] = useState(false);
   const [fteValue, setFteValue] = useState(user.fte || '1.0');
   const [salaryValue, setSalaryValue] = useState(user.salary?.toString() || '');
+  const [serviceDeliveryValue, setServiceDeliveryValue] = useState(user.serviceDeliveryHours || '0');
   
   const { data: userAssignments } = useQuery({
     queryKey: [`/api/users/${user.id}/strategy-assignments`],
@@ -204,6 +205,23 @@ function UserStrategyRow({ user, strategies, currentUserId, onRoleChange, onStra
                     data-testid={`input-salary-${user.id}`}
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor={`service-delivery-${user.id}`} className="text-xs">
+                    Service Delivery (hrs/week)
+                  </Label>
+                  <Input
+                    id={`service-delivery-${user.id}`}
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    max="40"
+                    value={serviceDeliveryValue}
+                    onChange={(e) => setServiceDeliveryValue(e.target.value)}
+                    placeholder="0"
+                    data-testid={`input-service-delivery-${user.id}`}
+                  />
+                  <p className="text-xs text-gray-500">Hours for meetings, IC work, etc.</p>
+                </div>
                 <Button
                   size="sm"
                   className="w-full"
@@ -211,7 +229,8 @@ function UserStrategyRow({ user, strategies, currentUserId, onRoleChange, onStra
                     onCapacityUpdate(
                       user.id, 
                       fteValue, 
-                      salaryValue ? parseInt(salaryValue) : null
+                      salaryValue ? parseInt(salaryValue) : null,
+                      serviceDeliveryValue
                     );
                     setIsCapacityOpen(false);
                   }}
@@ -1770,9 +1789,9 @@ export default function Settings() {
     deleteUserMutation.mutate(userId);
   };
 
-  const handleCapacityUpdate = async (userId: string, fte: string, salary: number | null) => {
+  const handleCapacityUpdate = async (userId: string, fte: string, salary: number | null, serviceDeliveryHours: string) => {
     try {
-      await apiRequest("PATCH", `/api/users/${userId}/capacity`, { fte, salary });
+      await apiRequest("PATCH", `/api/users/${userId}/capacity`, { fte, salary, serviceDeliveryHours });
       toast({
         title: "Success", 
         description: "User capacity updated successfully",

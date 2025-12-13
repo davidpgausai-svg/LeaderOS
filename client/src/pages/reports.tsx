@@ -1635,7 +1635,9 @@ function CapacityReport({
       ra => ra.userId === userId && relevantProjectIds.includes(ra.projectId)
     );
 
-    const totalHours = userAssignments.reduce((sum, ra) => sum + parseFloat(ra.hoursPerWeek || '0'), 0);
+    const projectHours = userAssignments.reduce((sum, ra) => sum + parseFloat(ra.hoursPerWeek || '0'), 0);
+    const serviceDeliveryHours = parseFloat(user.serviceDeliveryHours || '0');
+    const totalHours = projectHours + serviceDeliveryHours;
     const maxHours = parseFloat(user.fte || '1') * 40;
     const capacityPercent = maxHours > 0 ? (totalHours / maxHours) * 100 : 0;
 
@@ -1656,6 +1658,7 @@ function CapacityReport({
       maxHours,
       capacityPercent,
       projectDetails,
+      serviceDeliveryHours,
       assignmentCount: userAssignments.length
     };
   };
@@ -1781,7 +1784,7 @@ function CapacityReport({
             .filter(u => u && u.assignmentCount > 0)
             .map(userCap => {
               if (!userCap) return null;
-              const { user, totalHours, maxHours, projectDetails } = userCap;
+              const { user, totalHours, maxHours, projectDetails, serviceDeliveryHours } = userCap;
               const availableHours = Math.max(0, 40 - totalHours);
 
               return (
@@ -1813,6 +1816,20 @@ function CapacityReport({
                       <span className="absolute right-0">40</span>
                     </div>
                     <div className="h-8 mt-4 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden flex relative">
+                      {serviceDeliveryHours > 0 && (
+                        <div
+                          className="h-full flex items-center justify-center text-white text-xs font-medium"
+                          style={{ 
+                            width: `${(serviceDeliveryHours / 40) * 100}%`, 
+                            backgroundColor: '#D4A84B',
+                            minWidth: '30px'
+                          }}
+                          title={`Service Delivery: ${serviceDeliveryHours}h`}
+                          data-testid="capacity-bar-service-delivery"
+                        >
+                          {(serviceDeliveryHours / 40) * 100 >= 10 && <span>{Math.round(serviceDeliveryHours)}h</span>}
+                        </div>
+                      )}
                       {projectDetails.map(({ project, strategy, hours }, index) => {
                         const widthPercent = (hours / 40) * 100;
                         const color = strategy?.colorCode || '#6b7280';
@@ -1845,6 +1862,15 @@ function CapacityReport({
                   </div>
 
                   <div className="flex flex-wrap gap-3 text-xs">
+                    {serviceDeliveryHours > 0 && (
+                      <div className="flex items-center gap-1">
+                        <div 
+                          className="w-2.5 h-2.5 rounded-sm"
+                          style={{ backgroundColor: '#D4A84B' }}
+                        />
+                        <span className="text-gray-600 dark:text-gray-400">Service Delivery</span>
+                      </div>
+                    )}
                     {projectDetails.map(({ project, strategy }) => (
                       <div key={project?.id} className="flex items-center gap-1">
                         <div 
