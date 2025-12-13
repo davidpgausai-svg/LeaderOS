@@ -113,11 +113,11 @@ export function Sidebar() {
                   : "hover:bg-black/5"
               }`}
               style={{
-                backgroundColor: isActive ? '#FFFFFF' : 'transparent',
-                color: isActive ? '#007AFF' : '#1D1D1F',
+                backgroundColor: isActive ? '#007AFF' : 'transparent',
+                color: isActive ? '#FFFFFF' : '#1D1D1F',
               }}
             >
-              <Icon className={`${isCollapsed ? '' : 'mr-3'} h-4 w-4`} style={{ color: isActive ? '#007AFF' : '#86868B' }} />
+              <Icon className={`${isCollapsed ? '' : 'mr-3'} h-4 w-4`} style={{ color: isActive ? '#FFFFFF' : '#86868B' }} />
               {!isCollapsed && dashboardItem.name}
             </div>
           );
@@ -168,13 +168,13 @@ export function Sidebar() {
                       : "hover:bg-white/60"
                   }`}
                   style={{
-                    backgroundColor: isActive ? '#FFFFFF' : 'transparent',
-                    color: isActive ? '#007AFF' : '#1D1D1F',
+                    backgroundColor: isActive ? '#007AFF' : 'transparent',
+                    color: isActive ? '#FFFFFF' : '#1D1D1F',
                   }}
                 >
                   <Icon 
                     className={`${isCollapsed ? '' : 'mr-3'} h-5 w-5`} 
-                    style={{ color: item.iconColor }}
+                    style={{ color: isActive ? '#FFFFFF' : item.iconColor }}
                   />
                   {!isCollapsed && <span>{item.name}</span>}
                 </div>
@@ -213,11 +213,11 @@ export function Sidebar() {
                   : "hover:bg-black/5"
               }`}
               style={{
-                backgroundColor: isActive ? '#FFFFFF' : 'transparent',
-                color: isActive ? '#007AFF' : '#1D1D1F',
+                backgroundColor: isActive ? '#007AFF' : 'transparent',
+                color: isActive ? '#FFFFFF' : '#1D1D1F',
               }}
             >
-              <Icon className={`${isCollapsed ? '' : 'mr-3'} h-4 w-4`} style={{ color: isActive ? '#007AFF' : '#86868B' }} />
+              <Icon className={`${isCollapsed ? '' : 'mr-3'} h-4 w-4`} style={{ color: isActive ? '#FFFFFF' : '#86868B' }} />
               {!isCollapsed && item.name}
             </div>
           );
@@ -260,12 +260,12 @@ export function Sidebar() {
                           : "hover:bg-black/5"
                       }`}
                       style={{
-                        backgroundColor: isDocActive ? '#FFFFFF' : 'transparent',
-                        color: isDocActive ? '#007AFF' : '#1D1D1F',
+                        backgroundColor: isDocActive ? '#007AFF' : 'transparent',
+                        color: isDocActive ? '#FFFFFF' : '#1D1D1F',
                       }}
                       data-testid="link-documentation"
                     >
-                      <BookOpen className="h-4 w-4" style={{ color: isDocActive ? '#007AFF' : '#86868B' }} />
+                      <BookOpen className="h-4 w-4" style={{ color: isDocActive ? '#FFFFFF' : '#86868B' }} />
                     </div>
                   </TooltipTrigger>
                   <TooltipContent side="right">
@@ -280,12 +280,12 @@ export function Sidebar() {
                       : "hover:bg-black/5"
                   }`}
                   style={{
-                    backgroundColor: isDocActive ? '#FFFFFF' : 'transparent',
-                    color: isDocActive ? '#007AFF' : '#1D1D1F',
+                    backgroundColor: isDocActive ? '#007AFF' : 'transparent',
+                    color: isDocActive ? '#FFFFFF' : '#1D1D1F',
                   }}
                   data-testid="link-documentation"
                 >
-                  <BookOpen className="mr-3 h-4 w-4" style={{ color: isDocActive ? '#007AFF' : '#86868B' }} />
+                  <BookOpen className="mr-3 h-4 w-4" style={{ color: isDocActive ? '#FFFFFF' : '#86868B' }} />
                   Documentation
                 </div>
               )}
