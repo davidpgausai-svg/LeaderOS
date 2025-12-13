@@ -177,7 +177,7 @@ export default function Dashboard() {
                       return (
                         <div
                           key={todo.id}
-                          className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary/50 transition-colors cursor-pointer"
+                          className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-primary hover:shadow-md transition-all cursor-pointer"
                           onClick={() => navigateToAction(todo.id, todo.projectId)}
                           data-testid={`todo-item-${todo.id}`}
                         >
