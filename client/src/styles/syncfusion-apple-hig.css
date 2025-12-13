@@ -123,21 +123,40 @@
 }
 
 /* Taskbars - Pill shaped edges */
-.apple-hig-gantt .e-gantt-parent-taskbar-inner-div {
-  border-radius: 100px !important;
+.apple-hig-gantt .e-taskbar-main-container,
+.apple-hig-gantt .e-taskbar {
+  border-radius: 999px !important;
+  overflow: hidden !important;
 }
 
+.apple-hig-gantt .e-gantt-parent-taskbar-inner-div,
+.apple-hig-gantt .e-gantt-child-taskbar-inner-div,
 .apple-hig-gantt .e-gantt-child-taskbar {
-  border-radius: 100px !important;
+  border-radius: 999px !important;
 }
 
-.apple-hig-gantt .e-gantt-child-progressbar {
-  border-radius: 100px !important;
+.apple-hig-gantt .e-gantt-child-progressbar,
+.apple-hig-gantt .e-progressbar-holder {
+  border-radius: 999px !important;
 }
 
+/* Milestones - Circle markers with no background */
 .apple-hig-gantt .e-gantt-milestone {
   border-radius: 50% !important;
   transform: none !important;
+}
+
+/* Hide the colored container behind milestones */
+.apple-hig-gantt .e-taskbar-main-container:has(.e-gantt-milestone),
+.apple-hig-gantt .e-milestone-container {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.apple-hig-gantt [class*="milestone"] .e-taskbar-main-container,
+.apple-hig-gantt .e-taskbar-main-container[style*="milestone"] {
+  background: transparent !important;
 }
 
 /* Connector Lines (Dependencies) */

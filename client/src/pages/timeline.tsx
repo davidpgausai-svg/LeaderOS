@@ -40,6 +40,7 @@ interface SyncfusionTask {
   taskType?: 'strategy' | 'project' | 'action';
   isMilestone?: boolean;
   Duration?: number;
+  actionStatus?: string;
 }
 
 export default function Timeline() {
@@ -284,9 +285,9 @@ export default function Timeline() {
             Duration: 0,
             Progress: action.status === "achieved" ? 100 : action.status === "in_progress" ? 50 : 0,
             Predecessor: getPredecessor(actionTaskId),
-            taskColor: getActionStatusColor(action.status),
             taskType: 'action' as const,
             isMilestone: true,
+            actionStatus: action.status,
           };
         });
 
@@ -663,18 +664,38 @@ export default function Timeline() {
                 queryTaskbarInfo={(args: any) => {
                   if (args.data && args.data.taskData) {
                     const taskType = args.data.taskData.taskType;
-                    const color = args.data.taskData.taskColor || '#6b7280';
-                    args.taskbarBgColor = color;
-                    args.progressBarBgColor = color;
-                    args.taskbarBorderColor = color;
-                    if (args.taskbarElement) {
-                      args.taskbarElement.style.setProperty('background-color', color, 'important');
-                      args.taskbarElement.style.setProperty('box-sizing', 'border-box', 'important');
-                      args.taskbarElement.style.setProperty('overflow', 'hidden', 'important');
-                    }
-                    const progressBar = args.taskbarElement?.querySelector('.e-gantt-child-progress');
-                    if (progressBar) {
-                      progressBar.style.setProperty('background-color', color, 'important');
+                    
+                    if (taskType === 'action') {
+                      // For milestones (actions), use milestoneColor and hide container background
+                      const actionStatus = args.data.taskData.actionStatus;
+                      let milestoneColor = '#6b7280';
+                      switch (actionStatus) {
+                        case 'achieved': milestoneColor = '#22c55e'; break;
+                        case 'in_progress': milestoneColor = '#3b82f6'; break;
+                        case 'at_risk': milestoneColor = '#ef4444'; break;
+                        case 'not_started': milestoneColor = '#9ca3af'; break;
+                      }
+                      args.milestoneColor = milestoneColor;
+                      // Make container transparent
+                      if (args.taskbarElement) {
+                        args.taskbarElement.style.setProperty('background-color', 'transparent', 'important');
+                        args.taskbarElement.style.setProperty('background', 'transparent', 'important');
+                      }
+                    } else {
+                      // For regular tasks (strategies and projects)
+                      const color = args.data.taskData.taskColor || '#6b7280';
+                      args.taskbarBgColor = color;
+                      args.progressBarBgColor = color;
+                      args.taskbarBorderColor = color;
+                      if (args.taskbarElement) {
+                        args.taskbarElement.style.setProperty('background-color', color, 'important');
+                        args.taskbarElement.style.setProperty('box-sizing', 'border-box', 'important');
+                        args.taskbarElement.style.setProperty('overflow', 'hidden', 'important');
+                      }
+                      const progressBar = args.taskbarElement?.querySelector('.e-gantt-child-progress');
+                      if (progressBar) {
+                        progressBar.style.setProperty('background-color', color, 'important');
+                      }
                     }
                   }
                 }}
