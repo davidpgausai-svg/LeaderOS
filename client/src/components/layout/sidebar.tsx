@@ -34,8 +34,8 @@ const secondaryNavigation = [
   { name: "Dashboard", href: "/", icon: ChartLine },
   { name: "Timeline", href: "/timeline", icon: GanttChart },
   { name: "Calendar", href: "/calendar", icon: CalendarDays },
-  { name: "Meeting Notes", href: "/meeting-notes", icon: PenLine },
   { name: "Reports", href: "/reports", icon: BarChart3 },
+  { name: "Meeting Notes", href: "/meeting-notes", icon: PenLine },
   { name: "Templates", href: "/templates", icon: LayoutTemplate },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
