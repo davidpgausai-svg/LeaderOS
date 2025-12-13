@@ -5,7 +5,7 @@ import type { IStorage } from './storage';
 import {
   users, strategies, projects, activities, actions, notifications,
   actionDocuments, actionChecklistItems, userStrategyAssignments,
-  meetingNotes, aiChatConversations, barriers, dependencies, templateTypes,
+  meetingNotes, barriers, dependencies, templateTypes,
   organizations, passwordResetTokens, twoFactorCodes, executiveGoals, strategyExecutiveGoals,
   teamTags, projectTeamTags, projectResourceAssignments, actionPeopleAssignments, ptoEntries, holidays,
   type User, type UpsertUser, type InsertUser,
@@ -18,7 +18,6 @@ import {
   type ActionChecklistItem, type InsertActionChecklistItem,
   type UserStrategyAssignment,
   type MeetingNote, type InsertMeetingNote,
-  type AiChatConversation, type InsertAiChatConversation,
   type Barrier, type InsertBarrier,
   type Dependency, type InsertDependency,
   type TemplateType, type InsertTemplateType,
@@ -563,26 +562,6 @@ export class PostgresStorage implements IStorage {
   async deleteMeetingNote(id: string): Promise<boolean> {
     const result = await db.delete(meetingNotes).where(eq(meetingNotes.id, id)).returning();
     return result.length > 0;
-  }
-
-  async saveChatMessage(insertMessage: InsertAiChatConversation): Promise<AiChatConversation> {
-    const [message] = await db.insert(aiChatConversations).values({
-      id: randomUUID(),
-      ...insertMessage,
-    }).returning();
-    return message;
-  }
-
-  async getRecentChatHistory(userId: string, limit: number): Promise<AiChatConversation[]> {
-    const messages = await db.select().from(aiChatConversations)
-      .where(eq(aiChatConversations.userId, userId))
-      .orderBy(desc(aiChatConversations.createdAt))
-      .limit(limit);
-    return messages.reverse();
-  }
-
-  async clearChatHistory(userId: string): Promise<void> {
-    await db.delete(aiChatConversations).where(eq(aiChatConversations.userId, userId));
   }
 
   async getBarrier(id: string): Promise<Barrier | undefined> {

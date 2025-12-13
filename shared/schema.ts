@@ -474,25 +474,6 @@ export const insertTemplateTypeSchema = createInsertSchema(templateTypes).omit({
 export type InsertTemplateType = z.infer<typeof insertTemplateTypeSchema>;
 export type TemplateType = typeof templateTypes.$inferSelect;
 
-// AI Chat Conversations - Stores chat history with the AI assistant
-export const aiChatConversations = pgTable("ai_chat_conversations", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull(),
-  message: text("message").notNull(),
-  role: text("role").notNull(), // 'user' or 'assistant'
-  context: jsonb("context"), // Page, role, strategies, etc.
-  organizationId: varchar("organization_id"), // Foreign key to organizations table
-  createdAt: timestamp("created_at").default(sql`now()`),
-});
-
-export const insertAiChatConversationSchema = createInsertSchema(aiChatConversations).omit({
-  id: true,
-  createdAt: true,
-});
-
-export type InsertAiChatConversation = z.infer<typeof insertAiChatConversationSchema>;
-export type AiChatConversation = typeof aiChatConversations.$inferSelect;
-
 // Executive Goals - Organization-level tags for strategic planning
 export const executiveGoals = pgTable("executive_goals", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

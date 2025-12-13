@@ -5,7 +5,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { UserInitializer } from "@/components/user-initializer";
 import { useAuth } from "@/hooks/useAuth";
-import { AiChatAssistant } from "@/components/ai-chat/ai-chat-assistant";
 import Dashboard from "@/pages/dashboard";
 import Strategies from "@/pages/strategies";
 import MeetingNotes from "@/pages/meeting-notes";
@@ -71,7 +70,6 @@ function Router() {
         <Route path="/settings" component={Settings} />
         <Route component={NotFound} />
       </Switch>
-      <AiChatAssistant />
     </>
   );
 }
