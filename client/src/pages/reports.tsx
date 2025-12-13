@@ -86,6 +86,7 @@ type User = {
   role: string;
   fte?: string;
   salary?: number;
+  serviceDeliveryHours?: string;
 };
 
 type ResourceAssignment = {

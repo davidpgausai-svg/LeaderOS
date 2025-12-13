@@ -61,8 +61,9 @@ const peopleAssignmentSchema = z.object({
 });
 
 const capacityUpdateSchema = z.object({
-  fte: z.number().min(0).max(10).optional(),
-  salary: z.number().min(0).optional()
+  fte: z.coerce.number().min(0).max(10).optional(),
+  salary: z.coerce.number().min(0).optional(),
+  serviceDeliveryHours: z.coerce.number().min(0).max(40).optional()
 });
 
 const aiChatSchema = z.object({
