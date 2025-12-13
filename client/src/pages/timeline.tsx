@@ -747,12 +747,13 @@ export default function Timeline() {
                     const row = args.row as HTMLElement;
                     if (row) {
                       if (taskType === 'strategy') {
-                        row.style.setProperty('background-color', 'hsl(221.2, 83.2%, 53.3%)', 'important');
+                        const strategyColor = args.data.taskData.taskColor || '#1e3a8a';
+                        row.style.setProperty('background-color', strategyColor, 'important');
                         row.style.setProperty('color', 'white', 'important');
                         row.style.setProperty('font-weight', 'bold', 'important');
                         const cells = row.querySelectorAll('td');
                         cells.forEach((cell: HTMLElement) => {
-                          cell.style.setProperty('background-color', 'hsl(221.2, 83.2%, 53.3%)', 'important');
+                          cell.style.setProperty('background-color', strategyColor, 'important');
                           cell.style.setProperty('color', 'white', 'important');
                           cell.style.setProperty('font-weight', 'bold', 'important');
                         });
