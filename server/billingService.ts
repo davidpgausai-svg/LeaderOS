@@ -7,17 +7,25 @@ import type { Organization, SubscriptionPlan, SubscriptionStatus, BillingInterva
 const pgStorage = new PostgresStorage();
 
 // Stripe Price IDs for each plan
+// These include both test and live mode prices - Stripe automatically uses the right ones
+// Test mode prices (sandbox): price_1Sdx...
+// Live mode prices: price_1Sdz...
 export const PRICE_IDS = {
   starter: {
-    monthly: 'price_1SdxDMAPmlCUuC3zt16HQ6hR',
+    monthly: 'price_1SdxDMAPmlCUuC3zt16HQ6hR', // test
+    monthlyLive: 'price_1SdzfWH5ttU72wpZ7mVcFWqj', // live
   },
   leaderpro: {
-    monthly: 'price_1SdxDMAPmlCUuC3zrwwZFojc',
-    annual: 'price_1SdxDMAPmlCUuC3z1eidVw7P',
+    monthly: 'price_1SdxDMAPmlCUuC3zrwwZFojc', // test
+    annual: 'price_1SdxDMAPmlCUuC3z1eidVw7P', // test
+    monthlyLive: 'price_1SdziQH5ttU72wpZE8B3UZDf', // live
+    annualLive: 'price_1Sdzk1H5ttU72wpZ1mDifc7R', // live
   },
   team: {
-    monthly: 'price_1SdxDNAPmlCUuC3zCMeKd0bV',
-    annual: 'price_1SdxDNAPmlCUuC3zOcpRsQ3S',
+    monthly: 'price_1SdxDNAPmlCUuC3zCMeKd0bV', // test
+    annual: 'price_1SdxDNAPmlCUuC3zOcpRsQ3S', // test
+    monthlyLive: 'price_1Sdzl2H5ttU72wpZhrhH2ifK', // live
+    annualLive: 'price_1SdzmTH5ttU72wpZukNez9ok', // live
   },
   teamSeat: {
     monthly: 'price_1SdxDOAPmlCUuC3z1JC3NDy2',

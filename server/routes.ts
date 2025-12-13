@@ -4187,13 +4187,20 @@ ${outputTemplate}`;
   });
 
   // Create a Stripe checkout session for new customers (no authentication required)
-  // Allowlist of valid price IDs for anonymous purchase
+  // Allowlist of valid price IDs for anonymous purchase (both test and live modes)
   const VALID_ANONYMOUS_PRICE_IDS = new Set([
-    'price_1SdxDMAPmlCUuC3zt16HQ6hR', // Starter monthly
-    'price_1SdxDMAPmlCUuC3zrwwZFojc', // LeaderPro monthly
-    'price_1SdxDMAPmlCUuC3z1eidVw7P', // LeaderPro annual
-    'price_1SdxDNAPmlCUuC3zCMeKd0bV', // Team monthly
-    'price_1SdxDNAPmlCUuC3zOcpRsQ3S', // Team annual
+    // Test mode prices
+    'price_1SdxDMAPmlCUuC3zt16HQ6hR', // Starter monthly (test)
+    'price_1SdxDMAPmlCUuC3zrwwZFojc', // LeaderPro monthly (test)
+    'price_1SdxDMAPmlCUuC3z1eidVw7P', // LeaderPro annual (test)
+    'price_1SdxDNAPmlCUuC3zCMeKd0bV', // Team monthly (test)
+    'price_1SdxDNAPmlCUuC3zOcpRsQ3S', // Team annual (test)
+    // Live mode prices
+    'price_1SdzfWH5ttU72wpZ7mVcFWqj', // Starter monthly (live)
+    'price_1SdziQH5ttU72wpZE8B3UZDf', // LeaderPro monthly (live)
+    'price_1Sdzk1H5ttU72wpZ1mDifc7R', // LeaderPro annual (live)
+    'price_1Sdzl2H5ttU72wpZhrhH2ifK', // Team monthly (live)
+    'price_1SdzmTH5ttU72wpZukNez9ok', // Team annual (live)
   ]);
 
   app.post("/api/billing/create-anonymous-checkout", async (req, res) => {
