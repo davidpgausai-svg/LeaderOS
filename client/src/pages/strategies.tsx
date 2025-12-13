@@ -3009,11 +3009,11 @@ export default function Strategies() {
                   </Button>
                   
                   {canEditAllStrategies() && (
-                    <div className="flex gap-2 pt-2 border-t">
+                    <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t">
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex-1"
+                        className="w-full sm:flex-1"
                         onClick={() => setDocumentUrlEditing(true)}
                         data-testid="button-edit-document-url"
                       >
@@ -3023,7 +3023,7 @@ export default function Strategies() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="w-full sm:flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
                         onClick={async () => {
                           setUrlSaving(true);
                           try {
@@ -3210,11 +3210,11 @@ export default function Strategies() {
                   </Button>
                   
                   {canEditAllStrategies() && (
-                    <div className="flex gap-2 pt-2 border-t">
+                    <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t">
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex-1"
+                        className="w-full sm:flex-1"
                         onClick={() => setCommunicationUrlEditing(true)}
                         data-testid="button-edit-communication-url"
                       >
@@ -3224,7 +3224,7 @@ export default function Strategies() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="w-full sm:flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
                         onClick={async () => {
                           setUrlSaving(true);
                           try {
