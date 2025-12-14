@@ -112,9 +112,10 @@ export default function Timeline() {
     mutationFn: async ({ id, startDate, dueDate }: { id: string; startDate: Date; dueDate: Date }) => {
       return apiRequest("PATCH", `/api/projects/${id}`, { startDate, dueDate });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       toast({ title: "Project dates updated" });
+      setTimeout(() => ganttRef.current?.refresh(), 100);
     },
   });
 
@@ -122,9 +123,10 @@ export default function Timeline() {
     mutationFn: async ({ id, dueDate }: { id: string; dueDate: Date }) => {
       return apiRequest("PATCH", `/api/actions/${id}`, { dueDate });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
       toast({ title: "Action due date updated" });
+      setTimeout(() => ganttRef.current?.refresh(), 100);
     },
   });
 
