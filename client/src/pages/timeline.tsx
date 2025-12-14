@@ -406,6 +406,44 @@ export default function Timeline() {
     }
   };
 
+  const handleDialogSave = async (args: any) => {
+    if (args.requestType === 'save' && args.data) {
+      const taskData = args.data.taskData || args.data;
+      const ganttProps = args.data.ganttProperties || args.data;
+      
+      if (!taskData || !taskData.TaskID) return;
+      
+      const taskId = taskData.TaskID;
+      const parts = taskId.split('-');
+      const type = parts[0];
+      const id = parts.slice(1).join('-');
+      
+      try {
+        if (type === 'project') {
+          await apiRequest('PATCH', `/api/projects/${id}`, {
+            title: ganttProps.taskName || taskData.TaskName,
+            startDate: ganttProps.startDate || taskData.StartDate,
+            dueDate: ganttProps.endDate || taskData.EndDate
+          });
+          await queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+          await queryClient.invalidateQueries({ queryKey: ['/api/strategies'] });
+          toast({ title: 'Project updated' });
+        } else if (type === 'action') {
+          await apiRequest('PATCH', `/api/actions/${id}`, {
+            title: ganttProps.taskName || taskData.TaskName,
+            dueDate: ganttProps.endDate || taskData.EndDate
+          });
+          await queryClient.invalidateQueries({ queryKey: ['/api/actions'] });
+          await queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+          toast({ title: 'Action updated' });
+        }
+        setTimeout(() => ganttRef.current?.refresh(), 100);
+      } catch (error) {
+        toast({ title: 'Failed to save changes', variant: 'destructive' });
+      }
+    }
+  };
+
   const handlePriorityFilterChange = (priorityId: string, checked: boolean) => {
     setSelectedPriorityIds(prev => {
       if (checked) {
@@ -591,7 +629,8 @@ export default function Timeline() {
                 allowResizing={true}
                 editSettings={{
                   allowEditing: true,
-                  allowTaskbarEditing: true
+                  allowTaskbarEditing: true,
+                  allowDialogEditing: true
                 }}
                 enablePredecessorValidation={true}
                 validateManualTasksOnLinking={true}
@@ -686,8 +725,12 @@ export default function Timeline() {
                 })()}
                 rowSelected={handleRecordClick}
                 actionComplete={(args: any) => {
-                  if (args.requestType === 'save' && args.modifiedRecords && args.modifiedRecords.length > 0) {
-                    args.modifiedRecords.forEach((record: any) => handleTaskbarEditing(record));
+                  if (args.requestType === 'save') {
+                    if (args.action === 'DialogEditing') {
+                      handleDialogSave(args);
+                    } else if (args.modifiedRecords && args.modifiedRecords.length > 0) {
+                      args.modifiedRecords.forEach((record: any) => handleTaskbarEditing(record));
+                    }
                   }
                 }}
                 taskbarEditing={(args: any) => {
