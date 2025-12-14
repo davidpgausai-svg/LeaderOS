@@ -175,12 +175,18 @@
   width: 2px !important;
 }
 
-/* Hide progress gripper and resize handles for cleaner look */
+/* Make drag handles invisible but still functional for Safari compatibility */
+/* Safari requires these elements to exist in DOM for pointer capture during drag */
 .apple-hig-gantt .e-progressbar-handler,
-.apple-hig-gantt .e-gantt-child-progressbar-inner-div,
+.apple-hig-gantt .e-gantt-child-progressbar-inner-div {
+  opacity: 0 !important;
+  pointer-events: auto !important;
+}
+
 .apple-hig-gantt .e-left-resize-gripper,
 .apple-hig-gantt .e-right-resize-gripper {
-  display: none !important;
+  opacity: 0 !important;
+  pointer-events: auto !important;
 }
 
 /* Splitter */
