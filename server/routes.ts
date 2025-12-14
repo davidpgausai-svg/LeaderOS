@@ -4225,7 +4225,7 @@ ${outputTemplate}`;
       const session = await billingService.createAnonymousCheckoutSession(
         priceId,
         `${baseUrl}/register/purchase?session_id={CHECKOUT_SESSION_ID}`,
-        `${baseUrl}/pricing?checkout=canceled`,
+        `https://leaderos.app#/price`,
         { trialDays: trialDays || 0 }
       );
 
