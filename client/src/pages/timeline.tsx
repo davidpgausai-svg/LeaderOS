@@ -262,11 +262,6 @@ export default function Timeline() {
       const projectSubtasks: SyncfusionTask[] = [];
 
       strategyProjects.forEach(project => {
-        if (!project.startDate || !project.dueDate) return;
-
-        const projectStart = parseAsUTCDate(project.startDate);
-        const projectEnd = parseAsUTCDate(project.dueDate);
-
         const projectActions = actions
           .filter(a => a.projectId === project.id && a.dueDate)
           .sort((a, b) => {
@@ -275,6 +270,26 @@ export default function Timeline() {
             if (dateA !== dateB) return dateA - dateB;
             return a.id.localeCompare(b.id);
           });
+
+        // Derive project dates from child actions, fallback to DB values
+        const actionDates = projectActions.map(a => parseAsUTCDate(a.dueDate!));
+        const dbProjectStart = project.startDate ? parseAsUTCDate(project.startDate) : null;
+        const dbProjectEnd = project.dueDate ? parseAsUTCDate(project.dueDate) : null;
+        
+        let projectStart: Date;
+        let projectEnd: Date;
+        
+        if (actionDates.length > 0) {
+          const minActionDate = new Date(Math.min(...actionDates.map(d => d.getTime())));
+          const maxActionDate = new Date(Math.max(...actionDates.map(d => d.getTime())));
+          projectStart = dbProjectStart ? new Date(Math.min(dbProjectStart.getTime(), minActionDate.getTime())) : minActionDate;
+          projectEnd = dbProjectEnd ? new Date(Math.max(dbProjectEnd.getTime(), maxActionDate.getTime())) : maxActionDate;
+        } else if (dbProjectStart && dbProjectEnd) {
+          projectStart = dbProjectStart;
+          projectEnd = dbProjectEnd;
+        } else {
+          return; // Skip projects with no dates
+        }
 
         const getActionStatusText = (status: string) => {
           switch (status) {
