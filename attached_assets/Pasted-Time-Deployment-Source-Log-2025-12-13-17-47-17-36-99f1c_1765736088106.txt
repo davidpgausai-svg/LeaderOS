@@ -1,0 +1,148 @@
+Time
+Deployment
+Source
+Log
+2025-12-13 17:47:17.36
+99f1c1dc
+User
+Webhook error: Unhandled webhook event
+2025-12-14 12:07:53.47
+b8030a07
+User
+BOOL: 16,
+2025-12-14 12:07:53.47
+b8030a07
+User
+},
+2025-12-14 12:07:53.47
+b8030a07
+User
+replication: undefined,
+2025-12-14 12:07:53.47
+b8030a07
+User
+_eventsCount: 1,
+2025-12-14 12:07:53.47
+b8030a07
+User
+at Receiver.receiverOnMessage (/home/runner/workspace/node_modules/ws/lib/websocket.js:1220:20) {
+2025-12-14 12:07:53.47
+b8030a07
+User
+fallback_application_name: undefined,
+2025-12-14 12:07:53.47
+b8030a07
+User
+client: NeonClient {
+2025-12-14 12:07:53.47
+b8030a07
+User
+line: '3289',
+2025-12-14 12:07:53.47
+b8030a07
+User
+_maxListeners: undefined,
+2025-12-14 12:07:53.47
+b8030a07
+User
+hint: undefined,
+2025-12-14 12:07:53.47
+b8030a07
+User
+at cn.handlePacket (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1143:13)
+2025-12-14 12:07:53.47
+b8030a07
+User
+_Promise: [Function: Promise],
+2025-12-14 12:07:53.47
+b8030a07
+User
+at cn.parseErrorMessage (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1182:6)
+2025-12-14 12:07:53.47
+b8030a07
+User
+0&&(o=t[0]),o instanceof Error)throw o;var u=new Error("Unhandled error."+(o?" ("+
+2025-12-14 12:07:53.47
+b8030a07
+User
+at WebSocket. (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:987:80)
+2025-12-14 12:07:53.47
+b8030a07
+User
+statement_timeout: false,
+2025-12-14 12:07:53.47
+b8030a07
+User
+^
+2025-12-14 12:07:53.47
+b8030a07
+User
+file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:395
+2025-12-14 12:07:53.47
+b8030a07
+User
+column: undefined,
+2025-12-14 12:07:53.47
+b8030a07
+User
+OID: 26,
+2025-12-14 12:07:53.47
+b8030a07
+User
+port: 5432,
+2025-12-14 12:07:53.47
+b8030a07
+User
+detail: undefined,
+2025-12-14 12:07:53.47
+b8030a07
+User
+builtins: {
+2025-12-14 12:07:53.47
+b8030a07
+User
+getTypeParser: [Function: getTypeParser],
+2025-12-14 12:07:53.47
+b8030a07
+User
+dataType: undefined,
+2025-12-14 12:07:53.47
+b8030a07
+User
+constraint: undefined,
+2025-12-14 12:07:53.47
+b8030a07
+User
+_events: [Object: null prototype] { error: [Function (anonymous)] },
+2025-12-14 12:07:53.47
+b8030a07
+User
+idle_in_transaction_session_timeout: false,
+2025-12-14 12:07:53.47
+b8030a07
+User
+BYTEA: 17,
+2025-12-14 12:07:56.47
+b8030a07
+User
+npm notice
+2025-12-14 12:07:56.47
+b8030a07
+User
+npm notice
+2025-12-14 12:07:56.47
+b8030a07
+User
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.7.0
+2025-12-14 12:07:56.47
+b8030a07
+User
+npm notice To update run: npm install -g npm@11.7.0
+2025-12-14 12:07:56.47
+b8030a07
+User
+npm notice New major version of npm available! 10.8.2 -> 11.7.0
+2025-12-14 12:07:58.47
+b8030a07
+System
+command finished with error [npm run start]: exit status 1
