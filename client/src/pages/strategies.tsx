@@ -1378,10 +1378,7 @@ export default function Strategies() {
                 <Target className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold" style={{ color: '#1D1D1F' }}>Strategic Priority</h2>
-                <p className="mt-0.5" style={{ color: '#86868B' }}>
-                  Manage and track strategic initiatives
-                </p>
+                <h2 className="text-2xl font-bold" style={{ color: '#1D1D1F' }}>Strategic Priorities</h2>
               </div>
             </div>
             {canCreateStrategies() && (
