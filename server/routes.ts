@@ -867,7 +867,7 @@ Respond ONLY with a valid JSON object in this exact format:
       }
 
       const { strategyId, assignedTo } = req.query;
-      let projects;
+      let projects: any[] = [];
       
       // First get the base set of projects based on organization and role
       // All users (including Super Admins) are scoped to their organization for main views
@@ -965,10 +965,12 @@ Respond ONLY with a valid JSON object in this exact format:
       }
       
       // Check if strategy is read-only due to plan limits (for downgrades)
-      const { billingService } = await import('./billingService');
-      const strategyPerms = await billingService.getEditableStrategyIds(user.organizationId);
-      if (strategyPerms.readOnlyIds.includes(validatedData.strategyId)) {
-        return res.status(403).json({ message: "This strategic priority is read-only due to your current plan. Upgrade to edit." });
+      if (user.organizationId) {
+        const { billingService } = await import('./billingService');
+        const strategyPerms = await billingService.getEditableStrategyIds(user.organizationId);
+        if (strategyPerms.readOnlyIds.includes(validatedData.strategyId)) {
+          return res.status(403).json({ message: "This strategic priority is read-only due to your current plan. Upgrade to edit." });
+        }
       }
       
       // Validate date range
@@ -1029,10 +1031,12 @@ Respond ONLY with a valid JSON object in this exact format:
       }
       
       // Check if strategy is read-only due to plan limits (for downgrades)
-      const { billingService } = await import('./billingService');
-      const strategyPerms = await billingService.getEditableStrategyIds(user.organizationId);
-      if (strategyPerms.readOnlyIds.includes(oldProject.strategyId)) {
-        return res.status(403).json({ message: "This strategic priority is read-only due to your current plan. Upgrade to edit." });
+      if (user.organizationId) {
+        const { billingService } = await import('./billingService');
+        const strategyPerms = await billingService.getEditableStrategyIds(user.organizationId);
+        if (strategyPerms.readOnlyIds.includes(oldProject.strategyId)) {
+          return res.status(403).json({ message: "This strategic priority is read-only due to your current plan. Upgrade to edit." });
+        }
       }
       
       // Process the update data - convert date strings to Date objects
@@ -1136,10 +1140,12 @@ Respond ONLY with a valid JSON object in this exact format:
       }
       
       // Check if strategy is read-only due to plan limits (for downgrades)
-      const { billingService } = await import('./billingService');
-      const strategyPerms = await billingService.getEditableStrategyIds(user.organizationId);
-      if (strategyPerms.readOnlyIds.includes(project.strategyId)) {
-        return res.status(403).json({ message: "This strategic priority is read-only due to your current plan. Upgrade to edit." });
+      if (user.organizationId) {
+        const { billingService } = await import('./billingService');
+        const strategyPerms = await billingService.getEditableStrategyIds(user.organizationId);
+        if (strategyPerms.readOnlyIds.includes(project.strategyId)) {
+          return res.status(403).json({ message: "This strategic priority is read-only due to your current plan. Upgrade to edit." });
+        }
       }
 
       const deleted = await storage.deleteProject(req.params.id);
@@ -1721,7 +1727,7 @@ Respond ONLY with a valid JSON object in this exact format:
       }
 
       const { userId: queryUserId } = req.query;
-      let activities;
+      let activities: any[] = [];
       
       // First get the base set of activities based on organization and role
       if (user.isSuperAdmin === 'true') {
@@ -1811,10 +1817,12 @@ Respond ONLY with a valid JSON object in this exact format:
       }
       
       // Check if strategy is read-only due to plan limits (for downgrades)
-      const { billingService } = await import('./billingService');
-      const strategyPerms = await billingService.getEditableStrategyIds(user.organizationId);
-      if (strategyPerms.readOnlyIds.includes(validatedData.strategyId)) {
-        return res.status(403).json({ message: "This strategic priority is read-only due to your current plan. Upgrade to edit." });
+      if (user.organizationId) {
+        const { billingService } = await import('./billingService');
+        const strategyPerms = await billingService.getEditableStrategyIds(user.organizationId);
+        if (strategyPerms.readOnlyIds.includes(validatedData.strategyId)) {
+          return res.status(403).json({ message: "This strategic priority is read-only due to your current plan. Upgrade to edit." });
+        }
       }
       
       const action = await storage.createAction({
@@ -1885,10 +1893,12 @@ Respond ONLY with a valid JSON object in this exact format:
       }
       
       // Check if strategy is read-only due to plan limits (for downgrades)
-      const { billingService } = await import('./billingService');
-      const strategyPerms = await billingService.getEditableStrategyIds(user.organizationId);
-      if (strategyPerms.readOnlyIds.includes(oldAction.strategyId)) {
-        return res.status(403).json({ message: "This strategic priority is read-only due to your current plan. Upgrade to edit." });
+      if (user.organizationId) {
+        const { billingService } = await import('./billingService');
+        const strategyPerms = await billingService.getEditableStrategyIds(user.organizationId);
+        if (strategyPerms.readOnlyIds.includes(oldAction.strategyId)) {
+          return res.status(403).json({ message: "This strategic priority is read-only due to your current plan. Upgrade to edit." });
+        }
       }
       
       // Process the update data - support partial updates like the project endpoint
@@ -2006,10 +2016,12 @@ Respond ONLY with a valid JSON object in this exact format:
       }
       
       // Check if strategy is read-only due to plan limits (for downgrades)
-      const { billingService } = await import('./billingService');
-      const strategyPerms = await billingService.getEditableStrategyIds(user.organizationId);
-      if (strategyPerms.readOnlyIds.includes(action.strategyId)) {
-        return res.status(403).json({ message: "This strategic priority is read-only due to your current plan. Upgrade to edit." });
+      if (user.organizationId) {
+        const { billingService } = await import('./billingService');
+        const strategyPerms = await billingService.getEditableStrategyIds(user.organizationId);
+        if (strategyPerms.readOnlyIds.includes(action.strategyId)) {
+          return res.status(403).json({ message: "This strategic priority is read-only due to your current plan. Upgrade to edit." });
+        }
       }
 
       const deleted = await storage.deleteAction(req.params.id);

@@ -6,6 +6,16 @@ import type { Organization, SubscriptionPlan, SubscriptionStatus, BillingInterva
 
 const pgStorage = new PostgresStorage();
 
+// Organizations with free access (bypass all billing restrictions)
+// These are legacy/test organizations that should have full access
+const FREE_ACCESS_ORG_IDS = new Set([
+  '71837e76-6af2-4b1d-890a-ed25d66fc0ea', // Production test environment
+]);
+
+function hasFreeAccess(organizationId: string): boolean {
+  return FREE_ACCESS_ORG_IDS.has(organizationId);
+}
+
 // Stripe Price IDs for each plan
 // These include both test and live mode prices - Stripe automatically uses the right ones
 // Test mode prices (sandbox): price_1Sdx...
@@ -465,7 +475,8 @@ class BillingService {
       return { allowed: false, limit: 0, current: 0, message: 'Organization not found' };
     }
 
-    if (org.isLegacy === 'true') {
+    // Free access organizations bypass all billing restrictions
+    if (hasFreeAccess(organizationId) || org.isLegacy === 'true') {
       return { allowed: true, limit: null, current: 0 };
     }
 
@@ -547,7 +558,8 @@ class BillingService {
       return { editableIds: [], readOnlyIds: [], limit: 0, total: 0 };
     }
 
-    if (org.isLegacy === 'true') {
+    // Free access organizations bypass all billing restrictions
+    if (hasFreeAccess(organizationId) || org.isLegacy === 'true') {
       const strategies = await pgStorage.getStrategiesByOrganization(organizationId);
       const activeStrategies = strategies.filter((s: any) => s.status !== 'Archived');
       return {
