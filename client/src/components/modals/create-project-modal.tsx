@@ -30,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
+import { PeopleSelector } from "@/components/ui/people-selector";
 import { Calendar, Users, Target } from "lucide-react";
 
 interface CreateProjectModalProps {
@@ -291,38 +291,28 @@ export function CreateProjectModal({ isOpen, onClose, strategyId }: CreateProjec
               />
             </div>
 
-            {/* Accountable Leaders */}
+            {/* Grant Project Access */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium flex items-center space-x-2">
                 <Users className="w-5 h-5 text-purple-500" />
-                <span>Accountable Leaders</span>
+                <span>Grant Project Access to:</span>
               </h3>
               
               <div className="space-y-2">
-                <FormLabel>Select Leaders *</FormLabel>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-32 overflow-y-auto border rounded-md p-3">
-                  {(users as User[])?.map((user) => (
-                    <div key={user.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`leader-${user.id}`}
-                        checked={selectedLeaders.includes(user.id)}
-                        onCheckedChange={(checked) => handleLeaderChange(user.id, !!checked)}
-                        data-testid={`checkbox-leader-${user.id}`}
-                      />
-                      <label 
-                        htmlFor={`leader-${user.id}`}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        {user.firstName && user.lastName 
-                          ? `${user.firstName} ${user.lastName} (${user.email})`
-                          : user.email
-                        }
-                      </label>
-                    </div>
-                  ))}
-                </div>
+                <FormLabel>Select People *</FormLabel>
+                <PeopleSelector
+                  users={(users as User[]) || []}
+                  selectedUserIds={selectedLeaders}
+                  onChange={(userIds) => {
+                    setSelectedLeaders(userIds);
+                    form.setValue("accountableLeaders", JSON.stringify(userIds));
+                  }}
+                  mode="multi"
+                  placeholder="Search and select people..."
+                  showRole
+                />
                 {selectedLeaders.length === 0 && (
-                  <p className="text-sm text-red-500">At least one leader must be selected</p>
+                  <p className="text-sm text-red-500">At least one person must be selected</p>
                 )}
               </div>
             </div>

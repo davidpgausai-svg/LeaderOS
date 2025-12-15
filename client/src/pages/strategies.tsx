@@ -63,6 +63,7 @@ import {
 } from "@/components/ui/command";
 import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ChevronLeft, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen, TrendingUp, AlertTriangle, Users, Megaphone, Link2, ExternalLink, X, Clock, ListChecks, StickyNote, Tag, Indent, Outdent, Hash } from "lucide-react";
 import { ProgressRing } from "@/components/ui/progress-ring";
+import { PeopleSelector } from "@/components/ui/people-selector";
 import { useLocation } from "wouter";
 import {
   Collapsible,
@@ -2647,33 +2648,24 @@ export default function Strategies() {
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
                     Add Resource
                   </label>
-                  <Select
-                    onValueChange={(userId) => {
-                      if (userId) {
+                  <PeopleSelector
+                    users={(users as any[]) || []}
+                    selectedUserIds={[]}
+                    onChange={(userIds) => {
+                      if (userIds.length > 0) {
                         upsertResourceAssignmentMutation.mutate({
                           projectId: resourcesModalProject.id,
-                          assignedUserId: userId,
+                          assignedUserId: userIds[0],
                           hoursPerWeek: '0'
                         });
                       }
                     }}
-                  >
-                    <SelectTrigger data-testid="select-add-resource">
-                      <SelectValue placeholder="Select a person to add..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {users?.filter((u: any) => 
-                        !projectResourceAssignments.some((a: any) => a.userId === u.id)
-                      ).map((u: any) => {
-                        const fullName = [u.firstName, u.lastName].filter(Boolean).join(' ');
-                        return (
-                          <SelectItem key={u.id} value={u.id}>
-                            {fullName || u.email} ({u.role?.replace('_', ' ')})
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
+                    mode="single"
+                    placeholder="Search and select a person..."
+                    showFte
+                    showRole
+                    excludeUserIds={projectResourceAssignments.map((a: any) => a.userId)}
+                  />
                 </div>
               )}
             </div>
@@ -2781,37 +2773,22 @@ export default function Strategies() {
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
                       Add Person
                     </label>
-                    <Select
-                      onValueChange={(userId) => {
-                        if (userId) {
+                    <PeopleSelector
+                      users={(users as any[]) || []}
+                      selectedUserIds={[]}
+                      onChange={(userIds) => {
+                        if (userIds.length > 0) {
                           addActionPeopleMutation.mutate({
                             actionId: actionPeopleModalAction.id,
-                            assignedUserId: userId
+                            assignedUserId: userIds[0]
                           });
                         }
                       }}
-                    >
-                      <SelectTrigger data-testid="select-add-action-person">
-                        <SelectValue placeholder="Select a person to add..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {users?.filter((u: any) => 
-                          !actionPeople.some((a: any) => a.userId === u.id)
-                        ).map((u: any) => {
-                          const fullName = [u.firstName, u.lastName].filter(Boolean).join(' ');
-                          const isOnProject = parentProject ? isPersonAssignedToProject(parentProject.id, u.id) : true;
-                          return (
-                            <SelectItem key={u.id} value={u.id}>
-                              {fullName || u.email} ({u.role?.replace('_', ' ')})
-                              {!isOnProject && ' ⚠️'}
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
-                    {parentProject && (
-                      <p className="text-xs text-gray-400 mt-1">⚠️ indicates person is not assigned to this project</p>
-                    )}
+                      mode="single"
+                      placeholder="Search and select a person..."
+                      showRole
+                      excludeUserIds={actionPeople.map((a: any) => a.userId)}
+                    />
                   </div>
                 )}
               </div>
