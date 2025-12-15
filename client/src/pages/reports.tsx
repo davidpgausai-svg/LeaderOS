@@ -1,5 +1,14 @@
 import { useState, useRef, useMemo, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useReactToPrint } from "react-to-print";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
@@ -36,6 +45,10 @@ import {
   ZoomIn,
   ZoomOut,
   Link2,
+  Archive,
+  RotateCcw,
+  Copy,
+  Bell,
 } from "lucide-react";
 import {
   Select,
@@ -501,6 +514,7 @@ export default function Reports() {
                 { value: 'timeline', icon: Calendar, label: 'Timeline Risk' },
                 { value: 'ownership', icon: Users, label: 'Ownership' },
                 { value: 'graph', icon: GitBranch, label: 'Graph' },
+                { value: 'archived', icon: Archive, label: 'Archived Projects' },
               ].map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.value;
@@ -602,6 +616,15 @@ export default function Reports() {
                 projects={projects}
                 actions={actions}
                 dependencies={dependencies}
+              />
+            </TabsContent>
+
+            {/* Archived Projects Report */}
+            <TabsContent value="archived" className="space-y-4">
+              <ArchivedProjectsReport
+                strategies={strategies}
+                users={users}
+                safeDate={safeDate}
               />
             </TabsContent>
           </Tabs>
@@ -2599,5 +2622,315 @@ function GraphReport({ strategies, projects, actions, dependencies }: {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+// Archived Projects Report Component
+function ArchivedProjectsReport({ strategies, users, safeDate }: { strategies: Strategy[]; users: User[]; safeDate: (d: any) => Date | null }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [copyingProject, setCopyingProject] = useState<any>(null);
+  const [copyProjectTitle, setCopyProjectTitle] = useState("");
+  const [copyAsTemplate, setCopyAsTemplate] = useState(false);
+
+  // Fetch archived projects
+  const { data: archivedProjects = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/archived-projects"],
+  });
+
+  const unarchiveProjectMutation = useMutation({
+    mutationFn: async (projectId: string) => {
+      const response = await apiRequest("POST", `/api/projects/${projectId}/unarchive`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/archived-projects"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+      toast({
+        title: "Project Restored",
+        description: "The project has been restored and is now active.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to restore project",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const copyProjectMutation = useMutation({
+    mutationFn: async ({ projectId, newTitle, asTemplate }: { projectId: string; newTitle: string; asTemplate: boolean }) => {
+      const response = await apiRequest("POST", `/api/projects/${projectId}/copy`, { newTitle, asTemplate });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+      setCopyingProject(null);
+      setCopyProjectTitle("");
+      setCopyAsTemplate(false);
+      toast({
+        title: "Project Copied",
+        description: "A new project has been created based on the archived one.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to copy project",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const getStrategyTitle = (strategyId: string) => {
+    const strategy = strategies.find(s => s.id === strategyId);
+    return strategy?.title || 'Unknown Strategy';
+  };
+
+  const getStrategyColor = (strategyId: string) => {
+    const strategy = strategies.find(s => s.id === strategyId);
+    return strategy?.colorCode || '#6B7280';
+  };
+
+  const getUserName = (userId: string) => {
+    const user = users?.find(u => u.id === userId);
+    return user ? `${user.firstName} ${user.lastName}` : 'Unknown';
+  };
+
+  const isWakeUpDatePast = (wakeUpDate: string | null) => {
+    if (!wakeUpDate) return false;
+    const date = safeDate(wakeUpDate);
+    return date && isPast(date);
+  };
+
+  if (isLoading) {
+    return (
+      <Card data-testid="card-archived-projects">
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Archive className="w-5 h-5 mr-2" />
+            Archived Projects
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-gray-500">Loading archived projects...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <>
+      <Card data-testid="card-archived-projects">
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Archive className="w-5 h-5 mr-2" />
+            Archived Projects
+          </CardTitle>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            Projects that have been removed from daily view. You can restore them or copy as new projects.
+          </p>
+        </CardHeader>
+        <CardContent>
+          {archivedProjects.length === 0 ? (
+            <div className="text-center py-12">
+              <Archive className="w-12 h-12 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
+              <p className="text-gray-500 dark:text-gray-400 text-lg">No archived projects</p>
+              <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">
+                When you archive projects, they'll appear here
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {archivedProjects.map((project: any) => {
+                const wakeUpPast = isWakeUpDatePast(project.wakeUpDate);
+                
+                return (
+                  <div
+                    key={project.id}
+                    className={`border rounded-lg p-4 ${wakeUpPast ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/20' : 'border-gray-200 dark:border-gray-700'}`}
+                    data-testid={`archived-project-${project.id}`}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                            {project.title}
+                          </h3>
+                          {wakeUpPast && (
+                            <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                              <Bell className="w-3 h-3 mr-1" />
+                              Ready to Reactivate
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                          <div 
+                            className="w-2 h-2 rounded-full" 
+                            style={{ backgroundColor: getStrategyColor(project.strategyId) }} 
+                          />
+                          <span>{getStrategyTitle(project.strategyId)}</span>
+                        </div>
+                        
+                        <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs text-gray-500 dark:text-gray-400">
+                          <div>
+                            <span className="text-gray-400">Progress at Archive:</span>{' '}
+                            <span className="font-medium text-gray-600 dark:text-gray-300">{project.progressAtArchive || 0}%</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-400">Archived:</span>{' '}
+                            <span className="font-medium text-gray-600 dark:text-gray-300">
+                              {project.archivedAt ? format(safeDate(project.archivedAt)!, 'MMM d, yyyy') : 'Unknown'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-gray-400">By:</span>{' '}
+                            <span className="font-medium text-gray-600 dark:text-gray-300">
+                              {getUserName(project.archivedBy)}
+                            </span>
+                          </div>
+                          {project.wakeUpDate && (
+                            <div>
+                              <span className="text-gray-400">Wake-up:</span>{' '}
+                              <span className={`font-medium ${wakeUpPast ? 'text-amber-600 dark:text-amber-400' : 'text-gray-600 dark:text-gray-300'}`}>
+                                {format(safeDate(project.wakeUpDate)!, 'MMM d, yyyy')}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {project.archiveReason && (
+                          <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded px-2 py-1">
+                            <span className="text-gray-400">Reason:</span> {project.archiveReason}
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setCopyingProject(project);
+                            setCopyProjectTitle(`${project.title} (Copy)`);
+                            setCopyAsTemplate(false);
+                          }}
+                          data-testid={`button-copy-${project.id}`}
+                        >
+                          <Copy className="w-4 h-4 mr-1" />
+                          Copy
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => unarchiveProjectMutation.mutate(project.id)}
+                          disabled={unarchiveProjectMutation.isPending}
+                          className={wakeUpPast ? 'bg-amber-600 hover:bg-amber-700' : ''}
+                          data-testid={`button-restore-${project.id}`}
+                        >
+                          <RotateCcw className="w-4 h-4 mr-1" />
+                          {wakeUpPast ? 'Activate' : 'Restore'}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Copy Project Modal */}
+      <Dialog open={!!copyingProject} onOpenChange={(open) => !open && setCopyingProject(null)}>
+        <DialogContent onClick={(e) => e.stopPropagation()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Copy className="h-5 w-5" />
+              Copy Project
+            </DialogTitle>
+          </DialogHeader>
+          {copyingProject && (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Create a new project based on "{copyingProject.title}".
+              </p>
+              
+              <div className="space-y-2">
+                <label htmlFor="copy-title" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  New Project Title
+                </label>
+                <Input
+                  id="copy-title"
+                  value={copyProjectTitle}
+                  onChange={(e) => setCopyProjectTitle(e.target.value)}
+                  placeholder="Enter new project title..."
+                  data-testid="input-copy-project-title"
+                />
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="copy-as-template"
+                  checked={copyAsTemplate}
+                  onCheckedChange={setCopyAsTemplate}
+                  data-testid="switch-copy-as-template"
+                />
+                <label htmlFor="copy-as-template" className="text-sm text-gray-700 dark:text-gray-300">
+                  Copy as Template (resets progress, status, and dates)
+                </label>
+              </div>
+              
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-xs text-gray-500 dark:text-gray-400">
+                <p className="font-medium mb-1">What will be copied:</p>
+                <ul className="list-disc list-inside space-y-0.5">
+                  <li>Project title, description, and settings</li>
+                  <li>All actions with their details</li>
+                  {copyAsTemplate ? (
+                    <>
+                      <li>Dates reset to today + default offsets</li>
+                      <li>Progress and status reset to "Not Started"</li>
+                    </>
+                  ) : (
+                    <li>Dates adjusted based on time since original start date</li>
+                  )}
+                </ul>
+              </div>
+              
+              <div className="flex justify-end gap-3 pt-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setCopyingProject(null)}
+                  data-testid="button-cancel-copy"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="button"
+                  onClick={() => {
+                    copyProjectMutation.mutate({
+                      projectId: copyingProject.id,
+                      newTitle: copyProjectTitle,
+                      asTemplate: copyAsTemplate,
+                    });
+                  }}
+                  disabled={copyProjectMutation.isPending || !copyProjectTitle.trim()}
+                  data-testid="button-confirm-copy"
+                >
+                  {copyProjectMutation.isPending ? "Copying..." : "Create Copy"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
