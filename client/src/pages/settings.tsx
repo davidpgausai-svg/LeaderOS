@@ -2930,24 +2930,40 @@ export default function Settings() {
           {/* User Settings */}
           {!activeTab.startsWith("admin") && (
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-              <TabsList className="grid grid-cols-4 w-full max-w-2xl">
-                <TabsTrigger value="profile" className="flex items-center space-x-2" data-testid="tab-profile">
-                  <User className="w-4 h-4" />
-                  <span className="hidden sm:inline">Profile</span>
-                </TabsTrigger>
-                <TabsTrigger value="pto" className="flex items-center space-x-2" data-testid="tab-pto">
-                  <CalendarDays className="w-4 h-4" />
-                  <span className="hidden sm:inline">Time Off</span>
-                </TabsTrigger>
-                <TabsTrigger value="notifications" className="flex items-center space-x-2" data-testid="tab-notifications">
-                  <Bell className="w-4 h-4" />
-                  <span className="hidden sm:inline">Notifications</span>
-                </TabsTrigger>
-                <TabsTrigger value="appearance" className="flex items-center space-x-2" data-testid="tab-appearance">
-                  <Palette className="w-4 h-4" />
-                  <span className="hidden sm:inline">Appearance</span>
-                </TabsTrigger>
-              </TabsList>
+              <div 
+                className="flex flex-wrap gap-2 p-2 rounded-2xl"
+                style={{ backgroundColor: 'rgba(0, 0, 0, 0.05)' }}
+              >
+                {[
+                  { value: 'profile', icon: User, label: 'Profile' },
+                  { value: 'pto', icon: CalendarDays, label: 'Time Off' },
+                  { value: 'notifications', icon: Bell, label: 'Notifications' },
+                  { value: 'appearance', icon: Palette, label: 'Appearance' },
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.value;
+                  return (
+                    <button
+                      key={tab.value}
+                      type="button"
+                      onClick={() => setActiveTab(tab.value)}
+                      className={`
+                        flex items-center gap-2 px-4 py-2.5 rounded-full font-medium text-sm
+                        transition-all duration-200 ease-out
+                        ${isActive ? 'shadow-sm' : 'hover:bg-white/50 dark:hover:bg-gray-700/50'}
+                      `}
+                      style={{
+                        backgroundColor: isActive ? 'var(--background)' : 'transparent',
+                        color: isActive ? '#007AFF' : '#86868B',
+                      }}
+                      data-testid={`tab-${tab.value}`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
 
             {/* Profile Settings */}
             <TabsContent value="profile" className="space-y-6">
@@ -3248,38 +3264,43 @@ export default function Settings() {
           {/* Administrator Settings */}
           {canManageUsers() && activeTab.startsWith("admin") && (
             <Tabs value={adminActiveTab} onValueChange={setAdminActiveTab} className="space-y-6">
-              <TabsList className={`grid w-full max-w-5xl ${isSuperAdmin() ? 'grid-cols-7' : 'grid-cols-6'}`}>
-                {isSuperAdmin() && (
-                  <TabsTrigger value="organizations" className="flex items-center space-x-2" data-testid="tab-admin-organizations">
-                    <Building2 className="w-4 h-4" />
-                    <span className="hidden sm:inline">Organizations</span>
-                  </TabsTrigger>
-                )}
-                <TabsTrigger value="user-management" className="flex items-center space-x-2" data-testid="tab-admin-users">
-                  <Users className="w-4 h-4" />
-                  <span className="hidden sm:inline">User Roles</span>
-                </TabsTrigger>
-                <TabsTrigger value="holidays" className="flex items-center space-x-2" data-testid="tab-admin-holidays">
-                  <Star className="w-4 h-4" />
-                  <span className="hidden sm:inline">Holidays</span>
-                </TabsTrigger>
-                <TabsTrigger value="framework-management" className="flex items-center space-x-2" data-testid="tab-admin-frameworks">
-                  <Target className="w-4 h-4" />
-                  <span className="hidden sm:inline">Framework Order</span>
-                </TabsTrigger>
-                <TabsTrigger value="security" className="flex items-center space-x-2" data-testid="tab-admin-security">
-                  <Shield className="w-4 h-4" />
-                  <span className="hidden sm:inline">Security</span>
-                </TabsTrigger>
-                <TabsTrigger value="billing" className="flex items-center space-x-2" data-testid="tab-admin-billing">
-                  <CreditCard className="w-4 h-4" />
-                  <span className="hidden sm:inline">Billing</span>
-                </TabsTrigger>
-                <TabsTrigger value="data" className="flex items-center space-x-2" data-testid="tab-admin-data">
-                  <SettingsIcon className="w-4 h-4" />
-                  <span className="hidden sm:inline">Data Management</span>
-                </TabsTrigger>
-              </TabsList>
+              <div 
+                className="flex flex-wrap gap-2 p-2 rounded-2xl"
+                style={{ backgroundColor: 'rgba(0, 0, 0, 0.05)' }}
+              >
+                {[
+                  ...(isSuperAdmin() ? [{ value: 'organizations', icon: Building2, label: 'Organizations' }] : []),
+                  { value: 'user-management', icon: Users, label: 'User Roles' },
+                  { value: 'holidays', icon: Star, label: 'Holidays' },
+                  { value: 'framework-management', icon: Target, label: 'Framework Order' },
+                  { value: 'security', icon: Shield, label: 'Security' },
+                  { value: 'billing', icon: CreditCard, label: 'Billing' },
+                  { value: 'data', icon: SettingsIcon, label: 'Data Management' },
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = adminActiveTab === tab.value;
+                  return (
+                    <button
+                      key={tab.value}
+                      type="button"
+                      onClick={() => setAdminActiveTab(tab.value)}
+                      className={`
+                        flex items-center gap-2 px-4 py-2.5 rounded-full font-medium text-sm
+                        transition-all duration-200 ease-out
+                        ${isActive ? 'shadow-sm' : 'hover:bg-white/50 dark:hover:bg-gray-700/50'}
+                      `}
+                      style={{
+                        backgroundColor: isActive ? 'var(--background)' : 'transparent',
+                        color: isActive ? '#007AFF' : '#86868B',
+                      }}
+                      data-testid={`tab-admin-${tab.value}`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
 
               {/* Super Admin Organizations Management */}
               {isSuperAdmin() && (
