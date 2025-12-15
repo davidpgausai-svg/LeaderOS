@@ -1,5 +1,5 @@
 import { db } from './db';
-import { eq, desc, and, sql, inArray, or } from 'drizzle-orm';
+import { eq, desc, and, sql, inArray, or, isNull, isNotNull } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import type { IStorage } from './storage';
 import {
@@ -186,15 +186,25 @@ export class PostgresStorage implements IStorage {
   }
 
   async getAllProjects(): Promise<Project[]> {
-    return db.select().from(projects);
+    return db.select().from(projects).where(isNull(projects.archivedAt));
   }
 
   async getProjectsByOrganization(organizationId: string): Promise<Project[]> {
-    return db.select().from(projects).where(eq(projects.organizationId, organizationId));
+    return db.select().from(projects).where(
+      and(
+        eq(projects.organizationId, organizationId),
+        isNull(projects.archivedAt)
+      )
+    );
   }
 
   async getProjectsByStrategy(strategyId: string): Promise<Project[]> {
-    return db.select().from(projects).where(eq(projects.strategyId, strategyId));
+    return db.select().from(projects).where(
+      and(
+        eq(projects.strategyId, strategyId),
+        isNull(projects.archivedAt)
+      )
+    );
   }
 
   async getProjectsByAssignee(assigneeId: string): Promise<Project[]> {
