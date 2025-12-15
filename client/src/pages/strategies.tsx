@@ -1851,7 +1851,7 @@ export default function Strategies() {
                                                 e.stopPropagation();
                                                 setResourcesModalProject(project);
                                               }}
-                                              title={projectHasResources(project.id) ? "View people resources" : "Add people resources"}
+                                              title="Capacity Planning Tag"
                                               data-testid={`button-view-leaders-${project.id}`}
                                             >
                                               <Users className={`w-3.5 h-3.5 ${projectHasResources(project.id) ? 'text-blue-500' : 'text-gray-400'}`} />
@@ -2114,7 +2114,7 @@ export default function Strategies() {
                                                     e.stopPropagation();
                                                     setActionPeopleModalAction(action);
                                                   }}
-                                                  title={actionHasPeople(action.id) ? "View assigned people" : "Assign people"}
+                                                  title="Assign To-Do Actions"
                                                   data-testid={`action-people-${action.id}`}
                                                 >
                                                   <Users className={`w-3 h-3 ${actionHasPeople(action.id) ? 'text-blue-500' : 'text-gray-400'}`} />
@@ -2535,7 +2535,7 @@ export default function Strategies() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              People Resources
+              People Resources for Capacity Planning
             </DialogTitle>
           </DialogHeader>
           {resourcesModalProject && (
@@ -2683,7 +2683,7 @@ export default function Strategies() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Assigned People
+              Assign To-Do Actions to Specific People
             </DialogTitle>
           </DialogHeader>
           {actionPeopleModalAction && (() => {
