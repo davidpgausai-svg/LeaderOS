@@ -150,9 +150,6 @@ export function PeopleSelector({
             selectedUserIds.length > 0 && mode === "multi" && "py-1.5",
             className
           )}
-          onClick={(e) => {
-            e.preventDefault();
-          }}
           data-testid="people-selector-trigger"
         >
           <div className="flex flex-wrap gap-1 flex-1 text-left">
