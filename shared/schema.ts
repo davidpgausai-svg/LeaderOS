@@ -268,10 +268,27 @@ export const projects = pgTable("projects", {
   completionDate: timestamp("completion_date"), // When project status was set to 'C' (Complete)
   progress: integer("progress").notNull().default(0), // 0-100
   isArchived: text("is_archived").notNull().default('false'), // 'true' or 'false' for cascade archival
+  archiveReason: text("archive_reason"), // Optional note when archiving
+  archivedAt: timestamp("archived_at"), // When project was archived
+  archivedBy: varchar("archived_by"), // User who archived the project
+  progressAtArchive: integer("progress_at_archive"), // Progress percentage at time of archive
+  wakeUpDate: timestamp("wake_up_date"), // Optional date to notify user to reactivate
   documentFolderUrl: text("document_folder_url"), // OneDrive/Google Drive URL for project documents
   communicationUrl: text("communication_url"), // Custom communication template URL
   organizationId: varchar("organization_id"), // Foreign key to organizations table
   createdBy: varchar("created_by").notNull(),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+// Project Snapshots - Version history for archived/unarchived projects
+export const projectSnapshots = pgTable("project_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull(), // Original project ID
+  snapshotData: text("snapshot_data").notNull(), // JSON of project + actions at time of snapshot
+  snapshotType: text("snapshot_type").notNull(), // 'archive' or 'unarchive'
+  reason: text("reason"), // Optional reason for the snapshot
+  createdBy: varchar("created_by").notNull(),
+  organizationId: varchar("organization_id"),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
@@ -488,6 +505,11 @@ export const insertBarrierSchema = createInsertSchema(barriers).omit({
   targetResolutionDate: z.coerce.date().optional().nullable(),
 });
 
+export const insertProjectSnapshotSchema = createInsertSchema(projectSnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -511,6 +533,8 @@ export type InsertMeetingNote = z.infer<typeof insertMeetingNoteSchema>;
 export type MeetingNote = typeof meetingNotes.$inferSelect;
 export type InsertBarrier = z.infer<typeof insertBarrierSchema>;
 export type Barrier = typeof barriers.$inferSelect;
+export type InsertProjectSnapshot = z.infer<typeof insertProjectSnapshotSchema>;
+export type ProjectSnapshot = typeof projectSnapshots.$inferSelect;
 
 // Dependencies - Track dependencies between projects and actions
 export const dependencies = pgTable("dependencies", {

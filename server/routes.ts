@@ -1163,6 +1163,219 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
+  // Project Archive routes
+  app.get("/api/archived-projects", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (!user.organizationId && user.isSuperAdmin !== 'true') {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      const organizationId = user.organizationId || '';
+      const archivedProjects = await storage.getArchivedProjectsByOrganization(organizationId);
+      
+      // Filter by strategy access for non-admin users
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        const filteredProjects = archivedProjects.filter(p => assignedStrategyIds.includes(p.strategyId));
+        return res.json(filteredProjects);
+      }
+
+      res.json(archivedProjects);
+    } catch (error) {
+      logger.error("Failed to get archived projects", error);
+      res.status(500).json({ message: "Failed to get archived projects" });
+    }
+  });
+
+  app.post("/api/projects/:id/archive", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // View role cannot archive projects
+      if (user.role === 'view') {
+        return res.status(403).json({ message: "Forbidden: View users cannot archive projects" });
+      }
+
+      const project = await storage.getProject(req.params.id);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      // Verify organization access
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== project.organizationId) {
+        return res.status(403).json({ message: "Forbidden: You do not have access to this project" });
+      }
+
+      // Check strategy access for non-admin users
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        if (!assignedStrategyIds.includes(project.strategyId)) {
+          return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
+        }
+      }
+
+      const { reason, wakeUpDate } = req.body;
+      const archivedProject = await storage.archiveProject(
+        req.params.id,
+        userId,
+        reason,
+        wakeUpDate ? new Date(wakeUpDate) : undefined
+      );
+
+      if (!archivedProject) {
+        return res.status(500).json({ message: "Failed to archive project" });
+      }
+
+      // Recalculate strategy progress
+      await storage.recalculateStrategyProgress(archivedProject.strategyId);
+
+      res.json(archivedProject);
+    } catch (error) {
+      logger.error("Failed to archive project", error);
+      res.status(500).json({ message: "Failed to archive project" });
+    }
+  });
+
+  app.post("/api/projects/:id/unarchive", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // View role cannot unarchive projects
+      if (user.role === 'view') {
+        return res.status(403).json({ message: "Forbidden: View users cannot restore projects" });
+      }
+
+      const project = await storage.getProject(req.params.id);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      // Verify organization access
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== project.organizationId) {
+        return res.status(403).json({ message: "Forbidden: You do not have access to this project" });
+      }
+
+      // Check strategy access for non-admin users
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        if (!assignedStrategyIds.includes(project.strategyId)) {
+          return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
+        }
+      }
+
+      const restoredProject = await storage.unarchiveProject(req.params.id, userId);
+
+      if (!restoredProject) {
+        return res.status(500).json({ message: "Failed to restore project" });
+      }
+
+      // Recalculate strategy progress
+      await storage.recalculateStrategyProgress(restoredProject.strategyId);
+
+      res.json(restoredProject);
+    } catch (error) {
+      logger.error("Failed to restore project", error);
+      res.status(500).json({ message: "Failed to restore project" });
+    }
+  });
+
+  app.post("/api/projects/:id/copy", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // View role cannot copy projects
+      if (user.role === 'view') {
+        return res.status(403).json({ message: "Forbidden: View users cannot copy projects" });
+      }
+
+      const project = await storage.getProject(req.params.id);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      // Verify organization access
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== project.organizationId) {
+        return res.status(403).json({ message: "Forbidden: You do not have access to this project" });
+      }
+
+      // Check strategy access for non-admin users
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        if (!assignedStrategyIds.includes(project.strategyId)) {
+          return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
+        }
+      }
+
+      const { newTitle, asTemplate } = req.body;
+      if (!newTitle) {
+        return res.status(400).json({ message: "New title is required" });
+      }
+
+      const newProject = await storage.copyProject(req.params.id, newTitle, userId, asTemplate === true);
+
+      if (!newProject) {
+        return res.status(500).json({ message: "Failed to copy project" });
+      }
+
+      // Recalculate strategy progress for the new project
+      await storage.recalculateStrategyProgress(newProject.strategyId);
+
+      res.json(newProject);
+    } catch (error) {
+      logger.error("Failed to copy project", error);
+      res.status(500).json({ message: "Failed to copy project" });
+    }
+  });
+
+  app.get("/api/projects/:id/snapshots", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const project = await storage.getProject(req.params.id);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      // Verify organization access
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== project.organizationId) {
+        return res.status(403).json({ message: "Forbidden: You do not have access to this project" });
+      }
+
+      const snapshots = await storage.getProjectSnapshots(req.params.id);
+      res.json(snapshots);
+    } catch (error) {
+      logger.error("Failed to get project snapshots", error);
+      res.status(500).json({ message: "Failed to get project snapshots" });
+    }
+  });
+
   // Barrier routes
   app.get("/api/barriers", isAuthenticated, async (req: any, res) => {
     try {

@@ -8,7 +8,7 @@ import {
   meetingNotes, barriers, dependencies, templateTypes,
   organizations, passwordResetTokens, twoFactorCodes, executiveGoals, strategyExecutiveGoals,
   teamTags, projectTeamTags, projectResourceAssignments, actionPeopleAssignments, ptoEntries, holidays,
-  billingHistory, paymentFailures,
+  billingHistory, paymentFailures, projectSnapshots,
   type User, type UpsertUser, type InsertUser,
   type Strategy, type InsertStrategy,
   type Project, type InsertProject,
@@ -35,7 +35,8 @@ import {
   type Holiday, type InsertHoliday,
   type BillingHistory, type InsertBillingHistory,
   type PaymentFailure, type InsertPaymentFailure,
-  type SubscriptionPlan, type SubscriptionStatus, type BillingInterval
+  type SubscriptionPlan, type SubscriptionStatus, type BillingInterval,
+  type ProjectSnapshot, type InsertProjectSnapshot
 } from '@shared/schema';
 
 export class PostgresStorage implements IStorage {
@@ -1000,6 +1001,183 @@ export class PostgresStorage implements IStorage {
   async deleteHoliday(id: string): Promise<boolean> {
     await db.delete(holidays).where(eq(holidays.id, id));
     return true;
+  }
+
+  // Project Snapshot methods
+  async getProjectSnapshots(projectId: string): Promise<ProjectSnapshot[]> {
+    return db.select().from(projectSnapshots)
+      .where(eq(projectSnapshots.projectId, projectId))
+      .orderBy(desc(projectSnapshots.createdAt));
+  }
+
+  async createProjectSnapshot(snapshot: InsertProjectSnapshot): Promise<ProjectSnapshot> {
+    const [newSnapshot] = await db.insert(projectSnapshots).values({
+      ...snapshot,
+      id: randomUUID(),
+    }).returning();
+    return newSnapshot;
+  }
+
+  // Project Archive methods
+  async getArchivedProjectsByOrganization(organizationId: string): Promise<Project[]> {
+    return db.select().from(projects)
+      .where(and(
+        eq(projects.organizationId, organizationId),
+        eq(projects.isArchived, 'true')
+      ))
+      .orderBy(desc(projects.archivedAt));
+  }
+
+  async archiveProject(projectId: string, archivedBy: string, reason?: string, wakeUpDate?: Date): Promise<Project | undefined> {
+    // Get the project first
+    const project = await this.getProject(projectId);
+    if (!project) return undefined;
+
+    // Get all actions for this project to include in snapshot
+    const projectActions = await this.getActionsByProject(projectId);
+
+    // Create a snapshot of the current state before archiving
+    await this.createProjectSnapshot({
+      projectId,
+      snapshotData: JSON.stringify({ project, actions: projectActions }),
+      snapshotType: 'archive',
+      reason: reason || 'Project archived',
+      createdBy: archivedBy,
+      organizationId: project.organizationId,
+    });
+
+    // Archive all actions under this project
+    for (const action of projectActions) {
+      await db.update(actions)
+        .set({ isArchived: 'true' })
+        .where(eq(actions.id, action.id));
+    }
+
+    // Remove dependencies involving this project or its actions
+    const actionIds = projectActions.map(a => a.id);
+    if (project.organizationId) {
+      await this.deleteDependenciesForEntities([projectId], actionIds, project.organizationId);
+    }
+
+    // Update the project with archive info
+    const [archivedProject] = await db.update(projects)
+      .set({
+        isArchived: 'true',
+        archiveReason: reason || null,
+        archivedAt: new Date(),
+        archivedBy,
+        progressAtArchive: project.progress,
+        wakeUpDate: wakeUpDate || null,
+      })
+      .where(eq(projects.id, projectId))
+      .returning();
+
+    return archivedProject;
+  }
+
+  async unarchiveProject(projectId: string, restoredBy: string): Promise<Project | undefined> {
+    // Get the project first
+    const project = await this.getProject(projectId);
+    if (!project) return undefined;
+
+    // Get all actions for this project
+    const projectActions = await this.getActionsByProject(projectId);
+
+    // Create a snapshot of the archived state before unarchiving
+    await this.createProjectSnapshot({
+      projectId,
+      snapshotData: JSON.stringify({ project, actions: projectActions }),
+      snapshotType: 'unarchive',
+      reason: 'Project restored from archive',
+      createdBy: restoredBy,
+      organizationId: project.organizationId,
+    });
+
+    // Unarchive all actions under this project
+    for (const action of projectActions) {
+      await db.update(actions)
+        .set({ isArchived: 'false' })
+        .where(eq(actions.id, action.id));
+    }
+
+    // Update the project - clear archive info but keep progressAtArchive for history
+    const [restoredProject] = await db.update(projects)
+      .set({
+        isArchived: 'false',
+        archiveReason: null,
+        archivedAt: null,
+        archivedBy: null,
+        wakeUpDate: null,
+      })
+      .where(eq(projects.id, projectId))
+      .returning();
+
+    return restoredProject;
+  }
+
+  async copyProject(projectId: string, newTitle: string, createdBy: string, asTemplate: boolean = false): Promise<Project | undefined> {
+    // Get the source project
+    const sourceProject = await this.getProject(projectId);
+    if (!sourceProject) return undefined;
+
+    // Get all actions for the source project
+    const sourceActions = await this.getActionsByProject(projectId);
+
+    // Create the new project
+    const newProjectId = randomUUID();
+    const now = new Date();
+    
+    // Calculate date offset if copying as regular project (not template)
+    const dayOffset = asTemplate ? 0 : Math.ceil((now.getTime() - new Date(sourceProject.startDate).getTime()) / (1000 * 60 * 60 * 24));
+
+    const [newProject] = await db.insert(projects).values({
+      id: newProjectId,
+      title: newTitle,
+      description: sourceProject.description,
+      strategyId: sourceProject.strategyId,
+      kpi: sourceProject.kpi,
+      kpiTracking: asTemplate ? null : sourceProject.kpiTracking,
+      accountableLeaders: sourceProject.accountableLeaders,
+      resourcesRequired: sourceProject.resourcesRequired,
+      startDate: asTemplate ? now : new Date(new Date(sourceProject.startDate).getTime() + dayOffset * 24 * 60 * 60 * 1000),
+      dueDate: asTemplate ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) : new Date(new Date(sourceProject.dueDate).getTime() + dayOffset * 24 * 60 * 60 * 1000),
+      status: 'NYS',
+      progress: asTemplate ? 0 : 0,
+      isArchived: 'false',
+      documentFolderUrl: sourceProject.documentFolderUrl,
+      communicationUrl: sourceProject.communicationUrl,
+      organizationId: sourceProject.organizationId,
+      createdBy,
+    }).returning();
+
+    // Copy all actions
+    for (const sourceAction of sourceActions) {
+      const newActionDueDate = sourceAction.dueDate 
+        ? (asTemplate 
+            ? new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000) 
+            : new Date(new Date(sourceAction.dueDate).getTime() + dayOffset * 24 * 60 * 60 * 1000))
+        : null;
+
+      await db.insert(actions).values({
+        id: randomUUID(),
+        title: sourceAction.title,
+        description: sourceAction.description,
+        strategyId: sourceAction.strategyId,
+        projectId: newProjectId,
+        targetValue: sourceAction.targetValue,
+        currentValue: asTemplate ? null : sourceAction.currentValue,
+        measurementUnit: sourceAction.measurementUnit,
+        status: asTemplate ? 'not_started' : 'not_started',
+        dueDate: newActionDueDate,
+        isArchived: 'false',
+        documentFolderUrl: sourceAction.documentFolderUrl,
+        notes: asTemplate ? null : sourceAction.notes,
+        organizationId: sourceAction.organizationId,
+        createdBy,
+      });
+    }
+
+    return newProject;
   }
 }
 

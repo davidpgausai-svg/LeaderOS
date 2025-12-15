@@ -1,4 +1,4 @@
-import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Project, type InsertProject, type Activity, type InsertActivity, type Action, type InsertAction, type Notification, type InsertNotification, type ActionDocument, type InsertActionDocument, type ActionChecklistItem, type InsertActionChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, type Barrier, type InsertBarrier, type Dependency, type InsertDependency, type TemplateType, type InsertTemplateType, type ExecutiveGoal, type InsertExecutiveGoal, type StrategyExecutiveGoal, type TeamTag, type InsertTeamTag, type ProjectTeamTag, type ProjectResourceAssignment, type InsertProjectResourceAssignment, type ActionPeopleAssignment, type InsertActionPeopleAssignment, type PtoEntry, type InsertPtoEntry, type Holiday, type InsertHoliday } from "@shared/schema";
+import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Project, type InsertProject, type Activity, type InsertActivity, type Action, type InsertAction, type Notification, type InsertNotification, type ActionDocument, type InsertActionDocument, type ActionChecklistItem, type InsertActionChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, type Barrier, type InsertBarrier, type Dependency, type InsertDependency, type TemplateType, type InsertTemplateType, type ExecutiveGoal, type InsertExecutiveGoal, type StrategyExecutiveGoal, type TeamTag, type InsertTeamTag, type ProjectTeamTag, type ProjectResourceAssignment, type InsertProjectResourceAssignment, type ActionPeopleAssignment, type InsertActionPeopleAssignment, type PtoEntry, type InsertPtoEntry, type Holiday, type InsertHoliday, type ProjectSnapshot, type InsertProjectSnapshot } from "@shared/schema";
 
 export interface IStorage {
   // User methods
@@ -159,6 +159,16 @@ export interface IStorage {
   createHoliday(holiday: InsertHoliday & { organizationId: string }): Promise<Holiday>;
   updateHoliday(id: string, updates: Partial<InsertHoliday>): Promise<Holiday | undefined>;
   deleteHoliday(id: string): Promise<boolean>;
+
+  // Project Snapshot methods (for archive/unarchive version history)
+  getProjectSnapshots(projectId: string): Promise<ProjectSnapshot[]>;
+  createProjectSnapshot(snapshot: InsertProjectSnapshot): Promise<ProjectSnapshot>;
+
+  // Project Archive methods
+  getArchivedProjectsByOrganization(organizationId: string): Promise<Project[]>;
+  archiveProject(projectId: string, archivedBy: string, reason?: string, wakeUpDate?: Date): Promise<Project | undefined>;
+  unarchiveProject(projectId: string, restoredBy: string): Promise<Project | undefined>;
+  copyProject(projectId: string, newTitle: string, createdBy: string, asTemplate?: boolean): Promise<Project | undefined>;
 }
 
 // Use PostgreSQL storage
