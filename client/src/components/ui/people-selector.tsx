@@ -37,6 +37,7 @@ interface PeopleSelectorProps {
   excludeUserIds?: string[];
   disabled?: boolean;
   className?: string;
+  closeOnSelect?: boolean;
 }
 
 export function PeopleSelector({
@@ -50,6 +51,7 @@ export function PeopleSelector({
   excludeUserIds = [],
   disabled = false,
   className,
+  closeOnSelect = false,
 }: PeopleSelectorProps) {
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
@@ -103,9 +105,16 @@ export function PeopleSelector({
       setSearchValue("");
     } else {
       if (selectedUserIds.includes(userId)) {
-        onChange(selectedUserIds.filter((id) => id !== userId));
+        const newIds = selectedUserIds.filter((id) => id !== userId);
+        onChange(newIds);
+        if (closeOnSelect || newIds.length === 0) {
+          setOpen(false);
+        }
       } else {
         onChange([...selectedUserIds, userId]);
+        if (closeOnSelect) {
+          setOpen(false);
+        }
       }
     }
   };
@@ -113,13 +122,18 @@ export function PeopleSelector({
   const handleRemove = (userId: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    onChange(selectedUserIds.filter((id) => id !== userId));
+    const newIds = selectedUserIds.filter((id) => id !== userId);
+    onChange(newIds);
+    if (newIds.length === 0) {
+      setOpen(false);
+    }
   };
 
   const handleClear = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     onChange([]);
+    setOpen(false);
   };
 
   return (
