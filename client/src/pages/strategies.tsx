@@ -16,6 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -117,6 +118,9 @@ export default function Strategies() {
   const [viewingProject, setViewingProject] = useState<any>(null);
   const [isEditProjectOpen, setIsEditProjectOpen] = useState(false);
   const [isViewProjectOpen, setIsViewProjectOpen] = useState(false);
+  const [archivingProject, setArchivingProject] = useState<any>(null);
+  const [archiveReason, setArchiveReason] = useState("");
+  const [archiveWakeUpDate, setArchiveWakeUpDate] = useState<string>("");
   
   // Action icon bar modal states
   const [dueDateModalAction, setDueDateModalAction] = useState<any>(null);
@@ -953,6 +957,35 @@ export default function Strategies() {
       toast({
         title: "Error",
         description: "Failed to delete project",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const archiveProjectMutation = useMutation({
+    mutationFn: async ({ projectId, reason, wakeUpDate }: { projectId: string; reason?: string; wakeUpDate?: string }) => {
+      const response = await apiRequest("POST", `/api/projects/${projectId}/archive`, {
+        reason,
+        wakeUpDate: wakeUpDate || undefined,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+      setArchivingProject(null);
+      setArchiveReason("");
+      setArchiveWakeUpDate("");
+      toast({
+        title: "Project Archived",
+        description: "The project has been moved to the archive and removed from daily view.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to archive project",
         variant: "destructive",
       });
     },
@@ -1975,6 +2008,18 @@ export default function Strategies() {
                                                     >
                                                       <Edit className="w-4 h-4 mr-2" />
                                                       Edit Project
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem 
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setArchivingProject(project);
+                                                        setArchiveReason("");
+                                                        setArchiveWakeUpDate("");
+                                                      }}
+                                                      data-testid={`menu-archive-project-${project.id}`}
+                                                    >
+                                                      <Archive className="w-4 h-4 mr-2" />
+                                                      Archive Project
                                                     </DropdownMenuItem>
                                                     <AlertDialog>
                                                       <AlertDialogTrigger asChild>
@@ -4559,6 +4604,113 @@ export default function Strategies() {
                     </div>
                   </>
                 )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Archive Project Modal */}
+      <Dialog open={!!archivingProject} onOpenChange={(open) => !open && setArchivingProject(null)}>
+        <DialogContent onClick={(e) => e.stopPropagation()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Archive className="h-5 w-5" />
+              Archive Project
+            </DialogTitle>
+          </DialogHeader>
+          {archivingProject && (
+            <div className="space-y-4">
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                <p>Are you sure you want to archive <span className="font-medium">"{archivingProject.title}"</span>?</p>
+              </div>
+              
+              {/* Warning for non-100% progress */}
+              {archivingProject.progress !== undefined && archivingProject.progress < 100 && (
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-amber-700 dark:text-amber-300">
+                      <p className="font-medium">Project is not 100% complete</p>
+                      <p className="text-xs mt-0.5">
+                        Current progress: {archivingProject.progress || 0}%. Consider completing remaining actions before archiving.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-2">
+                <p className="text-xs text-gray-500 dark:text-gray-400">When archived:</p>
+                <ul className="text-xs text-gray-600 dark:text-gray-300 space-y-1 list-disc list-inside">
+                  <li>Project and its actions will be hidden from daily view</li>
+                  <li>Dependencies on this project will be removed</li>
+                  <li>A snapshot will be created for version history</li>
+                  <li>You can restore or copy it anytime from Reports</li>
+                </ul>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <label htmlFor="archive-reason" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Archive Reason (optional)
+                  </label>
+                  <Textarea
+                    id="archive-reason"
+                    placeholder="e.g., Completed, Postponed, Cyclical work completed for this quarter..."
+                    value={archiveReason}
+                    onChange={(e) => setArchiveReason(e.target.value)}
+                    className="resize-none"
+                    rows={2}
+                    data-testid="input-archive-reason"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label htmlFor="wake-up-date" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Wake-up Date (optional)
+                  </label>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Set a date when you'll be reminded to reactivate this project (useful for cyclical work)
+                  </p>
+                  <Input
+                    id="wake-up-date"
+                    type="date"
+                    value={archiveWakeUpDate}
+                    onChange={(e) => setArchiveWakeUpDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    data-testid="input-archive-wake-up-date"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-3 pt-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => {
+                    setArchivingProject(null);
+                    setArchiveReason("");
+                    setArchiveWakeUpDate("");
+                  }}
+                  data-testid="button-cancel-archive"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="button"
+                  onClick={() => {
+                    archiveProjectMutation.mutate({
+                      projectId: archivingProject.id,
+                      reason: archiveReason || undefined,
+                      wakeUpDate: archiveWakeUpDate || undefined,
+                    });
+                  }}
+                  disabled={archiveProjectMutation.isPending}
+                  data-testid="button-confirm-archive"
+                >
+                  {archiveProjectMutation.isPending ? "Archiving..." : "Archive Project"}
+                </Button>
               </div>
             </div>
           )}
