@@ -24,6 +24,7 @@ import {
 import {
   Target,
   Users,
+  Check,
   CheckCircle,
   Clock,
   AlertTriangle,
@@ -337,22 +338,26 @@ export default function Reports() {
   const nonArchivedActions = actions.filter(a => a.isArchived !== 'true');
 
   const totalStrategies = nonArchivedStrategies.length;
-  const activeStrategies = nonArchivedStrategies.filter(s => s.status?.toLowerCase() === 'active').length;
-  const atRiskStrategies = nonArchivedStrategies.filter(s => {
+  const activeStrategiesList = nonArchivedStrategies.filter(s => s.status?.toLowerCase() === 'active');
+  const activeStrategies = activeStrategiesList.length;
+  const atRiskStrategiesList = nonArchivedStrategies.filter(s => {
     if (s.status?.toLowerCase() !== 'active') return false;
     const strategyProjects = nonArchivedProjects.filter((t: any) => t.strategyId === s.id);
     const risk = getRiskLevel(s, 'strategy', strategyProjects);
     return risk === 'at-risk' || risk === 'critical';
-  }).length;
+  });
+  const atRiskStrategies = atRiskStrategiesList.length;
 
   const totalProjects = nonArchivedProjects.length;
-  const overdueProjects = nonArchivedProjects.filter(t => {
+  const overdueProjectsList = nonArchivedProjects.filter(t => {
     const dueDate = safeDate(t.dueDate);
     return dueDate && isPast(dueDate) && t.progress < 100;
-  }).length;
+  });
+  const overdueProjects = overdueProjectsList.length;
 
   const totalActions = nonArchivedActions.length;
-  const achievedActions = nonArchivedActions.filter(o => o.status === 'achieved').length;
+  const achievedActionsList = nonArchivedActions.filter(o => o.status === 'achieved');
+  const achievedActions = achievedActionsList.length;
 
   if (strategiesLoading || projectsLoading || actionsLoading) {
     return (
@@ -421,83 +426,185 @@ export default function Reports() {
 
         <div ref={reportRef} className="p-8">
           <div className="max-w-6xl mx-auto">
-          {/* Summary Metrics - Apple HIG Cards */}
+          {/* Summary Metrics - Apple HIG Cards with Hover Details */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div 
-              className="rounded-2xl p-4"
-              style={{ backgroundColor: '#FFFFFF', boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)' }}
-              data-testid="card-active-strategies"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#007AFF' }}>
-                  <Target className="w-4 h-4 text-white" />
-                </div>
-                <span className="text-sm font-medium" style={{ color: '#86868B' }}>Active Priorities</span>
-              </div>
-              <div className="text-3xl font-bold" style={{ color: '#1D1D1F' }} data-testid="text-active-strategies">
-                {activeStrategies}
-              </div>
-              <div className="text-xs mt-1" style={{ color: '#86868B' }}>
-                of {totalStrategies} total
-              </div>
-            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div 
+                    className="rounded-2xl p-4 cursor-pointer hover:shadow-lg transition-shadow"
+                    style={{ backgroundColor: '#FFFFFF', boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)' }}
+                    data-testid="card-active-strategies"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#007AFF' }}>
+                        <Target className="w-4 h-4 text-white" />
+                      </div>
+                      <span className="text-sm font-medium" style={{ color: '#86868B' }}>Active Priorities</span>
+                    </div>
+                    <div className="text-3xl font-bold" style={{ color: '#1D1D1F' }} data-testid="text-active-strategies">
+                      {activeStrategies}
+                    </div>
+                    <div className="text-xs mt-1" style={{ color: '#86868B' }}>
+                      of {totalStrategies} total
+                    </div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs p-3">
+                  <p className="font-semibold mb-2">Active Priorities</p>
+                  {activeStrategiesList.length === 0 ? (
+                    <p className="text-sm text-gray-500">No active priorities</p>
+                  ) : (
+                    <ul className="text-sm space-y-1">
+                      {activeStrategiesList.slice(0, 5).map(s => (
+                        <li key={s.id} className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.colorCode || '#007AFF' }} />
+                          {s.title}
+                        </li>
+                      ))}
+                      {activeStrategiesList.length > 5 && (
+                        <li className="text-gray-500">+{activeStrategiesList.length - 5} more</li>
+                      )}
+                    </ul>
+                  )}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
-            <div 
-              className="rounded-2xl p-4"
-              style={{ backgroundColor: '#FFFFFF', boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)' }}
-              data-testid="card-at-risk"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#FF9500' }}>
-                  <AlertTriangle className="w-4 h-4 text-white" />
-                </div>
-                <span className="text-sm font-medium" style={{ color: '#86868B' }}>At Risk</span>
-              </div>
-              <div className="text-3xl font-bold" style={{ color: '#FF9500' }} data-testid="text-at-risk">
-                {atRiskStrategies}
-              </div>
-              <div className="text-xs mt-1" style={{ color: '#FF9500' }}>
-                priorities need attention
-              </div>
-            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div 
+                    className="rounded-2xl p-4 cursor-pointer hover:shadow-lg transition-shadow"
+                    style={{ backgroundColor: '#FFFFFF', boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)' }}
+                    data-testid="card-at-risk"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#FF9500' }}>
+                        <AlertTriangle className="w-4 h-4 text-white" />
+                      </div>
+                      <span className="text-sm font-medium" style={{ color: '#86868B' }}>At Risk</span>
+                    </div>
+                    <div className="text-3xl font-bold" style={{ color: '#FF9500' }} data-testid="text-at-risk">
+                      {atRiskStrategies}
+                    </div>
+                    <div className="text-xs mt-1" style={{ color: '#FF9500' }}>
+                      priorities need attention
+                    </div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs p-3">
+                  <p className="font-semibold mb-2">At Risk Priorities</p>
+                  {atRiskStrategiesList.length === 0 ? (
+                    <p className="text-sm text-gray-500">No priorities at risk</p>
+                  ) : (
+                    <ul className="text-sm space-y-1">
+                      {atRiskStrategiesList.slice(0, 5).map(s => (
+                        <li key={s.id} className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.colorCode || '#FF9500' }} />
+                          {s.title}
+                        </li>
+                      ))}
+                      {atRiskStrategiesList.length > 5 && (
+                        <li className="text-gray-500">+{atRiskStrategiesList.length - 5} more</li>
+                      )}
+                    </ul>
+                  )}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
-            <div 
-              className="rounded-2xl p-4"
-              style={{ backgroundColor: '#FFFFFF', boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)' }}
-              data-testid="card-overdue-projects"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#FF3B30' }}>
-                  <XCircle className="w-4 h-4 text-white" />
-                </div>
-                <span className="text-sm font-medium" style={{ color: '#86868B' }}>Overdue Projects</span>
-              </div>
-              <div className="text-3xl font-bold" style={{ color: '#FF3B30' }} data-testid="text-overdue-projects">
-                {overdueProjects}
-              </div>
-              <div className="text-xs mt-1" style={{ color: '#FF3B30' }}>
-                past due date
-              </div>
-            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div 
+                    className="rounded-2xl p-4 cursor-pointer hover:shadow-lg transition-shadow"
+                    style={{ backgroundColor: '#FFFFFF', boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)' }}
+                    data-testid="card-overdue-projects"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#FF3B30' }}>
+                        <Clock className="w-4 h-4 text-white" />
+                      </div>
+                      <span className="text-sm font-medium" style={{ color: '#86868B' }}>Overdue Projects</span>
+                    </div>
+                    <div className="text-3xl font-bold" style={{ color: '#FF3B30' }} data-testid="text-overdue-projects">
+                      {overdueProjects}
+                    </div>
+                    <div className="text-xs mt-1" style={{ color: '#FF3B30' }}>
+                      past due date
+                    </div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs p-3">
+                  <p className="font-semibold mb-2">Overdue Projects</p>
+                  {overdueProjectsList.length === 0 ? (
+                    <p className="text-sm text-gray-500">No overdue projects</p>
+                  ) : (
+                    <ul className="text-sm space-y-1">
+                      {overdueProjectsList.slice(0, 5).map(p => {
+                        const strategy = strategies.find(s => s.id === p.strategyId);
+                        return (
+                          <li key={p.id} className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: strategy?.colorCode || '#FF3B30' }} />
+                            {p.title}
+                          </li>
+                        );
+                      })}
+                      {overdueProjectsList.length > 5 && (
+                        <li className="text-gray-500">+{overdueProjectsList.length - 5} more</li>
+                      )}
+                    </ul>
+                  )}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
-            <div 
-              className="rounded-2xl p-4"
-              style={{ backgroundColor: '#FFFFFF', boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)' }}
-              data-testid="card-completion-rate"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#34C759' }}>
-                  <CheckCircle className="w-4 h-4 text-white" />
-                </div>
-                <span className="text-sm font-medium" style={{ color: '#86868B' }}>Actions Complete</span>
-              </div>
-              <div className="text-3xl font-bold" style={{ color: '#34C759' }} data-testid="text-completion-rate">
-                {totalActions > 0 ? Math.round((achievedActions / totalActions) * 100) : 0}%
-              </div>
-              <div className="text-xs mt-1" style={{ color: '#86868B' }}>
-                {achievedActions} of {totalActions}
-              </div>
-            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div 
+                    className="rounded-2xl p-4 cursor-pointer hover:shadow-lg transition-shadow"
+                    style={{ backgroundColor: '#FFFFFF', boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)' }}
+                    data-testid="card-completion-rate"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#34C759' }}>
+                        <Check className="w-4 h-4 text-white" />
+                      </div>
+                      <span className="text-sm font-medium" style={{ color: '#86868B' }}>Actions Complete</span>
+                    </div>
+                    <div className="text-3xl font-bold" style={{ color: '#34C759' }} data-testid="text-completion-rate">
+                      {totalActions > 0 ? Math.round((achievedActions / totalActions) * 100) : 0}%
+                    </div>
+                    <div className="text-xs mt-1" style={{ color: '#86868B' }}>
+                      {achievedActions} of {totalActions}
+                    </div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs p-3">
+                  <p className="font-semibold mb-2">Recently Completed Actions</p>
+                  {achievedActionsList.length === 0 ? (
+                    <p className="text-sm text-gray-500">No completed actions yet</p>
+                  ) : (
+                    <ul className="text-sm space-y-1">
+                      {achievedActionsList.slice(0, 5).map(a => {
+                        const strategy = strategies.find(s => s.id === a.strategyId);
+                        return (
+                          <li key={a.id} className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: strategy?.colorCode || '#34C759' }} />
+                            {a.title}
+                          </li>
+                        );
+                      })}
+                      {achievedActionsList.length > 5 && (
+                        <li className="text-gray-500">+{achievedActionsList.length - 5} more</li>
+                      )}
+                    </ul>
+                  )}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
 
           {/* Tabbed Reports - Apple HIG Pill Navigation */}
