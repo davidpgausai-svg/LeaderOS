@@ -437,9 +437,7 @@ export default function Reports() {
                     data-testid="card-active-strategies"
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#007AFF' }}>
-                        <Target className="w-4 h-4 text-white" />
-                      </div>
+                      <Target className="w-5 h-5" style={{ color: '#007AFF' }} />
                       <span className="text-sm font-medium" style={{ color: '#86868B' }}>Active Priorities</span>
                     </div>
                     <div className="text-3xl font-bold" style={{ color: '#1D1D1F' }} data-testid="text-active-strategies">
@@ -480,9 +478,7 @@ export default function Reports() {
                     data-testid="card-at-risk"
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#FF9500' }}>
-                        <AlertTriangle className="w-4 h-4 text-white" />
-                      </div>
+                      <AlertTriangle className="w-5 h-5" style={{ color: '#FF9500' }} />
                       <span className="text-sm font-medium" style={{ color: '#86868B' }}>At Risk</span>
                     </div>
                     <div className="text-3xl font-bold" style={{ color: '#FF9500' }} data-testid="text-at-risk">
@@ -523,9 +519,7 @@ export default function Reports() {
                     data-testid="card-overdue-projects"
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#FF3B30' }}>
-                        <Clock className="w-4 h-4 text-white" />
-                      </div>
+                      <Clock className="w-5 h-5" style={{ color: '#FF3B30' }} />
                       <span className="text-sm font-medium" style={{ color: '#86868B' }}>Overdue Projects</span>
                     </div>
                     <div className="text-3xl font-bold" style={{ color: '#FF3B30' }} data-testid="text-overdue-projects">
@@ -569,9 +563,7 @@ export default function Reports() {
                     data-testid="card-completion-rate"
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#34C759' }}>
-                        <Check className="w-4 h-4 text-white" />
-                      </div>
+                      <Check className="w-5 h-5" style={{ color: '#34C759' }} />
                       <span className="text-sm font-medium" style={{ color: '#86868B' }}>Actions Complete</span>
                     </div>
                     <div className="text-3xl font-bold" style={{ color: '#34C759' }} data-testid="text-completion-rate">
