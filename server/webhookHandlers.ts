@@ -79,8 +79,8 @@ export class WebhookHandlers {
         console.log(`[Stripe Webhook] Welcome email sent to ${session.customer_details.email}`);
       }
     } catch (error) {
-      console.error('[Stripe Webhook] Error handling checkout completion:', error);
-      throw error;
+      // Log but don't rethrow - acknowledge to Stripe to prevent infinite retries
+      console.error('[Stripe Webhook] Error handling checkout completion (acknowledging to prevent retry):', error);
     }
   }
 }

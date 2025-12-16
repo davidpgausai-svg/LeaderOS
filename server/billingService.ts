@@ -683,8 +683,9 @@ class BillingService {
     const subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
     
     if (!customerEmail) {
-      console.error('[Billing] No customer email in checkout session');
-      throw new Error('No customer email in checkout session');
+      // Can't auto-provision without email - log and return
+      console.warn('[Billing] No customer email in checkout session - skipping auto-provision');
+      return { isNewCustomer: false };
     }
 
     // Check if we already have an organization linked to this Stripe customer
