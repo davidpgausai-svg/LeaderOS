@@ -498,3 +498,91 @@ export async function sendSubscriptionCanceledEmail(
     return false;
   }
 }
+
+export async function sendWelcomeEmail(
+  toEmail: string,
+  tempPassword: string,
+  firstName?: string | null
+): Promise<boolean> {
+  try {
+    logger.info(`Attempting to send welcome email to ${toEmail}`);
+    const { client, fromEmail } = await getResendClient();
+    
+    const baseUrl = process.env.APP_URL 
+      ? process.env.APP_URL.replace(/\/$/, '')
+      : process.env.REPLIT_DEV_DOMAIN 
+      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+      : process.env.REPLIT_DOMAINS
+      ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+      : 'http://localhost:5000';
+    
+    const loginLink = `${baseUrl}/login`;
+    const greeting = firstName ? `Hi ${firstName},` : 'Hi,';
+
+    const { data, error } = await client.emails.send({
+      from: fromEmail || 'LeaderOS <noreply@resend.dev>',
+      to: toEmail,
+      subject: 'Welcome to LeaderOS - Your Account is Ready!',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to LeaderOS!</h1>
+          </div>
+          
+          <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
+            <p style="font-size: 16px; margin-bottom: 20px;">${greeting}</p>
+            
+            <p style="font-size: 16px; margin-bottom: 20px;">
+              Thank you for subscribing to LeaderOS! Your account has been created and is ready to use.
+            </p>
+            
+            <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 0 0 10px 0; font-weight: 600;">Your Login Credentials:</p>
+              <p style="margin: 5px 0;"><strong>Email:</strong> ${toEmail}</p>
+              <p style="margin: 5px 0;"><strong>Temporary Password:</strong> <code style="background: #e5e7eb; padding: 2px 8px; border-radius: 4px; font-family: monospace;">${tempPassword}</code></p>
+            </div>
+            
+            <p style="font-size: 14px; color: #FF6B35; margin-bottom: 20px;">
+              <strong>Important:</strong> Please change your password after your first login for security.
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${loginLink}" 
+                 style="background: #3B82F6; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block;">
+                Log In to LeaderOS
+              </a>
+            </div>
+            
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+            
+            <p style="font-size: 14px; color: #666;">
+              Need help getting started? Reply to this email and our team will be happy to assist you.
+            </p>
+          </div>
+          
+          <p style="font-size: 12px; color: #999; text-align: center; margin-top: 20px;">
+            &copy; ${new Date().getFullYear()} LeaderOS powered by Gaus LLC. All rights reserved.
+          </p>
+        </body>
+        </html>
+      `,
+    });
+
+    if (error) {
+      logger.error('Failed to send welcome email', error);
+      return false;
+    }
+
+    logger.info(`Welcome email sent to ${toEmail}`, { messageId: data?.id });
+    return true;
+  } catch (error) {
+    logger.error('Error sending welcome email', error);
+    return false;
+  }
+}

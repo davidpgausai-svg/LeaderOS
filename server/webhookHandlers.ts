@@ -1,5 +1,6 @@
 import { getStripeSync } from './stripeClient';
 import { billingService } from './billingService';
+import { sendWelcomeEmail } from './email';
 import type Stripe from 'stripe';
 
 export class WebhookHandlers {
@@ -27,6 +28,10 @@ export class WebhookHandlers {
 
     try {
       switch (event.type) {
+        case 'checkout.session.completed':
+          await WebhookHandlers.handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+          break;
+
         case 'customer.subscription.created':
         case 'customer.subscription.updated':
           await billingService.handleSubscriptionChange(event.data.object as Stripe.Subscription);
@@ -53,6 +58,28 @@ export class WebhookHandlers {
       }
     } catch (error) {
       console.error(`[Stripe Webhook] Error processing ${event.type}:`, error);
+      throw error;
+    }
+  }
+
+  static async handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
+    console.log(`[Stripe Webhook] Checkout session completed: ${session.id}`);
+    
+    try {
+      const result = await billingService.handleCheckoutSessionCompleted(session);
+      
+      if (result.isNewCustomer && result.tempPassword && session.customer_details?.email) {
+        // Send welcome email with temporary password
+        const customerName = session.customer_details?.name?.split(' ')[0] || null;
+        await sendWelcomeEmail(
+          session.customer_details.email,
+          result.tempPassword,
+          customerName
+        );
+        console.log(`[Stripe Webhook] Welcome email sent to ${session.customer_details.email}`);
+      }
+    } catch (error) {
+      console.error('[Stripe Webhook] Error handling checkout completion:', error);
       throw error;
     }
   }

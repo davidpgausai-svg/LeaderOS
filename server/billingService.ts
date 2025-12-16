@@ -29,13 +29,13 @@ export const PRICE_IDS = {
     monthly: 'price_1SdxDMAPmlCUuC3zrwwZFojc', // test
     annual: 'price_1SdxDMAPmlCUuC3z1eidVw7P', // test
     monthlyLive: 'price_1SdziQH5ttU72wpZE8B3UZDf', // live
-    annualLive: 'price_1Sdzk1H5ttU72wpZ1mDifc7R', // live
+    annualLive: 'price_1Sf6bMH5ttU72wpZzPUPmyV8', // live - $120/year
   },
   team: {
     monthly: 'price_1SdxDNAPmlCUuC3zCMeKd0bV', // test
     annual: 'price_1SdxDNAPmlCUuC3zOcpRsQ3S', // test
     monthlyLive: 'price_1Sdzl2H5ttU72wpZhrhH2ifK', // live
-    annualLive: 'price_1SdzmTH5ttU72wpZukNez9ok', // live
+    annualLive: 'price_1Sf6bhH5ttU72wpZgSCvznWL', // live - $220/year
   },
   teamSeat: {
     monthly: 'price_1SdxDOAPmlCUuC3z1JC3NDy2',
@@ -43,6 +43,26 @@ export const PRICE_IDS = {
     monthlyLive: 'price_1Se1VpH5ttU72wpZ2PeWFafx', // live - $6/mo per additional team member
   },
 };
+
+// Map price IDs to plan info for checkout.session.completed handling
+export function getPlanFromPriceId(priceId: string): { plan: SubscriptionPlan; interval: BillingInterval } | null {
+  const priceMap: Record<string, { plan: SubscriptionPlan; interval: BillingInterval }> = {
+    // Starter (monthly only)
+    [PRICE_IDS.starter.monthly]: { plan: 'starter', interval: 'monthly' },
+    [PRICE_IDS.starter.monthlyLive]: { plan: 'starter', interval: 'monthly' },
+    // LeaderPro
+    [PRICE_IDS.leaderpro.monthly]: { plan: 'leaderpro', interval: 'monthly' },
+    [PRICE_IDS.leaderpro.monthlyLive]: { plan: 'leaderpro', interval: 'monthly' },
+    [PRICE_IDS.leaderpro.annual]: { plan: 'leaderpro', interval: 'annual' },
+    [PRICE_IDS.leaderpro.annualLive]: { plan: 'leaderpro', interval: 'annual' },
+    // Team
+    [PRICE_IDS.team.monthly]: { plan: 'team', interval: 'monthly' },
+    [PRICE_IDS.team.monthlyLive]: { plan: 'team', interval: 'monthly' },
+    [PRICE_IDS.team.annual]: { plan: 'team', interval: 'annual' },
+    [PRICE_IDS.team.annualLive]: { plan: 'team', interval: 'annual' },
+  };
+  return priceMap[priceId] || null;
+}
 
 export const PLAN_LIMITS = {
   starter: {
@@ -653,6 +673,115 @@ class BillingService {
       paymentFailed: !!org.paymentFailedAt,
       billingHistory: billingHistory.slice(0, 20),
     };
+  }
+
+  async handleCheckoutSessionCompleted(session: Stripe.Checkout.Session): Promise<{ isNewCustomer: boolean; organizationId?: string; tempPassword?: string }> {
+    console.log('[Billing] Processing checkout.session.completed:', session.id);
+    
+    const customerEmail = session.customer_details?.email;
+    const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
+    const subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
+    
+    if (!customerEmail) {
+      console.error('[Billing] No customer email in checkout session');
+      throw new Error('No customer email in checkout session');
+    }
+
+    // Check if we already have an organization linked to this Stripe customer
+    if (customerId) {
+      const existingOrg = await pgFunctions.getOrganizationByStripeCustomerId(customerId);
+      if (existingOrg) {
+        console.log(`[Billing] Existing customer found, org: ${existingOrg.id}`);
+        return { isNewCustomer: false, organizationId: existingOrg.id };
+      }
+    }
+
+    // Check if a user with this email already exists
+    const existingUser = await pgFunctions.getUserByEmail(customerEmail);
+    if (existingUser && existingUser.organizationId) {
+      console.log(`[Billing] User with email ${customerEmail} already exists in org ${existingUser.organizationId}`);
+      // Link the Stripe customer to their existing organization
+      if (customerId && subscriptionId) {
+        await pgFunctions.updateOrganizationSubscription(existingUser.organizationId, {
+          stripeCustomerId: customerId,
+          stripeSubscriptionId: subscriptionId,
+        });
+      }
+      return { isNewCustomer: false, organizationId: existingUser.organizationId };
+    }
+
+    // This is a new customer - auto-provision account
+    console.log(`[Billing] New customer, auto-provisioning account for ${customerEmail}`);
+    
+    // Get subscription details to determine plan
+    const stripe = await getUncachableStripeClient();
+    let plan: SubscriptionPlan = 'starter';
+    let interval: BillingInterval = 'monthly';
+    let currentPeriodEnd: Date | null = null;
+
+    if (subscriptionId) {
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      const priceId = subscription.items.data[0]?.price.id;
+      if (priceId) {
+        const planInfo = getPlanFromPriceId(priceId);
+        if (planInfo) {
+          plan = planInfo.plan;
+          interval = planInfo.interval;
+        }
+      }
+      currentPeriodEnd = new Date((subscription as any).current_period_end * 1000);
+    }
+
+    // Create organization
+    const orgName = session.customer_details?.name || customerEmail.split('@')[0] + "'s Organization";
+    const newOrg = await pgFunctions.createOrganization(orgName);
+    
+    // Update organization with Stripe info and subscription details
+    await pgFunctions.updateOrganizationSubscription(newOrg.id, {
+      stripeCustomerId: customerId || undefined,
+      stripeSubscriptionId: subscriptionId || undefined,
+      subscriptionPlan: plan,
+      subscriptionStatus: 'active',
+      billingInterval: interval,
+      currentPeriodEnd: currentPeriodEnd || undefined,
+    });
+
+    // Generate temporary password
+    const tempPassword = this.generateTempPassword();
+    const bcrypt = await import('bcryptjs');
+    const hashedPassword = await bcrypt.hash(tempPassword, 10);
+
+    // Create admin user
+    await pgStorage.createUser({
+      email: customerEmail,
+      passwordHash: hashedPassword,
+      firstName: session.customer_details?.name?.split(' ')[0] || 'User',
+      lastName: session.customer_details?.name?.split(' ').slice(1).join(' ') || '',
+      role: 'administrator',
+      organizationId: newOrg.id,
+    });
+
+    console.log(`[Billing] Auto-provisioned org ${newOrg.id} with admin user ${customerEmail} on ${plan} plan`);
+
+    // Log billing history
+    await pgFunctions.createBillingHistoryEntry({
+      organizationId: newOrg.id,
+      eventType: 'subscription_created',
+      description: `Account auto-provisioned via Stripe checkout. Plan: ${plan} (${interval})`,
+      planBefore: null,
+      planAfter: plan,
+    });
+
+    return { isNewCustomer: true, organizationId: newOrg.id, tempPassword };
+  }
+
+  private generateTempPassword(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
+    let password = '';
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
   }
 }
 
