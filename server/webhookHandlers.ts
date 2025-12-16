@@ -57,8 +57,8 @@ export class WebhookHandlers {
           console.log(`[Stripe Webhook] Unhandled event type: ${event.type}`);
       }
     } catch (error) {
-      console.error(`[Stripe Webhook] Error processing ${event.type}:`, error);
-      throw error;
+      // Log but don't rethrow - acknowledge to Stripe to prevent infinite retries
+      console.error(`[Stripe Webhook] Error processing ${event.type} (acknowledging to prevent retry):`, error);
     }
   }
 
