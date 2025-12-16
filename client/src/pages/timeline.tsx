@@ -190,14 +190,8 @@ export default function Timeline() {
     };
 
     const getProjectStatusColor = (status: string) => {
-      switch (status) {
-        case "C": return "#22c55e";
-        case "OT": return "#eab308";
-        case "OH": return "#ef4444";
-        case "B": return "#f97316";
-        case "NYS": return "#9ca3af";
-        default: return "#6b7280";
-      }
+      // All projects use the same grey color regardless of status
+      return "#6b7280";
     };
 
     const getActionStatusColor = (status: string) => {
