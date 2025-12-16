@@ -157,7 +157,7 @@ export function NotificationBell({ isCollapsed = false }: NotificationBellProps)
       {/* Dropdown Panel */}
       {isOpen && (
         <div
-          className="absolute left-full ml-2 top-0 w-96 bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50"
+          className="absolute left-full ml-2 top-0 w-96 bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-[9999]"
           data-testid="notification-dropdown"
         >
           {/* Header */}
