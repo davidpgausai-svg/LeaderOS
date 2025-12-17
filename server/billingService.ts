@@ -730,7 +730,15 @@ class BillingService {
           interval = planInfo.interval;
         }
       }
-      currentPeriodEnd = new Date((subscription as any).current_period_end * 1000);
+      // Safely parse current_period_end timestamp
+      const periodEndTimestamp = (subscription as any).current_period_end;
+      if (periodEndTimestamp && typeof periodEndTimestamp === 'number' && periodEndTimestamp > 0) {
+        currentPeriodEnd = new Date(periodEndTimestamp * 1000);
+        // Validate the date is valid
+        if (isNaN(currentPeriodEnd.getTime())) {
+          currentPeriodEnd = null;
+        }
+      }
     }
 
     // Create organization
