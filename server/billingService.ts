@@ -752,12 +752,18 @@ class BillingService {
     const bcrypt = await import('bcryptjs');
     const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
+    // Parse customer name safely (handle missing name, single-word names, etc.)
+    const customerName = session.customer_details?.name || '';
+    const nameParts = customerName.trim().split(/\s+/).filter(Boolean);
+    const firstName = nameParts[0] || 'User';
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
     // Create admin user
     await pgStorage.createUser({
       email: customerEmail,
       passwordHash: hashedPassword,
-      firstName: session.customer_details?.name?.split(' ')[0] || 'User',
-      lastName: session.customer_details?.name?.split(' ').slice(1).join(' ') || '',
+      firstName,
+      lastName,
       role: 'administrator',
       organizationId: newOrg.id,
     });
