@@ -104,6 +104,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     await (storage as any).seedData();
   }
 
+  // Public endpoint: Get checkout session details for thank-you page (no auth required)
+  app.get("/api/checkout-session/:sessionId", async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      
+      if (!sessionId || !sessionId.startsWith('cs_')) {
+        return res.status(400).json({ message: "Invalid session ID" });
+      }
+
+      const { getUncachableStripeClient } = await import('./stripeClient');
+      const stripe = await getUncachableStripeClient();
+      
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      
+      // Return limited info for security
+      res.json({
+        customerEmail: session.customer_details?.email || null,
+        customerName: session.customer_details?.name || null,
+        planName: session.amount_total ? `$${(session.amount_total / 100).toFixed(2)}/month` : null,
+      });
+    } catch (error: any) {
+      console.error('Error fetching checkout session:', error.message);
+      res.status(404).json({ message: "Session not found" });
+    }
+  });
+
   // Config endpoint for Syncfusion license (auth required)
   app.get("/api/config/syncfusion", isAuthenticated, (req: any, res) => {
     const licenseKey = process.env.SYNCFUSION_LICENSE_KEY || '';

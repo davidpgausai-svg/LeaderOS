@@ -1,0 +1,124 @@
+From a Stripe architecture standpoint, this is an important clarification:
+
+**You do not update the success URL on the Product or Price.**
+The **Product Catalog cannot own post-payment behavior**.
+
+The **success URL lives exclusively on the Checkout Session** that references the product/price.
+
+This is by design and aligns with Stripe’s separation of concerns:
+
+* **Products / Prices** → commercial definitions
+* **Checkout Session** → customer experience + flow control
+
+---
+
+## The Only Place the Success URL Is Set
+
+### ✅ Stripe Checkout Session (Replit / API)
+
+Wherever you are creating the Checkout Session in Replit, you will see (or need to add):
+
+```js
+success_url: "https://yourdomain.com/thank-you?session_id={CHECKOUT_SESSION_ID}"
+```
+
+That is the **single source of truth**.
+
+There is no dashboard toggle, product field, or price setting that overrides this.
+
+---
+
+## How to Update It (Step-by-Step, No Ambiguity)
+
+### 1️⃣ Locate your Checkout Session creation code
+
+In Replit, search for:
+
+* `checkout.sessions.create`
+* `success_url`
+* `stripe.checkout`
+
+You’re looking for something structurally similar to this:
+
+```js
+await stripe.checkout.sessions.create({
+  mode: "subscription", // or "payment"
+  line_items: [
+    { price: "price_123", quantity: 1 }
+  ],
+  success_url: "...",
+  cancel_url: "..."
+});
+```
+
+---
+
+### 2️⃣ Update the `success_url`
+
+Replace it with your desired destination:
+
+```js
+success_url: "https://leaderos.app/thank-you?session_id={CHECKOUT_SESSION_ID}"
+```
+
+**Best practice (recommended):**
+
+* Always include `{CHECKOUT_SESSION_ID}`
+* This future-proofs verification, personalization, and provisioning
+
+---
+
+### 3️⃣ Redeploy / Restart the Replit service
+
+Stripe will use the **new URL immediately** for all newly created Checkout Sessions.
+
+> Existing sessions are immutable — only new sessions pick up the change.
+
+---
+
+## What You *Cannot* Do (Important Guardrails)
+
+| Action                                      | Supported |
+| ------------------------------------------- | --------- |
+| Set success URL on Product                  | ❌ No      |
+| Set success URL on Price                    | ❌ No      |
+| Set success URL globally in Stripe          | ❌ No      |
+| Override success URL after session creation | ❌ No      |
+| Set success URL per Checkout Session        | ✅ Yes     |
+
+---
+
+## Strategic Recommendation (Scalable Pattern)
+
+If you anticipate multiple products or plans:
+
+```js
+success_url: "https://leaderos.app/thank-you?session_id={CHECKOUT_SESSION_ID}"
+```
+
+Then on the thank-you page:
+
+* Use the session ID
+* Fetch the session server-side
+* Infer product, plan, entitlement
+* Route the user accordingly
+
+This keeps:
+
+* Stripe clean
+* Replit logic centralized
+* UX flexible as you scale
+
+---
+
+## Quick Alignment Check
+
+To give you **exact code** (drop-in, no rework):
+
+* Are you creating Checkout Sessions in:
+
+  * Express API route?
+  * Replit serverless function?
+  * Frontend → backend call?
+
+Once I know that, I’ll tailor the snippet precisely to your implementation.

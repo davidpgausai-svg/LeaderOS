@@ -29,6 +29,7 @@ import RegisterPurchase from "@/pages/register-purchase";
 import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
 import SuperAdmin from "@/pages/super-admin";
+import CheckoutSuccess from "@/pages/checkout-success";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -43,6 +44,7 @@ function Router() {
       <Switch>
         <Route path="/register/:token" component={Register} />
         <Route path="/register/purchase" component={RegisterPurchase} />
+        <Route path="/checkout-success" component={CheckoutSuccess} />
         <Route path="/forgot-password" component={ForgotPassword} />
         <Route path="/reset-password" component={ResetPassword} />
         <Route path="/landing" component={Landing} />

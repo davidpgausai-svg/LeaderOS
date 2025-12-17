@@ -1,0 +1,82 @@
+1) Customize the Thank You Screen via success_url (Checkout Session)
+
+In Replit, wherever you create the Checkout Session, set a success_url to a page you fully control (Squarespace or your app):
+
+Best practice: include the session ID for verification/personalization
+https://leaderos.app/thank-you?session_id={CHECKOUT_SESSION_ID}
+
+Example (Node/Express-style):
+
+const session = await stripe.checkout.sessions.create({
+  mode: "subscription", // or "payment"
+  line_items: [{ price: PRICE_ID, quantity: 1 }],
+  success_url: "https://leaderos.app/thank-you?session_id={CHECKOUT_SESSION_ID}",
+  cancel_url: "https://leaderos.app/pricing",
+});
+
+
+Result: Stripe’s hosted checkout completes → customer is redirected to your branded thank-you page.
+
+2) Use Webhooks for “Confirmed Payment” (Source of Truth)
+
+Your “confirmed” event should come from Stripe webhooks, not the redirect.
+
+Common events:
+
+One-time purchase: checkout.session.completed
+
+Subscriptions:
+
+checkout.session.completed (customer completed checkout)
+
+invoice.paid (payment captured for the invoice)
+
+customer.subscription.created/updated (status changes)
+
+Recommended provisioning trigger (subscriptions)
+
+Provision access when:
+
+invoice.paid fires (strongest signal of successful payment capture), or
+
+checkout.session.completed and subscription is active (acceptable, but invoice-based is tighter)
+
+3) Architecture: “Thank You Page” vs “Provisioning”
+
+To keep things enterprise-grade:
+
+Thank You Page (UX Layer)
+
+Purpose: confirm next steps, route to onboarding.
+
+“Payment received”
+
+“Check your email”
+
+CTA: “Create your account” / “Continue to setup”
+
+Webhook Handler (System Layer)
+
+Purpose: update your database with Stripe truth.
+
+Save customer ID, subscription ID
+
+Set plan entitlements
+
+Mark status active/paid
+
+Generate license / unlock access
+
+4) Practical Replit Implementation (Minimal, Reliable)
+A) Webhook endpoint in Replit
+
+You’ll have something like:
+POST /api/stripe/webhook
+
+Key requirements:
+
+Use raw body (do not JSON-parse before verifying)
+
+Verify signature using your webhook signing secret
+
+Handle idempotency (Stripe may retry)
