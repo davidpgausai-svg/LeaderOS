@@ -126,6 +126,7 @@ export const users = pgTable("users", {
   salary: integer("salary"), // Annual salary for cost calculations (nullable for future use)
   serviceDeliveryHours: text("service_delivery_hours").default('0'), // Hours for individual contributor work, meetings, etc.
   twoFactorEnabled: text("two_factor_enabled").notNull().default('false'), // 'true' or 'false' - 2FA via email
+  mustChangePassword: text("must_change_password").notNull().default('false'), // 'true' or 'false' - force password change on first login
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

@@ -766,7 +766,7 @@ class BillingService {
     const firstName = nameParts[0] || 'User';
     const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
 
-    // Create admin user
+    // Create admin user with mustChangePassword flag
     await pgStorage.createUser({
       email: customerEmail,
       passwordHash: hashedPassword,
@@ -774,6 +774,7 @@ class BillingService {
       lastName,
       role: 'administrator',
       organizationId: newOrg.id,
+      mustChangePassword: 'true', // User must change temp password on first login
     });
 
     console.log(`[Billing] Auto-provisioned org ${newOrg.id} with admin user ${customerEmail} on ${plan} plan`);

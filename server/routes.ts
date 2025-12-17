@@ -568,6 +568,20 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(403).json({ message: "Forbidden: Only administrators can create strategies" });
       }
 
+      // Check plan limits for strategy creation
+      if (user.organizationId) {
+        const { billingService } = await import('./billingService');
+        const planCheck = await billingService.checkPlanLimits(user.organizationId, 'strategy');
+        if (!planCheck.allowed) {
+          return res.status(403).json({ 
+            message: planCheck.message,
+            code: 'PLAN_LIMIT_EXCEEDED',
+            limit: planCheck.limit,
+            current: planCheck.current
+          });
+        }
+      }
+
       const validatedData = insertStrategySchema.parse(req.body);
       
       // Validate color code format

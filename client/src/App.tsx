@@ -30,9 +30,10 @@ import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
 import SuperAdmin from "@/pages/super-admin";
 import CheckoutSuccess from "@/pages/checkout-success";
+import ForceChangePassword from "@/pages/force-change-password";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
@@ -51,6 +52,11 @@ function Router() {
         <Route component={Landing} />
       </Switch>
     );
+  }
+
+  // If user must change password, force them to the password change page
+  if (user?.mustChangePassword === 'true') {
+    return <ForceChangePassword />;
   }
 
   return (

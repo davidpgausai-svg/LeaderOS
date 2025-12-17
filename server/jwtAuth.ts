@@ -4,7 +4,7 @@ import type { Express, RequestHandler, Response } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { storage } from './storage';
 import { logger } from './logger';
-import { getOrganization, getOrganizationByToken, updateOrganizationToken, getAllOrganizations, createOrganization, deleteOrganization, getUserByEmail, updateUserPassword, createPasswordResetToken, getPasswordResetToken, markPasswordResetTokenUsed, createTwoFactorCode, getTwoFactorCode, incrementTwoFactorAttempts, markTwoFactorCodeUsed, deleteTwoFactorCodes } from './pgStorage';
+import { getOrganization, getOrganizationByToken, updateOrganizationToken, getAllOrganizations, createOrganization, deleteOrganization, getUserByEmail, updateUserPassword, clearMustChangePassword, createPasswordResetToken, getPasswordResetToken, markPasswordResetTokenUsed, createTwoFactorCode, getTwoFactorCode, incrementTwoFactorAttempts, markTwoFactorCodeUsed, deleteTwoFactorCodes } from './pgStorage';
 import { sendPasswordResetEmail, sendTwoFactorCode } from './email';
 import crypto from 'crypto';
 
@@ -567,6 +567,7 @@ export async function setupAuth(app: Express) {
       
       res.json({
         success: true,
+        mustChangePassword: user.mustChangePassword === 'true',
         user: {
           id: user.id,
           email: user.email,
@@ -576,6 +577,7 @@ export async function setupAuth(app: Express) {
           organizationId: user.organizationId,
           isSuperAdmin: user.isSuperAdmin === 'true',
           organizationName,
+          mustChangePassword: user.mustChangePassword === 'true',
         }
       });
     } catch (error) {
@@ -651,6 +653,7 @@ export async function setupAuth(app: Express) {
       
       res.json({
         success: true,
+        mustChangePassword: user.mustChangePassword === 'true',
         user: {
           id: user.id,
           email: user.email,
@@ -660,6 +663,7 @@ export async function setupAuth(app: Express) {
           organizationId: user.organizationId,
           isSuperAdmin: user.isSuperAdmin === 'true',
           organizationName,
+          mustChangePassword: user.mustChangePassword === 'true',
         }
       });
     } catch (error) {
@@ -984,6 +988,55 @@ export async function setupAuth(app: Express) {
     } catch (error) {
       logger.error('Error fetching authenticated user', error);
       res.status(500).json({ message: 'Unable to load user information.' });
+    }
+  });
+
+  // Force change password (for users with temporary passwords)
+  app.post('/api/auth/force-change-password', isAuthenticated, async (req: any, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      const userId = req.user.userId;
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ error: 'Current password and new password are required' });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      // Verify current password
+      if (!user.passwordHash) {
+        return res.status(400).json({ error: 'Account not set up for password login' });
+      }
+
+      const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!isValid) {
+        logger.warn(`[SECURITY] Force password change failed: invalid current password for user ${userId}`);
+        return res.status(401).json({ error: 'Current password is incorrect' });
+      }
+
+      // Validate new password complexity
+      const passwordValidation = validatePasswordComplexity(newPassword);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({ error: passwordValidation.error });
+      }
+
+      // Update password and clear mustChangePassword flag
+      const passwordHash = await bcrypt.hash(newPassword, 10);
+      await updateUserPassword(userId, passwordHash);
+      await clearMustChangePassword(userId);
+
+      logger.info(`[SECURITY] Force password change successful for user ${userId}`);
+
+      res.json({ 
+        success: true, 
+        message: 'Password changed successfully' 
+      });
+    } catch (error) {
+      logger.error('Force password change failed', error);
+      res.status(500).json({ error: 'Unable to change password. Please try again.' });
     }
   });
 

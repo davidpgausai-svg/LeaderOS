@@ -6,6 +6,7 @@ import { insertStrategySchema, type InsertStrategy } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useRole } from "@/hooks/use-role";
 import { useToast } from "@/hooks/use-toast";
+import { useUpgradeModal } from "@/hooks/use-upgrade-modal";
 import {
   Dialog,
   DialogContent,
@@ -41,6 +42,7 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isGenerating, setIsGenerating] = useState(false);
+  const { openModal: openUpgradeModal } = useUpgradeModal();
 
   const form = useForm<InsertStrategy>({
     resolver: zodResolver(insertStrategySchema),
@@ -80,10 +82,15 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
   const createStrategyMutation = useMutation({
     mutationFn: async (data: InsertStrategy) => {
       const response = await apiRequest("POST", "/api/strategies", data);
-      return response.json();
+      const result = await response.json();
+      if (!response.ok) {
+        throw { ...result, status: response.status };
+      }
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/billing/strategy-permissions"] });
       toast({
         title: "Success",
         description: "Priority created successfully",
@@ -91,12 +98,22 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
       form.reset();
       onOpenChange(false);
     },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to create priority",
-        variant: "destructive",
-      });
+    onError: (error: any) => {
+      if (error.code === 'PLAN_LIMIT_EXCEEDED') {
+        onOpenChange(false);
+        openUpgradeModal('limit_reached', 'priorities');
+        toast({
+          title: "Upgrade Required",
+          description: error.message || "You've reached your plan's limit for strategic priorities.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to create priority",
+          variant: "destructive",
+        });
+      }
     },
   });
 

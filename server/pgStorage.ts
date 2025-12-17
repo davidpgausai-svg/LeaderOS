@@ -1246,6 +1246,10 @@ export async function updateUserPassword(userId: string, passwordHash: string): 
   await db.update(users).set({ passwordHash }).where(eq(users.id, userId));
 }
 
+export async function clearMustChangePassword(userId: string): Promise<void> {
+  await db.update(users).set({ mustChangePassword: 'false' }).where(eq(users.id, userId));
+}
+
 export async function setupSuperAdmin(): Promise<void> {
   const superAdminEmails = process.env.SUPER_ADMIN_EMAILS?.split(',').map(e => e.trim().toLowerCase()) || [];
   
