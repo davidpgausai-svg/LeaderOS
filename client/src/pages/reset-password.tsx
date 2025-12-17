@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartLine, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import strategyPlanLogo from "@assets/Strategy_Plan_Logo_2.0_1764811966337.png";
 
 export default function ResetPassword() {
   const [password, setPassword] = useState("");
@@ -82,14 +83,16 @@ export default function ResetPassword() {
     <div className="min-h-screen bg-white dark:bg-black flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl mb-6">
-            <ChartLine className="w-8 h-8 text-white" />
-          </div>
+          <img 
+            src={strategyPlanLogo} 
+            alt="LeaderOS Logo" 
+            className="h-16 w-auto mx-auto mb-6"
+          />
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            StrategyPlan
+            LeaderOS
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Executive Planner: Design the strategy. Deliver the outcomes
+            The Leader Operating System
           </p>
         </div>
 
