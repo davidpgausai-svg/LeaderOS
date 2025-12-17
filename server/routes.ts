@@ -979,13 +979,43 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(400).json({ message: "Start date must be before or equal to due date" });
       }
       
+      // Derive organizationId from strategy if user doesn't have one (e.g., super-admin)
+      let projectOrgId = user.organizationId;
+      if (!projectOrgId) {
+        const strategy = await storage.getStrategy(validatedData.strategyId);
+        projectOrgId = strategy?.organizationId || null;
+      }
+      
       const project = await storage.createProject({
         ...validatedData,
-        organizationId: user.organizationId,
+        organizationId: projectOrgId,
       });
 
       // Recalculate parent strategy progress when a project is created
       await storage.recalculateStrategyProgress(project.strategyId);
+
+      // Auto-create resource assignments for accountableLeaders (unified access + capacity)
+      try {
+        const leaderIds: string[] = JSON.parse(project.accountableLeaders || '[]');
+        // Use project's organizationId (derived from user on creation) to ensure consistency
+        const orgId = project.organizationId || user.organizationId;
+        
+        // Only proceed if we have a valid organization ID
+        if (orgId) {
+          for (const leaderId of leaderIds) {
+            await storage.upsertProjectResourceAssignment({
+              projectId: project.id,
+              userId: leaderId,
+              hoursPerWeek: '0',
+              organizationId: orgId,
+              assignedBy: userId,
+            });
+          }
+        }
+      } catch (syncError) {
+        logger.error("Failed to create resource assignments for new project", syncError);
+        // Don't fail the request if sync fails
+      }
 
       res.status(201).json(project);
     } catch (error) {
@@ -1097,6 +1127,37 @@ Respond ONLY with a valid JSON object in this exact format:
       } catch (progressError) {
         logger.error("Failed to recalculate strategy progress after project update", progressError);
         // Don't fail the request if progress calculation fails
+      }
+
+      // Sync accountableLeaders with resource assignments (unified access + capacity)
+      // Note: We only ADD new leaders to resources, never DELETE existing ones
+      // This preserves legitimate capacity-only entries (contractors, etc.)
+      try {
+        const newLeaderIds: string[] = JSON.parse(project.accountableLeaders || '[]');
+        const existingAssignments = await storage.getProjectResourceAssignments(project.id);
+        const existingUserIds = existingAssignments.map(a => a.userId);
+        const orgId = project.organizationId || user.organizationId;
+        
+        // Only proceed if we have a valid organization ID
+        if (orgId) {
+          // Add resource assignments for new leaders (with 0 hours)
+          for (const leaderId of newLeaderIds) {
+            if (!existingUserIds.includes(leaderId)) {
+              await storage.upsertProjectResourceAssignment({
+                projectId: project.id,
+                userId: leaderId,
+                hoursPerWeek: '0',
+                organizationId: orgId,
+                assignedBy: userId,
+              });
+            }
+          }
+        }
+        // Note: We do NOT delete resource assignments when removing from accountableLeaders
+        // This allows capacity planning entries to persist independently of access control
+      } catch (syncError) {
+        logger.error("Failed to sync resource assignments with accountable leaders", syncError);
+        // Don't fail the request if sync fails
       }
 
       res.json(project);

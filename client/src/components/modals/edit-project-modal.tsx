@@ -123,6 +123,11 @@ export function EditProjectModal({ isOpen, onClose, project }: EditProjectModalP
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/resource-assignments"] });
+      // Also invalidate specific project resource assignments
+      if (project?.id) {
+        queryClient.invalidateQueries({ queryKey: [`/api/projects/${project.id}/resource-assignments`] });
+      }
       toast({
         title: "Success",
         description: "Project updated successfully",

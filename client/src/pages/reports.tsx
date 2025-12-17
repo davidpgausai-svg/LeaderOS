@@ -1889,13 +1889,19 @@ function CapacityReport({
       ra => ra.userId === userId && relevantProjectIds.includes(ra.projectId)
     );
 
-    const projectHours = userAssignments.reduce((sum, ra) => sum + parseFloat(ra.hoursPerWeek || '0'), 0);
+    // Filter to only non-zero hour assignments for capacity calculation
+    const nonZeroAssignments = userAssignments.filter(
+      ra => parseFloat(ra.hoursPerWeek || '0') > 0
+    );
+
+    const projectHours = nonZeroAssignments.reduce((sum, ra) => sum + parseFloat(ra.hoursPerWeek || '0'), 0);
     const serviceDeliveryHours = parseFloat(user.serviceDeliveryHours || '0');
     const totalHours = projectHours + serviceDeliveryHours;
     const maxHours = parseFloat(user.fte || '1') * 40;
     const capacityPercent = maxHours > 0 ? (totalHours / maxHours) * 100 : 0;
 
-    const projectDetails = userAssignments.map(ra => {
+    // Only include non-zero assignments in project details for capacity chart
+    const projectDetails = nonZeroAssignments.map(ra => {
       const project = projects.find(p => p.id === ra.projectId);
       const strategy = project ? strategies.find(s => s.id === project.strategyId) : null;
       return {
@@ -1913,7 +1919,8 @@ function CapacityReport({
       capacityPercent,
       projectDetails,
       serviceDeliveryHours,
-      assignmentCount: userAssignments.length
+      assignmentCount: nonZeroAssignments.length, // Only count assignments with hours > 0
+      hasWorkload: totalHours > 0 // User has actual workload (project hours or service delivery)
     };
   };
 
@@ -1925,7 +1932,7 @@ function CapacityReport({
 
   const overCapacityUsers = usersWithCapacity.filter(u => u && u.totalHours > 40);
   const healthyUsers = usersWithCapacity.filter(u => u && u.totalHours >= 32 && u.totalHours <= 40);
-  const underUtilizedUsers = usersWithCapacity.filter(u => u && u.totalHours < 32 && u.assignmentCount > 0);
+  const underUtilizedUsers = usersWithCapacity.filter(u => u && u.totalHours < 32 && u.hasWorkload);
 
   const getStatusBadge = (totalHours: number) => {
     if (totalHours > 40) {
@@ -1979,7 +1986,7 @@ function CapacityReport({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{usersWithCapacity.filter(u => u && u.assignmentCount > 0).length}</div>
+            <div className="text-2xl font-bold">{usersWithCapacity.filter(u => u && u.hasWorkload).length}</div>
             <div className="text-xs text-gray-500">of {users.filter(u => u.role !== 'sme').length} total</div>
           </CardContent>
         </Card>
@@ -2024,7 +2031,7 @@ function CapacityReport({
         </Card>
       </div>
 
-      {usersWithCapacity.filter(u => u && u.assignmentCount > 0).length === 0 ? (
+      {usersWithCapacity.filter(u => u && u.hasWorkload).length === 0 ? (
         <Card>
           <CardContent className="text-center py-12">
             <Users className="w-12 h-12 mx-auto mb-3 text-gray-400" />
@@ -2035,7 +2042,7 @@ function CapacityReport({
       ) : (
         <div className="space-y-8">
           {usersWithCapacity
-            .filter(u => u && u.assignmentCount > 0)
+            .filter(u => u && u.hasWorkload)
             .map(userCap => {
               if (!userCap) return null;
               const { user, totalHours, maxHours, projectDetails, serviceDeliveryHours } = userCap;

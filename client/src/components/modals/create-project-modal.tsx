@@ -106,6 +106,7 @@ export function CreateProjectModal({ isOpen, onClose, strategyId }: CreateProjec
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/resource-assignments"] });
       toast({
         title: "Success",
         description: "Project created successfully",
