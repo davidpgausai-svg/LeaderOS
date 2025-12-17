@@ -71,7 +71,7 @@ export function Sidebar() {
 
   return (
     <aside 
-      className={`${isCollapsed ? 'w-20' : 'w-64'} flex flex-col transition-all duration-300 border-r`}
+      className={`${isCollapsed ? 'w-20' : 'w-64'} flex flex-col transition-all duration-300 border-r relative z-50`}
       style={{ 
         backgroundColor: 'rgba(255, 255, 255, 0.7)',
         backdropFilter: 'blur(20px)',
