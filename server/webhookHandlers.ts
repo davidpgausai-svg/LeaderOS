@@ -1,7 +1,9 @@
-import { getStripeSync } from './stripeClient';
+import { getStripeSync, getUncachableStripeClient } from './stripeClient';
 import { billingService } from './billingService';
 import { sendWelcomeEmail } from './email';
 import type Stripe from 'stripe';
+import { db } from './db';
+import { sql } from 'drizzle-orm';
 
 export class WebhookHandlers {
   static async processWebhook(payload: Buffer, signature: string, uuid: string): Promise<void> {
@@ -14,12 +16,33 @@ export class WebhookHandlers {
       );
     }
 
-    const sync = await getStripeSync();
+    // Get webhook secret from database for managed webhooks
+    const result = await db.execute(
+      sql`SELECT secret FROM "stripe"."_managed_webhooks" WHERE uuid = ${uuid}`
+    );
     
-    const event = await sync.processWebhook(payload, signature, uuid) as Stripe.Event;
+    if (!result.rows || result.rows.length === 0) {
+      throw new Error(`No managed webhook found with UUID: ${uuid}`);
+    }
     
-    if (event) {
-      await WebhookHandlers.handleStripeEvent(event);
+    const webhookSecret = result.rows[0].secret as string;
+    
+    // Construct the event ourselves using Stripe SDK so we can use it for custom handling
+    const stripe = await getUncachableStripeClient();
+    const event = await stripe.webhooks.constructEventAsync(payload, signature, webhookSecret);
+    
+    console.log(`[Stripe Webhook] Received event: ${event.type} (${event.id})`);
+    
+    // First, run our custom handlers (for account provisioning, etc.)
+    await WebhookHandlers.handleStripeEvent(event);
+    
+    // Then, let the sync library handle data persistence (it will re-construct the event internally)
+    try {
+      const sync = await getStripeSync();
+      await sync.processWebhook(payload, signature, uuid);
+    } catch (syncError) {
+      // Log sync errors but don't fail - our custom handler already ran
+      console.error('[Stripe Webhook] Sync library error (continuing):', syncError);
     }
   }
 
