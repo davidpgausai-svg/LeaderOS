@@ -326,7 +326,7 @@ export default function Dashboard() {
                     <div>
                       <h2 className="text-xl font-bold" style={{ color: '#1D1D1F' }}>Your Projects</h2>
                       <p className="text-sm" style={{ color: '#86868B' }}>
-                        Projects you're assigned to with your weekly allocation
+                        Projects you're assigned + weekly allocation
                       </p>
                     </div>
                   </div>
