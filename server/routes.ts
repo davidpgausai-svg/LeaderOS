@@ -47,7 +47,7 @@ const updateUserSchema = z.object({
 }).strict();
 
 const strategyAssignmentSchema = z.object({
-  strategyId: z.number().int().positive("Strategy ID is required")
+  strategyId: z.string().min(1, "Strategy ID is required")
 });
 
 const resourceAssignmentSchema = z.object({
