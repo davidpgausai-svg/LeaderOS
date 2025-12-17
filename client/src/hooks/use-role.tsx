@@ -109,7 +109,8 @@ export const useRole = create<RoleStore>((set, get) => ({
 
   canEditAllStrategies: () => {
     const { currentUser } = get();
-    return currentUser?.role === 'administrator';
+    // Administrators and Co-Leads can edit projects and actions
+    return currentUser?.role === 'administrator' || currentUser?.role === 'co_lead';
   },
 
   isStrategyAssigned: (strategyId) => {
