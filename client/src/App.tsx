@@ -62,6 +62,7 @@ function Router() {
   return (
     <>
       <Switch>
+        <Route path="/register/:token" component={Register} />
         <Route path="/" component={Dashboard} />
         <Route path="/strategies" component={Strategies} />
         <Route path="/timeline" component={Timeline} />
