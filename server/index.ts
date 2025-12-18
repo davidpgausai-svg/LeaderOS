@@ -2,7 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import cookieParser from "cookie-parser";
 import { rateLimit } from "express-rate-limit";
 import { registerRoutes } from "./routes";
-import { startDueDateScheduler, startBillingScheduler } from "./scheduler";
+import { startDueDateScheduler, startBillingScheduler, startEmailReminderScheduler } from "./scheduler";
 import { validateCsrf } from "./jwtAuth";
 import { logger } from "./logger";
 import { runMigrations } from 'stripe-replit-sync';
@@ -316,6 +316,11 @@ async function initStripe() {
   // Start the billing scheduler
   // Check every 4 hours for payment reminders
   startBillingScheduler(240);
+  
+  // Start the email reminder scheduler
+  // Sends trial reminders (day 3, 5, 7) and cancellation reminders (3 days before, day of)
+  // Runs at noon CST (18:00 UTC) daily
+  startEmailReminderScheduler();
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
   // Other ports are firewalled. Default to 5000 if not specified.

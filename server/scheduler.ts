@@ -192,3 +192,45 @@ export function startBillingScheduler(intervalMinutes: number = 240) {
   
   logger.info(`Billing scheduler started (checking every ${intervalMinutes} minutes)`);
 }
+
+/**
+ * Check if it's time to run the daily email job (noon CST / 6 PM UTC)
+ * This runs every hour and checks if the current hour is 18 UTC
+ */
+let lastEmailJobRunDate: string | null = null;
+
+async function checkAndRunScheduledEmails() {
+  const now = new Date();
+  const utcHour = now.getUTCHours();
+  const todayDate = now.toISOString().split('T')[0];
+  
+  // Run at 18:00 UTC (noon CST) and only once per day
+  if (utcHour === 18 && lastEmailJobRunDate !== todayDate) {
+    lastEmailJobRunDate = todayDate;
+    logger.info('[ScheduledEmail] Running daily email job at noon CST');
+    
+    try {
+      const { runScheduledEmailJob } = await import('./scheduledEmailService');
+      await runScheduledEmailJob();
+    } catch (error) {
+      logger.error('[ScheduledEmail] Error running scheduled email job', error);
+    }
+  }
+}
+
+/**
+ * Start the scheduled email reminder scheduler
+ * Checks every hour if it's time to send trial and cancellation reminder emails
+ * Runs at noon CST (6 PM UTC) daily
+ */
+export function startEmailReminderScheduler() {
+  const ONE_HOUR_MS = 60 * 60 * 1000;
+  
+  // Check immediately on startup
+  checkAndRunScheduledEmails();
+  
+  // Then check every hour
+  setInterval(checkAndRunScheduledEmails, ONE_HOUR_MS);
+  
+  logger.info('Email reminder scheduler started (runs daily at noon CST / 18:00 UTC)');
+}
