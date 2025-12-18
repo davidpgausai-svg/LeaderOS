@@ -4605,41 +4605,6 @@ ${outputTemplate}`;
     }
   });
 
-  // Create a Stripe customer portal session
-  app.post("/api/billing/create-portal-session", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "User not authenticated" });
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user || !user.organizationId) {
-        return res.status(403).json({ message: "User must belong to an organization" });
-      }
-
-      if (user.role !== 'administrator') {
-        return res.status(403).json({ message: "Only administrators can manage billing" });
-      }
-
-      const { billingService } = await import('./billingService');
-      
-      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-        : 'http://localhost:5000';
-      
-      const session = await billingService.createCustomerPortalSession(
-        user.organizationId,
-        `${baseUrl}/settings`
-      );
-
-      res.json({ url: session.url });
-    } catch (error) {
-      logger.error("Failed to create portal session", error);
-      res.status(500).json({ message: "Failed to create billing portal session" });
-    }
-  });
-
   // Create Stripe Customer Portal session for billing management
   app.post("/api/billing/create-portal-session", isAuthenticated, async (req: any, res) => {
     try {

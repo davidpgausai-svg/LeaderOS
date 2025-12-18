@@ -319,10 +319,26 @@ class BillingService {
   }
 
   async handleSubscriptionChange(subscription: Stripe.Subscription): Promise<void> {
-    const organizationId = subscription.metadata?.organizationId;
+    let organizationId = subscription.metadata?.organizationId;
+    
+    // If no organizationId in metadata, look up by Stripe customer ID
+    // This handles upgrades/changes made through the billing portal
+    if (!organizationId) {
+      const customerId = typeof subscription.customer === 'string' 
+        ? subscription.customer 
+        : subscription.customer?.id;
+      
+      if (customerId) {
+        const org = await pgFunctions.getOrganizationByStripeCustomerId(customerId);
+        if (org) {
+          organizationId = org.id;
+          console.log(`[Billing] Found organization ${organizationId} by Stripe customer ${customerId}`);
+        }
+      }
+    }
     
     if (!organizationId) {
-      console.log('[Billing] Subscription has no organizationId in metadata, skipping');
+      console.log('[Billing] Subscription has no organizationId and no matching customer, skipping');
       return;
     }
 
@@ -363,10 +379,25 @@ class BillingService {
   }
 
   async handleSubscriptionCanceled(subscription: Stripe.Subscription): Promise<void> {
-    const organizationId = subscription.metadata?.organizationId;
+    let organizationId = subscription.metadata?.organizationId;
+    
+    // If no organizationId in metadata, look up by Stripe customer ID
+    if (!organizationId) {
+      const customerId = typeof subscription.customer === 'string' 
+        ? subscription.customer 
+        : subscription.customer?.id;
+      
+      if (customerId) {
+        const org = await pgFunctions.getOrganizationByStripeCustomerId(customerId);
+        if (org) {
+          organizationId = org.id;
+          console.log(`[Billing] Found organization ${organizationId} by Stripe customer ${customerId}`);
+        }
+      }
+    }
     
     if (!organizationId) {
-      console.log('[Billing] Canceled subscription has no organizationId, skipping');
+      console.log('[Billing] Canceled subscription has no organizationId and no matching customer, skipping');
       return;
     }
 
