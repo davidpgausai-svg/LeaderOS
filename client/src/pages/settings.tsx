@@ -2970,18 +2970,29 @@ export default function Settings() {
     }
   };
 
-  const escapeCSV = (value: any): string => {
+  const flattenValue = (value: any): string => {
     if (value === null || value === undefined) return '';
-    const str = String(value);
+    if (typeof value === 'object') {
+      return JSON.stringify(value);
+    }
+    return String(value);
+  };
+
+  const escapeCSV = (value: any): string => {
+    const str = flattenValue(value);
     if (str.includes(',') || str.includes('"') || str.includes('\n')) {
       return `"${str.replace(/"/g, '""')}"`;
     }
     return str;
   };
 
-  const convertToCSV = (data: any[]): string => {
-    if (!data || data.length === 0) return '';
-    const headers = Object.keys(data[0]);
+  const STRATEGY_HEADERS = ['id', 'organizationId', 'name', 'description', 'status', 'progress', 'executiveGoalTag', 'color', 'archived', 'displayOrder', 'completionDate', 'createdBy'];
+  const PROJECT_HEADERS = ['id', 'organizationId', 'strategyId', 'name', 'description', 'status', 'progress', 'startDate', 'dueDate', 'completionDate', 'communicationUrl', 'archived', 'createdBy'];
+  const ACTION_HEADERS = ['id', 'organizationId', 'projectId', 'description', 'status', 'priority', 'startDate', 'dueDate', 'achievedDate', 'notes', 'archived', 'createdBy'];
+
+  const convertToCSV = (data: any[], defaultHeaders?: string[]): string => {
+    const headers = data.length > 0 ? Object.keys(data[0]) : (defaultHeaders || []);
+    if (headers.length === 0) return '';
     const csvRows = [
       headers.join(','),
       ...data.map(row => 
@@ -3009,7 +3020,7 @@ export default function Settings() {
       if (!response.ok) throw new Error('Failed to fetch strategies');
       const data = await response.json();
       const timestamp = new Date().toISOString().split('T')[0];
-      const csv = convertToCSV(data);
+      const csv = convertToCSV(data, STRATEGY_HEADERS);
       downloadCSV(csv, `priorities-export-${timestamp}.csv`);
       toast({
         title: "Success",
@@ -3030,7 +3041,7 @@ export default function Settings() {
       if (!response.ok) throw new Error('Failed to fetch projects');
       const data = await response.json();
       const timestamp = new Date().toISOString().split('T')[0];
-      const csv = convertToCSV(data);
+      const csv = convertToCSV(data, PROJECT_HEADERS);
       downloadCSV(csv, `projects-export-${timestamp}.csv`);
       toast({
         title: "Success",
@@ -3065,9 +3076,9 @@ export default function Settings() {
       
       const timestamp = new Date().toISOString().split('T')[0];
       
-      downloadCSV(convertToCSV(strategies), `priorities-export-${timestamp}.csv`);
-      setTimeout(() => downloadCSV(convertToCSV(projects), `projects-export-${timestamp}.csv`), 100);
-      setTimeout(() => downloadCSV(convertToCSV(actions), `actions-export-${timestamp}.csv`), 200);
+      downloadCSV(convertToCSV(strategies, STRATEGY_HEADERS), `priorities-export-${timestamp}.csv`);
+      setTimeout(() => downloadCSV(convertToCSV(projects, PROJECT_HEADERS), `projects-export-${timestamp}.csv`), 100);
+      setTimeout(() => downloadCSV(convertToCSV(actions, ACTION_HEADERS), `actions-export-${timestamp}.csv`), 200);
       
       toast({
         title: "Success",
