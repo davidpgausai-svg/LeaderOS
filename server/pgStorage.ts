@@ -1251,6 +1251,10 @@ export async function getUserByEmail(email: string): Promise<User | undefined> {
   return user || undefined;
 }
 
+export async function getUsersByOrganization(organizationId: string): Promise<User[]> {
+  return db.select().from(users).where(eq(users.organizationId, organizationId));
+}
+
 export async function updateUserPassword(userId: string, passwordHash: string): Promise<void> {
   await db.update(users).set({ passwordHash }).where(eq(users.id, userId));
 }

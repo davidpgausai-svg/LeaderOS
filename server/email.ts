@@ -586,3 +586,170 @@ export async function sendWelcomeEmail(
     return false;
   }
 }
+
+export async function sendTrialReminderEmail(
+  toEmail: string,
+  firstName: string | null,
+  daysRemaining: number,
+  upgradeLink: string
+): Promise<boolean> {
+  try {
+    logger.info(`Attempting to send trial reminder email to ${toEmail} (${daysRemaining} days remaining)`);
+    const { client, fromEmail } = await getResendClient();
+    
+    const greeting = firstName ? `Hi ${firstName},` : 'Hi,';
+    const urgency = daysRemaining <= 0 
+      ? 'Your free trial ends today!' 
+      : daysRemaining === 1 
+      ? 'Your free trial ends tomorrow!' 
+      : `You have ${daysRemaining} days left on your free trial.`;
+    
+    const subject = daysRemaining <= 0 
+      ? 'Your LeaderOS trial ends today'
+      : `${daysRemaining} days left on your LeaderOS trial`;
+
+    const { data, error } = await client.emails.send({
+      from: fromEmail || 'LeaderOS <noreply@resend.dev>',
+      to: toEmail,
+      subject,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">LeaderOS</h1>
+          </div>
+          
+          <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
+            <p style="font-size: 16px; margin-bottom: 20px;">${greeting}</p>
+            
+            <p style="font-size: 18px; font-weight: 600; color: #1D4ED8; margin-bottom: 20px;">
+              ${urgency}
+            </p>
+            
+            <p style="font-size: 16px; margin-bottom: 20px;">
+              We hope you've been enjoying LeaderOS. To keep access to all your strategic planning tools and data, upgrade to a paid plan before your trial ends.
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${upgradeLink}" 
+                 style="background: #3B82F6; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block;">
+                Upgrade Now
+              </a>
+            </div>
+            
+            <p style="font-size: 14px; color: #666;">
+              Have questions? Reply to this email and we'll be happy to help.
+            </p>
+          </div>
+          
+          <p style="font-size: 12px; color: #999; text-align: center; margin-top: 20px;">
+            &copy; ${new Date().getFullYear()} LeaderOS powered by Gaus LLC. All rights reserved.
+          </p>
+        </body>
+        </html>
+      `,
+    });
+
+    if (error) {
+      logger.error('Failed to send trial reminder email', error);
+      return false;
+    }
+
+    logger.info(`Trial reminder email sent to ${toEmail}`, { messageId: data?.id });
+    return true;
+  } catch (error) {
+    logger.error('Error sending trial reminder email', error);
+    return false;
+  }
+}
+
+export async function sendCancellationReminderEmail(
+  toEmail: string,
+  firstName: string | null,
+  daysUntilCancel: number,
+  cancelDate: Date
+): Promise<boolean> {
+  try {
+    logger.info(`Attempting to send cancellation reminder email to ${toEmail} (${daysUntilCancel} days until cancel)`);
+    const { client, fromEmail } = await getResendClient();
+    
+    const greeting = firstName ? `Hi ${firstName},` : 'Hi,';
+    const formattedDate = cancelDate.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    
+    const isToday = daysUntilCancel <= 0;
+    const subject = isToday 
+      ? 'Your LeaderOS subscription has ended'
+      : `Your LeaderOS subscription ends in ${daysUntilCancel} days`;
+    
+    const message = isToday
+      ? `Your LeaderOS subscription has ended as of ${formattedDate}. Thank you for trying LeaderOS - we hope it was helpful for your strategic planning needs.`
+      : `Your LeaderOS subscription will end on ${formattedDate}. We wanted to give you a heads up so you can export any data you need.`;
+
+    const { data, error } = await client.emails.send({
+      from: fromEmail || 'LeaderOS <noreply@resend.dev>',
+      to: toEmail,
+      subject,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">LeaderOS</h1>
+          </div>
+          
+          <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
+            <p style="font-size: 16px; margin-bottom: 20px;">${greeting}</p>
+            
+            <p style="font-size: 16px; margin-bottom: 20px;">
+              ${message}
+            </p>
+            
+            ${!isToday ? `
+            <p style="font-size: 14px; color: #666; margin-bottom: 20px;">
+              If you'd like to continue using LeaderOS, you can reactivate your subscription anytime from your account settings.
+            </p>
+            ` : `
+            <p style="font-size: 14px; color: #666; margin-bottom: 20px;">
+              If you ever want to come back, we'll be here. You can sign up again anytime.
+            </p>
+            `}
+            
+            <p style="font-size: 14px; color: #666;">
+              Thank you for being part of LeaderOS.
+            </p>
+          </div>
+          
+          <p style="font-size: 12px; color: #999; text-align: center; margin-top: 20px;">
+            &copy; ${new Date().getFullYear()} LeaderOS powered by Gaus LLC. All rights reserved.
+          </p>
+        </body>
+        </html>
+      `,
+    });
+
+    if (error) {
+      logger.error('Failed to send cancellation reminder email', error);
+      return false;
+    }
+
+    logger.info(`Cancellation reminder email sent to ${toEmail}`, { messageId: data?.id });
+    return true;
+  } catch (error) {
+    logger.error('Error sending cancellation reminder email', error);
+    return false;
+  }
+}
