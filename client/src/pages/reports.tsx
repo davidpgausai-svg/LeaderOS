@@ -2,7 +2,14 @@ import { useState, useRef, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +39,7 @@ import {
   ChevronDown,
   ChevronRight,
   FileDown,
+  FileText,
   Calendar,
   TrendingUp,
   BarChart3,
@@ -161,6 +169,10 @@ type Dependency = {
 };
 
 export default function Reports() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const isAdmin = user?.role === 'administrator';
+  
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('tab') || "capacity";
@@ -237,6 +249,217 @@ export default function Reports() {
     contentRef: reportRef,
     documentTitle: `Strategic Report - ${format(new Date(), 'yyyy-MM-dd')}`,
   });
+
+  const flattenValue = (value: any): string => {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'object') return JSON.stringify(value);
+    return String(value);
+  };
+
+  const escapeCSV = (value: any): string => {
+    const str = flattenValue(value);
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  const convertToCSV = (data: any[], defaultHeaders?: string[]): string => {
+    const headers = data.length > 0 ? Object.keys(data[0]) : (defaultHeaders || []);
+    if (headers.length === 0) return '';
+    const csvRows = [
+      headers.join(','),
+      ...data.map(row => headers.map(header => escapeCSV(row[header])).join(','))
+    ];
+    return csvRows.join('\n');
+  };
+
+  const downloadCSV = (csvContent: string, filename: string) => {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const getReportName = (tab: string): string => {
+    const names: Record<string, string> = {
+      'capacity': 'Capacity Report',
+      'team-tags': 'Team Tags Report',
+      'executive-goals': 'Executive Goals Report',
+      'health': 'Strategy Health Report',
+      'timeline': 'Timeline Risk Report',
+      'ownership': 'Ownership Report',
+      'graph': 'Dependencies Graph Report',
+      'archived': 'Archived Projects Report'
+    };
+    return names[tab] || 'Report';
+  };
+
+  const handleExportCSV = () => {
+    const timestamp = format(new Date(), 'yyyy-MM-dd');
+    const reportName = getReportName(activeTab).replace(/\s+/g, '-').toLowerCase();
+    let csvData: any[] = [];
+    
+    switch (activeTab) {
+      case 'capacity':
+        csvData = users.filter(u => u.role !== 'sme').map(u => {
+          const userAssignments = resourceAssignments.filter(ra => ra.userId === u.id);
+          const totalHours = userAssignments.reduce((sum, ra) => sum + parseFloat(ra.hoursPerWeek || '0'), 0);
+          const fte = parseFloat(u.fte || '1') * 40;
+          return {
+            name: `${u.firstName} ${u.lastName}`,
+            email: u.email,
+            role: u.role,
+            fte: u.fte || '1',
+            weeklyCapacityHours: fte,
+            assignedHours: totalHours,
+            availableHours: Math.max(0, fte - totalHours),
+            utilizationPercent: fte > 0 ? Math.round((totalHours / fte) * 100) : 0,
+            projectCount: userAssignments.length
+          };
+        });
+        break;
+      case 'team-tags':
+        csvData = teamTags.map(tag => {
+          const tagProjects = projectTeamTags.filter(pt => pt.teamTagId === tag.id);
+          return {
+            tagName: tag.name,
+            color: tag.colorHex,
+            projectCount: tagProjects.length,
+            projects: tagProjects.map(pt => {
+              const p = projects.find(proj => proj.id === pt.projectId);
+              return p?.title || '';
+            }).filter(Boolean).join('; ')
+          };
+        });
+        break;
+      case 'executive-goals':
+        csvData = executiveGoals.map(goal => {
+          const goalStrategies = strategyExecutiveGoalMappings
+            .filter(m => m.executiveGoalId === goal.id)
+            .map(m => strategies.find(s => s.id === m.strategyId))
+            .filter(Boolean);
+          return {
+            goalName: goal.name,
+            description: goal.description || '',
+            strategyCount: goalStrategies.length,
+            strategies: goalStrategies.map(s => s?.title || '').join('; '),
+            avgProgress: goalStrategies.length > 0 
+              ? Math.round(goalStrategies.reduce((sum, s) => sum + (s?.progress || 0), 0) / goalStrategies.length) 
+              : 0
+          };
+        });
+        break;
+      case 'health':
+        csvData = strategies.map(s => {
+          const stratProjects = projects.filter(p => p.strategyId === s.id && p.isArchived !== 'true');
+          const riskLevel = getRiskLevel(s, 'strategy', stratProjects);
+          return {
+            strategyName: s.title,
+            status: s.status,
+            progress: s.progress,
+            riskLevel,
+            startDate: s.startDate,
+            dueDate: s.dueDate,
+            projectCount: stratProjects.length,
+            completedProjects: stratProjects.filter(p => p.status === 'C').length
+          };
+        });
+        break;
+      case 'timeline':
+        csvData = projects.filter(p => p.isArchived !== 'true').map(p => {
+          const strategy = strategies.find(s => s.id === p.strategyId);
+          const riskLevel = getRiskLevel(p, 'project');
+          const dueDate = safeDate(p.dueDate);
+          const daysUntilDue = dueDate ? differenceInDays(dueDate, new Date()) : null;
+          return {
+            projectName: p.title,
+            strategyName: strategy?.title || '',
+            status: p.status,
+            progress: p.progress,
+            riskLevel,
+            startDate: p.startDate,
+            dueDate: p.dueDate,
+            daysUntilDue,
+            isOverdue: dueDate ? isPast(dueDate) : false
+          };
+        });
+        break;
+      case 'ownership':
+        csvData = projects.filter(p => p.isArchived !== 'true').map(p => {
+          const strategy = strategies.find(s => s.id === p.strategyId);
+          let leaders: string[] = [];
+          try {
+            leaders = JSON.parse(p.accountableLeaders || '[]');
+          } catch { leaders = []; }
+          const leaderNames = leaders.map(lid => {
+            const u = users.find(usr => usr.id === lid);
+            return u ? `${u.firstName} ${u.lastName}` : '';
+          }).filter(Boolean);
+          return {
+            projectName: p.title,
+            strategyName: strategy?.title || '',
+            status: p.status,
+            progress: p.progress,
+            accountableLeaders: leaderNames.join('; '),
+            leaderCount: leaderNames.length
+          };
+        });
+        break;
+      case 'graph':
+        csvData = dependencies.map(d => {
+          const sourceItem = d.sourceType === 'project' 
+            ? projects.find(p => p.id === d.sourceId)
+            : actions.find(a => a.id === d.sourceId);
+          const targetItem = d.targetType === 'project'
+            ? projects.find(p => p.id === d.targetId)
+            : actions.find(a => a.id === d.targetId);
+          return {
+            sourceType: d.sourceType,
+            sourceName: sourceItem?.title || d.sourceId,
+            targetType: d.targetType,
+            targetName: targetItem?.title || d.targetId,
+            relationship: 'depends on'
+          };
+        });
+        break;
+      case 'archived':
+        csvData = projects.filter(p => p.isArchived === 'true').map(p => {
+          const strategy = strategies.find(s => s.id === p.strategyId);
+          return {
+            projectName: p.title,
+            strategyName: strategy?.title || '',
+            status: p.status,
+            progress: p.progress,
+            startDate: p.startDate,
+            dueDate: p.dueDate,
+            completionDate: p.completionDate || ''
+          };
+        });
+        break;
+    }
+    
+    if (csvData.length === 0) {
+      toast({
+        title: "No data",
+        description: "There is no data to export for this report.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const csv = convertToCSV(csvData);
+    downloadCSV(csv, `${reportName}-${timestamp}.csv`);
+    toast({
+      title: "Success",
+      description: `Exported ${csvData.length} rows to CSV`
+    });
+  };
 
   // Safe date parsing helper
   const safeDate = (dateString: string | null | undefined): Date | null => {
@@ -412,15 +635,41 @@ export default function Reports() {
                 </p>
               </div>
             </div>
-            <Button 
-              onClick={handlePrint} 
-              className="print:hidden rounded-full px-5"
-              style={{ backgroundColor: '#007AFF', color: '#FFFFFF' }}
-              data-testid="button-export-pdf"
-            >
-              <FileDown className="w-4 h-4 mr-2" />
-              Export to PDF
-            </Button>
+            {isAdmin ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    className="print:hidden rounded-full px-5"
+                    style={{ backgroundColor: '#007AFF', color: '#FFFFFF' }}
+                    data-testid="button-export-dropdown"
+                  >
+                    <FileDown className="w-4 h-4 mr-2" />
+                    Export
+                    <ChevronDown className="w-4 h-4 ml-2" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handlePrint()} data-testid="menu-export-pdf">
+                    <FileDown className="w-4 h-4 mr-2" />
+                    Export to PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportCSV} data-testid="menu-export-csv">
+                    <FileText className="w-4 h-4 mr-2" />
+                    Export to CSV
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button 
+                onClick={handlePrint} 
+                className="print:hidden rounded-full px-5"
+                style={{ backgroundColor: '#007AFF', color: '#FFFFFF' }}
+                data-testid="button-export-pdf"
+              >
+                <FileDown className="w-4 h-4 mr-2" />
+                Export to PDF
+              </Button>
+            )}
           </div>
         </header>
 
