@@ -8,7 +8,7 @@ import {
   meetingNotes, barriers, dependencies, templateTypes,
   organizations, passwordResetTokens, twoFactorCodes, executiveGoals, strategyExecutiveGoals,
   teamTags, projectTeamTags, projectResourceAssignments, actionPeopleAssignments, ptoEntries, holidays,
-  billingHistory, paymentFailures, projectSnapshots,
+  billingHistory, paymentFailures, projectSnapshots, sentEmailNotifications,
   type User, type UpsertUser, type InsertUser,
   type Strategy, type InsertStrategy,
   type Project, type InsertProject,
@@ -36,7 +36,8 @@ import {
   type BillingHistory, type InsertBillingHistory,
   type PaymentFailure, type InsertPaymentFailure,
   type SubscriptionPlan, type SubscriptionStatus, type BillingInterval,
-  type ProjectSnapshot, type InsertProjectSnapshot
+  type ProjectSnapshot, type InsertProjectSnapshot,
+  type SentEmailNotification, type InsertSentEmailNotification
 } from '@shared/schema';
 
 export class PostgresStorage implements IStorage {
@@ -1501,6 +1502,42 @@ export async function resolvePaymentFailure(id: string): Promise<PaymentFailure 
     .where(eq(paymentFailures.id, id))
     .returning();
   return updated || undefined;
+}
+
+// Sent Email Notification Functions
+export async function createSentEmailNotification(notification: InsertSentEmailNotification): Promise<SentEmailNotification> {
+  const [created] = await db.insert(sentEmailNotifications).values({
+    id: randomUUID(),
+    ...notification,
+  }).returning();
+  return created;
+}
+
+export async function hasEmailBeenSent(
+  organizationId: string,
+  emailType: string,
+  stripeSubscriptionId?: string
+): Promise<boolean> {
+  const conditions = [
+    eq(sentEmailNotifications.organizationId, organizationId),
+    eq(sentEmailNotifications.emailType, emailType),
+  ];
+  
+  if (stripeSubscriptionId) {
+    conditions.push(eq(sentEmailNotifications.stripeSubscriptionId, stripeSubscriptionId));
+  }
+  
+  const [existing] = await db.select()
+    .from(sentEmailNotifications)
+    .where(sql`${sentEmailNotifications.organizationId} = ${organizationId} AND ${sentEmailNotifications.emailType} = ${emailType}${stripeSubscriptionId ? sql` AND ${sentEmailNotifications.stripeSubscriptionId} = ${stripeSubscriptionId}` : sql``}`);
+  
+  return !!existing;
+}
+
+export async function getSentEmailNotificationsByOrganization(organizationId: string): Promise<SentEmailNotification[]> {
+  return db.select().from(sentEmailNotifications)
+    .where(eq(sentEmailNotifications.organizationId, organizationId))
+    .orderBy(desc(sentEmailNotifications.sentAt));
 }
 
 // Super Admin Dashboard Functions

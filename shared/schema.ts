@@ -108,6 +108,24 @@ export const processedStripeEvents = pgTable("processed_stripe_events", {
 
 export type ProcessedStripeEvent = typeof processedStripeEvents.$inferSelect;
 
+// Sent Email Notifications - Track sent emails to prevent duplicates
+export const sentEmailNotifications = pgTable("sent_email_notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull(),
+  emailType: text("email_type").notNull(), // 'trial_day_3', 'trial_day_5', 'trial_day_7', 'cancel_3_days', 'cancel_day_of'
+  recipientEmail: text("recipient_email").notNull(),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  sentAt: timestamp("sent_at").default(sql`now()`),
+});
+
+export const insertSentEmailNotificationSchema = createInsertSchema(sentEmailNotifications).omit({
+  id: true,
+  sentAt: true,
+});
+
+export type InsertSentEmailNotification = z.infer<typeof insertSentEmailNotificationSchema>;
+export type SentEmailNotification = typeof sentEmailNotifications.$inferSelect;
+
 // Session storage table for Replit Auth
 export const sessions = pgTable(
   "sessions",
