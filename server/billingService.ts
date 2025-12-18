@@ -343,15 +343,22 @@ class BillingService {
     }
 
     const priceId = subscription.items.data[0]?.price?.id;
-    const plan = this.getPlanFromPriceId(priceId);
+    let plan = this.getPlanFromPriceId(priceId);
     const interval = subscription.items.data[0]?.price?.recurring?.interval === 'year' ? 'annual' : 'monthly';
+    
+    // If plan couldn't be determined from priceId, keep existing plan
+    if (!plan) {
+      const org = await pgFunctions.getOrganization(organizationId);
+      plan = (org?.subscriptionPlan as SubscriptionPlan) || 'starter';
+      console.log(`[Billing] Could not determine plan from priceId ${priceId}, keeping existing plan: ${plan}`);
+    }
     
     let status: SubscriptionStatus = 'active';
     if (subscription.status === 'trialing') status = 'trialing';
     else if (subscription.status === 'past_due') status = 'past_due';
     else if (subscription.status === 'canceled') status = 'canceled';
 
-    const planLimits = PLAN_LIMITS[plan];
+    const planLimits = PLAN_LIMITS[plan] || PLAN_LIMITS.starter;
 
     await pgFunctions.updateOrganizationSubscription(organizationId, {
       stripeSubscriptionId: subscription.id,
@@ -494,22 +501,12 @@ class BillingService {
     console.log(`[Billing] Trial ending for org ${organizationId} at ${new Date(subscription.trial_end! * 1000)}`);
   }
 
-  getPlanFromPriceId(priceId: string | undefined): SubscriptionPlan {
-    if (!priceId) return 'starter';
+  getPlanFromPriceId(priceId: string | undefined): SubscriptionPlan | null {
+    if (!priceId) return null;
     
-    // Price IDs from Stripe - maps to LeaderOS plans
-    const priceMapping: Record<string, SubscriptionPlan> = {
-      // Starter ($1/mo)
-      'price_1SdxDMAPmlCUuC3zt16HQ6hR': 'starter',
-      // LeaderPro ($12/mo, $120/yr)
-      'price_1SdxDMAPmlCUuC3zrwwZFojc': 'leaderpro',
-      'price_1SdxDMAPmlCUuC3z1eidVw7P': 'leaderpro',
-      // Team ($22/mo, $220/yr)
-      'price_1SdxDNAPmlCUuC3zCMeKd0bV': 'team',
-      'price_1SdxDNAPmlCUuC3zOcpRsQ3S': 'team',
-    };
-    
-    return priceMapping[priceId] || 'starter';
+    // Use the standalone function which has the complete, up-to-date mapping
+    const result = getPlanFromPriceId(priceId);
+    return result?.plan || null;
   }
 
   getPlanLimits(plan: SubscriptionPlan) {
