@@ -4467,6 +4467,15 @@ ${outputTemplate}`;
       }
 
       const { billingService } = await import('./billingService');
+      
+      // Auto-sync from Stripe to ensure plan is up-to-date (handles missed webhooks)
+      try {
+        await billingService.syncSubscriptionFromStripe(user.organizationId);
+      } catch (syncError) {
+        // Log but don't fail - sync is best-effort to catch missed webhooks
+        console.log('[Billing] Auto-sync skipped:', (syncError as Error).message);
+      }
+      
       const billingInfo = await billingService.getOrganizationBillingInfo(user.organizationId);
       res.json(billingInfo);
     } catch (error) {
@@ -4637,6 +4646,38 @@ ${outputTemplate}`;
     } catch (error) {
       logger.error("Failed to create portal session", error);
       res.status(500).json({ message: "Failed to open billing portal" });
+    }
+  });
+
+  // Manually sync subscription from Stripe (for when webhooks miss)
+  app.post("/api/billing/sync", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      if (user.role !== 'administrator') {
+        return res.status(403).json({ message: "Only administrators can sync billing" });
+      }
+
+      const { billingService } = await import('./billingService');
+      const result = await billingService.syncSubscriptionFromStripe(user.organizationId);
+
+      res.json({ 
+        success: true, 
+        message: "Subscription synced from Stripe",
+        plan: result.plan,
+        status: result.status
+      });
+    } catch (error) {
+      logger.error("Failed to sync subscription", error);
+      res.status(500).json({ message: "Failed to sync subscription from Stripe" });
     }
   });
 

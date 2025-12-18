@@ -256,13 +256,20 @@ async function initStripe() {
     
     const stripeSync = await getStripeSync();
     
-    const replitDomains = process.env.REPLIT_DOMAINS;
-    if (!replitDomains) {
-      console.log('REPLIT_DOMAINS not set, skipping webhook registration');
-      return;
+    // Use APP_URL for production webhook, fall back to REPLIT_DOMAINS for dev
+    let webhookBaseUrl: string;
+    if (process.env.APP_URL) {
+      webhookBaseUrl = process.env.APP_URL.replace(/\/$/, '');
+      console.log('Using APP_URL for Stripe webhook:', webhookBaseUrl);
+    } else {
+      const replitDomains = process.env.REPLIT_DOMAINS;
+      if (!replitDomains) {
+        console.log('Neither APP_URL nor REPLIT_DOMAINS set, skipping webhook registration');
+        return;
+      }
+      webhookBaseUrl = `https://${replitDomains.split(',')[0]}`;
     }
     
-    const webhookBaseUrl = `https://${replitDomains.split(',')[0]}`;
     const { webhook } = await stripeSync.findOrCreateManagedWebhook(
       `${webhookBaseUrl}/api/stripe/webhook`,
       { enabled_events: ['*'] }

@@ -280,6 +280,64 @@ class BillingService {
     });
   }
 
+  async syncSubscriptionFromStripe(organizationId: string): Promise<{ plan: string; status: string }> {
+    const stripe = await getUncachableStripeClient();
+    const org = await pgFunctions.getOrganization(organizationId);
+    
+    if (!org?.stripeCustomerId) {
+      throw new Error('Organization has no Stripe customer');
+    }
+
+    // Get all active/trialing/past_due subscriptions
+    const activeStatuses = ['active', 'trialing', 'past_due'] as const;
+    let allSubscriptions: Stripe.Subscription[] = [];
+    
+    for (const status of activeStatuses) {
+      const subs = await stripe.subscriptions.list({
+        customer: org.stripeCustomerId,
+        status: status,
+        limit: 10,
+      });
+      allSubscriptions = allSubscriptions.concat(subs.data);
+    }
+
+    if (allSubscriptions.length === 0) {
+      // No active subscription found - keep existing plan
+      console.log(`[Billing] No active subscription for org ${organizationId}, keeping existing plan: ${org.subscriptionPlan}`);
+      return { plan: org.subscriptionPlan || 'starter', status: 'no_active_subscription' };
+    }
+
+    // Filter to only subscriptions with a recognized base plan price (exclude add-ons like seat subscriptions)
+    const basePlanSubscriptions = allSubscriptions.filter(sub => {
+      const priceId = sub.items.data[0]?.price?.id;
+      const plan = this.getPlanFromPriceId(priceId);
+      return plan !== null; // Only keep subscriptions with recognized plan prices
+    });
+
+    // If we found base plan subscriptions, use them; otherwise fall back to all
+    const candidateSubscriptions = basePlanSubscriptions.length > 0 ? basePlanSubscriptions : allSubscriptions;
+
+    // Get the most recent subscription (highest current_period_end)
+    const subscription = candidateSubscriptions.reduce((latest, current) => {
+      const latestEnd = (latest as any).current_period_end || 0;
+      const currentEnd = (current as any).current_period_end || 0;
+      return currentEnd > latestEnd ? current : latest;
+    });
+    
+    // Use the subscription handler to update the database
+    await this.handleSubscriptionChange(subscription);
+
+    // Fetch updated org to return current state
+    const updatedOrg = await pgFunctions.getOrganization(organizationId);
+    
+    console.log(`[Billing] Sync completed for org ${organizationId}: ${updatedOrg?.subscriptionPlan} (from Stripe subscription ${subscription.id})`);
+
+    return { 
+      plan: updatedOrg?.subscriptionPlan || 'starter', 
+      status: subscription.status 
+    };
+  }
+
   async scheduleDowngrade(
     organizationId: string,
     newPlan: SubscriptionPlan
