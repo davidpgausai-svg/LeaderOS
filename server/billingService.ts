@@ -462,6 +462,21 @@ class BillingService {
       paymentFailedAt: null,
     });
 
+    // Cancel any other active base-plan subscriptions for this customer
+    // This ensures upgrades replace old subscriptions rather than stacking
+    const customerId = typeof subscription.customer === 'string' 
+      ? subscription.customer 
+      : subscription.customer?.id;
+    
+    if (customerId && (status === 'active' || status === 'trialing')) {
+      try {
+        await this.cancelOtherBasePlanSubscriptions(customerId, subscription.id);
+      } catch (error) {
+        console.error(`[Billing] Failed to cancel old subscriptions for customer ${customerId}:`, error);
+        // Don't throw - the new subscription is already active
+      }
+    }
+
     await pgFunctions.createBillingHistoryEntry({
       organizationId,
       eventType: 'subscription_updated',
@@ -594,6 +609,54 @@ class BillingService {
     // Use the standalone function which has the complete, up-to-date mapping
     const result = getPlanFromPriceId(priceId);
     return result?.plan || null;
+  }
+
+  /**
+   * Cancel any other active base-plan subscriptions for a customer when they upgrade.
+   * This prevents stacking multiple subscriptions (e.g., Starter + Team both active).
+   */
+  async cancelOtherBasePlanSubscriptions(customerId: string, keepSubscriptionId: string): Promise<void> {
+    const stripe = await getUncachableStripeClient();
+    
+    // List active subscriptions for this customer
+    const activeSubscriptions = await stripe.subscriptions.list({
+      customer: customerId,
+      status: 'active',
+      expand: ['data.items.data.price'],
+    });
+    
+    // Also list trialing subscriptions
+    const trialingSubscriptions = await stripe.subscriptions.list({
+      customer: customerId,
+      status: 'trialing',
+      expand: ['data.items.data.price'],
+    });
+    
+    // Combine both lists
+    const allActiveSubscriptions = [
+      ...activeSubscriptions.data,
+      ...trialingSubscriptions.data,
+    ];
+    
+    for (const sub of allActiveSubscriptions) {
+      // Skip the subscription we want to keep
+      if (sub.id === keepSubscriptionId) continue;
+      
+      // Check if this is a base plan subscription (not an add-on like team seats)
+      const priceId = sub.items.data[0]?.price?.id;
+      const planInfo = getPlanFromPriceId(priceId || '');
+      
+      if (planInfo) {
+        // This is a recognized base plan - cancel it immediately
+        console.log(`[Billing] Cancelling old subscription ${sub.id} (${planInfo.plan}) for customer ${customerId}`);
+        
+        await stripe.subscriptions.cancel(sub.id, {
+          prorate: true, // Give credit for unused time
+        });
+        
+        console.log(`[Billing] Cancelled old subscription ${sub.id}`);
+      }
+    }
   }
 
   getPlanLimits(plan: SubscriptionPlan) {
