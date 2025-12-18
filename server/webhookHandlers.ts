@@ -3,7 +3,8 @@ import { billingService } from './billingService';
 import { sendWelcomeEmail } from './email';
 import type Stripe from 'stripe';
 import { db } from './db';
-import { sql } from 'drizzle-orm';
+import { sql, eq } from 'drizzle-orm';
+import { processedStripeEvents } from '@shared/schema';
 
 export class WebhookHandlers {
   static async processWebhook(payload: Buffer, signature: string, uuid: string): Promise<void> {
@@ -48,6 +49,29 @@ export class WebhookHandlers {
 
   static async handleStripeEvent(event: Stripe.Event): Promise<void> {
     console.log(`[Stripe Webhook] Processing event: ${event.type}`);
+
+    // Check if this event has already been processed (idempotency check)
+    const existingEvent = await db.select()
+      .from(processedStripeEvents)
+      .where(eq(processedStripeEvents.eventId, event.id))
+      .limit(1);
+    
+    if (existingEvent.length > 0) {
+      console.log(`[Stripe Webhook] Event ${event.id} already processed, skipping`);
+      return;
+    }
+
+    // Mark event as processed BEFORE handling to prevent race conditions
+    try {
+      await db.insert(processedStripeEvents).values({
+        eventId: event.id,
+        eventType: event.type,
+      }).onConflictDoNothing();
+    } catch (insertError) {
+      // If insert fails due to race condition, another instance is processing - skip
+      console.log(`[Stripe Webhook] Event ${event.id} being processed by another instance, skipping`);
+      return;
+    }
 
     try {
       switch (event.type) {

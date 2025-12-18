@@ -99,6 +99,15 @@ export const insertPaymentFailureSchema = createInsertSchema(paymentFailures).om
 export type InsertPaymentFailure = z.infer<typeof insertPaymentFailureSchema>;
 export type PaymentFailure = typeof paymentFailures.$inferSelect;
 
+// Processed Stripe Events - Track processed webhook events for idempotency
+export const processedStripeEvents = pgTable("processed_stripe_events", {
+  eventId: varchar("event_id").primaryKey(),
+  eventType: text("event_type").notNull(),
+  processedAt: timestamp("processed_at").default(sql`now()`),
+});
+
+export type ProcessedStripeEvent = typeof processedStripeEvents.$inferSelect;
+
 // Session storage table for Replit Auth
 export const sessions = pgTable(
   "sessions",

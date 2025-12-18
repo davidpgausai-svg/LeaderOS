@@ -131,6 +131,35 @@ class BillingService {
       throw new Error('Organization not found');
     }
 
+    // Idempotency check: If org already has an active subscription with the same price, don't create another
+    if (org.stripeSubscriptionId && org.stripePriceId === priceId && 
+        (org.subscriptionStatus === 'active' || org.subscriptionStatus === 'trialing')) {
+      console.log(`[Billing] Organization ${organizationId} already has active subscription with price ${priceId}, blocking duplicate checkout`);
+      throw new Error('You already have an active subscription for this plan');
+    }
+
+    // Check if there's a pending checkout in Stripe for this customer
+    if (org.stripeCustomerId) {
+      const recentSessions = await stripe.checkout.sessions.list({
+        customer: org.stripeCustomerId,
+        limit: 5,
+        expand: ['data.line_items'],
+      });
+      
+      // Check for open sessions created in the last 5 minutes for the same price
+      const fiveMinutesAgo = Math.floor(Date.now() / 1000) - 300;
+      const pendingSession = recentSessions.data.find(s => 
+        s.status === 'open' && 
+        s.created > fiveMinutesAgo &&
+        s.line_items?.data[0]?.price?.id === priceId
+      );
+      
+      if (pendingSession) {
+        console.log(`[Billing] Found pending checkout session ${pendingSession.id}, returning it instead of creating new`);
+        return pendingSession;
+      }
+    }
+
     let customerId = org.stripeCustomerId;
     
     if (!customerId) {

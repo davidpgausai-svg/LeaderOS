@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useUpgradeModal } from "@/hooks/use-upgrade-modal";
 import { useToast } from "@/hooks/use-toast";
@@ -32,6 +32,7 @@ export function GlobalUpgradeModal() {
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'annual'>('monthly');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const checkoutInProgress = useRef(false);
 
   const { data: billingInfo } = useQuery<BillingInfo>({
     queryKey: ['/api/billing/info'],
@@ -135,9 +136,17 @@ export function GlobalUpgradeModal() {
   };
 
   const createCheckoutSession = async (planId: string, withTrial: boolean = false) => {
+    // Prevent double-clicks with ref-based debounce
+    if (checkoutInProgress.current) {
+      console.log('[Billing] Checkout already in progress, ignoring duplicate click');
+      return;
+    }
+    checkoutInProgress.current = true;
+    
     // If user has an active subscription, redirect to billing portal instead
     if (billingInfo?.hasActiveSubscription) {
       await openCustomerPortal();
+      checkoutInProgress.current = false;
       return;
     }
     
@@ -185,6 +194,7 @@ export function GlobalUpgradeModal() {
       setSelectedPlan(null);
     } finally {
       setIsLoading(false);
+      checkoutInProgress.current = false;
     }
   };
 
