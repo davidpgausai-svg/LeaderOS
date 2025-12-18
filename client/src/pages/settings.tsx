@@ -2970,6 +2970,98 @@ export default function Settings() {
     }
   };
 
+  const downloadJSON = (data: any, filename: string) => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportStrategies = async () => {
+    try {
+      const response = await fetch('/api/strategies', { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch strategies');
+      const data = await response.json();
+      const timestamp = new Date().toISOString().split('T')[0];
+      downloadJSON(data, `priorities-export-${timestamp}.json`);
+      toast({
+        title: "Success",
+        description: `Exported ${data.length} priorities`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to export priorities",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportProjects = async () => {
+    try {
+      const response = await fetch('/api/projects', { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch projects');
+      const data = await response.json();
+      const timestamp = new Date().toISOString().split('T')[0];
+      downloadJSON(data, `projects-export-${timestamp}.json`);
+      toast({
+        title: "Success",
+        description: `Exported ${data.length} projects`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to export projects",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportAll = async () => {
+    try {
+      const [strategiesRes, projectsRes, actionsRes] = await Promise.all([
+        fetch('/api/strategies', { credentials: 'include' }),
+        fetch('/api/projects', { credentials: 'include' }),
+        fetch('/api/actions', { credentials: 'include' }),
+      ]);
+      
+      if (!strategiesRes.ok || !projectsRes.ok || !actionsRes.ok) {
+        throw new Error('Failed to fetch data');
+      }
+      
+      const [strategies, projects, actions] = await Promise.all([
+        strategiesRes.json(),
+        projectsRes.json(),
+        actionsRes.json(),
+      ]);
+      
+      const exportData = {
+        exportDate: new Date().toISOString(),
+        strategies,
+        projects,
+        actions,
+      };
+      
+      const timestamp = new Date().toISOString().split('T')[0];
+      downloadJSON(exportData, `complete-data-export-${timestamp}.json`);
+      toast({
+        title: "Success",
+        description: `Exported ${strategies.length} priorities, ${projects.length} projects, and ${actions.length} actions`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to export data",
+        variant: "destructive",
+      });
+    }
+  };
+
   const moveFramework = (fromIndex: number, toIndex: number) => {
     const updatedOrder = [...frameworkOrder];
     const [movedItem] = updatedOrder.splice(fromIndex, 1);
@@ -4046,13 +4138,13 @@ export default function Settings() {
                           Export all organizational strategic planning data for backup, compliance, or analysis.
                         </p>
                         <div className="flex space-x-2">
-                          <Button variant="outline" data-testid="button-admin-export-strategies">
+                          <Button variant="outline" onClick={handleExportStrategies} data-testid="button-admin-export-strategies">
                             Export All Priorities
                           </Button>
-                          <Button variant="outline" data-testid="button-admin-export-tactics">
+                          <Button variant="outline" onClick={handleExportProjects} data-testid="button-admin-export-tactics">
                             Export All Projects
                           </Button>
-                          <Button variant="outline" data-testid="button-admin-export-everything">
+                          <Button variant="outline" onClick={handleExportAll} data-testid="button-admin-export-everything">
                             Complete Data Export
                           </Button>
                         </div>
