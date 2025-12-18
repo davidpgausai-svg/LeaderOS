@@ -2970,8 +2970,29 @@ export default function Settings() {
     }
   };
 
-  const downloadJSON = (data: any, filename: string) => {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const escapeCSV = (value: any): string => {
+    if (value === null || value === undefined) return '';
+    const str = String(value);
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  const convertToCSV = (data: any[]): string => {
+    if (!data || data.length === 0) return '';
+    const headers = Object.keys(data[0]);
+    const csvRows = [
+      headers.join(','),
+      ...data.map(row => 
+        headers.map(header => escapeCSV(row[header])).join(',')
+      )
+    ];
+    return csvRows.join('\n');
+  };
+
+  const downloadCSV = (csvContent: string, filename: string) => {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -2988,7 +3009,8 @@ export default function Settings() {
       if (!response.ok) throw new Error('Failed to fetch strategies');
       const data = await response.json();
       const timestamp = new Date().toISOString().split('T')[0];
-      downloadJSON(data, `priorities-export-${timestamp}.json`);
+      const csv = convertToCSV(data);
+      downloadCSV(csv, `priorities-export-${timestamp}.csv`);
       toast({
         title: "Success",
         description: `Exported ${data.length} priorities`,
@@ -3008,7 +3030,8 @@ export default function Settings() {
       if (!response.ok) throw new Error('Failed to fetch projects');
       const data = await response.json();
       const timestamp = new Date().toISOString().split('T')[0];
-      downloadJSON(data, `projects-export-${timestamp}.json`);
+      const csv = convertToCSV(data);
+      downloadCSV(csv, `projects-export-${timestamp}.csv`);
       toast({
         title: "Success",
         description: `Exported ${data.length} projects`,
@@ -3040,18 +3063,15 @@ export default function Settings() {
         actionsRes.json(),
       ]);
       
-      const exportData = {
-        exportDate: new Date().toISOString(),
-        strategies,
-        projects,
-        actions,
-      };
-      
       const timestamp = new Date().toISOString().split('T')[0];
-      downloadJSON(exportData, `complete-data-export-${timestamp}.json`);
+      
+      downloadCSV(convertToCSV(strategies), `priorities-export-${timestamp}.csv`);
+      setTimeout(() => downloadCSV(convertToCSV(projects), `projects-export-${timestamp}.csv`), 100);
+      setTimeout(() => downloadCSV(convertToCSV(actions), `actions-export-${timestamp}.csv`), 200);
+      
       toast({
         title: "Success",
-        description: `Exported ${strategies.length} priorities, ${projects.length} projects, and ${actions.length} actions`,
+        description: `Exported ${strategies.length} priorities, ${projects.length} projects, and ${actions.length} actions as 3 CSV files`,
       });
     } catch (error) {
       toast({
