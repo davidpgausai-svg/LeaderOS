@@ -42,19 +42,17 @@ export async function getTrialingOrganizations(): Promise<TrialInfo[]> {
   const stripe = await getUncachableStripeClient();
   const trialOrgs: TrialInfo[] = [];
   
-  const subscriptions = await stripe.subscriptions.list({
+  for await (const sub of stripe.subscriptions.list({
     status: 'trialing',
     limit: 100,
     expand: ['data.customer'],
-  });
-  
-  for (const sub of subscriptions.data) {
+  })) {
     if (!sub.trial_end) continue;
     
     const trialEnd = new Date(sub.trial_end * 1000);
     const now = new Date();
     const msPerDay = 24 * 60 * 60 * 1000;
-    const daysRemaining = Math.ceil((trialEnd.getTime() - now.getTime()) / msPerDay);
+    const daysRemaining = Math.floor((trialEnd.getTime() - now.getTime()) / msPerDay);
     
     const org = await pgFunctions.getOrganizationByStripeSubscriptionId(sub.id);
     if (!org) continue;
@@ -79,19 +77,17 @@ export async function getCancelingOrganizations(): Promise<CancellationInfo[]> {
   const stripe = await getUncachableStripeClient();
   const cancelingOrgs: CancellationInfo[] = [];
   
-  const subscriptions = await stripe.subscriptions.list({
+  for await (const sub of stripe.subscriptions.list({
     status: 'active',
     limit: 100,
     expand: ['data.customer'],
-  });
-  
-  for (const sub of subscriptions.data) {
+  })) {
     if (!sub.cancel_at_period_end || !(sub as any).current_period_end) continue;
     
     const cancelAt = new Date((sub as any).current_period_end * 1000);
     const now = new Date();
     const msPerDay = 24 * 60 * 60 * 1000;
-    const daysUntilCancel = Math.ceil((cancelAt.getTime() - now.getTime()) / msPerDay);
+    const daysUntilCancel = Math.floor((cancelAt.getTime() - now.getTime()) / msPerDay);
     
     const org = await pgFunctions.getOrganizationByStripeSubscriptionId(sub.id);
     if (!org) continue;
@@ -140,7 +136,7 @@ async function processTrialReminders(): Promise<void> {
       await sendTrialEmailIfNotSent(trial, 'trial_day_3', 4, sendTrialReminderEmail);
     } else if (daysRemaining === 2) {
       await sendTrialEmailIfNotSent(trial, 'trial_day_5', 2, sendTrialReminderEmail);
-    } else if (daysRemaining <= 0) {
+    } else if (daysRemaining === 0) {
       await sendTrialEmailIfNotSent(trial, 'trial_day_7', 0, sendTrialReminderEmail);
     }
   }
@@ -186,7 +182,7 @@ async function processCancellationReminders(): Promise<void> {
     
     if (daysUntilCancel === 3) {
       await sendCancelEmailIfNotSent(cancel, 'cancel_3_days', 3, sendCancellationReminderEmail);
-    } else if (daysUntilCancel <= 0) {
+    } else if (daysUntilCancel === 0) {
       await sendCancelEmailIfNotSent(cancel, 'cancel_day_of', 0, sendCancellationReminderEmail);
     }
   }
