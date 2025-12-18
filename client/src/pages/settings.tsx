@@ -2136,6 +2136,8 @@ export default function Settings() {
   const [copiedToken, setCopiedToken] = useState(false);
   const [newOrgName, setNewOrgName] = useState("");
   const [copiedOrgToken, setCopiedOrgToken] = useState<string | null>(null);
+  const [editingOrgName, setEditingOrgName] = useState(false);
+  const [orgNameInput, setOrgNameInput] = useState("");
 
   const { data: users } = useQuery({
     queryKey: ["/api/users"],
@@ -2164,6 +2166,43 @@ export default function Settings() {
     enabled: isSuperAdmin(),
   });
 
+  // Fetch current organization for regular admins
+  const { data: currentOrg } = useQuery<Organization>({
+    queryKey: ["/api/billing/info"],
+    enabled: currentUser?.role === 'administrator' && !isSuperAdmin(),
+    select: (data: any) => ({
+      id: data.organizationId || currentUser?.organizationId,
+      name: data.organizationName || 'Your Organization',
+    }) as Organization,
+  });
+
+  // Update organization name mutation
+  const updateOrgNameMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const response = await apiRequest("PATCH", "/api/organizations/name", { name });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update organization name');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/billing/info"] });
+      setEditingOrgName(false);
+      toast({
+        title: "Success",
+        description: "Organization name updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Initialize framework order when strategies load
   React.useEffect(() => {
     if (strategies) {
@@ -2172,6 +2211,13 @@ export default function Settings() {
       setFrameworkOrder(sortedStrategies);
     }
   }, [strategies]);
+
+  // Initialize org name input when organization data loads (only when not actively editing)
+  React.useEffect(() => {
+    if (currentOrg?.name && !editingOrgName) {
+      setOrgNameInput(currentOrg.name);
+    }
+  }, [currentOrg?.name, editingOrgName]);
 
   // Fetch registration token when admin security tab is active
   React.useEffect(() => {
@@ -3270,6 +3316,7 @@ export default function Settings() {
               >
                 {[
                   ...(isSuperAdmin() ? [{ value: 'organizations', icon: Building2, label: 'Organizations' }] : []),
+                  ...(!isSuperAdmin() ? [{ value: 'organization', icon: Building2, label: 'Organization' }] : []),
                   { value: 'user-management', icon: Users, label: 'User Roles' },
                   { value: 'holidays', icon: Star, label: 'Holidays' },
                   { value: 'framework-management', icon: Target, label: 'Framework Order' },
@@ -3452,6 +3499,92 @@ export default function Settings() {
                             </div>
                           ))
                         )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              )}
+
+              {/* Regular Admin Organization Settings */}
+              {!isSuperAdmin() && (
+                <TabsContent value="organization" className="space-y-6">
+                  <Card data-testid="card-admin-organization">
+                    <CardHeader>
+                      <CardTitle className="flex items-center">
+                        <Building2 className="mr-2 h-5 w-5" />
+                        Organization Settings
+                      </CardTitle>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                        Manage your organization's name and settings. This name appears throughout the app and in communications.
+                      </p>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between p-4 border dark:border-gray-700 rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <Building2 className="h-5 w-5 text-gray-500" />
+                            <div>
+                              <Label className="text-sm text-gray-500">Organization Name</Label>
+                              {editingOrgName ? (
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Input
+                                    value={orgNameInput}
+                                    onChange={(e) => setOrgNameInput(e.target.value)}
+                                    placeholder="Enter organization name"
+                                    className="max-w-xs"
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' && orgNameInput.trim()) {
+                                        updateOrgNameMutation.mutate(orgNameInput.trim());
+                                      }
+                                      if (e.key === 'Escape') {
+                                        setEditingOrgName(false);
+                                      }
+                                    }}
+                                    data-testid="input-org-name"
+                                  />
+                                  <Button
+                                    size="sm"
+                                    onClick={() => updateOrgNameMutation.mutate(orgNameInput.trim())}
+                                    disabled={updateOrgNameMutation.isPending || !orgNameInput.trim()}
+                                    data-testid="button-save-org-name"
+                                  >
+                                    {updateOrgNameMutation.isPending ? "Saving..." : "Save"}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setEditingOrgName(false)}
+                                    data-testid="button-cancel-org-name"
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              ) : (
+                                <p className="font-medium text-gray-900 dark:text-white text-lg">
+                                  {currentOrg?.name || 'Your Organization'}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          {!editingOrgName && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setOrgNameInput(currentOrg?.name || '');
+                                setEditingOrgName(true);
+                              }}
+                              disabled={!currentOrg?.name}
+                              data-testid="button-edit-org-name"
+                            >
+                              <Pencil className="w-4 h-4 mr-2" />
+                              {currentOrg?.name ? 'Edit' : 'Loading...'}
+                            </Button>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          The organization name is used for branding and appears in emails, invoices, and throughout the app.
+                        </p>
                       </div>
                     </CardContent>
                   </Card>

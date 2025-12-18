@@ -658,6 +658,8 @@ class BillingService {
 
     return {
       organization: org,
+      organizationId: org.id,
+      organizationName: org.name,
       currentPlan: org.subscriptionPlan,
       status: org.subscriptionStatus,
       interval: org.billingInterval,

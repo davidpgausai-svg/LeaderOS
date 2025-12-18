@@ -1224,6 +1224,14 @@ export async function updateOrganizationToken(id: string): Promise<Organization 
   return org || undefined;
 }
 
+export async function updateOrganizationName(id: string, name: string): Promise<Organization | undefined> {
+  const [org] = await db.update(organizations)
+    .set({ name, updatedAt: new Date() })
+    .where(eq(organizations.id, id))
+    .returning();
+  return org || undefined;
+}
+
 export async function deleteOrganization(id: string): Promise<boolean> {
   const result = await db.delete(organizations).where(eq(organizations.id, id)).returning();
   return result.length > 0;

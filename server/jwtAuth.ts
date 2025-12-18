@@ -4,7 +4,7 @@ import type { Express, RequestHandler, Response } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { storage } from './storage';
 import { logger } from './logger';
-import { getOrganization, getOrganizationByToken, updateOrganizationToken, getAllOrganizations, createOrganization, deleteOrganization, getUserByEmail, updateUserPassword, clearMustChangePassword, createPasswordResetToken, getPasswordResetToken, markPasswordResetTokenUsed, createTwoFactorCode, getTwoFactorCode, incrementTwoFactorAttempts, markTwoFactorCodeUsed, deleteTwoFactorCodes } from './pgStorage';
+import { getOrganization, getOrganizationByToken, updateOrganizationToken, updateOrganizationName, getAllOrganizations, createOrganization, deleteOrganization, getUserByEmail, updateUserPassword, clearMustChangePassword, createPasswordResetToken, getPasswordResetToken, markPasswordResetTokenUsed, createTwoFactorCode, getTwoFactorCode, incrementTwoFactorAttempts, markTwoFactorCodeUsed, deleteTwoFactorCodes } from './pgStorage';
 import { sendPasswordResetEmail, sendTwoFactorCode } from './email';
 import crypto from 'crypto';
 
@@ -490,6 +490,41 @@ export async function setupAuth(app: Express) {
     } catch (error) {
       logger.error('Error rotating organization token', error);
       res.status(500).json({ error: 'Failed to rotate organization token' });
+    }
+  });
+
+  // Administrator: Update organization name
+  app.patch('/api/organizations/name', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      // Only administrators can update organization name
+      if (user.role !== 'administrator') {
+        return res.status(403).json({ error: 'Only administrators can update organization name' });
+      }
+
+      const { name } = req.body;
+      if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        return res.status(400).json({ error: 'Organization name is required' });
+      }
+
+      if (name.trim().length > 200) {
+        return res.status(400).json({ error: 'Organization name must be 200 characters or less' });
+      }
+
+      const updatedOrg = await updateOrganizationName(user.organizationId, name.trim());
+      if (!updatedOrg) {
+        return res.status(404).json({ error: 'Organization not found' });
+      }
+
+      logger.info(`Organization name updated to "${name.trim()}" by administrator ${user.id}`);
+      res.json({ organization: updatedOrg, message: 'Organization name updated successfully' });
+    } catch (error) {
+      logger.error('Error updating organization name', error);
+      res.status(500).json({ error: 'Failed to update organization name' });
     }
   });
 
