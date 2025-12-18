@@ -691,6 +691,7 @@ interface BillingInfo {
   status: string;
   interval: string;
   isLegacy: boolean;
+  hasActiveSubscription?: boolean;
   userCount: number;
   maxUsers: number;
   extraSeats: number;
@@ -2166,15 +2167,21 @@ export default function Settings() {
     enabled: isSuperAdmin(),
   });
 
-  // Fetch current organization for regular admins
-  const { data: currentOrg } = useQuery<Organization>({
+  // Fetch billing info for regular admins (plan checks and org name)
+  const { data: adminBillingInfo } = useQuery<BillingInfo>({
     queryKey: ["/api/billing/info"],
     enabled: currentUser?.role === 'administrator' && !isSuperAdmin(),
-    select: (data: any) => ({
-      id: data.organizationId || currentUser?.organizationId,
-      name: data.organizationName || 'Your Organization',
-    }) as Organization,
   });
+
+  // Derive current organization from billing info
+  const currentOrg: Organization | undefined = adminBillingInfo ? {
+    id: adminBillingInfo.organization?.id || currentUser?.organizationId || '',
+    name: adminBillingInfo.organization?.name || 'Your Organization',
+  } as Organization : undefined;
+
+  // Check if current plan allows multiple users (only Team plan or legacy)
+  // Super admins can always add users (they manage all organizations)
+  const canAddUsers = isSuperAdmin() || adminBillingInfo?.currentPlan === 'team' || adminBillingInfo?.isLegacy;
 
   // Update organization name mutation
   const updateOrgNameMutation = useMutation({
@@ -2265,6 +2272,16 @@ export default function Settings() {
   };
 
   const copyRegistrationUrl = async () => {
+    // Check if plan allows adding users
+    if (!canAddUsers) {
+      toast({
+        title: "Upgrade to Team Plan",
+        description: "The Team plan is required to add additional users. Go to Settings → Billing to upgrade.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const baseUrl = window.location.origin;
     const registrationUrl = `${baseUrl}/register/${registrationToken}`;
     try {
@@ -3732,13 +3749,27 @@ export default function Settings() {
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="space-y-4">
-                      <div className="p-4 border rounded-lg bg-blue-50 dark:bg-blue-900/20">
-                        <div className="flex items-center space-x-2 mb-3">
-                          <Link className="h-5 w-5 text-blue-600" />
-                          <h4 className="font-medium text-blue-800 dark:text-blue-200">
-                            User Registration Link
-                          </h4>
+                      <div className={`p-4 border rounded-lg ${canAddUsers ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-gray-100 dark:bg-gray-800/50 opacity-75'}`}>
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center space-x-2">
+                            <Link className={`h-5 w-5 ${canAddUsers ? 'text-blue-600' : 'text-gray-400'}`} />
+                            <h4 className={`font-medium ${canAddUsers ? 'text-blue-800 dark:text-blue-200' : 'text-gray-500 dark:text-gray-400'}`}>
+                              User Registration Link
+                            </h4>
+                          </div>
+                          {!canAddUsers && (
+                            <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50 dark:bg-amber-900/20">
+                              Team Plan Required
+                            </Badge>
+                          )}
                         </div>
+                        {!canAddUsers && (
+                          <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                            <p className="text-sm text-amber-700 dark:text-amber-300">
+                              Adding team members requires the Team plan. Upgrade to invite additional users to your organization.
+                            </p>
+                          </div>
+                        )}
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                           Share this secret link with people you want to grant access to the platform. 
                           The first person to register becomes an Administrator. All others become Co-Leads by default.
@@ -3755,7 +3786,8 @@ export default function Settings() {
                               <Input
                                 value={registrationToken ? `${window.location.origin}/register/${registrationToken}` : ''}
                                 readOnly
-                                className="font-mono text-sm bg-white dark:bg-gray-800"
+                                className={`font-mono text-sm ${canAddUsers ? 'bg-white dark:bg-gray-800' : 'bg-gray-200 dark:bg-gray-700 text-gray-400'}`}
+                                disabled={!canAddUsers}
                                 data-testid="input-registration-url"
                               />
                               <Button
@@ -3763,6 +3795,7 @@ export default function Settings() {
                                 size="icon"
                                 onClick={copyRegistrationUrl}
                                 disabled={!registrationToken}
+                                className={!canAddUsers ? 'opacity-50' : ''}
                                 data-testid="button-copy-registration-url"
                               >
                                 {copiedToken ? (
@@ -3777,8 +3810,8 @@ export default function Settings() {
                               <AlertDialogTrigger asChild>
                                 <Button
                                   variant="outline"
-                                  className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:text-orange-400 dark:border-orange-700 dark:hover:bg-orange-950"
-                                  disabled={isRotatingToken}
+                                  className={`${canAddUsers ? 'text-orange-600 border-orange-300 hover:bg-orange-50 dark:text-orange-400 dark:border-orange-700 dark:hover:bg-orange-950' : 'text-gray-400 border-gray-300'}`}
+                                  disabled={isRotatingToken || !canAddUsers}
                                   data-testid="button-rotate-registration-token"
                                 >
                                   <RefreshCw className={`h-4 w-4 mr-2 ${isRotatingToken ? 'animate-spin' : ''}`} />

@@ -656,6 +656,10 @@ class BillingService {
     const billingHistory = await pgFunctions.getBillingHistoryByOrganization(organizationId);
     const planLimits = PLAN_LIMITS[org.subscriptionPlan as SubscriptionPlan];
 
+    // Determine if the organization has an active Stripe subscription
+    const hasActiveSubscription = !!(org.stripeSubscriptionId && 
+      (org.subscriptionStatus === 'active' || org.subscriptionStatus === 'trialing'));
+
     return {
       organization: org,
       organizationId: org.id,
@@ -664,6 +668,7 @@ class BillingService {
       status: org.subscriptionStatus,
       interval: org.billingInterval,
       isLegacy: org.isLegacy === 'true',
+      hasActiveSubscription,
       userCount: users.length,
       maxUsers: org.maxUsers + (org.extraSeats || 0),
       extraSeats: org.extraSeats || 0,

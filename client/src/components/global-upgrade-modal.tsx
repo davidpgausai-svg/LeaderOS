@@ -9,6 +9,7 @@ import { Zap, X, Check, Clock, RefreshCw } from "lucide-react";
 interface BillingInfo {
   currentPlan: string;
   isLegacy: boolean;
+  hasActiveSubscription?: boolean;
 }
 
 const PRICE_IDS = {
@@ -94,9 +95,55 @@ export function GlobalUpgradeModal() {
     },
   ];
 
+  const openCustomerPortal = async () => {
+    setIsLoading(true);
+    setSelectedPlan('portal');
+    try {
+      const csrfToken = document.cookie.match(/csrf_token=([^;]+)/)?.[1];
+      const response = await fetch('/api/billing/create-portal-session', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to open billing portal');
+      }
+      
+      const { url } = await response.json();
+      // Navigate to billing portal - page will unload
+      window.location.href = url;
+      
+      // Reset state after a short delay in case navigation is blocked
+      // (popup blockers, SPA constraints, etc.)
+      setTimeout(() => {
+        setSelectedPlan(null);
+        setIsLoading(false);
+      }, 3000);
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'Failed to open billing portal. Please try again.',
+        variant: 'destructive',
+      });
+      setSelectedPlan(null);
+      setIsLoading(false);
+    }
+  };
+
   const createCheckoutSession = async (planId: string, withTrial: boolean = false) => {
+    // If user has an active subscription, redirect to billing portal instead
+    if (billingInfo?.hasActiveSubscription) {
+      await openCustomerPortal();
+      return;
+    }
+    
     setIsLoading(true);
     setSelectedPlan(planId);
+    
     try {
       const csrfToken = document.cookie.match(/csrf_token=([^;]+)/)?.[1];
       const plan = plans.find(p => p.id === planId);
