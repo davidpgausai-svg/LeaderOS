@@ -4758,6 +4758,39 @@ ${outputTemplate}`;
     }
   });
 
+  // Schedule a downgrade to a lower plan at end of billing period
+  app.post("/api/billing/schedule-downgrade", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      if (user.role !== 'administrator') {
+        return res.status(403).json({ message: "Only administrators can manage billing" });
+      }
+
+      const { newPlan } = req.body;
+      if (!newPlan || !['starter', 'leaderpro', 'team'].includes(newPlan)) {
+        return res.status(400).json({ message: "Invalid plan specified" });
+      }
+
+      const { billingService } = await import('./billingService');
+      await billingService.scheduleDowngrade(user.organizationId, newPlan);
+
+      res.json({ success: true, message: `Scheduled downgrade to ${newPlan} at end of billing period` });
+    } catch (error) {
+      logger.error("Failed to schedule downgrade", error);
+      const message = error instanceof Error ? error.message : "Failed to schedule downgrade";
+      res.status(500).json({ message });
+    }
+  });
+
   // Cancel pending downgrade
   app.post("/api/billing/cancel-downgrade", isAuthenticated, async (req: any, res) => {
     try {

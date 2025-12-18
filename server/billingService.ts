@@ -371,18 +371,51 @@ class BillingService {
     organizationId: string,
     newPlan: SubscriptionPlan
   ): Promise<void> {
+    const org = await pgFunctions.getOrganization(organizationId);
+    
+    if (!org) {
+      throw new Error('Organization not found');
+    }
+    
+    if (!org.stripeSubscriptionId) {
+      throw new Error('No active subscription to downgrade');
+    }
+    
+    // Validate this is actually a downgrade
+    const planHierarchy: Record<string, number> = {
+      'starter': 1,
+      'leaderpro': 2,
+      'team': 3,
+    };
+    
+    const currentLevel = planHierarchy[org.subscriptionPlan || 'starter'] || 1;
+    const newLevel = planHierarchy[newPlan] || 1;
+    
+    if (newLevel >= currentLevel) {
+      throw new Error('Cannot downgrade to a plan at the same or higher level');
+    }
+    
+    // Tell Stripe to cancel the subscription at the end of the billing period
+    const stripe = await getUncachableStripeClient();
+    await stripe.subscriptions.update(org.stripeSubscriptionId, {
+      cancel_at_period_end: true,
+    });
+    
+    // Store the pending downgrade plan in our database
     await pgFunctions.updateOrganizationSubscription(organizationId, {
       pendingDowngradePlan: newPlan,
+      cancelAtPeriodEnd: 'true',
     });
 
-    const org = await pgFunctions.getOrganization(organizationId);
     await pgFunctions.createBillingHistoryEntry({
       organizationId,
       eventType: 'downgrade_scheduled',
       description: `Scheduled downgrade to ${newPlan} plan at end of billing period`,
-      planBefore: org?.subscriptionPlan || null,
+      planBefore: org.subscriptionPlan || null,
       planAfter: newPlan,
     });
+    
+    console.log(`[Billing] Scheduled downgrade for org ${organizationId}: ${org.subscriptionPlan} → ${newPlan}`);
   }
 
   async cancelPendingDowngrade(organizationId: string): Promise<void> {
@@ -391,9 +424,18 @@ class BillingService {
     if (!org?.pendingDowngradePlan) {
       throw new Error('No pending downgrade to cancel');
     }
+    
+    // Tell Stripe to NOT cancel at period end (resume the subscription)
+    if (org.stripeSubscriptionId) {
+      const stripe = await getUncachableStripeClient();
+      await stripe.subscriptions.update(org.stripeSubscriptionId, {
+        cancel_at_period_end: false,
+      });
+    }
 
     await pgFunctions.updateOrganizationSubscription(organizationId, {
       pendingDowngradePlan: null,
+      cancelAtPeriodEnd: 'false',
     });
 
     await pgFunctions.createBillingHistoryEntry({
@@ -403,6 +445,8 @@ class BillingService {
       planBefore: org.subscriptionPlan,
       planAfter: org.subscriptionPlan,
     });
+    
+    console.log(`[Billing] Cancelled pending downgrade for org ${organizationId}`);
   }
 
   async handleSubscriptionChange(subscription: Stripe.Subscription): Promise<void> {
@@ -491,17 +535,15 @@ class BillingService {
     let organizationId = subscription.metadata?.organizationId;
     
     // If no organizationId in metadata, look up by Stripe customer ID
-    if (!organizationId) {
-      const customerId = typeof subscription.customer === 'string' 
-        ? subscription.customer 
-        : subscription.customer?.id;
-      
-      if (customerId) {
-        const org = await pgFunctions.getOrganizationByStripeCustomerId(customerId);
-        if (org) {
-          organizationId = org.id;
-          console.log(`[Billing] Found organization ${organizationId} by Stripe customer ${customerId}`);
-        }
+    const customerId = typeof subscription.customer === 'string' 
+      ? subscription.customer 
+      : subscription.customer?.id;
+    
+    if (!organizationId && customerId) {
+      const org = await pgFunctions.getOrganizationByStripeCustomerId(customerId);
+      if (org) {
+        organizationId = org.id;
+        console.log(`[Billing] Found organization ${organizationId} by Stripe customer ${customerId}`);
       }
     }
     
@@ -509,11 +551,39 @@ class BillingService {
       console.log('[Billing] Canceled subscription has no organizationId and no matching customer, skipping');
       return;
     }
+    
+    // Check if this is a scheduled downgrade
+    const org = await pgFunctions.getOrganization(organizationId);
+    
+    if (org?.pendingDowngradePlan && customerId) {
+      // This is a downgrade - create the new lower-tier subscription
+      console.log(`[Billing] Processing downgrade for org ${organizationId}: → ${org.pendingDowngradePlan}`);
+      
+      try {
+        await this.createDowngradeSubscription(customerId, organizationId, org.pendingDowngradePlan as SubscriptionPlan);
+        
+        await pgFunctions.createBillingHistoryEntry({
+          organizationId,
+          eventType: 'subscription_downgraded',
+          description: `Downgraded to ${org.pendingDowngradePlan} plan`,
+          planBefore: org.subscriptionPlan,
+          planAfter: org.pendingDowngradePlan,
+        });
+        
+        console.log(`[Billing] Downgrade complete for org ${organizationId}: ${org.subscriptionPlan} → ${org.pendingDowngradePlan}`);
+        return; // Don't mark as canceled since we created a new subscription
+      } catch (error) {
+        console.error(`[Billing] Failed to create downgrade subscription for org ${organizationId}:`, error);
+        // Fall through to mark as canceled
+      }
+    }
 
+    // No pending downgrade - just mark as canceled
     await pgFunctions.updateOrganizationSubscription(organizationId, {
       subscriptionStatus: 'canceled',
       stripeSubscriptionId: null,
       stripePriceId: null,
+      pendingDowngradePlan: null,
     });
 
     await pgFunctions.createBillingHistoryEntry({
@@ -523,6 +593,73 @@ class BillingService {
     });
 
     console.log(`[Billing] Subscription canceled for org ${organizationId}`);
+  }
+  
+  /**
+   * Create a new subscription for a downgrade (called when old subscription ends)
+   */
+  async createDowngradeSubscription(
+    customerId: string,
+    organizationId: string,
+    newPlan: SubscriptionPlan
+  ): Promise<void> {
+    const stripe = await getUncachableStripeClient();
+    
+    // Get the price ID for the new plan (monthly by default)
+    const priceId = this.getPriceIdForPlan(newPlan, 'monthly');
+    
+    if (!priceId) {
+      throw new Error(`No price ID found for plan: ${newPlan}`);
+    }
+    
+    // Create the new subscription
+    const subscription = await stripe.subscriptions.create({
+      customer: customerId,
+      items: [{ price: priceId }],
+      metadata: { organizationId },
+    });
+    
+    // Update our database with the new subscription
+    const planLimits = PLAN_LIMITS[newPlan] || PLAN_LIMITS.starter;
+    
+    await pgFunctions.updateOrganizationSubscription(organizationId, {
+      stripeSubscriptionId: subscription.id,
+      stripePriceId: priceId,
+      subscriptionPlan: newPlan,
+      subscriptionStatus: 'active',
+      billingInterval: 'monthly',
+      currentPeriodStart: new Date((subscription as any).current_period_start * 1000),
+      currentPeriodEnd: new Date((subscription as any).current_period_end * 1000),
+      cancelAtPeriodEnd: 'false',
+      maxUsers: planLimits.maxUsers,
+      pendingDowngradePlan: null,
+    });
+    
+    console.log(`[Billing] Created downgrade subscription ${subscription.id} for org ${organizationId}: ${newPlan}`);
+  }
+  
+  /**
+   * Get the Stripe price ID for a given plan and interval
+   */
+  getPriceIdForPlan(plan: SubscriptionPlan, interval: 'monthly' | 'annual'): string | null {
+    // Determine if we're in live mode or test mode based on existing config
+    const isLiveMode = process.env.STRIPE_SECRET_KEY?.startsWith('sk_live');
+    
+    const priceMap: Record<string, Record<string, string>> = {
+      starter: {
+        monthly: isLiveMode ? PRICE_IDS.starter.monthlyLive : PRICE_IDS.starter.monthly,
+      },
+      leaderpro: {
+        monthly: isLiveMode ? PRICE_IDS.leaderpro.monthlyLive : PRICE_IDS.leaderpro.monthly,
+        annual: isLiveMode ? PRICE_IDS.leaderpro.annualLive : PRICE_IDS.leaderpro.annual,
+      },
+      team: {
+        monthly: isLiveMode ? PRICE_IDS.team.monthlyLive : PRICE_IDS.team.monthly,
+        annual: isLiveMode ? PRICE_IDS.team.annualLive : PRICE_IDS.team.annual,
+      },
+    };
+    
+    return priceMap[plan]?.[interval] || null;
   }
 
   async handlePaymentSucceeded(invoice: Stripe.Invoice): Promise<void> {

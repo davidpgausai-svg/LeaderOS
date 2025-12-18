@@ -66,6 +66,7 @@ import {
   AlertTriangle,
   Clock,
   Zap,
+  ArrowDownCircle,
 } from "lucide-react";
 import type { TemplateType, Organization, ExecutiveGoal, TeamTag, PtoEntry, Holiday } from "@shared/schema";
 import { Pencil, X, Hash } from "lucide-react";
@@ -1315,6 +1316,60 @@ function BillingSettings() {
     }
   };
 
+  const scheduleDowngrade = async (newPlan: string) => {
+    setIsLoading(true);
+    try {
+      const csrfToken = document.cookie.match(/csrf_token=([^;]+)/)?.[1];
+      const response = await fetch('/api/billing/schedule-downgrade', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
+        },
+        body: JSON.stringify({ newPlan }),
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Failed to schedule downgrade');
+      }
+      
+      const planName = PLAN_DETAILS[newPlan as keyof typeof PLAN_DETAILS]?.name || newPlan;
+      toast({
+        title: 'Downgrade Scheduled',
+        description: `Your plan will change to ${planName} at the end of your billing period.`,
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['/api/billing/info'] });
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Failed to schedule downgrade. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Get available downgrade options based on current plan
+  const getDowngradeOptions = () => {
+    const currentPlan = billingInfo?.currentPlan;
+    if (currentPlan === 'team') {
+      return [
+        { id: 'leaderpro', name: 'LeaderPro', price: 12 },
+        { id: 'starter', name: 'Starter', price: 1 },
+      ];
+    }
+    if (currentPlan === 'leaderpro') {
+      return [
+        { id: 'starter', name: 'Starter', price: 1 },
+      ];
+    }
+    return [];
+  };
+
   if (isFetchingBilling) {
     return (
       <Card data-testid="card-billing-settings">
@@ -1536,7 +1591,7 @@ function BillingSettings() {
         />
 
         {/* Manage Subscription */}
-        {hasActiveSubscription && !isLegacy && !billingInfo?.cancelAtPeriodEnd && (
+        {hasActiveSubscription && !isLegacy && !billingInfo?.pendingDowngrade && (
           <div className="p-4 border rounded-lg">
             <h4 className="font-medium mb-4">Manage Subscription</h4>
             <div className="flex flex-wrap gap-3">
@@ -1549,39 +1604,99 @@ function BillingSettings() {
                 <ExternalLink className="w-4 h-4 mr-2" />
                 Manage Billing
               </Button>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-950"
-                    disabled={isLoading}
-                    data-testid="button-cancel-subscription"
-                  >
-                    Cancel Subscription
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Cancel Subscription?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Your subscription will remain active until the end of your current billing period 
-                      ({billingInfo?.currentPeriodEnd ? new Date(billingInfo.currentPeriodEnd).toLocaleDateString() : 'period end'}). 
-                      After that, you'll lose access to premium features.
-                      <br /><br />
-                      You can reactivate anytime before the cancellation date.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Keep Subscription</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={cancelSubscription}
-                      className="bg-red-600 hover:bg-red-700"
+              
+              {/* Downgrade option - only show if there are lower plans available */}
+              {getDowngradeOptions().length > 0 && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="text-amber-600 border-amber-300 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-700 dark:hover:bg-amber-950"
+                      disabled={isLoading}
+                      data-testid="button-downgrade-plan"
+                    >
+                      <ArrowDownCircle className="w-4 h-4 mr-2" />
+                      Downgrade Plan
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Downgrade Your Plan</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Your current plan ({PLAN_DETAILS[billingInfo?.currentPlan as keyof typeof PLAN_DETAILS]?.name}) will remain active until the end of your billing period 
+                        ({billingInfo?.currentPeriodEnd ? new Date(billingInfo.currentPeriodEnd).toLocaleDateString() : 'period end'}).
+                        <br /><br />
+                        Select a plan to switch to:
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="space-y-2 py-4">
+                      {getDowngradeOptions().map((option) => (
+                        <Button
+                          key={option.id}
+                          variant="outline"
+                          className="w-full justify-between"
+                          onClick={() => {
+                            scheduleDowngrade(option.id);
+                          }}
+                          disabled={isLoading}
+                          data-testid={`button-downgrade-to-${option.id}`}
+                        >
+                          <span>{option.name}</span>
+                          <span className="text-gray-500">${option.price}/month</span>
+                        </Button>
+                      ))}
+                    </div>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+              
+              {/* Only show cancel button if not already scheduled for cancellation */}
+              {!billingInfo?.cancelAtPeriodEnd && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-950"
+                      disabled={isLoading}
+                      data-testid="button-cancel-subscription"
                     >
                       Cancel Subscription
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Cancel Subscription?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Your subscription will remain active until the end of your current billing period 
+                        ({billingInfo?.currentPeriodEnd ? new Date(billingInfo.currentPeriodEnd).toLocaleDateString() : 'period end'}). 
+                        After that, you'll lose access to premium features.
+                        <br /><br />
+                        You can reactivate anytime before the cancellation date.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Keep Subscription</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={cancelSubscription}
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        Cancel Subscription
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+              
+              {/* Show info when subscription is scheduled for cancellation */}
+              {billingInfo?.cancelAtPeriodEnd && (
+                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                  <Clock className="w-4 h-4" />
+                  <span className="text-sm">Cancels {billingInfo?.currentPeriodEnd ? new Date(billingInfo.currentPeriodEnd).toLocaleDateString() : 'at period end'}</span>
+                </div>
+              )}
             </div>
           </div>
         )}
