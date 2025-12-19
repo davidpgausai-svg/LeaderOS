@@ -316,7 +316,7 @@ export async function setupAuth(app: Express) {
         subscriptionPlan: plan,
         subscriptionStatus: subscription?.status === 'trialing' ? 'trialing' : 'active',
         currentPeriodEnd: subscription?.current_period_end 
-          ? new Date(subscription.current_period_end * 1000).toISOString()
+          ? new Date(subscription.current_period_end * 1000)
           : null,
       });
 
@@ -515,7 +515,7 @@ export async function setupAuth(app: Express) {
         return res.status(400).json({ error: 'Organization name must be 200 characters or less' });
       }
 
-      const updatedOrg = await updateOrganizationName(user.organizationId, name.trim());
+      const updatedOrg = await updateOrganizationName(user.organizationId!, name.trim());
       if (!updatedOrg) {
         return res.status(404).json({ error: 'Organization not found' });
       }
