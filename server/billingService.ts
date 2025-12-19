@@ -38,9 +38,10 @@ export const PRICE_IDS = {
     annualLive: 'price_1Sf6bhH5ttU72wpZgSCvznWL', // live - $220/year
   },
   teamSeat: {
-    monthly: 'price_1SdxDOAPmlCUuC3z1JC3NDy2',
-    annual: 'price_1SdxDOAPmlCUuC3zgGeGd9sp',
+    monthly: 'price_1SdxDOAPmlCUuC3z1JC3NDy2', // test - $6/mo per seat
+    annual: 'price_1SdxDOAPmlCUuC3zgGeGd9sp', // test - $60/yr per seat
     monthlyLive: 'price_1Se1VpH5ttU72wpZ2PeWFafx', // live - $6/mo per additional team member
+    annualLive: 'price_1Se1VpH5ttU72wpZ2PeWFafx', // live - seats are billed monthly ($6/mo) regardless of base plan interval
   },
 };
 
@@ -960,6 +961,218 @@ class BillingService {
     });
   }
 
+  async removeTeamSeats(organizationId: string, seatsToRemove: number): Promise<{ seatsRemoved: number; newSeatCount: number }> {
+    const stripe = await getUncachableStripeClient();
+    const org = await pgFunctions.getOrganization(organizationId);
+    
+    if (!org || org.subscriptionPlan !== 'team') {
+      throw new Error('Only Team plan organizations can modify seats');
+    }
+
+    const currentExtraSeats = org.extraSeats || 0;
+    const newExtraSeats = Math.max(0, currentExtraSeats - seatsToRemove);
+    const actualSeatsRemoved = currentExtraSeats - newExtraSeats;
+
+    if (actualSeatsRemoved > 0) {
+      let stripeUpdated = false;
+      
+      // Update Stripe subscription first if it exists
+      if (org.stripeSubscriptionId) {
+        const subscription = await stripe.subscriptions.retrieve(org.stripeSubscriptionId, {
+          expand: ['items.data.price.product'],
+        });
+        
+        // Get all known seat price IDs for lookup
+        const allSeatPriceIds = [
+          PRICE_IDS.teamSeat.monthly,
+          PRICE_IDS.teamSeat.monthlyLive,
+          PRICE_IDS.teamSeat.annual,
+          PRICE_IDS.teamSeat.annualLive,
+        ];
+        
+        // Find seat item by price ID or by product name
+        const seatItem = subscription.items.data.find(item => {
+          if (allSeatPriceIds.includes(item.price.id)) {
+            return true;
+          }
+          const product = item.price.product;
+          if (typeof product === 'object' && product !== null && 'name' in product) {
+            const productName = (product as any).name?.toLowerCase() || '';
+            return productName.includes('seat') || productName.includes('user');
+          }
+          return false;
+        });
+
+        if (seatItem) {
+          // Stripe update - throws on failure, preventing local state change
+          if (newExtraSeats === 0) {
+            await stripe.subscriptionItems.del(seatItem.id, {
+              proration_behavior: 'create_prorations',
+            });
+          } else {
+            await stripe.subscriptionItems.update(seatItem.id, {
+              quantity: newExtraSeats,
+              proration_behavior: 'create_prorations',
+            });
+          }
+          stripeUpdated = true;
+        }
+      }
+
+      // Only update local state if:
+      // 1. Stripe was successfully updated, OR
+      // 2. No Stripe subscription exists (legacy/manual org)
+      if (stripeUpdated || !org.stripeSubscriptionId) {
+        await pgFunctions.updateOrganizationSubscription(organizationId, {
+          extraSeats: newExtraSeats,
+          pendingExtraSeats: null,
+        });
+
+        await pgFunctions.createBillingHistoryEntry({
+          organizationId,
+          eventType: 'seats_removed',
+          description: `Removed ${actualSeatsRemoved} extra seat(s) - now have ${newExtraSeats} extra seat(s)`,
+          seatsBefore: currentExtraSeats,
+          seatsAfter: newExtraSeats,
+        });
+      } else {
+        // Stripe sub exists but no seat item found - log warning but don't update local state
+        console.warn(`[Billing] No seat item found in Stripe subscription for org ${organizationId} - local state not updated`);
+        return { seatsRemoved: 0, newSeatCount: currentExtraSeats };
+      }
+    }
+
+    return { seatsRemoved: actualSeatsRemoved, newSeatCount: newExtraSeats };
+  }
+
+  async adjustSeatsAfterUserDeletion(organizationId: string): Promise<{ seatsReduced: number } | null> {
+    const org = await pgFunctions.getOrganization(organizationId);
+    
+    if (!org || org.subscriptionPlan !== 'team') {
+      return null;
+    }
+
+    const users = await pgStorage.getUsersByOrganization(organizationId);
+    const userCount = users.length;
+    const baseLimit = PLAN_LIMITS.team.maxUsers;
+    const currentExtraSeats = org.extraSeats || 0;
+    
+    // Calculate the minimum extra seats needed for current user count
+    const minExtraSeatsNeeded = Math.max(0, userCount - baseLimit);
+    
+    // If we have more extra seats than needed, reduce them
+    if (currentExtraSeats > minExtraSeatsNeeded) {
+      const seatsToRemove = currentExtraSeats - minExtraSeatsNeeded;
+      const result = await this.removeTeamSeats(organizationId, seatsToRemove);
+      return { seatsReduced: result.seatsRemoved };
+    }
+
+    return null;
+  }
+
+  async addSeatsToSubscription(
+    organizationId: string,
+    seatsToAdd: number
+  ): Promise<{ success: boolean; newSeatCount: number }> {
+    const stripe = await getUncachableStripeClient();
+    const org = await pgFunctions.getOrganization(organizationId);
+    
+    if (!org || org.subscriptionPlan !== 'team') {
+      throw new Error('Only Team plan organizations can add extra seats');
+    }
+
+    if (!org.stripeSubscriptionId) {
+      throw new Error('Organization does not have an active subscription');
+    }
+
+    // Get the current subscription with expanded price data
+    const subscription = await stripe.subscriptions.retrieve(org.stripeSubscriptionId, {
+      expand: ['items.data.price.product'],
+    });
+    
+    // Determine if we're in live mode based on the existing subscription price
+    const existingPriceId = subscription.items.data[0]?.price.id;
+    const isLiveMode = existingPriceId?.includes('H5ttU72wpZ') || false;
+
+    // Get all known seat price IDs for lookup
+    const allSeatPriceIds = [
+      PRICE_IDS.teamSeat.monthly,
+      PRICE_IDS.teamSeat.monthlyLive,
+      PRICE_IDS.teamSeat.annual,
+      PRICE_IDS.teamSeat.annualLive,
+    ];
+
+    // Determine the correct seat price based on billing interval and environment
+    // In live mode: seats are billed monthly ($6/mo) - only monthly price available
+    // In test mode: use matching interval (monthly or annual) for testing
+    let seatPriceId: string;
+    if (isLiveMode) {
+      // Live mode only has monthly seat pricing ($6/mo per seat)
+      seatPriceId = PRICE_IDS.teamSeat.monthlyLive;
+    } else {
+      // Test mode: match the base plan interval for proper testing
+      seatPriceId = org.billingInterval === 'annual' 
+        ? PRICE_IDS.teamSeat.annual 
+        : PRICE_IDS.teamSeat.monthly;
+    }
+
+    // Find existing seat item by price ID or by product name containing "seat"
+    const existingSeatItem = subscription.items.data.find(item => {
+      // Match by known price IDs
+      if (allSeatPriceIds.includes(item.price.id)) {
+        return true;
+      }
+      // Fallback: match by product name containing "seat" (case insensitive)
+      const product = item.price.product;
+      if (typeof product === 'object' && product !== null && 'name' in product) {
+        const productName = (product as any).name?.toLowerCase() || '';
+        return productName.includes('seat') || productName.includes('user');
+      }
+      return false;
+    });
+
+    const currentExtraSeats = org.extraSeats || 0;
+    const newExtraSeats = currentExtraSeats + seatsToAdd;
+
+    // Perform Stripe operation first - only update local state if it succeeds
+    try {
+      if (existingSeatItem) {
+        // Update the quantity of existing seat item
+        await stripe.subscriptionItems.update(existingSeatItem.id, {
+          quantity: newExtraSeats,
+          proration_behavior: 'create_prorations',
+        });
+      } else {
+        // Add new seat item to the subscription
+        await stripe.subscriptionItems.create({
+          subscription: org.stripeSubscriptionId,
+          price: seatPriceId,
+          quantity: seatsToAdd,
+          proration_behavior: 'create_prorations',
+        });
+      }
+    } catch (stripeError: any) {
+      console.error('[Billing] Stripe seat add failed:', stripeError);
+      throw new Error(stripeError.message || 'Failed to add seats to subscription');
+    }
+
+    // Update organization with new seat count immediately (only after Stripe succeeds)
+    await pgFunctions.updateOrganizationSubscription(organizationId, {
+      extraSeats: newExtraSeats,
+      pendingExtraSeats: null,
+    });
+
+    await pgFunctions.createBillingHistoryEntry({
+      organizationId,
+      eventType: 'seats_added',
+      description: `Added ${seatsToAdd} extra seat(s) - now have ${newExtraSeats} extra seat(s)`,
+      seatsBefore: currentExtraSeats,
+      seatsAfter: newExtraSeats,
+    });
+
+    return { success: true, newSeatCount: newExtraSeats };
+  }
+
   async getOrganizationBillingInfo(organizationId: string) {
     const org = await pgFunctions.getOrganization(organizationId);
     
@@ -987,6 +1200,8 @@ class BillingService {
       userCount: users.length,
       maxUsers: org.maxUsers + (org.extraSeats || 0),
       extraSeats: org.extraSeats || 0,
+      pendingExtraSeats: org.pendingExtraSeats ?? null,
+      baseUserLimit: org.maxUsers,
       limits: planLimits,
       trialEndsAt: org.trialEndsAt,
       currentPeriodEnd: org.currentPeriodEnd,

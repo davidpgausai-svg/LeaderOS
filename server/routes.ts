@@ -287,9 +287,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Cannot delete users from other organizations" });
       }
       
+      const organizationId = targetUser.organizationId;
+      
       const deleted = await storage.deleteUser(req.params.id);
       if (!deleted) {
         return res.status(404).json({ message: "User not found" });
+      }
+      
+      // After deleting a user, check if we should reduce extra seats
+      if (organizationId) {
+        try {
+          const { billingService } = await import('./billingService');
+          const seatResult = await billingService.adjustSeatsAfterUserDeletion(organizationId);
+          if (seatResult && seatResult.seatsReduced > 0) {
+            logger.info(`Reduced ${seatResult.seatsReduced} extra seat(s) for org ${organizationId} after user deletion`);
+          }
+        } catch (seatError) {
+          // Log but don't fail the delete operation
+          logger.error("Failed to adjust seats after user deletion", seatError);
+        }
       }
       
       res.status(204).send();
@@ -4815,6 +4831,75 @@ ${outputTemplate}`;
     } catch (error) {
       logger.error("Failed to cancel pending downgrade", error);
       res.status(500).json({ message: "Failed to cancel pending downgrade" });
+    }
+  });
+
+  // Add team seats to existing subscription
+  app.post("/api/billing/add-seats", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      if (user.role !== 'administrator') {
+        return res.status(403).json({ message: "Only administrators can manage billing" });
+      }
+
+      const { seatsToAdd } = req.body;
+      if (!seatsToAdd || typeof seatsToAdd !== 'number' || seatsToAdd < 1 || seatsToAdd > 100) {
+        return res.status(400).json({ message: "Invalid number of seats (1-100)" });
+      }
+
+      const { billingService } = await import('./billingService');
+      
+      const result = await billingService.addSeatsToSubscription(
+        user.organizationId,
+        seatsToAdd
+      );
+
+      res.json(result);
+    } catch (error) {
+      logger.error("Failed to add seats to subscription", error);
+      const message = error instanceof Error ? error.message : "Failed to add seats";
+      res.status(500).json({ message });
+    }
+  });
+
+  // Get seat info for the organization
+  app.get("/api/billing/seats", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      const { billingService } = await import('./billingService');
+      const billingInfo = await billingService.getOrganizationBillingInfo(user.organizationId);
+
+      res.json({
+        currentPlan: billingInfo.currentPlan,
+        userCount: billingInfo.userCount,
+        maxUsers: billingInfo.maxUsers,
+        baseUserLimit: billingInfo.baseUserLimit,
+        extraSeats: billingInfo.extraSeats,
+        pendingExtraSeats: billingInfo.pendingExtraSeats,
+        canAddSeats: billingInfo.currentPlan === 'team' && billingInfo.hasActiveSubscription,
+        seatPrice: billingInfo.interval === 'annual' ? 60 : 6,
+      });
+    } catch (error) {
+      logger.error("Failed to get seat info", error);
+      res.status(500).json({ message: "Failed to get seat info" });
     }
   });
 

@@ -696,6 +696,8 @@ interface BillingInfo {
   userCount: number;
   maxUsers: number;
   extraSeats: number;
+  pendingExtraSeats: number | null;
+  baseUserLimit: number;
   limits: {
     maxStrategies: number | null;
     maxProjects: number | null;
@@ -1147,11 +1149,52 @@ function BillingSettings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
+  const [isAddingSeat, setIsAddingSeat] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const { data: billingInfo, isLoading: isFetchingBilling, error } = useQuery<BillingInfo>({
     queryKey: ['/api/billing/info'],
   });
+
+  const addTeamSeat = async () => {
+    setIsAddingSeat(true);
+    try {
+      const csrfToken = document.cookie.match(/csrf_token=([^;]+)/)?.[1];
+      const response = await fetch('/api/billing/add-seats', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
+        },
+        body: JSON.stringify({ seatsToAdd: 1 }),
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Failed to add seat');
+      }
+      
+      const data = await response.json();
+      
+      toast({
+        title: 'Seat Added',
+        description: `You now have ${data.newSeatCount} extra seat${data.newSeatCount > 1 ? 's' : ''}. Your billing will be prorated.`,
+      });
+      
+      // Refresh billing info
+      queryClient.invalidateQueries({ queryKey: ['/api/billing/info'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Failed to add seat. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsAddingSeat(false);
+    }
+  };
 
   const createCheckoutSession = async (priceId: string, trialDays?: number) => {
     setIsLoading(true);
@@ -1490,6 +1533,45 @@ function BillingSettings() {
               <p className="font-bold">{billingInfo?.limits.maxProjects ?? 'Unlimited'}</p>
             </div>
           </div>
+
+          {/* Team Seat Management - Show only for Team plan with active subscription */}
+          {billingInfo?.currentPlan === 'team' && hasActiveSubscription && (
+            <div className="mt-4 p-4 border rounded-lg bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium text-blue-800 dark:text-blue-200 flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    Team Seats
+                  </h4>
+                  <p className="text-sm text-blue-600 dark:text-blue-300 mt-1">
+                    {billingInfo?.extraSeats > 0 
+                      ? `6 included + ${billingInfo.extraSeats} extra seat${billingInfo.extraSeats > 1 ? 's' : ''} = ${billingInfo.maxUsers} total`
+                      : '6 seats included with Team plan'
+                    }
+                  </p>
+                  {billingInfo?.pendingExtraSeats !== null && billingInfo?.pendingExtraSeats !== billingInfo?.extraSeats && (
+                    <p className="text-xs text-blue-500 dark:text-blue-400 mt-1">
+                      Pending change: {billingInfo.pendingExtraSeats} extra seats at next billing cycle
+                    </p>
+                  )}
+                </div>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={addTeamSeat}
+                  disabled={isAddingSeat}
+                  data-testid="button-add-seat"
+                >
+                  {isAddingSeat ? (
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Plus className="w-4 h-4 mr-2" />
+                  )}
+                  Add User +$6/mo
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Payment Failed Alert */}
