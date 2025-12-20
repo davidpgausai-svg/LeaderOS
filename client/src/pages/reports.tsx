@@ -1862,9 +1862,10 @@ function TeamTagsReport({
       if (!projectIds.includes(p.id)) return false;
       // Exclude archived or completed projects
       if (p.status === 'A' || p.status === 'C') return false;
-      // Exclude projects from archived or completed strategies
+      // Exclude projects from archived or completed strategies (case-insensitive)
       const strategy = strategies.find((s: any) => s.id === p.strategyId);
-      if (strategy && (strategy.status === 'archived' || strategy.status === 'completed')) return false;
+      const strategyStatus = strategy?.status?.toLowerCase();
+      if (strategyStatus === 'archived' || strategyStatus === 'completed') return false;
       return true;
     });
   };
