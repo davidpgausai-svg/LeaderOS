@@ -944,7 +944,6 @@ export default function Reports() {
             <TabsContent value="team-tags" className="space-y-4">
               <TeamTagsReport
                 teamTags={teamTags}
-                projectTeamTags={projectTeamTags}
                 userTeamTags={userTeamTags}
                 projects={projects}
                 strategies={strategies}
@@ -1034,7 +1033,6 @@ export default function Reports() {
               <h2 className="text-xl font-bold mb-4">Team Capacity Report</h2>
               <TeamTagsReport
                 teamTags={teamTags}
-                projectTeamTags={projectTeamTags}
                 userTeamTags={userTeamTags}
                 projects={projects}
                 strategies={strategies}
@@ -1799,7 +1797,6 @@ function ExecutiveGoalsReport({
 // Hierarchy: Team (by primary user tag) → Users → Projects
 function TeamTagsReport({ 
   teamTags, 
-  projectTeamTags,
   userTeamTags,
   projects, 
   strategies,
