@@ -1854,11 +1854,19 @@ function TeamTagsReport({
 
   const quarterGroups = getQuarterGroups();
 
-  // Get projects for a specific tag
+  // Get projects for a specific tag (exclude archived/completed)
   const getProjectsForTag = (tagId: string): any[] => {
     const mappings = projectTeamTags.filter((m: any) => m.teamTagId === tagId);
     const projectIds = mappings.map((m: any) => m.projectId);
-    return projects.filter((p: any) => projectIds.includes(p.id));
+    return projects.filter((p: any) => {
+      if (!projectIds.includes(p.id)) return false;
+      // Exclude archived projects
+      if (p.status === 'A') return false;
+      // Exclude projects from archived or completed strategies
+      const strategy = strategies.find((s: any) => s.id === p.strategyId);
+      if (strategy && (strategy.status === 'archived' || strategy.status === 'completed')) return false;
+      return true;
+    });
   };
 
   // Get users assigned to a team tag
