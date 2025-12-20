@@ -7,7 +7,7 @@ import {
   actionDocuments, actionChecklistItems, userStrategyAssignments,
   meetingNotes, barriers, dependencies, templateTypes,
   organizations, passwordResetTokens, twoFactorCodes, executiveGoals, strategyExecutiveGoals,
-  teamTags, projectTeamTags, projectResourceAssignments, actionPeopleAssignments, ptoEntries, holidays,
+  teamTags, projectTeamTags, userTeamTags, projectResourceAssignments, actionPeopleAssignments, ptoEntries, holidays,
   billingHistory, paymentFailures, projectSnapshots, sentEmailNotifications,
   type User, type UpsertUser, type InsertUser,
   type Strategy, type InsertStrategy,
@@ -29,6 +29,7 @@ import {
   type StrategyExecutiveGoal,
   type TeamTag, type InsertTeamTag,
   type ProjectTeamTag,
+  type UserTeamTag,
   type ProjectResourceAssignment, type InsertProjectResourceAssignment,
   type ActionPeopleAssignment, type InsertActionPeopleAssignment,
   type PtoEntry, type InsertPtoEntry,
@@ -870,6 +871,56 @@ export class PostgresStorage implements IStorage {
     
     const projectIds = assignments.map(a => a.projectId);
     return db.select().from(projects).where(inArray(projects.id, projectIds));
+  }
+
+  // User Team Tag methods (for tagging users to teams)
+  async getUserTeamTags(userId: string, organizationId: string): Promise<UserTeamTag[]> {
+    return db.select().from(userTeamTags)
+      .where(and(
+        eq(userTeamTags.userId, userId),
+        eq(userTeamTags.organizationId, organizationId)
+      ));
+  }
+
+  async setUserTeamTags(userId: string, tagIds: string[], organizationId: string): Promise<UserTeamTag[]> {
+    // Delete existing assignments for this user within the same organization only
+    await db.delete(userTeamTags).where(and(
+      eq(userTeamTags.userId, userId),
+      eq(userTeamTags.organizationId, organizationId)
+    ));
+    
+    if (tagIds.length === 0) {
+      return [];
+    }
+    
+    const values = tagIds.map(tagId => ({
+      id: randomUUID(),
+      userId,
+      teamTagId: tagId,
+      organizationId,
+    }));
+    
+    return db.insert(userTeamTags).values(values).returning();
+  }
+
+  async getUsersByTeamTag(teamTagId: string, organizationId: string): Promise<User[]> {
+    const assignments = await db.select().from(userTeamTags)
+      .where(and(
+        eq(userTeamTags.teamTagId, teamTagId),
+        eq(userTeamTags.organizationId, organizationId)
+      ));
+    
+    if (assignments.length === 0) {
+      return [];
+    }
+    
+    const userIds = assignments.map(a => a.userId);
+    return db.select().from(users).where(inArray(users.id, userIds));
+  }
+
+  async getUserTeamTagsByOrganization(organizationId: string): Promise<UserTeamTag[]> {
+    return db.select().from(userTeamTags)
+      .where(eq(userTeamTags.organizationId, organizationId));
   }
 
   // Project Resource Assignment methods (for capacity planning)

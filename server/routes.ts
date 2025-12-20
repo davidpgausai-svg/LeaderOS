@@ -315,6 +315,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User Team Tag routes (for tagging users to teams)
+  app.get("/api/users/:id/team-tags", isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUserId = req.user?.claims?.sub;
+      if (!currentUserId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const currentUser = await storage.getUser(currentUserId);
+      if (!currentUser) {
+        return res.status(403).json({ message: "User not found" });
+      }
+
+      // Verify target user exists and get their organization
+      const targetUser = await storage.getUser(req.params.id);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Super admins can access any user; regular users must be in the same organization
+      if (currentUser.isSuperAdmin !== 'true') {
+        if (!currentUser.organizationId) {
+          return res.status(403).json({ message: "User must belong to an organization" });
+        }
+        if (currentUser.organizationId !== targetUser.organizationId) {
+          return res.status(403).json({ message: "Cannot access users from other organizations" });
+        }
+      }
+
+      // Use target user's organization for scoped query
+      const targetOrgId = targetUser.organizationId;
+      if (!targetOrgId) {
+        return res.json([]); // User without organization has no team tags
+      }
+
+      // Get team tags scoped by target user's organization
+      const userTags = await storage.getUserTeamTags(req.params.id, targetOrgId);
+      res.json(userTags);
+    } catch (error) {
+      logger.error("Failed to fetch user team tags", error);
+      res.status(500).json({ message: "Failed to fetch user team tags" });
+    }
+  });
+
+  app.put("/api/users/:id/team-tags", isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUserId = req.user?.claims?.sub;
+      if (!currentUserId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const currentUser = await storage.getUser(currentUserId);
+      if (!currentUser) {
+        return res.status(403).json({ message: "User not found" });
+      }
+
+      // Only administrators can update user team tags
+      if (currentUser.role !== 'administrator' && currentUser.isSuperAdmin !== 'true') {
+        return res.status(403).json({ message: "Only administrators can update user team tags" });
+      }
+
+      // Verify target user exists
+      const targetUser = await storage.getUser(req.params.id);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Super admins can update any user; regular admins must be in the same organization
+      if (currentUser.isSuperAdmin !== 'true') {
+        if (!currentUser.organizationId) {
+          return res.status(403).json({ message: "User must belong to an organization" });
+        }
+        if (currentUser.organizationId !== targetUser.organizationId) {
+          return res.status(403).json({ message: "Cannot update users from other organizations" });
+        }
+      }
+
+      // Use target user's organization for tag validation
+      const targetOrgId = targetUser.organizationId;
+      if (!targetOrgId) {
+        return res.status(400).json({ message: "Target user must belong to an organization" });
+      }
+
+      const { tagIds } = req.body;
+      if (!Array.isArray(tagIds)) {
+        return res.status(400).json({ message: "tagIds must be an array" });
+      }
+
+      // Verify all tag IDs belong to the TARGET user's organization
+      if (tagIds.length > 0) {
+        const orgTags = await storage.getTeamTagsByOrganization(targetOrgId);
+        const validTagIds = new Set(orgTags.map(t => t.id));
+        for (const tagId of tagIds) {
+          if (!validTagIds.has(tagId)) {
+            return res.status(400).json({ message: `Invalid team tag ID: ${tagId}` });
+          }
+        }
+      }
+
+      const updatedTags = await storage.setUserTeamTags(req.params.id, tagIds, targetOrgId);
+      res.json(updatedTags);
+    } catch (error) {
+      logger.error("Failed to update user team tags", error);
+      res.status(500).json({ message: "Failed to update user team tags" });
+    }
+  });
+
   // User Strategy Assignment routes
   app.get("/api/users/:userId/strategy-assignments", isAuthenticated, async (req: any, res) => {
     try {

@@ -75,19 +75,42 @@ interface UserStrategyRowProps {
   user: any;
   strategies: any[];
   currentUserId: string;
+  teamTags: TeamTag[];
   onRoleChange: (userId: string, newRole: string) => void;
   onStrategyToggle: (userId: string, strategyId: string, isAssigned: boolean) => void;
   onDelete: (userId: string, userName: string) => void;
   onCapacityUpdate: (userId: string, fte: string, salary: number | null, serviceDeliveryHours: string) => void;
+  onTeamTagsUpdate: (userId: string, tagIds: string[]) => void;
 }
 
-function UserStrategyRow({ user, strategies, currentUserId, onRoleChange, onStrategyToggle, onDelete, onCapacityUpdate }: UserStrategyRowProps) {
+function UserStrategyRow({ user, strategies, currentUserId, teamTags, onRoleChange, onStrategyToggle, onDelete, onCapacityUpdate, onTeamTagsUpdate }: UserStrategyRowProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isCapacityOpen, setIsCapacityOpen] = useState(false);
   const [fteValue, setFteValue] = useState(user.fte || '1.0');
   const [salaryValue, setSalaryValue] = useState(user.salary?.toString() || '');
   const [serviceDeliveryValue, setServiceDeliveryValue] = useState(user.serviceDeliveryHours || '0');
+  
+  // Fetch user's current team tag assignments
+  const { data: userTeamTagAssignments } = useQuery<{id: string; userId: string; teamTagId: string; organizationId: string}[]>({
+    queryKey: ['/api/users', user.id, 'team-tags'],
+  });
+  
+  const [selectedTeamTagIds, setSelectedTeamTagIds] = useState<string[]>([]);
+  
+  // Reset selected tags when popover opens (to get fresh data)
+  React.useEffect(() => {
+    if (isCapacityOpen && userTeamTagAssignments) {
+      setSelectedTeamTagIds(userTeamTagAssignments.map(a => a.teamTagId));
+    }
+  }, [isCapacityOpen, userTeamTagAssignments]);
+  
+  // Also update when data first loads
+  React.useEffect(() => {
+    if (userTeamTagAssignments && !isCapacityOpen) {
+      setSelectedTeamTagIds(userTeamTagAssignments.map(a => a.teamTagId));
+    }
+  }, [userTeamTagAssignments]);
   
   const { data: userAssignments } = useQuery({
     queryKey: [`/api/users/${user.id}/strategy-assignments`],
@@ -228,6 +251,39 @@ function UserStrategyRow({ user, strategies, currentUserId, onRoleChange, onStra
                   />
                   <p className="text-xs text-gray-500">Hours for meetings, IC work, etc.</p>
                 </div>
+                
+                {/* Team Tags Multi-Select */}
+                {teamTags && teamTags.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-xs">Team Tags</Label>
+                    <div className="flex flex-wrap gap-1 p-2 border rounded-md bg-gray-50 dark:bg-gray-900 max-h-32 overflow-y-auto">
+                      {teamTags.map(tag => {
+                        const isSelected = selectedTeamTagIds.includes(tag.id);
+                        return (
+                          <Badge
+                            key={tag.id}
+                            variant={isSelected ? "default" : "outline"}
+                            className="cursor-pointer transition-colors"
+                            style={isSelected ? { backgroundColor: tag.colorHex, borderColor: tag.colorHex } : { borderColor: tag.colorHex, color: tag.colorHex }}
+                            onClick={() => {
+                              if (isSelected) {
+                                setSelectedTeamTagIds(prev => prev.filter(id => id !== tag.id));
+                              } else {
+                                setSelectedTeamTagIds(prev => [...prev, tag.id]);
+                              }
+                            }}
+                            data-testid={`team-tag-${tag.id}-${user.id}`}
+                          >
+                            {tag.name}
+                            {isSelected && <X className="h-3 w-3 ml-1" />}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                    <p className="text-xs text-gray-500">Click to toggle team assignments</p>
+                  </div>
+                )}
+                
                 <Button
                   size="sm"
                   className="w-full"
@@ -238,6 +294,7 @@ function UserStrategyRow({ user, strategies, currentUserId, onRoleChange, onStra
                       salaryValue ? parseInt(salaryValue) : null,
                       serviceDeliveryValue
                     );
+                    onTeamTagsUpdate(user.id, selectedTeamTagIds);
                     setIsCapacityOpen(false);
                   }}
                   data-testid={`button-save-capacity-${user.id}`}
@@ -3018,6 +3075,23 @@ export default function Settings() {
     }
   };
 
+  const handleUserTeamTagsUpdate = async (userId: string, tagIds: string[]) => {
+    try {
+      await apiRequest("PUT", `/api/users/${userId}/team-tags`, { tagIds });
+      toast({
+        title: "Success",
+        description: "Team tags updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/users', userId, 'team-tags'] });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update team tags",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleUserRoleChange = async (userId: string, newRole: string) => {
     try {
       await apiRequest("PATCH", `/api/users/${userId}`, { role: newRole });
@@ -3950,10 +4024,12 @@ export default function Settings() {
                           user={user}
                           strategies={strategies as any[]}
                           currentUserId={currentUser?.id || ''}
+                          teamTags={(teamTags as TeamTag[]) || []}
                           onRoleChange={handleUserRoleChange}
                           onStrategyToggle={handleStrategyAssignmentToggle}
                           onDelete={handleDeleteUser}
                           onCapacityUpdate={handleCapacityUpdate}
+                          onTeamTagsUpdate={handleUserTeamTagsUpdate}
                         />
                       ))}
                     </div>

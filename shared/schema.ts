@@ -684,6 +684,25 @@ export const insertProjectTeamTagSchema = createInsertSchema(projectTeamTags).om
 export type InsertProjectTeamTag = z.infer<typeof insertProjectTeamTagSchema>;
 export type ProjectTeamTag = typeof projectTeamTags.$inferSelect;
 
+// User Team Tags - Junction table for many-to-many relationship between users and team tags
+export const userTeamTags = pgTable("user_team_tags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  teamTagId: varchar("team_tag_id").notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  createdAt: timestamp("created_at").default(sql`now()`),
+}, (table) => ({
+  uniqueUserTag: unique().on(table.userId, table.teamTagId),
+}));
+
+export const insertUserTeamTagSchema = createInsertSchema(userTeamTags).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertUserTeamTag = z.infer<typeof insertUserTeamTagSchema>;
+export type UserTeamTag = typeof userTeamTags.$inferSelect;
+
 // PTO Entries - Track time off for users
 export const ptoEntries = pgTable("pto_entries", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
