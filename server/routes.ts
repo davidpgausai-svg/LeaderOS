@@ -315,6 +315,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all user team tags for the organization (for reports)
+  app.get("/api/user-team-tags", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) {
+        return res.status(403).json({ message: "User must belong to an organization" });
+      }
+
+      const userTeamTags = await storage.getUserTeamTagsByOrganization(user.organizationId);
+      res.json(userTeamTags);
+    } catch (error) {
+      logger.error("Failed to fetch user team tags", error);
+      res.status(500).json({ message: "Failed to fetch user team tags" });
+    }
+  });
+
   // User Team Tag routes (for tagging users to teams)
   app.get("/api/users/:id/team-tags", isAuthenticated, async (req: any, res) => {
     try {

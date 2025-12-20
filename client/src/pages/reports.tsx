@@ -58,6 +58,7 @@ import {
   RotateCcw,
   Copy,
   Bell,
+  User as UserIcon,
 } from "lucide-react";
 import {
   Select,
@@ -228,6 +229,10 @@ export default function Reports() {
 
   const { data: projectTeamTags = [] } = useQuery<ProjectTeamTag[]>({
     queryKey: ["/api/project-team-tags"],
+  });
+
+  const { data: userTeamTags = [] } = useQuery<any[]>({
+    queryKey: ["/api/user-team-tags"],
   });
 
   const { data: resourceAssignments = [] } = useQuery<ResourceAssignment[]>({
@@ -940,10 +945,11 @@ export default function Reports() {
               <TeamTagsReport
                 teamTags={teamTags}
                 projectTeamTags={projectTeamTags}
+                userTeamTags={userTeamTags}
                 projects={projects}
                 strategies={strategies}
-                actions={actions}
-                safeDate={safeDate}
+                users={users}
+                resourceAssignments={resourceAssignments}
               />
             </TabsContent>
 
@@ -1025,14 +1031,15 @@ export default function Reports() {
               />
             </div>
             <div className="page-break">
-              <h2 className="text-xl font-bold mb-4">Team Tags Report</h2>
+              <h2 className="text-xl font-bold mb-4">Team Capacity Report</h2>
               <TeamTagsReport
                 teamTags={teamTags}
                 projectTeamTags={projectTeamTags}
+                userTeamTags={userTeamTags}
                 projects={projects}
                 strategies={strategies}
-                actions={actions}
-                safeDate={safeDate}
+                users={users}
+                resourceAssignments={resourceAssignments}
                 isPrintView={true}
               />
             </div>
@@ -1788,16 +1795,65 @@ function ExecutiveGoalsReport({
   );
 }
 
-// Team Tags Report Component
+// Team Capacity Report Component - Shows team capacity with rolling 12-month view
 function TeamTagsReport({ 
   teamTags, 
   projectTeamTags, 
+  userTeamTags,
   projects, 
   strategies,
-  actions, 
-  safeDate,
+  users,
+  resourceAssignments,
   isPrintView = false 
 }: any) {
+  const [expandedTags, setExpandedTags] = useState<Set<string>>(new Set());
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+
+  // Generate rolling 12 months starting from current month
+  const getMonthColumns = () => {
+    const months = [];
+    const now = new Date();
+    for (let i = 0; i < 12; i++) {
+      const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      months.push({
+        key: format(date, 'yyyy-MM'),
+        label: format(date, 'MMM'),
+        year: format(date, 'yyyy'),
+        quarter: `Q${Math.floor(date.getMonth() / 3) + 1}`,
+        date
+      });
+    }
+    return months;
+  };
+
+  const months = getMonthColumns();
+
+  // Group months by quarter for header display
+  const getQuarterGroups = () => {
+    const groups: { label: string; months: typeof months }[] = [];
+    let currentQuarter = '';
+    let currentGroup: typeof months = [];
+    
+    months.forEach(month => {
+      const quarterLabel = `${month.quarter} - ${month.year}`;
+      if (quarterLabel !== currentQuarter) {
+        if (currentGroup.length > 0) {
+          groups.push({ label: currentQuarter, months: currentGroup });
+        }
+        currentQuarter = quarterLabel;
+        currentGroup = [month];
+      } else {
+        currentGroup.push(month);
+      }
+    });
+    if (currentGroup.length > 0) {
+      groups.push({ label: currentQuarter, months: currentGroup });
+    }
+    return groups;
+  };
+
+  const quarterGroups = getQuarterGroups();
+
   // Get projects for a specific tag
   const getProjectsForTag = (tagId: string): any[] => {
     const mappings = projectTeamTags.filter((m: any) => m.teamTagId === tagId);
@@ -1805,295 +1861,354 @@ function TeamTagsReport({
     return projects.filter((p: any) => projectIds.includes(p.id));
   };
 
-  // Get all tagged projects (for summary stats)
-  const getAllTaggedProjects = (): any[] => {
-    const allMappedProjectIds = Array.from(new Set(projectTeamTags.map((m: any) => m.projectId)));
-    return projects.filter((p: any) => allMappedProjectIds.includes(p.id));
+  // Get users assigned to a team tag
+  const getUsersForTag = (tagId: string): any[] => {
+    const mappings = userTeamTags.filter((m: any) => m.teamTagId === tagId);
+    const userIds = mappings.map((m: any) => m.userId);
+    return users.filter((u: any) => userIds.includes(u.id) && u.role !== 'sme');
   };
 
-  // Get actions for projects
-  const getActionsForProjects = (projectList: any[]) => {
-    const projectIds = projectList.map((p: any) => p.id);
-    return actions.filter((a: any) => projectIds.includes(a.projectId));
+  // Get users assigned to a project (from resource assignments)
+  const getUsersForProject = (projectId: string): any[] => {
+    const assignments = resourceAssignments.filter((ra: any) => ra.projectId === projectId);
+    const userIds = Array.from(new Set(assignments.map((ra: any) => ra.userId)));
+    return users.filter((u: any) => userIds.includes(u.id));
   };
 
-  // Summary stats for all tagged projects
-  const allTaggedProjects = getAllTaggedProjects();
-  const allTaggedActions = getActionsForProjects(allTaggedProjects);
-  
-  const completedActions = allTaggedActions.filter((a: any) => a.status === 'achieved');
-  const overdueActions = allTaggedActions.filter((a: any) => {
-    if (a.status === 'achieved') return false;
-    const targetDate = safeDate(a.targetDate);
-    return targetDate && isPast(targetDate);
-  });
-  const blockedActions = allTaggedActions.filter((a: any) => a.status === 'blocked');
-  
-  const overallProgress = allTaggedProjects.length > 0
-    ? Math.round(allTaggedProjects.reduce((sum: number, p: any) => sum + (p.progress || 0), 0) / allTaggedProjects.length)
-    : 0;
+  // Calculate user capacity for a specific month
+  const getUserMonthlyCapacity = (userId: string, monthKey: string) => {
+    const user = users.find((u: any) => u.id === userId);
+    if (!user) return { available: 0, allocated: 0, net: 0 };
 
-  const completedProjects = allTaggedProjects.filter((p: any) => p.progress >= 100);
+    const fte = parseFloat(user.fte || '1');
+    const maxHoursPerWeek = fte * 40;
+    const maxHoursPerMonth = maxHoursPerWeek * 4.33; // Average weeks per month
+    
+    // Get service delivery hours (constant per month)
+    const serviceDeliveryPerWeek = parseFloat(user.serviceDeliveryHours || '0');
+    const serviceDeliveryPerMonth = serviceDeliveryPerWeek * 4.33;
 
-  // Tag stats for collapsible hierarchy
-  const tagStats = teamTags.map((tag: any) => {
-    const tagProjects = getProjectsForTag(tag.id);
-    const tagActions = getActionsForProjects(tagProjects);
-    const completedTagActions = tagActions.filter((a: any) => a.status === 'achieved');
-    const avgProgress = tagProjects.length > 0
-      ? Math.round(tagProjects.reduce((sum: number, p: any) => sum + (p.progress || 0), 0) / tagProjects.length)
-      : 0;
+    // Get project allocations for active projects in this month
+    const monthDate = new Date(monthKey + '-01');
+    const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
+    
+    const userAssignments = resourceAssignments.filter((ra: any) => {
+      if (ra.userId !== userId) return false;
+      const project = projects.find((p: any) => p.id === ra.projectId);
+      if (!project) return false;
+      // Check if project is active during this month (not completed, not archived)
+      if (project.status === 'C' || project.status === 'A') return false;
+      // Check project date range if available
+      const startDate = project.startDate ? new Date(project.startDate) : null;
+      const dueDate = project.dueDate ? new Date(project.dueDate) : null;
+      if (startDate && startDate > monthEnd) return false;
+      if (dueDate && dueDate < monthDate) return false;
+      return true;
+    });
+
+    const projectHoursPerWeek = userAssignments.reduce((sum: number, ra: any) => 
+      sum + parseFloat(ra.hoursPerWeek || '0'), 0
+    );
+    const projectHoursPerMonth = projectHoursPerWeek * 4.33;
+
+    const totalAllocated = projectHoursPerMonth + serviceDeliveryPerMonth;
+    const net = maxHoursPerMonth - totalAllocated;
+
+    return {
+      available: Math.round(maxHoursPerMonth),
+      allocated: Math.round(totalAllocated),
+      net: Math.round(net)
+    };
+  };
+
+  // Calculate project capacity for a month (sum of all user allocations)
+  const getProjectMonthlyCapacity = (projectId: string, monthKey: string) => {
+    const projectAssignments = resourceAssignments.filter((ra: any) => ra.projectId === projectId);
+    const project = projects.find((p: any) => p.id === projectId);
+    
+    if (!project) return { allocated: 0, userCount: 0 };
+
+    const monthDate = new Date(monthKey + '-01');
+    const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
+    
+    // Check if project is active during this month
+    if (project.status === 'C' || project.status === 'A') return { allocated: 0, userCount: 0 };
+    const startDate = project.startDate ? new Date(project.startDate) : null;
+    const dueDate = project.dueDate ? new Date(project.dueDate) : null;
+    if (startDate && startDate > monthEnd) return { allocated: 0, userCount: 0 };
+    if (dueDate && dueDate < monthDate) return { allocated: 0, userCount: 0 };
+
+    const totalHoursPerWeek = projectAssignments.reduce((sum: number, ra: any) => 
+      sum + parseFloat(ra.hoursPerWeek || '0'), 0
+    );
     
     return {
-      ...tag,
-      projectCount: tagProjects.length,
-      actionCount: tagActions.length,
-      completedActions: completedTagActions.length,
-      avgProgress,
+      allocated: Math.round(totalHoursPerWeek * 4.33),
+      userCount: projectAssignments.length
     };
-  }).sort((a: any, b: any) => b.projectCount - a.projectCount);
+  };
+
+  // Calculate team tag capacity for a month (aggregate of all users in the team)
+  const getTagMonthlyCapacity = (tagId: string, monthKey: string) => {
+    const tagUsers = getUsersForTag(tagId);
+    
+    let totalAvailable = 0;
+    let totalAllocated = 0;
+    
+    tagUsers.forEach((user: any) => {
+      const capacity = getUserMonthlyCapacity(user.id, monthKey);
+      totalAvailable += capacity.available;
+      totalAllocated += capacity.allocated;
+    });
+
+    return {
+      available: totalAvailable,
+      allocated: totalAllocated,
+      net: totalAvailable - totalAllocated,
+      userCount: tagUsers.length
+    };
+  };
+
+  // Get capacity cell color based on net value
+  const getCapacityColor = (net: number, total: number) => {
+    if (total === 0) return 'bg-gray-100 dark:bg-gray-800 text-gray-500';
+    const ratio = net / total;
+    if (net < 0) return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400';
+    if (ratio < 0.15) return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400';
+    return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400';
+  };
+
+  const toggleTag = (tagId: string) => {
+    setExpandedTags(prev => {
+      const next = new Set(prev);
+      if (next.has(tagId)) {
+        next.delete(tagId);
+      } else {
+        next.add(tagId);
+      }
+      return next;
+    });
+  };
+
+  const toggleProject = (projectId: string) => {
+    setExpandedProjects(prev => {
+      const next = new Set(prev);
+      if (next.has(projectId)) {
+        next.delete(projectId);
+      } else {
+        next.add(projectId);
+      }
+      return next;
+    });
+  };
+
+  // Sort tags by name
+  const sortedTags = [...teamTags].sort((a: any, b: any) => 
+    a.name.localeCompare(b.name)
+  );
 
   return (
-    <div className="space-y-6" data-testid="team-tags-report">
+    <div className="space-y-4" data-testid="team-tags-report">
       {isPrintView && (
         <div className="mb-4 pb-4 border-b border-gray-200">
           <div className="flex items-center gap-2 mb-2">
-            <Hash className="h-6 w-6" />
-            <h2 className="text-xl font-bold">Team Tags Report</h2>
+            <Users className="h-6 w-6" />
+            <h2 className="text-xl font-bold">Team Capacity Report</h2>
           </div>
+          <p className="text-sm text-gray-500">Rolling 12-month capacity view by team</p>
         </div>
       )}
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card data-testid="stat-tagged-projects">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
-              <Briefcase className="w-4 h-4 mr-2 text-purple-600" />
-              Tagged Projects
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-purple-600">{allTaggedProjects.length}</div>
-            <div className="text-xs text-gray-500 mt-1">
-              {completedProjects.length} complete
-            </div>
+      {teamTags.length === 0 ? (
+        <Card>
+          <CardContent className="text-center py-12">
+            <Hash className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-500 mb-2">No Team Tags Defined</p>
+            <p className="text-sm text-gray-400">Create team tags in Settings and assign users to see capacity reports</p>
           </CardContent>
         </Card>
-
-        <Card data-testid="stat-avg-progress">
+      ) : (
+        <Card data-testid="card-team-capacity">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
-              <TrendingUp className="w-4 h-4 mr-2 text-blue-600" />
-              Avg Progress
+            <CardTitle className="text-base flex items-center">
+              <Users className="w-4 h-4 mr-2" />
+              Team Capacity (Hours/Month)
             </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-600">{overallProgress}%</div>
-            <Progress value={overallProgress} className="h-2 mt-2" />
-          </CardContent>
-        </Card>
-
-        <Card data-testid="stat-actions-complete">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
-              <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
-              Actions Complete
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-600">
-              {allTaggedActions.length > 0 ? Math.round((completedActions.length / allTaggedActions.length) * 100) : 0}%
-            </div>
-            <div className="text-xs text-gray-500 mt-1">
-              {completedActions.length} of {allTaggedActions.length}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card data-testid="stat-at-risk">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
-              <AlertTriangle className="w-4 h-4 mr-2 text-red-600" />
-              At Risk
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-red-600">{overdueActions.length + blockedActions.length}</div>
-            <div className="text-xs text-gray-500 mt-1">
-              {overdueActions.length} overdue, {blockedActions.length} blocked
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Projects Grouped by Team Tag (Collapsible Hierarchy) */}
-      <Card data-testid="card-projects-by-team-tag">
-        <CardHeader>
-          <CardTitle className="text-base flex items-center">
-            <ListChecks className="w-4 h-4 mr-2" />
-            Projects by Team Tag
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {teamTags.length === 0 ? (
-            <p className="text-sm text-gray-500 py-4 text-center">
-              No team tags created yet. Create tags in Settings to start organizing projects.
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Green = available capacity, Red = over-allocated. Click to expand team details.
             </p>
-          ) : (
-            <div className="space-y-3">
-              {tagStats.map((tag: any) => {
-                const tagProjects = getProjectsForTag(tag.id);
-                
-                if (isPrintView) {
-                  // Print view: always expanded
-                  return (
-                    <div key={tag.id} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                      <div 
-                        className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800"
-                        style={{ borderLeft: `4px solid ${tag.colorHex}` }}
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  {/* Quarter header row */}
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 text-left py-2 px-3 font-medium text-gray-600 dark:text-gray-400 min-w-[200px]">
+                      Team / Project / User
+                    </th>
+                    {quarterGroups.map((group, idx) => (
+                      <th 
+                        key={idx} 
+                        colSpan={group.months.length}
+                        className="text-center py-1 px-1 font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border-l border-gray-200 dark:border-gray-600"
                       >
-                        <div className="flex items-center gap-3">
-                          <div 
-                            className="w-4 h-4 rounded-full" 
-                            style={{ backgroundColor: tag.colorHex }}
-                          />
-                          <span className="font-medium">#{tag.name}</span>
-                          <Badge variant="secondary" className="text-xs">
-                            {tagProjects.length} project{tagProjects.length !== 1 ? 's' : ''}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-3 text-sm text-gray-500">
-                          <span>{tag.avgProgress}% avg</span>
-                        </div>
-                      </div>
-                      {tagProjects.length > 0 && (
-                        <div className="p-3 space-y-2 bg-white dark:bg-gray-900">
-                          {tagProjects.map((project: any) => {
-                            const strategy = strategies.find((s: any) => s.id === project.strategyId);
-                            const projectActions = actions.filter((a: any) => a.projectId === project.id);
-                            const projectCompletedActions = projectActions.filter((a: any) => a.status === 'achieved');
-                            
-                            return (
+                        {group.label}
+                      </th>
+                    ))}
+                  </tr>
+                  {/* Month header row */}
+                  <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                    <th className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800"></th>
+                    {months.map(month => (
+                      <th 
+                        key={month.key} 
+                        className="text-center py-2 px-2 font-medium text-gray-500 dark:text-gray-400 min-w-[60px] border-l border-gray-100 dark:border-gray-700"
+                      >
+                        {month.label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedTags.map((tag: any) => {
+                    const isTagExpanded = expandedTags.has(tag.id) || isPrintView;
+                    const tagProjects = getProjectsForTag(tag.id);
+                    const tagUsers = getUsersForTag(tag.id);
+                    
+                    return (
+                      <>
+                        {/* Team Tag Row */}
+                        <tr 
+                          key={tag.id}
+                          className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                          onClick={() => !isPrintView && toggleTag(tag.id)}
+                          data-testid={`team-tag-row-${tag.id}`}
+                        >
+                          <td className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 py-2 px-3 font-medium">
+                            <div className="flex items-center gap-2">
+                              {!isPrintView && (
+                                <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform ${isTagExpanded ? 'rotate-90' : ''}`} />
+                              )}
                               <div 
-                                key={project.id}
-                                className="flex items-center justify-between p-2 border border-gray-100 dark:border-gray-700 rounded"
+                                className="w-3 h-3 rounded-full flex-shrink-0" 
+                                style={{ backgroundColor: tag.colorHex }}
+                              />
+                              <span>#{tag.name}</span>
+                              <Badge variant="secondary" className="text-xs ml-1">
+                                {tagUsers.length} user{tagUsers.length !== 1 ? 's' : ''}
+                              </Badge>
+                            </div>
+                          </td>
+                          {months.map(month => {
+                            const capacity = getTagMonthlyCapacity(tag.id, month.key);
+                            return (
+                              <td 
+                                key={month.key}
+                                className={`text-center py-2 px-1 font-medium border-l border-gray-100 dark:border-gray-700 ${getCapacityColor(capacity.net, capacity.available)}`}
                               >
-                                <div className="flex-1 min-w-0">
+                                {capacity.userCount > 0 ? capacity.net : '-'}
+                              </td>
+                            );
+                          })}
+                        </tr>
+
+                        {/* Expanded Project Rows */}
+                        {isTagExpanded && tagProjects.map((project: any) => {
+                          const isProjectExpanded = expandedProjects.has(project.id) || isPrintView;
+                          const projectUsers = getUsersForProject(project.id);
+                          const strategy = strategies.find((s: any) => s.id === project.strategyId);
+                          
+                          return (
+                            <>
+                              {/* Project Row */}
+                              <tr 
+                                key={project.id}
+                                className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer"
+                                onClick={(e) => { e.stopPropagation(); !isPrintView && toggleProject(project.id); }}
+                                data-testid={`project-row-${project.id}`}
+                              >
+                                <td className="sticky left-0 z-10 bg-white dark:bg-gray-900 py-2 px-3 pl-8">
                                   <div className="flex items-center gap-2">
+                                    {!isPrintView && projectUsers.length > 0 && (
+                                      <ChevronRight className={`w-3 h-3 text-gray-400 transition-transform ${isProjectExpanded ? 'rotate-90' : ''}`} />
+                                    )}
                                     {strategy && (
                                       <div 
                                         className="w-2 h-2 rounded-full flex-shrink-0" 
                                         style={{ backgroundColor: strategy.colorCode }}
                                       />
                                     )}
-                                    <span className="text-sm font-medium truncate">{project.title}</span>
-                                  </div>
-                                  {strategy && (
-                                    <span className="text-xs text-gray-500 ml-4">{strategy.title}</span>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-3 flex-shrink-0">
-                                  <div className="text-right text-xs">
-                                    <div className="font-medium">{project.progress || 0}%</div>
-                                    <div className="text-gray-500">{projectCompletedActions.length}/{projectActions.length}</div>
-                                  </div>
-                                  <Progress value={project.progress || 0} className="w-16 h-1.5" />
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                }
-                
-                // Interactive view: collapsible
-                return (
-                  <Collapsible key={tag.id} defaultOpen={tagProjects.length > 0 && tagProjects.length <= 5}>
-                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                      <CollapsibleTrigger 
-                        className="flex items-center justify-between w-full p-3 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                        style={{ borderLeft: `4px solid ${tag.colorHex}` }}
-                        data-testid={`collapsible-tag-${tag.id}`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <ChevronRight className="w-4 h-4 text-gray-500 transition-transform [[data-state=open]>&]:rotate-90" />
-                          <div 
-                            className="w-4 h-4 rounded-full" 
-                            style={{ backgroundColor: tag.colorHex }}
-                          />
-                          <span className="font-medium">#{tag.name}</span>
-                          <Badge variant="secondary" className="text-xs">
-                            {tagProjects.length} project{tagProjects.length !== 1 ? 's' : ''}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-3 text-sm text-gray-500">
-                          <span>{tag.avgProgress}% avg</span>
-                          <Progress value={tag.avgProgress} className="w-16 h-1.5" />
-                        </div>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        {tagProjects.length === 0 ? (
-                          <div className="p-4 text-center text-sm text-gray-500 bg-white dark:bg-gray-900">
-                            No projects assigned to this tag
-                          </div>
-                        ) : (
-                          <div className="p-3 space-y-2 bg-white dark:bg-gray-900">
-                            {tagProjects.map((project: any) => {
-                              const strategy = strategies.find((s: any) => s.id === project.strategyId);
-                              const projectActions = actions.filter((a: any) => a.projectId === project.id);
-                              const projectCompletedActions = projectActions.filter((a: any) => a.status === 'achieved');
-                              
-                              return (
-                                <div 
-                                  key={project.id}
-                                  className="flex items-center justify-between p-2 border border-gray-100 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                                  data-testid={`tag-project-row-${tag.id}-${project.id}`}
-                                >
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                      {strategy && (
-                                        <div 
-                                          className="w-2 h-2 rounded-full flex-shrink-0" 
-                                          style={{ backgroundColor: strategy.colorCode }}
-                                        />
-                                      )}
-                                      <span className="text-sm font-medium truncate">{project.title}</span>
-                                    </div>
-                                    {strategy && (
-                                      <span className="text-xs text-gray-500 ml-4">{strategy.title}</span>
+                                    <span className="text-gray-700 dark:text-gray-300 truncate max-w-[150px]" title={project.title}>
+                                      {project.title}
+                                    </span>
+                                    {projectUsers.length === 0 && (
+                                      <Badge variant="outline" className="text-xs text-gray-400">No users</Badge>
                                     )}
                                   </div>
-                                  <div className="flex items-center gap-3 flex-shrink-0">
-                                    <div className="text-right text-xs">
-                                      <div className="font-medium">{project.progress || 0}%</div>
-                                      <div className="text-gray-500">{projectCompletedActions.length}/{projectActions.length}</div>
-                                    </div>
-                                    <Progress value={project.progress || 0} className="w-16 h-1.5" />
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </CollapsibleContent>
-                    </div>
-                  </Collapsible>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                                </td>
+                                {months.map(month => {
+                                  const capacity = getProjectMonthlyCapacity(project.id, month.key);
+                                  return (
+                                    <td 
+                                      key={month.key}
+                                      className="text-center py-2 px-1 text-gray-600 dark:text-gray-400 border-l border-gray-50 dark:border-gray-800"
+                                    >
+                                      {capacity.allocated > 0 ? capacity.allocated : '-'}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
 
-      {teamTags.length === 0 && (
-        <Card>
-          <CardContent className="text-center py-12">
-            <Hash className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500 mb-2">No Team Tags Defined</p>
-            <p className="text-sm text-gray-400">Create team tags in Settings to see utilization reports</p>
+                              {/* Expanded User Rows */}
+                              {isProjectExpanded && projectUsers.map((user: any) => (
+                                <tr 
+                                  key={`${project.id}-${user.id}`}
+                                  className="border-b border-gray-50 dark:border-gray-800/50 bg-gray-50/50 dark:bg-gray-800/30"
+                                  data-testid={`user-row-${user.id}`}
+                                >
+                                  <td className="sticky left-0 z-10 bg-gray-50/50 dark:bg-gray-800/30 py-1.5 px-3 pl-14">
+                                    <div className="flex items-center gap-2">
+                                      <UserIcon className="w-3 h-3 text-gray-400" />
+                                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                                        {user.firstName} {user.lastName}
+                                      </span>
+                                      <span className="text-xs text-gray-400">
+                                        ({user.fte || 1} FTE)
+                                      </span>
+                                    </div>
+                                  </td>
+                                  {months.map(month => {
+                                    const capacity = getUserMonthlyCapacity(user.id, month.key);
+                                    return (
+                                      <td 
+                                        key={month.key}
+                                        className={`text-center py-1.5 px-1 text-xs border-l border-gray-50 dark:border-gray-800 ${getCapacityColor(capacity.net, capacity.available)}`}
+                                      >
+                                        {capacity.net}
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              ))}
+                            </>
+                          );
+                        })}
+
+                        {/* Show message if no projects */}
+                        {isTagExpanded && tagProjects.length === 0 && (
+                          <tr className="border-b border-gray-100 dark:border-gray-800">
+                            <td colSpan={months.length + 1} className="py-3 px-3 pl-8 text-sm text-gray-500 italic">
+                              No projects assigned to this team tag
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </CardContent>
         </Card>
       )}
