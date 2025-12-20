@@ -1890,6 +1890,25 @@ export default function Strategies() {
                                               <Users className={`w-3.5 h-3.5 ${projectHasResources(project.id) ? 'text-blue-500' : 'text-gray-400'}`} />
                                             </Button>
                                             
+                                            {/* Team Tags - right after capacity since they're linked */}
+                                            {canEditAllStrategies() && (
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-6 w-6 p-0"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  const currentTagIds = getProjectTeamTags(project.id).map(t => t.id);
+                                                  setSelectedTeamTagIds(currentTagIds);
+                                                  setTeamTagsModalProject(project);
+                                                }}
+                                                title={getProjectTeamTags(project.id).length > 0 ? "Manage team tags" : "Add team tags"}
+                                                data-testid={`button-team-tags-${project.id}`}
+                                              >
+                                                <Hash className={`w-3.5 h-3.5 ${getProjectTeamTags(project.id).length > 0 ? 'text-purple-500' : 'text-gray-400'}`} />
+                                              </Button>
+                                            )}
+                                            
                                             {/* Barriers - grey if none, red if active */}
                                             <Button
                                               variant="ghost"
@@ -1953,25 +1972,6 @@ export default function Strategies() {
                                             >
                                               <Megaphone className={`w-3.5 h-3.5 ${project.communicationUrl ? 'text-blue-500' : 'text-gray-400'}`} />
                                             </Button>
-                                            
-                                            {/* Team Tags - only admin/co-lead can assign */}
-                                            {canEditAllStrategies() && (
-                                              <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-6 w-6 p-0"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  const currentTagIds = getProjectTeamTags(project.id).map(t => t.id);
-                                                  setSelectedTeamTagIds(currentTagIds);
-                                                  setTeamTagsModalProject(project);
-                                                }}
-                                                title={getProjectTeamTags(project.id).length > 0 ? "Manage team tags" : "Add team tags"}
-                                                data-testid={`button-team-tags-${project.id}`}
-                                              >
-                                                <Hash className={`w-3.5 h-3.5 ${getProjectTeamTags(project.id).length > 0 ? 'text-purple-500' : 'text-gray-400'}`} />
-                                              </Button>
-                                            )}
                                             
                                             {/* Three dots menu */}
                                             <DropdownMenu>
