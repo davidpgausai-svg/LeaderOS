@@ -4018,7 +4018,9 @@ export default function Settings() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {(users as any[])?.map((user: any) => (
+                      {(users as any[])?.slice().sort((a: any, b: any) => 
+                        (a.firstName || '').localeCompare(b.firstName || '')
+                      ).map((user: any) => (
                         <UserStrategyRow
                           key={user.id}
                           user={user}
