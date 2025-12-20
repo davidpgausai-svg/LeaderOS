@@ -294,7 +294,7 @@ export default function Reports() {
   const getReportName = (tab: string): string => {
     const names: Record<string, string> = {
       'capacity': 'Capacity Report',
-      'team-tags': 'Team Tags Report',
+      'team-tags': 'Team Capacity Report',
       'executive-goals': 'Executive Goals Report',
       'health': 'Strategy Health Report',
       'timeline': 'Timeline Risk Report',
@@ -861,7 +861,7 @@ export default function Reports() {
             >
               {[
                 { value: 'capacity', icon: Users, label: 'Capacity' },
-                { value: 'team-tags', icon: Hash, label: 'Team Tags' },
+                { value: 'team-tags', icon: Hash, label: 'Team Capacity' },
                 { value: 'executive-goals', icon: Tag, label: 'Executive Goals' },
                 { value: 'health', icon: Target, label: 'Strategy Health' },
                 { value: 'timeline', icon: Calendar, label: 'Timeline Risk' },
