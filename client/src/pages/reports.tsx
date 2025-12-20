@@ -1860,8 +1860,8 @@ function TeamTagsReport({
     const projectIds = mappings.map((m: any) => m.projectId);
     return projects.filter((p: any) => {
       if (!projectIds.includes(p.id)) return false;
-      // Exclude archived projects
-      if (p.status === 'A') return false;
+      // Exclude archived or completed projects
+      if (p.status === 'A' || p.status === 'C') return false;
       // Exclude projects from archived or completed strategies
       const strategy = strategies.find((s: any) => s.id === p.strategyId);
       if (strategy && (strategy.status === 'archived' || strategy.status === 'completed')) return false;
