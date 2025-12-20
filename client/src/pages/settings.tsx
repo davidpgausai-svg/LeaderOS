@@ -80,7 +80,7 @@ interface UserStrategyRowProps {
   onStrategyToggle: (userId: string, strategyId: string, isAssigned: boolean) => void;
   onDelete: (userId: string, userName: string) => void;
   onCapacityUpdate: (userId: string, fte: string, salary: number | null, serviceDeliveryHours: string) => void;
-  onTeamTagsUpdate: (userId: string, tagIds: string[]) => void;
+  onTeamTagsUpdate: (userId: string, tagIds: string[], primaryTagId?: string) => void;
 }
 
 function UserStrategyRow({ user, strategies, currentUserId, teamTags, onRoleChange, onStrategyToggle, onDelete, onCapacityUpdate, onTeamTagsUpdate }: UserStrategyRowProps) {
@@ -92,16 +92,19 @@ function UserStrategyRow({ user, strategies, currentUserId, teamTags, onRoleChan
   const [serviceDeliveryValue, setServiceDeliveryValue] = useState(user.serviceDeliveryHours || '0');
   
   // Fetch user's current team tag assignments
-  const { data: userTeamTagAssignments } = useQuery<{id: string; userId: string; teamTagId: string; organizationId: string}[]>({
+  const { data: userTeamTagAssignments } = useQuery<{id: string; userId: string; teamTagId: string; organizationId: string; isPrimary: boolean}[]>({
     queryKey: ['/api/users', user.id, 'team-tags'],
   });
   
   const [selectedTeamTagIds, setSelectedTeamTagIds] = useState<string[]>([]);
+  const [primaryTagId, setPrimaryTagId] = useState<string | null>(null);
   
   // Reset selected tags when popover opens (to get fresh data)
   React.useEffect(() => {
     if (isCapacityOpen && userTeamTagAssignments) {
       setSelectedTeamTagIds(userTeamTagAssignments.map(a => a.teamTagId));
+      const primary = userTeamTagAssignments.find(a => a.isPrimary);
+      setPrimaryTagId(primary?.teamTagId || null);
     }
   }, [isCapacityOpen, userTeamTagAssignments]);
   
@@ -109,6 +112,8 @@ function UserStrategyRow({ user, strategies, currentUserId, teamTags, onRoleChan
   React.useEffect(() => {
     if (userTeamTagAssignments && !isCapacityOpen) {
       setSelectedTeamTagIds(userTeamTagAssignments.map(a => a.teamTagId));
+      const primary = userTeamTagAssignments.find(a => a.isPrimary);
+      setPrimaryTagId(primary?.teamTagId || null);
     }
   }, [userTeamTagAssignments]);
   
@@ -259,21 +264,29 @@ function UserStrategyRow({ user, strategies, currentUserId, teamTags, onRoleChan
                     <div className="flex flex-wrap gap-1 p-2 border rounded-md bg-gray-50 dark:bg-gray-900 max-h-32 overflow-y-auto">
                       {teamTags.map(tag => {
                         const isSelected = selectedTeamTagIds.includes(tag.id);
+                        const isPrimary = primaryTagId === tag.id;
                         return (
                           <Badge
                             key={tag.id}
                             variant={isSelected ? "default" : "outline"}
-                            className="cursor-pointer transition-colors"
+                            className="cursor-pointer transition-colors flex items-center gap-1"
                             style={isSelected ? { backgroundColor: tag.colorHex, borderColor: tag.colorHex } : { borderColor: tag.colorHex, color: tag.colorHex }}
                             onClick={() => {
                               if (isSelected) {
                                 setSelectedTeamTagIds(prev => prev.filter(id => id !== tag.id));
+                                if (isPrimary) {
+                                  setPrimaryTagId(null);
+                                }
                               } else {
                                 setSelectedTeamTagIds(prev => [...prev, tag.id]);
+                                if (!primaryTagId) {
+                                  setPrimaryTagId(tag.id);
+                                }
                               }
                             }}
                             data-testid={`team-tag-${tag.id}-${user.id}`}
                           >
+                            {isPrimary && <Star className="h-3 w-3 fill-current" />}
                             {tag.name}
                             {isSelected && <X className="h-3 w-3 ml-1" />}
                           </Badge>
@@ -281,6 +294,29 @@ function UserStrategyRow({ user, strategies, currentUserId, teamTags, onRoleChan
                       })}
                     </div>
                     <p className="text-xs text-gray-500">Click to toggle team assignments</p>
+                    {selectedTeamTagIds.length > 1 && (
+                      <div className="space-y-1">
+                        <Label className="text-xs">Primary Team (for capacity report)</Label>
+                        <Select value={primaryTagId || ''} onValueChange={(val) => setPrimaryTagId(val)}>
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="Select primary team" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {selectedTeamTagIds.map(tagId => {
+                              const tag = teamTags.find(t => t.id === tagId);
+                              return tag ? (
+                                <SelectItem key={tag.id} value={tag.id}>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.colorHex }} />
+                                    {tag.name}
+                                  </div>
+                                </SelectItem>
+                              ) : null;
+                            })}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </div>
                 )}
                 
@@ -294,7 +330,10 @@ function UserStrategyRow({ user, strategies, currentUserId, teamTags, onRoleChan
                       salaryValue ? parseInt(salaryValue) : null,
                       serviceDeliveryValue
                     );
-                    onTeamTagsUpdate(user.id, selectedTeamTagIds);
+                    const actualPrimaryId = primaryTagId && selectedTeamTagIds.includes(primaryTagId) 
+                      ? primaryTagId 
+                      : selectedTeamTagIds[0] || undefined;
+                    onTeamTagsUpdate(user.id, selectedTeamTagIds, actualPrimaryId);
                     setIsCapacityOpen(false);
                   }}
                   data-testid={`button-save-capacity-${user.id}`}
@@ -3075,9 +3114,9 @@ export default function Settings() {
     }
   };
 
-  const handleUserTeamTagsUpdate = async (userId: string, tagIds: string[]) => {
+  const handleUserTeamTagsUpdate = async (userId: string, tagIds: string[], primaryTagId?: string) => {
     try {
-      await apiRequest("PUT", `/api/users/${userId}/team-tags`, { tagIds });
+      await apiRequest("PUT", `/api/users/${userId}/team-tags`, { tagIds, primaryTagId });
       toast({
         title: "Success",
         description: "Team tags updated successfully",

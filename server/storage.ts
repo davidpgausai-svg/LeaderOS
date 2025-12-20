@@ -133,7 +133,8 @@ export interface IStorage {
 
   // User Team Tag (many-to-many) methods - for tagging users to teams
   getUserTeamTags(userId: string, organizationId: string): Promise<UserTeamTag[]>;
-  setUserTeamTags(userId: string, tagIds: string[], organizationId: string): Promise<UserTeamTag[]>;
+  setUserTeamTags(userId: string, tagIds: string[], organizationId: string, primaryTagId?: string): Promise<UserTeamTag[]>;
+  setUserPrimaryTeam(userId: string, teamTagId: string, organizationId: string): Promise<void>;
   getUsersByTeamTag(teamTagId: string, organizationId: string): Promise<User[]>;
   getUserTeamTagsByOrganization(organizationId: string): Promise<UserTeamTag[]>;
 

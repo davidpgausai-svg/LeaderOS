@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useEffect } from "react";
+import { useState, useRef, useMemo, useEffect, Fragment } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -1796,9 +1796,10 @@ function ExecutiveGoalsReport({
 }
 
 // Team Capacity Report Component - Shows team capacity with rolling 12-month view
+// Hierarchy: Team (by primary user tag) → Users → Projects
 function TeamTagsReport({ 
   teamTags, 
-  projectTeamTags, 
+  projectTeamTags,
   userTeamTags,
   projects, 
   strategies,
@@ -1807,7 +1808,7 @@ function TeamTagsReport({
   isPrintView = false 
 }: any) {
   const [expandedTags, setExpandedTags] = useState<Set<string>>(new Set());
-  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
 
   // Generate rolling 12 months starting from current month
   const getMonthColumns = () => {
@@ -1854,10 +1855,17 @@ function TeamTagsReport({
 
   const quarterGroups = getQuarterGroups();
 
-  // Get projects for a specific tag (exclude archived/completed)
-  const getProjectsForTag = (tagId: string): any[] => {
-    const mappings = projectTeamTags.filter((m: any) => m.teamTagId === tagId);
-    const projectIds = mappings.map((m: any) => m.projectId);
+  // Get users whose PRIMARY team is this tag (using isPrimary field)
+  const getUsersForTagByPrimary = (tagId: string): any[] => {
+    const primaryMappings = userTeamTags.filter((m: any) => m.teamTagId === tagId && m.isPrimary === true);
+    const userIds = primaryMappings.map((m: any) => m.userId);
+    return users.filter((u: any) => userIds.includes(u.id) && u.role !== 'sme');
+  };
+
+  // Get projects a user is assigned to (from resource assignments, exclude archived/completed)
+  const getProjectsForUser = (userId: string): any[] => {
+    const userAssignments = resourceAssignments.filter((ra: any) => ra.userId === userId);
+    const projectIds = Array.from(new Set(userAssignments.map((ra: any) => ra.projectId)));
     return projects.filter((p: any) => {
       if (!projectIds.includes(p.id)) return false;
       // Exclude archived or completed projects
@@ -1870,18 +1878,10 @@ function TeamTagsReport({
     });
   };
 
-  // Get users assigned to a team tag
-  const getUsersForTag = (tagId: string): any[] => {
-    const mappings = userTeamTags.filter((m: any) => m.teamTagId === tagId);
-    const userIds = mappings.map((m: any) => m.userId);
-    return users.filter((u: any) => userIds.includes(u.id) && u.role !== 'sme');
-  };
-
-  // Get users assigned to a project (from resource assignments)
-  const getUsersForProject = (projectId: string): any[] => {
-    const assignments = resourceAssignments.filter((ra: any) => ra.projectId === projectId);
-    const userIds = Array.from(new Set(assignments.map((ra: any) => ra.userId)));
-    return users.filter((u: any) => userIds.includes(u.id));
+  // Get user's allocation for a specific project
+  const getUserProjectAllocation = (userId: string, projectId: string): number => {
+    const assignment = resourceAssignments.find((ra: any) => ra.userId === userId && ra.projectId === projectId);
+    return assignment ? parseFloat(assignment.hoursPerWeek || '0') : 0;
   };
 
   // Calculate user capacity for a specific month
@@ -1930,36 +1930,28 @@ function TeamTagsReport({
     };
   };
 
-  // Calculate project capacity for a month (sum of all user allocations)
-  const getProjectMonthlyCapacity = (projectId: string, monthKey: string) => {
-    const projectAssignments = resourceAssignments.filter((ra: any) => ra.projectId === projectId);
+  // Get project allocation for a specific user in a specific month
+  const getUserProjectMonthlyHours = (userId: string, projectId: string, monthKey: string) => {
     const project = projects.find((p: any) => p.id === projectId);
-    
-    if (!project) return { allocated: 0, userCount: 0 };
+    if (!project) return 0;
 
     const monthDate = new Date(monthKey + '-01');
     const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
     
     // Check if project is active during this month
-    if (project.status === 'C' || project.status === 'A') return { allocated: 0, userCount: 0 };
+    if (project.status === 'C' || project.status === 'A') return 0;
     const startDate = project.startDate ? new Date(project.startDate) : null;
     const dueDate = project.dueDate ? new Date(project.dueDate) : null;
-    if (startDate && startDate > monthEnd) return { allocated: 0, userCount: 0 };
-    if (dueDate && dueDate < monthDate) return { allocated: 0, userCount: 0 };
+    if (startDate && startDate > monthEnd) return 0;
+    if (dueDate && dueDate < monthDate) return 0;
 
-    const totalHoursPerWeek = projectAssignments.reduce((sum: number, ra: any) => 
-      sum + parseFloat(ra.hoursPerWeek || '0'), 0
-    );
-    
-    return {
-      allocated: Math.round(totalHoursPerWeek * 4.33),
-      userCount: projectAssignments.length
-    };
+    const hoursPerWeek = getUserProjectAllocation(userId, projectId);
+    return Math.round(hoursPerWeek * 4.33);
   };
 
-  // Calculate team tag capacity for a month (aggregate of all users in the team)
+  // Calculate team tag capacity for a month (aggregate of all users with PRIMARY team = this tag)
   const getTagMonthlyCapacity = (tagId: string, monthKey: string) => {
-    const tagUsers = getUsersForTag(tagId);
+    const tagUsers = getUsersForTagByPrimary(tagId);
     
     let totalAvailable = 0;
     let totalAllocated = 0;
@@ -1999,13 +1991,13 @@ function TeamTagsReport({
     });
   };
 
-  const toggleProject = (projectId: string) => {
-    setExpandedProjects(prev => {
+  const toggleUser = (userId: string) => {
+    setExpandedUsers(prev => {
       const next = new Set(prev);
-      if (next.has(projectId)) {
-        next.delete(projectId);
+      if (next.has(userId)) {
+        next.delete(userId);
       } else {
-        next.add(projectId);
+        next.add(userId);
       }
       return next;
     });
@@ -2054,7 +2046,7 @@ function TeamTagsReport({
                   {/* Quarter header row */}
                   <tr className="border-b border-gray-200 dark:border-gray-700">
                     <th className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 text-left py-2 px-3 font-medium text-gray-600 dark:text-gray-400 min-w-[200px]">
-                      Team / Project / User
+                      Team / User / Project
                     </th>
                     {quarterGroups.map((group, idx) => (
                       <th 
@@ -2082,14 +2074,12 @@ function TeamTagsReport({
                 <tbody>
                   {sortedTags.map((tag: any) => {
                     const isTagExpanded = expandedTags.has(tag.id) || isPrintView;
-                    const tagProjects = getProjectsForTag(tag.id);
-                    const tagUsers = getUsersForTag(tag.id);
+                    const tagUsers = getUsersForTagByPrimary(tag.id);
                     
                     return (
-                      <>
+                      <Fragment key={tag.id}>
                         {/* Team Tag Row */}
                         <tr 
-                          key={tag.id}
                           className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                           onClick={() => !isPrintView && toggleTag(tag.id)}
                           data-testid={`team-tag-row-${tag.id}`}
@@ -2122,97 +2112,99 @@ function TeamTagsReport({
                           })}
                         </tr>
 
-                        {/* Expanded Project Rows */}
-                        {isTagExpanded && tagProjects.map((project: any) => {
-                          const isProjectExpanded = expandedProjects.has(project.id) || isPrintView;
-                          const projectUsers = getUsersForProject(project.id);
-                          const strategy = strategies.find((s: any) => s.id === project.strategyId);
+                        {/* Expanded User Rows */}
+                        {isTagExpanded && tagUsers.map((user: any) => {
+                          const isUserExpanded = expandedUsers.has(user.id) || isPrintView;
+                          const userProjects = getProjectsForUser(user.id);
                           
                           return (
-                            <>
-                              {/* Project Row */}
+                            <Fragment key={user.id}>
+                              {/* User Row */}
                               <tr 
-                                key={project.id}
                                 className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer"
-                                onClick={(e) => { e.stopPropagation(); !isPrintView && toggleProject(project.id); }}
-                                data-testid={`project-row-${project.id}`}
+                                onClick={(e) => { e.stopPropagation(); !isPrintView && toggleUser(user.id); }}
+                                data-testid={`user-row-${user.id}`}
                               >
                                 <td className="sticky left-0 z-10 bg-white dark:bg-gray-900 py-2 px-3 pl-8">
                                   <div className="flex items-center gap-2">
-                                    {!isPrintView && projectUsers.length > 0 && (
-                                      <ChevronRight className={`w-3 h-3 text-gray-400 transition-transform ${isProjectExpanded ? 'rotate-90' : ''}`} />
+                                    {!isPrintView && userProjects.length > 0 && (
+                                      <ChevronRight className={`w-3 h-3 text-gray-400 transition-transform ${isUserExpanded ? 'rotate-90' : ''}`} />
                                     )}
-                                    {strategy && (
-                                      <div 
-                                        className="w-2 h-2 rounded-full flex-shrink-0" 
-                                        style={{ backgroundColor: strategy.colorCode }}
-                                      />
-                                    )}
-                                    <span className="text-gray-700 dark:text-gray-300 truncate max-w-[150px]" title={project.title}>
-                                      {project.title}
+                                    <UserIcon className="w-3 h-3 text-gray-500" />
+                                    <span className="text-gray-700 dark:text-gray-300">
+                                      {user.firstName} {user.lastName}
                                     </span>
-                                    {projectUsers.length === 0 && (
-                                      <Badge variant="outline" className="text-xs text-gray-400">No users</Badge>
+                                    <span className="text-xs text-gray-400">
+                                      ({user.fte || 1} FTE)
+                                    </span>
+                                    {userProjects.length === 0 && (
+                                      <Badge variant="outline" className="text-xs text-gray-400">No projects</Badge>
                                     )}
                                   </div>
                                 </td>
                                 {months.map(month => {
-                                  const capacity = getProjectMonthlyCapacity(project.id, month.key);
+                                  const capacity = getUserMonthlyCapacity(user.id, month.key);
                                   return (
                                     <td 
                                       key={month.key}
-                                      className="text-center py-2 px-1 text-gray-600 dark:text-gray-400 border-l border-gray-50 dark:border-gray-800"
+                                      className={`text-center py-2 px-1 font-medium border-l border-gray-100 dark:border-gray-700 ${getCapacityColor(capacity.net, capacity.available)}`}
                                     >
-                                      {capacity.allocated > 0 ? capacity.allocated : '-'}
+                                      {capacity.net}
                                     </td>
                                   );
                                 })}
                               </tr>
 
-                              {/* Expanded User Rows */}
-                              {isProjectExpanded && projectUsers.map((user: any) => (
-                                <tr 
-                                  key={`${project.id}-${user.id}`}
-                                  className="border-b border-gray-50 dark:border-gray-800/50 bg-gray-50/50 dark:bg-gray-800/30"
-                                  data-testid={`user-row-${user.id}`}
-                                >
-                                  <td className="sticky left-0 z-10 bg-gray-50/50 dark:bg-gray-800/30 py-1.5 px-3 pl-14">
-                                    <div className="flex items-center gap-2">
-                                      <UserIcon className="w-3 h-3 text-gray-400" />
-                                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                                        {user.firstName} {user.lastName}
-                                      </span>
-                                      <span className="text-xs text-gray-400">
-                                        ({user.fte || 1} FTE)
-                                      </span>
-                                    </div>
-                                  </td>
-                                  {months.map(month => {
-                                    const capacity = getUserMonthlyCapacity(user.id, month.key);
-                                    return (
-                                      <td 
-                                        key={month.key}
-                                        className={`text-center py-1.5 px-1 text-xs border-l border-gray-50 dark:border-gray-800 ${getCapacityColor(capacity.net, capacity.available)}`}
-                                      >
-                                        {capacity.net}
-                                      </td>
-                                    );
-                                  })}
-                                </tr>
-                              ))}
-                            </>
+                              {/* Expanded Project Rows */}
+                              {isUserExpanded && userProjects.map((project: any) => {
+                                const strategy = strategies.find((s: any) => s.id === project.strategyId);
+                                
+                                return (
+                                  <tr 
+                                    key={`${user.id}-${project.id}`}
+                                    className="border-b border-gray-50 dark:border-gray-800/50 bg-gray-50/50 dark:bg-gray-800/30"
+                                    data-testid={`project-row-${project.id}`}
+                                  >
+                                    <td className="sticky left-0 z-10 bg-gray-50/50 dark:bg-gray-800/30 py-1.5 px-3 pl-14">
+                                      <div className="flex items-center gap-2">
+                                        {strategy && (
+                                          <div 
+                                            className="w-2 h-2 rounded-full flex-shrink-0" 
+                                            style={{ backgroundColor: strategy.colorCode }}
+                                          />
+                                        )}
+                                        <span className="text-sm text-gray-600 dark:text-gray-400 truncate max-w-[150px]" title={project.title}>
+                                          {project.title}
+                                        </span>
+                                      </div>
+                                    </td>
+                                    {months.map(month => {
+                                      const hours = getUserProjectMonthlyHours(user.id, project.id, month.key);
+                                      return (
+                                        <td 
+                                          key={month.key}
+                                          className="text-center py-1.5 px-1 text-xs text-gray-500 dark:text-gray-400 border-l border-gray-50 dark:border-gray-800"
+                                        >
+                                          {hours > 0 ? hours : '-'}
+                                        </td>
+                                      );
+                                    })}
+                                  </tr>
+                                );
+                              })}
+                            </Fragment>
                           );
                         })}
 
-                        {/* Show message if no projects */}
-                        {isTagExpanded && tagProjects.length === 0 && (
+                        {/* Show message if no users with this primary team */}
+                        {isTagExpanded && tagUsers.length === 0 && (
                           <tr className="border-b border-gray-100 dark:border-gray-800">
                             <td colSpan={months.length + 1} className="py-3 px-3 pl-8 text-sm text-gray-500 italic">
-                              No projects assigned to this team tag
+                              No users have this as their primary team
                             </td>
                           </tr>
                         )}
-                      </>
+                      </Fragment>
                     );
                   })}
                 </tbody>

@@ -882,7 +882,16 @@ export class PostgresStorage implements IStorage {
       ));
   }
 
-  async setUserTeamTags(userId: string, tagIds: string[], organizationId: string): Promise<UserTeamTag[]> {
+  async setUserTeamTags(userId: string, tagIds: string[], organizationId: string, primaryTagId?: string): Promise<UserTeamTag[]> {
+    // Get existing assignments to preserve primary if possible
+    const existingTags = await db.select().from(userTeamTags).where(and(
+      eq(userTeamTags.userId, userId),
+      eq(userTeamTags.organizationId, organizationId)
+    ));
+    
+    // Find existing primary tag
+    const existingPrimaryId = existingTags.find(t => t.isPrimary)?.teamTagId;
+    
     // Delete existing assignments for this user within the same organization only
     await db.delete(userTeamTags).where(and(
       eq(userTeamTags.userId, userId),
@@ -893,14 +902,47 @@ export class PostgresStorage implements IStorage {
       return [];
     }
     
+    // Determine which tag should be primary:
+    // 1. If explicitly specified and in the list, use it
+    // 2. If existing primary is still in the list, keep it
+    // 3. Otherwise, first tag in the list becomes primary
+    let actualPrimaryId: string;
+    if (primaryTagId && tagIds.includes(primaryTagId)) {
+      actualPrimaryId = primaryTagId;
+    } else if (existingPrimaryId && tagIds.includes(existingPrimaryId)) {
+      actualPrimaryId = existingPrimaryId;
+    } else {
+      actualPrimaryId = tagIds[0];
+    }
+    
     const values = tagIds.map(tagId => ({
       id: randomUUID(),
       userId,
       teamTagId: tagId,
       organizationId,
+      isPrimary: tagId === actualPrimaryId,
     }));
     
     return db.insert(userTeamTags).values(values).returning();
+  }
+  
+  async setUserPrimaryTeam(userId: string, teamTagId: string, organizationId: string): Promise<void> {
+    // First, unset all primary flags for this user
+    await db.update(userTeamTags)
+      .set({ isPrimary: false })
+      .where(and(
+        eq(userTeamTags.userId, userId),
+        eq(userTeamTags.organizationId, organizationId)
+      ));
+    
+    // Then set the specified team as primary
+    await db.update(userTeamTags)
+      .set({ isPrimary: true })
+      .where(and(
+        eq(userTeamTags.userId, userId),
+        eq(userTeamTags.teamTagId, teamTagId),
+        eq(userTeamTags.organizationId, organizationId)
+      ));
   }
 
   async getUsersByTeamTag(teamTagId: string, organizationId: string): Promise<User[]> {

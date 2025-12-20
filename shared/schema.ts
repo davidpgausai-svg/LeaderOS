@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, jsonb, index, unique, serial } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, jsonb, index, unique, serial, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -690,6 +690,7 @@ export const userTeamTags = pgTable("user_team_tags", {
   userId: varchar("user_id").notNull(),
   teamTagId: varchar("team_tag_id").notNull(),
   organizationId: varchar("organization_id").notNull(),
+  isPrimary: boolean("is_primary").default(false).notNull(),
   createdAt: timestamp("created_at").default(sql`now()`),
 }, (table) => ({
   uniqueUserTag: unique().on(table.userId, table.teamTagId),

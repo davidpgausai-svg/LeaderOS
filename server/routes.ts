@@ -419,7 +419,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Target user must belong to an organization" });
       }
 
-      const { tagIds } = req.body;
+      const { tagIds, primaryTagId } = req.body;
       if (!Array.isArray(tagIds)) {
         return res.status(400).json({ message: "tagIds must be an array" });
       }
@@ -433,13 +433,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return res.status(400).json({ message: `Invalid team tag ID: ${tagId}` });
           }
         }
+        // Verify primaryTagId if provided
+        if (primaryTagId && !validTagIds.has(primaryTagId)) {
+          return res.status(400).json({ message: `Invalid primary team tag ID: ${primaryTagId}` });
+        }
       }
 
-      const updatedTags = await storage.setUserTeamTags(req.params.id, tagIds, targetOrgId);
+      const updatedTags = await storage.setUserTeamTags(req.params.id, tagIds, targetOrgId, primaryTagId);
       res.json(updatedTags);
     } catch (error) {
       logger.error("Failed to update user team tags", error);
       res.status(500).json({ message: "Failed to update user team tags" });
+    }
+  });
+
+  // Set user's primary team
+  app.put("/api/users/:id/primary-team", isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUserId = req.user?.claims?.sub;
+      if (!currentUserId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const currentUser = await storage.getUser(currentUserId);
+      if (!currentUser) {
+        return res.status(403).json({ message: "User not found" });
+      }
+
+      // Only administrators can update user's primary team
+      if (currentUser.role !== 'administrator' && currentUser.isSuperAdmin !== 'true') {
+        return res.status(403).json({ message: "Only administrators can update user's primary team" });
+      }
+
+      // Verify target user exists
+      const targetUser = await storage.getUser(req.params.id);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Super admins can update any user; regular admins must be in the same organization
+      if (currentUser.isSuperAdmin !== 'true') {
+        if (!currentUser.organizationId) {
+          return res.status(403).json({ message: "User must belong to an organization" });
+        }
+        if (currentUser.organizationId !== targetUser.organizationId) {
+          return res.status(403).json({ message: "Cannot update users from other organizations" });
+        }
+      }
+
+      const targetOrgId = targetUser.organizationId;
+      if (!targetOrgId) {
+        return res.status(400).json({ message: "Target user must belong to an organization" });
+      }
+
+      const { teamTagId } = req.body;
+      if (!teamTagId || typeof teamTagId !== 'string') {
+        return res.status(400).json({ message: "teamTagId is required" });
+      }
+
+      // Verify the team tag belongs to the organization
+      const orgTags = await storage.getTeamTagsByOrganization(targetOrgId);
+      if (!orgTags.some(t => t.id === teamTagId)) {
+        return res.status(400).json({ message: "Invalid team tag ID" });
+      }
+
+      // Verify user is assigned to this team
+      const userTags = await storage.getUserTeamTags(req.params.id, targetOrgId);
+      if (!userTags.some(t => t.teamTagId === teamTagId)) {
+        return res.status(400).json({ message: "User is not assigned to this team" });
+      }
+
+      await storage.setUserPrimaryTeam(req.params.id, teamTagId, targetOrgId);
+      
+      // Return updated tags
+      const updatedTags = await storage.getUserTeamTags(req.params.id, targetOrgId);
+      res.json(updatedTags);
+    } catch (error) {
+      logger.error("Failed to update user's primary team", error);
+      res.status(500).json({ message: "Failed to update user's primary team" });
     }
   });
 
