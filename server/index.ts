@@ -20,9 +20,10 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
   skip: (req) => {
     // Skip rate limiting for auth endpoints (they have their own stricter limits)
+    // and Stripe webhooks (they use signature verification)
     // Use originalUrl since middleware is mounted at /api
     const fullPath = req.originalUrl || req.path;
-    return fullPath.startsWith('/api/auth/');
+    return fullPath.startsWith('/api/auth/') || fullPath.startsWith('/api/stripe/webhook');
   },
   handler: (req, res, next, options) => {
     const fullPath = req.originalUrl || req.path;
@@ -39,12 +40,13 @@ const writeOperationLimiter = rateLimit({
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   skip: (req) => {
-    // Only apply to write operations, skip auth endpoints
+    // Only apply to write operations, skip auth endpoints and Stripe webhooks
     const isWriteOperation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
     // Use originalUrl since middleware is mounted at /api
     const fullPath = req.originalUrl || req.path;
     const isAuthEndpoint = fullPath.startsWith('/api/auth/');
-    return !isWriteOperation || isAuthEndpoint;
+    const isStripeWebhook = fullPath.startsWith('/api/stripe/webhook');
+    return !isWriteOperation || isAuthEndpoint || isStripeWebhook;
   },
   handler: (req, res, next, options) => {
     const fullPath = req.originalUrl || req.path;
