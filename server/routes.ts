@@ -2720,7 +2720,7 @@ Respond ONLY with a valid JSON object in this exact format:
     }
   });
 
-  app.post("/api/actions/:actionId/checklist", isAuthenticated, validateBody(insertActionChecklistItemSchema), async (req: any, res) => {
+  app.post("/api/actions/:actionId/checklist", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -2745,11 +2745,12 @@ Respond ONLY with a valid JSON object in this exact format:
         }
       }
       
-      const validatedData = insertActionChecklistItemSchema.parse({
-        ...req.body,
+      // Validate body without actionId, then merge actionId from URL params
+      const validatedBody = insertActionChecklistItemSchema.parse(req.body);
+      const item = await storage.createActionChecklistItem({
+        ...validatedBody,
         actionId: req.params.actionId,
       });
-      const item = await storage.createActionChecklistItem(validatedData);
       res.status(201).json(item);
     } catch (error) {
       if (error instanceof z.ZodError) {

@@ -492,6 +492,7 @@ export const insertActionDocumentSchema = createInsertSchema(actionDocuments).om
 export const insertActionChecklistItemSchema = createInsertSchema(actionChecklistItems).omit({
   id: true,
   createdAt: true,
+  actionId: true, // actionId comes from URL params, not request body
 });
 
 export const insertUserStrategyAssignmentSchema = createInsertSchema(userStrategyAssignments).omit({
@@ -555,6 +556,8 @@ export type InsertActionDocument = z.infer<typeof insertActionDocumentSchema>;
 export type ActionDocument = typeof actionDocuments.$inferSelect;
 export type InsertActionChecklistItem = z.infer<typeof insertActionChecklistItemSchema>;
 export type ActionChecklistItem = typeof actionChecklistItems.$inferSelect;
+// Full insert type including actionId for storage layer (actionId comes from URL params)
+export type CreateActionChecklistItem = InsertActionChecklistItem & { actionId: string };
 export type InsertUserStrategyAssignment = z.infer<typeof insertUserStrategyAssignmentSchema>;
 export type UserStrategyAssignment = typeof userStrategyAssignments.$inferSelect;
 export type InsertMeetingNote = z.infer<typeof insertMeetingNoteSchema>;

@@ -16,7 +16,7 @@ import {
   type Action, type InsertAction,
   type Notification, type InsertNotification,
   type ActionDocument, type InsertActionDocument,
-  type ActionChecklistItem, type InsertActionChecklistItem,
+  type ActionChecklistItem, type InsertActionChecklistItem, type CreateActionChecklistItem,
   type UserStrategyAssignment,
   type MeetingNote, type InsertMeetingNote,
   type Barrier, type InsertBarrier,
@@ -491,7 +491,7 @@ export class PostgresStorage implements IStorage {
       .orderBy(actionChecklistItems.orderIndex);
   }
 
-  async createActionChecklistItem(insertItem: InsertActionChecklistItem): Promise<ActionChecklistItem> {
+  async createActionChecklistItem(insertItem: CreateActionChecklistItem): Promise<ActionChecklistItem> {
     const [item] = await db.insert(actionChecklistItems).values({
       id: randomUUID(),
       ...insertItem,

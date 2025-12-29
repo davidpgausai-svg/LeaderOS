@@ -9,7 +9,7 @@ import type {
   Action, InsertAction,
   Notification, InsertNotification,
   ActionDocument, InsertActionDocument,
-  ActionChecklistItem, InsertActionChecklistItem,
+  ActionChecklistItem, InsertActionChecklistItem, CreateActionChecklistItem,
   UserStrategyAssignment, InsertUserStrategyAssignment,
   MeetingNote, InsertMeetingNote,
   AiChatConversation, InsertAiChatConversation,
@@ -868,7 +868,7 @@ export class SQLiteStorage implements IStorage {
     return rows.map(mapActionChecklistItem);
   }
 
-  async createActionChecklistItem(item: InsertActionChecklistItem): Promise<ActionChecklistItem> {
+  async createActionChecklistItem(item: CreateActionChecklistItem): Promise<ActionChecklistItem> {
     const id = randomUUID();
     const now = new Date().toISOString();
 
