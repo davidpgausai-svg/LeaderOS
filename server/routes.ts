@@ -66,9 +66,9 @@ const capacityUpdateSchema = z.object({
 });
 
 const reorderSchema = z.object({
-  strategies: z.array(z.object({
-    id: z.number().int().positive(),
-    sortOrder: z.number().int().min(0)
+  strategyOrders: z.array(z.object({
+    id: z.string(),
+    displayOrder: z.number().int().min(0)
   }))
 });
 
