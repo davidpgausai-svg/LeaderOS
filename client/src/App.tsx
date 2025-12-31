@@ -13,7 +13,6 @@ import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
 import Timeline from "@/pages/timeline";
 import Calendar from "@/pages/calendar";
-import Documentation from "@/pages/documentation";
 import Templates from "@/pages/templates";
 import SwotTemplate from "@/pages/templates/swot";
 import SmartGoalsTemplate from "@/pages/templates/smart-goals";
@@ -79,7 +78,6 @@ function Router() {
         <Route path="/templates/smart-goals" component={SmartGoalsTemplate} />
         <Route path="/templates/eisenhower-matrix" component={EisenhowerMatrixTemplate} />
         <Route path="/templates/first-principles" component={FirstPrinciplesTemplate} />
-        <Route path="/documentation" component={Documentation} />
         <Route path="/settings" component={Settings} />
         <Route path="/super-admin" component={SuperAdmin} />
         <Route component={NotFound} />
