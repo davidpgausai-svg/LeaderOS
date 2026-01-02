@@ -1,0 +1,573 @@
+<style>
+  .ladder-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 60px 20px;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  .ladder-header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  .ladder-header h1 {
+    font-size: 32px;
+    line-height: 1.3;
+    margin: 0 0 12px 0;
+    color: #111;
+  }
+
+  .ladder-header .subtitle {
+    font-size: 18px;
+    color: #666;
+    margin-bottom: 20px;
+  }
+
+  .ladder-intro {
+    background: #f9fafb;
+    border-left: 4px solid #3b82f6;
+    padding: 20px 24px;
+    border-radius: 8px;
+    margin-bottom: 40px;
+  }
+
+  .ladder-intro p {
+    margin: 0 0 12px 0;
+    line-height: 1.6;
+    color: #374151;
+  }
+
+  .ladder-intro p:last-child {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .level-card {
+    border: 2px solid #e5e7eb;
+    border-left: 6px solid;
+    border-radius: 10px;
+    margin-bottom: 24px;
+    background: #fff;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+
+  .level-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+
+  .level-card.level-1 { border-left-color: #8b5cf6; }
+  .level-card.level-2 { border-left-color: #3b82f6; }
+  .level-card.level-3 { border-left-color: #10b981; }
+  .level-card.level-4 { border-left-color: #f59e0b; }
+  .level-card.level-5 { border-left-color: #ef4444; }
+
+  .level-header {
+    padding: 20px 24px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fafbfc;
+  }
+
+  .level-header:hover {
+    background: #f3f4f6;
+  }
+
+  .level-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .level-number {
+    font-size: 28px;
+    font-weight: 700;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+  }
+
+  .level-1 .level-number { background: #8b5cf6; }
+  .level-2 .level-number { background: #3b82f6; }
+  .level-3 .level-number { background: #10b981; }
+  .level-4 .level-number { background: #f59e0b; }
+  .level-5 .level-number { background: #ef4444; }
+
+  .level-info h3 {
+    margin: 0 0 4px 0;
+    font-size: 20px;
+    color: #111;
+  }
+
+  .level-info p {
+    margin: 0;
+    font-size: 14px;
+    color: #666;
+    font-style: italic;
+  }
+
+  .expand-icon {
+    font-size: 24px;
+    color: #9ca3af;
+    transition: transform 0.3s ease;
+  }
+
+  .level-card.open .expand-icon {
+    transform: rotate(180deg);
+  }
+
+  .level-content {
+    display: none;
+    padding: 24px;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  .level-card.open .level-content {
+    display: block;
+  }
+
+  .framework-box {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 16px 0;
+  }
+
+  .framework-title {
+    font-weight: 700;
+    color: #111;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .framework-content {
+    color: #4b5563;
+    line-height: 1.6;
+  }
+
+  .prompt-examples {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 16px 0;
+  }
+
+  .prompt-examples h4 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+  }
+
+  .prompt-item {
+    background: #f9fafb;
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    font-family: 'Monaco', 'Courier New', monospace;
+    font-size: 13px;
+    color: #1f2937;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .prompt-item:hover {
+    background: #e5e7eb;
+  }
+
+  .prompt-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .coaching-tip {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-left: 4px solid #f59e0b;
+    padding: 16px;
+    border-radius: 8px;
+    margin-top: 16px;
+  }
+
+  .coaching-tip strong {
+    color: #92400e;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .coaching-tip p {
+    margin: 0;
+    color: #78350f;
+    line-height: 1.6;
+  }
+
+  .repeatable-model {
+    background: #eff6ff;
+    border: 2px solid #3b82f6;
+    border-radius: 10px;
+    padding: 24px;
+    margin: 40px 0;
+  }
+
+  .repeatable-model h3 {
+    margin: 0 0 16px 0;
+    color: #1e40af;
+    font-size: 22px;
+  }
+
+  .model-steps {
+    display: grid;
+    gap: 12px;
+  }
+
+  .model-step {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: white;
+    border-radius: 6px;
+  }
+
+  .step-number {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #3b82f6;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .outcome-section {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    border-left: 4px solid #10b981;
+    padding: 24px;
+    border-radius: 10px;
+    margin-top: 40px;
+  }
+
+  .outcome-section h3 {
+    margin: 0 0 12px 0;
+    color: #065f46;
+    font-size: 22px;
+  }
+
+  .outcome-section p {
+    margin: 0 0 12px 0;
+    color: #064e3b;
+    line-height: 1.6;
+  }
+
+  .outcome-section p:last-child {
+    margin: 0;
+    font-weight: 700;
+    font-size: 18px;
+  }
+
+  .open-all {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+
+  .open-all button {
+    padding: 12px 24px;
+    font-size: 14px;
+    cursor: pointer;
+    border: 2px solid #3b82f6;
+    border-radius: 8px;
+    background: white;
+    color: #3b82f6;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  .open-all button:hover {
+    background: #3b82f6;
+    color: white;
+  }
+
+  ol {
+    margin: 0;
+    padding-left: 20px;
+  }
+
+  ol li {
+    margin-bottom: 8px;
+    line-height: 1.6;
+    color: #4b5563;
+  }
+
+  @media (max-width: 768px) {
+    .ladder-header h1 {
+      font-size: 24px;
+    }
+    
+    .level-header {
+      padding: 16px;
+    }
+    
+    .level-number {
+      width: 40px;
+      height: 40px;
+      font-size: 20px;
+    }
+    
+    .level-info h3 {
+      font-size: 18px;
+    }
+  }
+</style>
+
+<div class="ladder-container">
+  <div class="ladder-header">
+    <h1>🚀 The Prompt Literacy Ladder™</h1>
+    <p class="subtitle">How to Move from AI Curiosity to AI Mastery</p>
+  </div>
+
+  <div class="ladder-intro">
+    <p><strong>AI is amplifying those who know how to speak its language.</strong></p>
+    <p>The biggest differentiator in the next decade won't be who has access to AI — it'll be who has <strong>prompt literacy</strong>. That's the ability to turn intent into intelligent output.</p>
+    <p>Here's the 5-level ladder every professional can climb to go from curious user to AI orchestrator. 👇</p>
+  </div>
+
+  <div class="open-all">
+    <button onclick="toggleAll()">Expand All Levels</button>
+  </div>
+
+  <div id="levelsContainer"></div>
+
+  <div class="repeatable-model">
+    <h3>🔁 The Repeatable Model</h3>
+    <p style="margin-bottom: 16px; color: #1e40af;">When you face a new challenge:</p>
+    <div class="model-steps">
+      <div class="model-step">
+        <div class="step-number">1</div>
+        <div>Start with curiosity.</div>
+      </div>
+      <div class="model-step">
+        <div class="step-number">2</div>
+        <div>Clarify your intent.</div>
+      </div>
+      <div class="model-step">
+        <div class="step-number">3</div>
+        <div>Add organizational context.</div>
+      </div>
+      <div class="model-step">
+        <div class="step-number">4</div>
+        <div>Calibrate through collaboration.</div>
+      </div>
+      <div class="model-step">
+        <div class="step-number">5</div>
+        <div>Scale strategically.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="outcome-section">
+    <h3>🌟 The Outcome</h3>
+    <p>Teams that master this ladder move from AI dabbling to AI orchestration. They gain consistency, confidence, and measurable ROI in every interaction.</p>
+    <p>Prompt literacy is the new digital fluency. Those who can lead AI — will lead the future.</p>
+  </div>
+</div>
+
+<script>
+  const levels = [
+    {
+      number: 1,
+      emoji: "🧩",
+      title: "The Curious User",
+      mindset: "I know AI can help me, but I'm exploring how.",
+      description: "Start with curiosity. Ask questions. Test assumptions. See what happens when you change your wording. You're learning how AI thinks.",
+      prompts: [
+        "Explain [topic] as if I'm [audience].",
+        "Give me 3 ideas for [goal] and 1 risk I should consider."
+      ],
+      coachingTip: "Encourage breadth of experimentation. Try five versions of the same ask — curiosity is your classroom.",
+      framework: null
+    },
+    {
+      number: 2,
+      emoji: "🧱",
+      title: "The Intent Clarifier",
+      mindset: "I know what I need; I must express it precisely.",
+      description: "Prompting becomes powerful when you're clear. Define your expectations up front.",
+      framework: {
+        name: "R–T–F (Role, Task, Format)",
+        example: "Act as a Compensation Analyst. Analyze this dataset and summarize three market risks in bullet form."
+      },
+      coachingTip: "Start building a Prompt Library — tag your best-performing structures for reuse and training."
+    },
+    {
+      number: 3,
+      emoji: "🌐",
+      title: "The System Thinker",
+      mindset: "I know the ecosystem — I'll teach AI my world.",
+      description: "AI can't mirror what it doesn't understand. Feed it your context — mission, tone, audience, and priorities.",
+      framework: {
+        name: "C–A–R–E (Context, Action, Result, Emotion)",
+        steps: [
+          "<strong>Context:</strong> This memo is for senior HR leaders.",
+          "<strong>Action:</strong> Summarize FY26 compensation budget highlights.",
+          "<strong>Result:</strong> Should read as an executive brief.",
+          "<strong>Emotion:</strong> Inspire confidence and fiscal responsibility."
+        ]
+      },
+      coachingTip: "Treat AI like a new hire. Show examples of excellence. Don't just tell — train."
+    },
+    {
+      number: 4,
+      emoji: "🔁",
+      title: "The AI Collaborator",
+      mindset: "I can co-create with AI and refine iteratively.",
+      description: "You've stopped using AI — now you're working with it.",
+      framework: {
+        name: "I–D–E–A (Instruct, Draft, Evaluate, Adjust)",
+        steps: [
+          "<strong>Draft:</strong> Create an HR communication plan for MERIT rollout.",
+          "<strong>Evaluate:</strong> Critique tone and clarity from a leader's view.",
+          "<strong>Adjust:</strong> Refine for transparency and trust."
+        ]
+      },
+      coachingTip: "Run prompt loops — short feedback cycles until the output feels truly yours."
+    },
+    {
+      number: 5,
+      emoji: "🧠",
+      title: "The AI Orchestrator",
+      mindset: "I deploy AI strategically across workflows.",
+      description: "This is mastery. You're not just prompting — you're designing systems.",
+      framework: {
+        name: "S–E–A–T (Situation, Expectation, Accountability, Timeline)",
+        steps: [
+          "<strong>Situation:</strong> Onboarding process for clinicians.",
+          "<strong>Expectation:</strong> Build an AI checklist workflow.",
+          "<strong>Accountability:</strong> HR Ops validates.",
+          "<strong>Timeline:</strong> Prototype in 2 weeks."
+        ]
+      },
+      coachingTip: "Integrate prompting into leadership literacy. AI becomes a part of governance — not a gadget."
+    }
+  ];
+
+  function renderLevels() {
+    const container = document.getElementById('levelsContainer');
+    container.innerHTML = '';
+
+    levels.forEach(level => {
+      const card = document.createElement('div');
+      card.className = `level-card level-${level.number}`;
+      card.id = `level-${level.number}`;
+
+      let contentHTML = `
+        <div class="level-header" onclick="toggleLevel(${level.number})">
+          <div class="level-title">
+            <div class="level-number">${level.number}</div>
+            <div class="level-info">
+              <h3>${level.emoji} Level ${level.number} — ${level.title}</h3>
+              <p>Mindset: "${level.mindset}"</p>
+            </div>
+          </div>
+          <div class="expand-icon">▼</div>
+        </div>
+        <div class="level-content">
+          <p style="line-height: 1.6; color: #374151; margin-bottom: 16px;">${level.description}</p>
+      `;
+
+      if (level.prompts) {
+        contentHTML += `
+          <div class="prompt-examples">
+            <h4>💡 Prompts to Try:</h4>
+            ${level.prompts.map(prompt => `
+              <div class="prompt-item" onclick="copyPrompt(this)">${prompt}</div>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      if (level.framework) {
+        contentHTML += `
+          <div class="framework-box">
+            <div class="framework-title">🧭 Framework: ${level.framework.name}</div>
+            <div class="framework-content">
+        `;
+
+        if (level.framework.example) {
+          contentHTML += `<p style="margin: 8px 0 0 0;">"${level.framework.example}"</p>`;
+        }
+
+        if (level.framework.steps) {
+          contentHTML += '<ol style="margin-top: 8px;">';
+          level.framework.steps.forEach(step => {
+            contentHTML += `<li>${step}</li>`;
+          });
+          contentHTML += '</ol>';
+        }
+
+        contentHTML += `
+            </div>
+          </div>
+        `;
+      }
+
+      contentHTML += `
+          <div class="coaching-tip">
+            <strong>🎯 Coaching Tip:</strong>
+            <p>${level.coachingTip}</p>
+          </div>
+        </div>
+      `;
+
+      card.innerHTML = contentHTML;
+      container.appendChild(card);
+    });
+  }
+
+  function toggleLevel(number) {
+    const card = document.getElementById(`level-${number}`);
+    card.classList.toggle('open');
+  }
+
+  let allOpen = false;
+  function toggleAll() {
+    allOpen = !allOpen;
+    const cards = document.querySelectorAll('.level-card');
+    const button = document.querySelector('.open-all button');
+    
+    cards.forEach(card => {
+      if (allOpen) {
+        card.classList.add('open');
+      } else {
+        card.classList.remove('open');
+      }
+    });
+
+    button.textContent = allOpen ? 'Collapse All Levels' : 'Expand All Levels';
+  }
+
+  function copyPrompt(element) {
+    const text = element.textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const original = element.style.background;
+      element.style.background = '#d1fae5';
+      setTimeout(() => {
+        element.style.background = original;
+      }, 500);
+    });
+  }
+
+  // Initialize
+  renderLevels();
+</script>
