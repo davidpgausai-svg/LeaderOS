@@ -22,6 +22,7 @@ import PestleTemplate from "@/pages/templates/pestle";
 import PortersFiveForcesTemplate from "@/pages/templates/porters-five-forces";
 import FirstPrinciplesTemplate from "@/pages/templates/first-principles";
 import AIResourcesTemplate from "@/pages/templates/ai-resources";
+import PromptLiteracyLibrary from "@/pages/templates/prompt-literacy-library";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Register from "@/pages/register";
@@ -80,6 +81,7 @@ function Router() {
         <Route path="/templates/eisenhower-matrix" component={EisenhowerMatrixTemplate} />
         <Route path="/templates/first-principles" component={FirstPrinciplesTemplate} />
         <Route path="/templates/ai-resources" component={AIResourcesTemplate} />
+        <Route path="/templates/prompt-literacy-library" component={PromptLiteracyLibrary} />
         <Route path="/settings" component={Settings} />
         <Route path="/super-admin" component={SuperAdmin} />
         <Route component={NotFound} />

@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Target, ClipboardList, LayoutGrid, Clock, FileText, ChevronRight, FileSpreadsheet, Radar, Swords, Atom, Brain } from "lucide-react";
+import { Target, ClipboardList, LayoutGrid, Clock, FileText, ChevronRight, FileSpreadsheet, Radar, Swords, Atom, Brain, GraduationCap } from "lucide-react";
 import type { TemplateType } from "@shared/schema";
 
 type TemplateInfo = {
@@ -99,6 +99,16 @@ const templates: TemplateInfo[] = [
     readTime: "Browse",
     path: "/templates/ai-resources",
     color: "text-violet-600",
+  },
+  {
+    id: "prompt-literacy-library",
+    title: "Prompt Literacy Library",
+    description: "The 5-level ladder to move from AI curiosity to AI mastery. Learn frameworks like RTF, CARE, IDEA, and SEAT.",
+    icon: GraduationCap,
+    category: "Resources",
+    readTime: "15 min",
+    path: "/templates/prompt-literacy-library",
+    color: "text-amber-600",
   },
 ];
 
