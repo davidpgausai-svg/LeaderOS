@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Target, ClipboardList, LayoutGrid, Clock, FileText, ChevronRight, FileSpreadsheet, Radar, Swords, Atom, Brain, GraduationCap } from "lucide-react";
+import { Target, ClipboardList, LayoutGrid, Clock, FileText, ChevronRight, FileSpreadsheet, Radar, Swords, Atom, Brain, GraduationCap, Layers } from "lucide-react";
 import type { TemplateType } from "@shared/schema";
 
 type TemplateInfo = {
@@ -109,6 +109,16 @@ const templates: TemplateInfo[] = [
     readTime: "15 min",
     path: "/templates/prompt-literacy-library",
     color: "text-amber-600",
+  },
+  {
+    id: "ogsm",
+    title: "OGSM Framework",
+    description: "Turn a broad strategic objective into measurable goals, strategic pillars, and KPIs on one page.",
+    icon: Layers,
+    category: "Strategic Planning",
+    readTime: "12 min",
+    path: "/templates/ogsm",
+    color: "text-orange-600",
   },
 ];
 
