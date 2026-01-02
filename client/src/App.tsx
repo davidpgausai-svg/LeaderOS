@@ -21,6 +21,7 @@ import StrategyOnAPage from "@/pages/templates/strategy-on-a-page";
 import PestleTemplate from "@/pages/templates/pestle";
 import PortersFiveForcesTemplate from "@/pages/templates/porters-five-forces";
 import FirstPrinciplesTemplate from "@/pages/templates/first-principles";
+import AIResourcesTemplate from "@/pages/templates/ai-resources";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Register from "@/pages/register";
@@ -78,6 +79,7 @@ function Router() {
         <Route path="/templates/smart-goals" component={SmartGoalsTemplate} />
         <Route path="/templates/eisenhower-matrix" component={EisenhowerMatrixTemplate} />
         <Route path="/templates/first-principles" component={FirstPrinciplesTemplate} />
+        <Route path="/templates/ai-resources" component={AIResourcesTemplate} />
         <Route path="/settings" component={Settings} />
         <Route path="/super-admin" component={SuperAdmin} />
         <Route component={NotFound} />

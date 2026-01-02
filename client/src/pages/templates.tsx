@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Target, ClipboardList, LayoutGrid, Clock, FileText, ChevronRight, FileSpreadsheet, Radar, Swords, Atom } from "lucide-react";
+import { Target, ClipboardList, LayoutGrid, Clock, FileText, ChevronRight, FileSpreadsheet, Radar, Swords, Atom, Brain } from "lucide-react";
 import type { TemplateType } from "@shared/schema";
 
 type TemplateInfo = {
@@ -90,9 +90,19 @@ const templates: TemplateInfo[] = [
     path: "/templates/first-principles",
     color: "text-cyan-600",
   },
+  {
+    id: "ai-resources",
+    title: "AI Resources",
+    description: "Curated directory of AI and LLM resources from major research companies including APIs, documentation, and tools.",
+    icon: Brain,
+    category: "Resources",
+    readTime: "Browse",
+    path: "/templates/ai-resources",
+    color: "text-violet-600",
+  },
 ];
 
-const defaultCategories = ["All Templates", "Strategic Planning", "Project Management", "Daily Tasks"];
+const defaultCategories = ["All Templates", "Strategic Planning", "Project Management", "Daily Tasks", "Resources"];
 
 export default function Templates() {
   const [selectedCategory, setSelectedCategory] = useState("All Templates");
