@@ -62,7 +62,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ChevronLeft, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen, TrendingUp, AlertTriangle, Users, Megaphone, Link2, ExternalLink, X, Clock, ListChecks, StickyNote, Tag, Indent, Outdent, Hash } from "lucide-react";
+import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ChevronLeft, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen, TrendingUp, AlertTriangle, Users, Megaphone, Link2, ExternalLink, X, Clock, ListChecks, StickyNote, Tag, Indent, Outdent, Hash, List, LayoutGrid, GripVertical } from "lucide-react";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { PeopleSelector } from "@/components/ui/people-selector";
 import { useLocation } from "wouter";
@@ -144,6 +144,10 @@ export default function Strategies() {
   const [notesModalAction, setNotesModalAction] = useState<any>(null);
   const [actionNotes, setActionNotes] = useState("");
   const [actionPeopleModalAction, setActionPeopleModalAction] = useState<any>(null);
+  
+  // Kanban view state (per-project toggle)
+  const [kanbanViewProjects, setKanbanViewProjects] = useState<Set<string>>(new Set());
+  const [draggedActionId, setDraggedActionId] = useState<string | null>(null);
   
   // Executive Goal tagging state
   const [executiveGoalModalStrategy, setExecutiveGoalModalStrategy] = useState<any>(null);
@@ -2031,6 +2035,118 @@ export default function Strategies() {
                                   {/* Expanded Actions */}
                                   {isProjectExpanded && (
                                     <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30 px-4 py-2">
+                                      {/* List/Kanban toggle */}
+                                      {projectActions.length > 0 && (
+                                        <div className="flex items-center justify-end mb-2">
+                                          <div className="flex items-center bg-gray-200 dark:bg-gray-700 rounded-lg p-0.5">
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              className={`h-6 px-2 py-0 text-xs rounded-md ${!kanbanViewProjects.has(project.id) ? 'bg-white dark:bg-gray-600 shadow-sm' : 'hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setKanbanViewProjects(prev => { const next = new Set(prev); next.delete(project.id); return next; });
+                                              }}
+                                              data-testid={`toggle-list-${project.id}`}
+                                            >
+                                              <List className="w-3 h-3 mr-1" />
+                                              List
+                                            </Button>
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              className={`h-6 px-2 py-0 text-xs rounded-md ${kanbanViewProjects.has(project.id) ? 'bg-white dark:bg-gray-600 shadow-sm' : 'hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setKanbanViewProjects(prev => { const next = new Set(prev); next.add(project.id); return next; });
+                                              }}
+                                              data-testid={`toggle-kanban-${project.id}`}
+                                            >
+                                              <LayoutGrid className="w-3 h-3 mr-1" />
+                                              Board
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* Kanban Board View */}
+                                      {kanbanViewProjects.has(project.id) ? (
+                                        <div className="flex gap-2 overflow-x-auto pb-2" data-testid={`kanban-board-${project.id}`}>
+                                          {actionStatusOptions.map((statusCol) => {
+                                            const columnActions = projectActions.filter((a: any) => a.status === statusCol.value);
+                                            return (
+                                              <div
+                                                key={statusCol.value}
+                                                className="flex-1 min-w-[160px] max-w-[220px]"
+                                                onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('ring-2', 'ring-blue-400'); }}
+                                                onDragLeave={(e) => { e.currentTarget.classList.remove('ring-2', 'ring-blue-400'); }}
+                                                onDrop={(e) => {
+                                                  e.preventDefault();
+                                                  e.currentTarget.classList.remove('ring-2', 'ring-blue-400');
+                                                  if (draggedActionId && canEditAllStrategies() && !isStrategyReadOnly(strategy.id)) {
+                                                    const action = projectActions.find((a: any) => a.id === draggedActionId);
+                                                    if (action && action.status !== statusCol.value) {
+                                                      updateActionStatusMutation.mutate({ action, status: statusCol.value });
+                                                    }
+                                                    setDraggedActionId(null);
+                                                  }
+                                                }}
+                                                data-testid={`kanban-column-${statusCol.value}-${project.id}`}
+                                              >
+                                                <div className="flex items-center gap-1.5 mb-2 px-1">
+                                                  <div className={`w-2.5 h-2.5 rounded-full ${getActionStatusCircleColor(statusCol.value)}`} />
+                                                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{statusCol.label}</span>
+                                                  <span className="text-xs text-gray-400 dark:text-gray-500">({columnActions.length})</span>
+                                                </div>
+                                                <div className="bg-gray-100 dark:bg-gray-800/50 rounded-lg p-1.5 min-h-[80px] space-y-1.5 transition-all">
+                                                  {columnActions.map((action: any) => {
+                                                    const dueDateDisplay = getActionDueDateDisplay(action);
+                                                    const people = getActionPeople(action.id);
+                                                    const peopleNames = people.map((p: any) => {
+                                                      const user = users?.find((u: any) => u.id === p.userId);
+                                                      return user ? (user.firstName || user.email?.split('@')[0] || '?') : '?';
+                                                    });
+                                                    return (
+                                                      <div
+                                                        key={action.id}
+                                                        draggable={canEditAllStrategies() && !isStrategyReadOnly(strategy.id)}
+                                                        onDragStart={(e) => {
+                                                          setDraggedActionId(action.id);
+                                                          e.dataTransfer.effectAllowed = 'move';
+                                                        }}
+                                                        onDragEnd={() => setDraggedActionId(null)}
+                                                        className={`bg-white dark:bg-gray-700 rounded-lg p-2 shadow-sm border border-gray-200 dark:border-gray-600 cursor-pointer hover:shadow-md transition-shadow ${
+                                                          draggedActionId === action.id ? 'opacity-50' : ''
+                                                        } ${canEditAllStrategies() && !isStrategyReadOnly(strategy.id) ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                                                        onClick={() => setChecklistModalAction(action)}
+                                                        data-testid={`kanban-card-${action.id}`}
+                                                      >
+                                                        <p className="text-xs font-medium text-gray-800 dark:text-gray-200 mb-1.5 line-clamp-2">{action.title}</p>
+                                                        {dueDateDisplay && (
+                                                          <div className="mb-1.5">
+                                                            <Badge className={`text-[10px] px-1 py-0 ${dueDateDisplay.color}`}>
+                                                              {dueDateDisplay.date}
+                                                            </Badge>
+                                                          </div>
+                                                        )}
+                                                        {peopleNames.length > 0 && (
+                                                          <div className="flex items-center gap-1">
+                                                            <Users className="w-2.5 h-2.5 text-blue-500" />
+                                                            <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
+                                                              {peopleNames.slice(0, 2).join(', ')}{peopleNames.length > 2 ? ` +${peopleNames.length - 2}` : ''}
+                                                            </span>
+                                                          </div>
+                                                        )}
+                                                      </div>
+                                                    );
+                                                  })}
+                                                </div>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      ) : (
+                                      /* List View (default) */
                                       <div className="space-y-1.5">
                                         {projectActions.length > 0 ? projectActions.map((action: any) => {
                                           const dueDateDisplay = getActionDueDateDisplay(action);
@@ -2270,6 +2386,8 @@ export default function Strategies() {
                                             No actions yet
                                           </div>
                                         )}
+                                      </div>
+                                      )}
                                         
                                         {/* Add Action button inside project */}
                                         {canEditAllStrategies() && !isStrategyReadOnly(strategy.id) && (
@@ -2289,7 +2407,6 @@ export default function Strategies() {
                                             Add Action
                                           </Button>
                                         )}
-                                      </div>
                                     </div>
                                   )}
                                 </div>
