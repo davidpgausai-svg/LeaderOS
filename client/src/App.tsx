@@ -13,17 +13,6 @@ import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
 import Timeline from "@/pages/timeline";
 import Calendar from "@/pages/calendar";
-import Templates from "@/pages/templates";
-import SwotTemplate from "@/pages/templates/swot";
-import SmartGoalsTemplate from "@/pages/templates/smart-goals";
-import EisenhowerMatrixTemplate from "@/pages/templates/eisenhower-matrix";
-import StrategyOnAPage from "@/pages/templates/strategy-on-a-page";
-import PestleTemplate from "@/pages/templates/pestle";
-import PortersFiveForcesTemplate from "@/pages/templates/porters-five-forces";
-import FirstPrinciplesTemplate from "@/pages/templates/first-principles";
-import AIResourcesTemplate from "@/pages/templates/ai-resources";
-import PromptLiteracyLibrary from "@/pages/templates/prompt-literacy-library";
-import OgsmTemplate from "@/pages/templates/ogsm";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Register from "@/pages/register";
@@ -73,17 +62,6 @@ function Router() {
         <Route path="/graph">{() => { window.location.replace('/reports?tab=graph'); return null; }}</Route>
         <Route path="/meeting-notes" component={MeetingNotes} />
         <Route path="/reports" component={Reports} />
-        <Route path="/templates" component={Templates} />
-        <Route path="/templates/strategy-on-a-page" component={StrategyOnAPage} />
-        <Route path="/templates/pestle" component={PestleTemplate} />
-        <Route path="/templates/porters-five-forces" component={PortersFiveForcesTemplate} />
-        <Route path="/templates/swot" component={SwotTemplate} />
-        <Route path="/templates/smart-goals" component={SmartGoalsTemplate} />
-        <Route path="/templates/eisenhower-matrix" component={EisenhowerMatrixTemplate} />
-        <Route path="/templates/first-principles" component={FirstPrinciplesTemplate} />
-        <Route path="/templates/ai-resources" component={AIResourcesTemplate} />
-        <Route path="/templates/prompt-literacy-library" component={PromptLiteracyLibrary} />
-        <Route path="/templates/ogsm" component={OgsmTemplate} />
         <Route path="/settings" component={Settings} />
         <Route path="/super-admin" component={SuperAdmin} />
         <Route component={NotFound} />

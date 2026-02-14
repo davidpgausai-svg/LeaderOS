@@ -18,8 +18,6 @@ import {
   ChevronLeft,
   ChevronRight,
   PenLine,
-  BookOpen,
-  LayoutTemplate,
   CalendarDays,
   GanttChart,
   Crown,
@@ -37,7 +35,6 @@ const secondaryNavigation = [
   { name: "Calendar", href: "/calendar", icon: CalendarDays },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Meeting Notes", href: "/meeting-notes", icon: PenLine },
-  { name: "Templates", href: "/templates", icon: LayoutTemplate },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
@@ -294,44 +291,6 @@ export function Sidebar() {
           );
         })()}
 
-        {/* Documentation Link - External */}
-        <a 
-          href="https://leaderos.app/support" 
-          target="_blank" 
-          rel="noopener noreferrer"
-        >
-          {isCollapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div
-                  className="flex items-center justify-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm hover:bg-black/5"
-                  style={{
-                    backgroundColor: 'transparent',
-                    color: '#1D1D1F',
-                  }}
-                  data-testid="link-documentation"
-                >
-                  <BookOpen className="h-4 w-4" style={{ color: '#86868B' }} />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                Documentation
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <div
-              className="flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm hover:bg-black/5"
-              style={{
-                backgroundColor: 'transparent',
-                color: '#1D1D1F',
-              }}
-              data-testid="link-documentation"
-            >
-              <BookOpen className="mr-3 h-4 w-4" style={{ color: '#86868B' }} />
-              Documentation
-            </div>
-          )}
-        </a>
       </nav>
       
       {/* User Profile */}
