@@ -34,7 +34,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -512,14 +511,13 @@ export default function IntakeForms() {
       </div>
 
       <Dialog open={isModalOpen} onOpenChange={(open) => { if (!open) closeModal(); }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
-          <DialogHeader className="flex-shrink-0">
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="w-5 h-5" />
               {editingForm ? 'Edit Intake Form' : 'Create Intake Form'}
             </DialogTitle>
           </DialogHeader>
-          <ScrollArea className="flex-1 min-h-0 pr-4">
             <div className="space-y-6 pb-4">
               <div className="space-y-4">
                 <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Basic Info</h3>
@@ -749,8 +747,7 @@ export default function IntakeForms() {
                 </div>
               </div>
             </div>
-          </ScrollArea>
-          <div className="flex justify-end gap-3 pt-4 border-t flex-shrink-0">
+          <div className="flex justify-end gap-3 pt-4 border-t">
             <Button variant="outline" onClick={closeModal} disabled={isSaving}>Cancel</Button>
             <Button onClick={handleSubmit} disabled={isSaving} style={{ backgroundColor: '#007AFF' }}>
               {isSaving ? 'Saving...' : editingForm ? 'Update Form' : 'Create Form'}
