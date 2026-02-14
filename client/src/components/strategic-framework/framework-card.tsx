@@ -39,6 +39,8 @@ interface FrameworkCardProps {
   changeChampionAssignment?: string;
   reinforcementPlan?: string;
   benefitsRealizationPlan?: string;
+  hiddenContinuumSections?: string;
+  customContinuumSections?: string;
 }
 
 export function FrameworkCard({ 
@@ -60,7 +62,9 @@ export function FrameworkCard({
   riskExposureRating,
   changeChampionAssignment,
   reinforcementPlan,
-  benefitsRealizationPlan
+  benefitsRealizationPlan,
+  hiddenContinuumSections,
+  customContinuumSections,
 }: FrameworkCardProps) {
   const [expandedGoal, setExpandedGoal] = useState(false);
   const [expandedDescription, setExpandedDescription] = useState(false);
@@ -186,42 +190,37 @@ export function FrameworkCard({
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-1 space-y-2">
-                <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
-                  <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Case for Change</div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400">{caseForChange || "To be defined"}</div>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
-                  <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Vision Statement</div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400">{visionStatement || "To be defined"}</div>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
-                  <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Success Metrics</div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400">{successMetrics || "To be defined"}</div>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
-                  <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Stakeholder Map</div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400">{stakeholderMap || "To be defined"}</div>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
-                  <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Readiness Rating (RAG)</div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400">{readinessRating || "To be defined"}</div>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
-                  <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Risk Exposure Rating</div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400">{riskExposureRating || "To be defined"}</div>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
-                  <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Change Champion Assignment</div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400">{changeChampionAssignment || "To be defined"}</div>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
-                  <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Reinforcement Plan</div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400">{reinforcementPlan || "To be defined"}</div>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
-                  <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Benefits Realization Plan</div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400">{benefitsRealizationPlan || "To be defined"}</div>
-                </div>
+                {(() => {
+                  const hidden: string[] = (() => { try { return JSON.parse(hiddenContinuumSections || "[]"); } catch { return []; } })();
+                  const custom: {label: string; value: string}[] = (() => { try { return JSON.parse(customContinuumSections || "[]"); } catch { return []; } })();
+                  const allSections = [
+                    { key: "caseForChange", label: "Case for Change", value: caseForChange },
+                    { key: "visionStatement", label: "Vision Statement", value: visionStatement },
+                    { key: "successMetrics", label: "Success Metrics", value: successMetrics },
+                    { key: "stakeholderMap", label: "Stakeholder Map", value: stakeholderMap },
+                    { key: "readinessRating", label: "Readiness Rating (RAG)", value: readinessRating },
+                    { key: "riskExposureRating", label: "Risk Exposure Rating", value: riskExposureRating },
+                    { key: "changeChampionAssignment", label: "Change Champion Assignment", value: changeChampionAssignment },
+                    { key: "reinforcementPlan", label: "Reinforcement Plan", value: reinforcementPlan },
+                    { key: "benefitsRealizationPlan", label: "Benefits Realization Plan", value: benefitsRealizationPlan },
+                  ].filter(s => !hidden.includes(s.key));
+                  return (
+                    <>
+                      {allSections.map((s) => (
+                        <div key={s.key} className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
+                          <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{s.label}</div>
+                          <div className="text-xs text-gray-600 dark:text-gray-400">{s.value || "To be defined"}</div>
+                        </div>
+                      ))}
+                      {custom.map((s, idx) => (
+                        <div key={`custom-${idx}`} className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
+                          <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{s.label}</div>
+                          <div className="text-xs text-gray-600 dark:text-gray-400">{s.value || "To be defined"}</div>
+                        </div>
+                      ))}
+                    </>
+                  );
+                })()}
               </CollapsibleContent>
             </Collapsible>
           </div>

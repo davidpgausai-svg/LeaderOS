@@ -112,43 +112,43 @@ export function ViewStrategyModal({ open, onOpenChange, strategy }: ViewStrategy
               Comprehensive change management framework for this strategy
             </p>
 
-            <div className="space-y-4">
-              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                <InfoField label="1. Case for Change" value={strategy.caseForChange} />
-              </div>
-
-              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                <InfoField label="2. Vision Statement" value={strategy.visionStatement} />
-              </div>
-
-              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                <InfoField label="3. Success Metrics" value={strategy.successMetrics} />
-              </div>
-
-              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                <InfoField label="4. Stakeholder Map" value={strategy.stakeholderMap} />
-              </div>
-
-              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                <InfoField label="5. Readiness Rating (RAG)" value={strategy.readinessRating} />
-              </div>
-
-              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                <InfoField label="6. Risk Exposure Rating" value={strategy.riskExposureRating} />
-              </div>
-
-              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                <InfoField label="7. Change Champion Assignment" value={strategy.changeChampionAssignment} />
-              </div>
-
-              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                <InfoField label="8. Reinforcement Plan" value={strategy.reinforcementPlan} />
-              </div>
-
-              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                <InfoField label="9. Benefits Realization Plan" value={strategy.benefitsRealizationPlan} />
-              </div>
-            </div>
+            {(() => {
+              const hiddenSections: string[] = (() => { try { return JSON.parse((strategy as any).hiddenContinuumSections || "[]"); } catch { return []; } })();
+              const customSections: {label: string; value: string}[] = (() => { try { return JSON.parse((strategy as any).customContinuumSections || "[]"); } catch { return []; } })();
+              const builtInSections = [
+                { key: "caseForChange", label: "Case for Change" },
+                { key: "visionStatement", label: "Vision Statement" },
+                { key: "successMetrics", label: "Success Metrics" },
+                { key: "stakeholderMap", label: "Stakeholder Map" },
+                { key: "readinessRating", label: "Readiness Rating (RAG)" },
+                { key: "riskExposureRating", label: "Risk Exposure Rating" },
+                { key: "changeChampionAssignment", label: "Change Champion Assignment" },
+                { key: "reinforcementPlan", label: "Reinforcement Plan" },
+                { key: "benefitsRealizationPlan", label: "Benefits Realization Plan" },
+              ];
+              const visibleBuiltIn = builtInSections.filter(s => !hiddenSections.includes(s.key));
+              let counter = 0;
+              return (
+                <div className="space-y-4">
+                  {visibleBuiltIn.map((section) => {
+                    counter++;
+                    return (
+                      <div key={section.key} className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                        <InfoField label={`${counter}. ${section.label}`} value={(strategy as any)[section.key]} />
+                      </div>
+                    );
+                  })}
+                  {customSections.map((section, idx) => {
+                    counter++;
+                    return (
+                      <div key={`custom-${idx}`} className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                        <InfoField label={`${counter}. ${section.label}`} value={section.value} />
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         </div>
 

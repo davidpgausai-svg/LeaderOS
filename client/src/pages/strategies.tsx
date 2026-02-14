@@ -2604,44 +2604,45 @@ export default function Strategies() {
               </div>
 
               {/* Numbered Continuum Fields */}
-              <div className="space-y-3">
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                  <div className="font-medium text-gray-700 dark:text-gray-300 text-sm">1. Case for Change</div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{continuumModalStrategy.caseForChange || "To be defined"}</p>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                  <div className="font-medium text-gray-700 dark:text-gray-300 text-sm">2. Vision Statement</div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{continuumModalStrategy.visionStatement || "To be defined"}</p>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                  <div className="font-medium text-gray-700 dark:text-gray-300 text-sm">3. Success Metrics</div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{continuumModalStrategy.successMetrics || "To be defined"}</p>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                  <div className="font-medium text-gray-700 dark:text-gray-300 text-sm">4. Stakeholder Map</div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{continuumModalStrategy.stakeholderMap || "To be defined"}</p>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                  <div className="font-medium text-gray-700 dark:text-gray-300 text-sm">5. Readiness Rating (RAG)</div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{continuumModalStrategy.readinessRating || "To be defined"}</p>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                  <div className="font-medium text-gray-700 dark:text-gray-300 text-sm">6. Risk Exposure Rating</div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{continuumModalStrategy.riskExposureRating || "To be defined"}</p>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                  <div className="font-medium text-gray-700 dark:text-gray-300 text-sm">7. Change Champion</div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{continuumModalStrategy.changeChampionAssignment || "To be defined"}</p>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                  <div className="font-medium text-gray-700 dark:text-gray-300 text-sm">8. Reinforcement Plan</div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{continuumModalStrategy.reinforcementPlan || "To be defined"}</p>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                  <div className="font-medium text-gray-700 dark:text-gray-300 text-sm">9. Benefits Realization</div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{continuumModalStrategy.benefitsRealizationPlan || "To be defined"}</p>
-                </div>
-              </div>
+              {(() => {
+                const hiddenSections: string[] = (() => { try { return JSON.parse(continuumModalStrategy.hiddenContinuumSections || "[]"); } catch { return []; } })();
+                const customSections: {label: string; value: string}[] = (() => { try { return JSON.parse(continuumModalStrategy.customContinuumSections || "[]"); } catch { return []; } })();
+                const builtInSections = [
+                  { key: "caseForChange", label: "Case for Change" },
+                  { key: "visionStatement", label: "Vision Statement" },
+                  { key: "successMetrics", label: "Success Metrics" },
+                  { key: "stakeholderMap", label: "Stakeholder Map" },
+                  { key: "readinessRating", label: "Readiness Rating (RAG)" },
+                  { key: "riskExposureRating", label: "Risk Exposure Rating" },
+                  { key: "changeChampionAssignment", label: "Change Champion" },
+                  { key: "reinforcementPlan", label: "Reinforcement Plan" },
+                  { key: "benefitsRealizationPlan", label: "Benefits Realization" },
+                ];
+                const visibleBuiltIn = builtInSections.filter(s => !hiddenSections.includes(s.key));
+                let counter = 0;
+                return (
+                  <div className="space-y-3">
+                    {visibleBuiltIn.map((section) => {
+                      counter++;
+                      return (
+                        <div key={section.key} className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                          <div className="font-medium text-gray-700 dark:text-gray-300 text-sm">{counter}. {section.label}</div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{(continuumModalStrategy as any)[section.key] || "To be defined"}</p>
+                        </div>
+                      );
+                    })}
+                    {customSections.map((section, idx) => {
+                      counter++;
+                      return (
+                        <div key={`custom-${idx}`} className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+                          <div className="font-medium text-gray-700 dark:text-gray-300 text-sm">{counter}. {section.label}</div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{section.value || "To be defined"}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           )}
         </DialogContent>

@@ -24,13 +24,25 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Loader2, Info } from "lucide-react";
+import { Sparkles, Loader2, Info, X, Plus } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
+const BUILT_IN_SECTIONS = [
+  { key: "caseForChange", label: "Case for Change", placeholder: "Why is this change necessary?" },
+  { key: "visionStatement", label: "Vision Statement", placeholder: "What will success look like?" },
+  { key: "successMetrics", label: "Success Metrics", placeholder: "How will we measure success?" },
+  { key: "stakeholderMap", label: "Stakeholder Map", placeholder: "Who are the key stakeholders?" },
+  { key: "readinessRating", label: "Readiness Rating (RAG)", placeholder: "Red/Amber/Green assessment" },
+  { key: "riskExposureRating", label: "Risk Exposure Rating", placeholder: "Assessment of risks and potential issues" },
+  { key: "changeChampionAssignment", label: "Change Champion Assignment", placeholder: "Who will champion this change?" },
+  { key: "reinforcementPlan", label: "Reinforcement Plan", placeholder: "How will we reinforce and sustain the change?" },
+  { key: "benefitsRealizationPlan", label: "Benefits Realization Plan", placeholder: "How will we realize and track benefits?" },
+];
 
 interface CreateStrategyModalProps {
   open: boolean;
@@ -42,6 +54,11 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [hiddenSections, setHiddenSections] = useState<Set<string>>(new Set());
+  const [customSections, setCustomSections] = useState<Array<{ id: string; label: string; value: string }>>([]);
+  const [addingCustomSection, setAddingCustomSection] = useState(false);
+  const [newSectionLabel, setNewSectionLabel] = useState("");
+  const [newSectionValue, setNewSectionValue] = useState("");
   const { openModal: openUpgradeModal } = useUpgradeModal();
 
   const form = useForm<InsertStrategy>({
@@ -96,6 +113,11 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
         description: "Priority created successfully",
       });
       form.reset();
+      setHiddenSections(new Set());
+      setCustomSections([]);
+      setAddingCustomSection(false);
+      setNewSectionLabel("");
+      setNewSectionValue("");
       onOpenChange(false);
     },
     onError: (error: any) => {
@@ -158,21 +180,15 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
       });
       const data = await response.json();
 
-      if (!data.caseForChange || !data.visionStatement || !data.successMetrics || 
-          !data.stakeholderMap || !data.readinessRating || !data.riskExposureRating || 
-          !data.changeChampionAssignment || !data.reinforcementPlan || !data.benefitsRealizationPlan) {
+      const visibleKeys = BUILT_IN_SECTIONS.filter(s => !hiddenSections.has(s.key)).map(s => s.key);
+      const hasAllVisible = visibleKeys.every(key => data[key]);
+      if (!hasAllVisible) {
         throw new Error("Incomplete data received from AI");
       }
 
-      form.setValue("caseForChange", data.caseForChange);
-      form.setValue("visionStatement", data.visionStatement);
-      form.setValue("successMetrics", data.successMetrics);
-      form.setValue("stakeholderMap", data.stakeholderMap);
-      form.setValue("readinessRating", data.readinessRating);
-      form.setValue("riskExposureRating", data.riskExposureRating);
-      form.setValue("changeChampionAssignment", data.changeChampionAssignment);
-      form.setValue("reinforcementPlan", data.reinforcementPlan);
-      form.setValue("benefitsRealizationPlan", data.benefitsRealizationPlan);
+      visibleKeys.forEach(key => {
+        form.setValue(key as any, data[key]);
+      });
 
       toast({
         title: "Success",
@@ -191,11 +207,24 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
   };
 
   const onSubmit = (data: InsertStrategy) => {
-    createStrategyMutation.mutate(data);
+    createStrategyMutation.mutate({
+      ...data,
+      hiddenContinuumSections: JSON.stringify(Array.from(hiddenSections)),
+      customContinuumSections: JSON.stringify(customSections.map(s => ({ label: s.label, value: s.value }))),
+    });
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          setHiddenSections(new Set());
+          setCustomSections([]);
+          setAddingCustomSection(false);
+          setNewSectionLabel("");
+          setNewSectionValue("");
+        }
+        onOpenChange(isOpen);
+      }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Strategic Priority</DialogTitle>
@@ -359,174 +388,125 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
             </div>
 
             <div className="border-t pt-6 space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Change Continuum
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Change Continuum
+                </h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAddingCustomSection(true)}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Section
+                </Button>
+              </div>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Define the change management framework for this priority.
               </p>
 
-              <FormField
-                control={form.control}
-                name="caseForChange"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Case for Change</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        rows={2}
-                        placeholder="Why is this change necessary?"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {BUILT_IN_SECTIONS.filter(section => !hiddenSections.has(section.key)).map(section => (
+                <FormField
+                  key={section.key}
+                  control={form.control}
+                  name={section.key as any}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center justify-between">
+                        <span>{section.label}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setHiddenSections(prev => {
+                              const next = new Set(prev);
+                              next.add(section.key);
+                              return next;
+                            });
+                          }}
+                          className="text-gray-400 hover:text-red-500 transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={2}
+                          placeholder={section.placeholder}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ))}
 
-              <FormField
-                control={form.control}
-                name="visionStatement"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Vision Statement</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        rows={2}
-                        placeholder="What will success look like?"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {customSections.map(section => (
+                <div key={section.id} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      {section.label}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setCustomSections(prev => prev.filter(s => s.id !== section.id))}
+                      className="text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <Textarea
+                    rows={2}
+                    value={section.value}
+                    onChange={(e) => setCustomSections(prev => prev.map(s => s.id === section.id ? { ...s, value: e.target.value } : s))}
+                  />
+                </div>
+              ))}
 
-              <FormField
-                control={form.control}
-                name="successMetrics"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Success Metrics</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        rows={2}
-                        placeholder="How will we measure success?"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="stakeholderMap"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Stakeholder Map</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        rows={2}
-                        placeholder="Who are the key stakeholders?"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="readinessRating"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Readiness Rating (RAG)</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        rows={2}
-                        placeholder="Red/Amber/Green assessment of organizational readiness"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="riskExposureRating"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Risk Exposure Rating</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        rows={2}
-                        placeholder="Assessment of risks and potential issues"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="changeChampionAssignment"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Change Champion Assignment</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        rows={2}
-                        placeholder="Who will champion this change?"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="reinforcementPlan"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Reinforcement Plan</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        rows={2}
-                        placeholder="How will we reinforce and sustain the change?"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="benefitsRealizationPlan"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Benefits Realization Plan</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        rows={2}
-                        placeholder="How will we realize and track benefits?"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {addingCustomSection && (
+                <div className="space-y-3 border rounded-md p-3">
+                  <Input
+                    placeholder="Section label"
+                    value={newSectionLabel}
+                    onChange={(e) => setNewSectionLabel(e.target.value)}
+                  />
+                  <Textarea
+                    rows={2}
+                    placeholder="Section content"
+                    value={newSectionValue}
+                    onChange={(e) => setNewSectionValue(e.target.value)}
+                  />
+                  <div className="flex justify-end space-x-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setAddingCustomSection(false);
+                        setNewSectionLabel("");
+                        setNewSectionValue("");
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => {
+                        if (newSectionLabel.trim()) {
+                          setCustomSections(prev => [...prev, { id: crypto.randomUUID(), label: newSectionLabel.trim(), value: newSectionValue }]);
+                          setNewSectionLabel("");
+                          setNewSectionValue("");
+                          setAddingCustomSection(false);
+                        }
+                      }}
+                    >
+                      Add
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end space-x-3 pt-4">

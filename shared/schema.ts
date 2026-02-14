@@ -275,6 +275,8 @@ export const strategies = pgTable("strategies", {
   changeChampionAssignment: text("change_champion_assignment").notNull().default("To be defined"),
   reinforcementPlan: text("reinforcement_plan").notNull().default("To be defined"),
   benefitsRealizationPlan: text("benefits_realization_plan").notNull().default("To be defined"),
+  hiddenContinuumSections: text("hidden_continuum_sections").default("[]"),
+  customContinuumSections: text("custom_continuum_sections").default("[]"),
   organizationId: varchar("organization_id"), // Foreign key to organizations table
   executiveGoalId: varchar("executive_goal_id"), // Foreign key to executive_goals table for tagging
   createdBy: varchar("created_by").notNull(),
@@ -446,6 +448,8 @@ export const insertStrategySchema = createInsertSchema(strategies).omit({
   changeChampionAssignment: z.string().optional().transform(val => val?.trim() || "To be defined"),
   reinforcementPlan: z.string().optional().transform(val => val?.trim() || "To be defined"),
   benefitsRealizationPlan: z.string().optional().transform(val => val?.trim() || "To be defined"),
+  hiddenContinuumSections: z.string().optional().default("[]"),
+  customContinuumSections: z.string().optional().default("[]"),
 });
 
 export const insertProjectSchema = createInsertSchema(projects).omit({
