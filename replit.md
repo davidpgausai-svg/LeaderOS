@@ -83,7 +83,18 @@ Email-based password reset flow using Resend for transactional emails. Users can
 Registration requires an organization-specific secret token in the URL (`/register/:token`). Administrators can manage tokens, and the first registrant for an organization becomes an Administrator. Super Admins can be designated via the `SUPER_ADMIN_EMAILS` environment variable.
 
 ### Key Data Models
-Core entities include Organizations (for multi-tenancy), Users (with organization membership and optional super_admin status), User Strategy Assignments, Strategies (with Change Continuum Framework), Projects (with communication URL), Actions, Barriers, Dependencies, Meeting Notes, Activities, Template Types, and Action People Assignments (for to-do list tagging). All tables include organization_id for data isolation.
+Core entities include Organizations (for multi-tenancy), Users (with organization membership and optional super_admin status), User Strategy Assignments, Strategies (with Change Continuum Framework), Projects (with communication URL), Actions, Barriers, Dependencies, Meeting Notes, Activities, Template Types, Action People Assignments (for to-do list tagging), Intake Forms, and Intake Submissions. All tables include organization_id for data isolation.
+
+### Intake Forms System
+External, public-facing intake forms for collecting submissions from non-authenticated users. Key features:
+- **Form Builder**: Administrators can create forms with a drag-and-drop style editor supporting 8 field types (text, textarea, select, checkbox, radio, date, number, email)
+- **Public Access**: Forms are accessible via `/intake/:slug` without login. Each form has a unique slug per organization.
+- **Expiration**: Optional `expiresAt` date that auto-closes the form. Only administrators can extend this date.
+- **Submission Limits**: `maxSubmissionsPerEmail` (per-email cap) and `maxTotalSubmissions` (global cap). When limits use email, email becomes required.
+- **Thank You Message**: Customizable message shown after successful submission.
+- **Submission Management**: Administrators and Co-Leads can view submissions, change status (New → Under Review → Assigned → Dismissed), and assign submissions to a specific strategy and project.
+- **Data Storage**: Form field definitions stored as JSON in `fields` column. Submission data stored as JSON snapshot in `data` column for version safety.
+- **Routes**: `/intake-forms` (admin form management), `/intake-submissions` (submission management), `/intake/:slug` (public form page)
 
 ### Personalized Dashboard
 The main dashboard shows a personalized "Welcome back, [Name]" greeting with two cards:

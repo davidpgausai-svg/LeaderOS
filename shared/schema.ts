@@ -756,3 +756,70 @@ export const insertHolidaySchema = createInsertSchema(holidays).omit({
 
 export type InsertHoliday = z.infer<typeof insertHolidaySchema>;
 export type Holiday = typeof holidays.$inferSelect;
+
+// Intake Forms - External non-login forms for collecting submissions
+export const intakeForms = pgTable("intake_forms", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  slug: text("slug").notNull(),
+  fields: text("fields").notNull().default("[]"), // JSON array of field definitions
+  status: text("status").notNull().default('active'), // 'active' or 'inactive'
+  expiresAt: timestamp("expires_at"), // Optional expiration date
+  thankYouMessage: text("thank_you_message"), // Custom message after submission
+  maxSubmissionsPerEmail: integer("max_submissions_per_email"), // null = unlimited
+  maxTotalSubmissions: integer("max_total_submissions"), // null = unlimited
+  requireEmail: text("require_email").notNull().default('true'), // 'true' or 'false'
+  createdBy: varchar("created_by").notNull(),
+  createdAt: timestamp("created_at").default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+}, (table) => ({
+  uniqueOrgSlug: unique().on(table.organizationId, table.slug),
+}));
+
+export const insertIntakeFormSchema = createInsertSchema(intakeForms).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  createdBy: true,
+  organizationId: true,
+}).extend({
+  expiresAt: z.coerce.date().optional().nullable(),
+  maxSubmissionsPerEmail: z.number().int().min(1).optional().nullable(),
+  maxTotalSubmissions: z.number().int().min(1).optional().nullable(),
+});
+
+export type InsertIntakeForm = z.infer<typeof insertIntakeFormSchema>;
+export type IntakeForm = typeof intakeForms.$inferSelect;
+
+// Intake Submissions - Responses submitted to intake forms
+export const intakeSubmissions = pgTable("intake_submissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  formId: varchar("form_id").notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  data: text("data").notNull().default("{}"), // JSON snapshot of submitted answers
+  submitterEmail: text("submitter_email"),
+  submitterName: text("submitter_name"),
+  status: text("status").notNull().default('new'), // 'new', 'under_review', 'assigned', 'dismissed'
+  assignedStrategyId: varchar("assigned_strategy_id"),
+  assignedProjectId: varchar("assigned_project_id"),
+  assignedActionId: varchar("assigned_action_id"),
+  reviewedBy: varchar("reviewed_by"),
+  reviewedAt: timestamp("reviewed_at"),
+  submittedAt: timestamp("submitted_at").default(sql`now()`),
+});
+
+export const insertIntakeSubmissionSchema = createInsertSchema(intakeSubmissions).omit({
+  id: true,
+  submittedAt: true,
+  reviewedBy: true,
+  reviewedAt: true,
+  assignedStrategyId: true,
+  assignedProjectId: true,
+  assignedActionId: true,
+  status: true,
+});
+
+export type InsertIntakeSubmission = z.infer<typeof insertIntakeSubmissionSchema>;
+export type IntakeSubmission = typeof intakeSubmissions.$inferSelect;

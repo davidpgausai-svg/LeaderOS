@@ -22,6 +22,9 @@ import ResetPassword from "@/pages/reset-password";
 import SuperAdmin from "@/pages/super-admin";
 import CheckoutSuccess from "@/pages/checkout-success";
 import ForceChangePassword from "@/pages/force-change-password";
+import IntakeForms from "@/pages/intake-forms";
+import IntakeSubmissions from "@/pages/intake-submissions";
+import PublicIntake from "@/pages/public-intake";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -37,6 +40,7 @@ function Router() {
         <Route path="/register/:token" component={Register} />
         <Route path="/register/purchase" component={RegisterPurchase} />
         <Route path="/checkout-success" component={CheckoutSuccess} />
+        <Route path="/intake/:slug" component={PublicIntake} />
         <Route path="/forgot-password" component={ForgotPassword} />
         <Route path="/reset-password" component={ResetPassword} />
         <Route path="/landing" component={Landing} />
@@ -63,6 +67,9 @@ function Router() {
         <Route path="/meeting-notes" component={MeetingNotes} />
         <Route path="/reports" component={Reports} />
         <Route path="/settings" component={Settings} />
+        <Route path="/intake-forms" component={IntakeForms} />
+        <Route path="/intake-submissions" component={IntakeSubmissions} />
+        <Route path="/intake/:slug" component={PublicIntake} />
         <Route path="/super-admin" component={SuperAdmin} />
         <Route component={NotFound} />
       </Switch>
