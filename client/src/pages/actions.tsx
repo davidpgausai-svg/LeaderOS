@@ -316,6 +316,7 @@ export default function Actions() {
       'achieved': { label: 'Achieved', color: 'bg-green-500', textColor: 'text-green-700' },
       'in_progress': { label: 'In Progress', color: 'bg-blue-500', textColor: 'text-blue-700' },
       'at_risk': { label: 'At Risk', color: 'bg-red-500', textColor: 'text-red-700' },
+      'on_hold': { label: 'On Hold', color: 'bg-orange-500', textColor: 'text-orange-700' },
       'not_started': { label: 'Not Started', color: 'bg-gray-500', textColor: 'text-gray-700' },
     };
     return statusMap[status as keyof typeof statusMap] || statusMap['not_started'];
@@ -893,6 +894,7 @@ export default function Actions() {
                                                     <SelectItem value="achieved">Achieved</SelectItem>
                                                     <SelectItem value="in_progress">In Progress</SelectItem>
                                                     <SelectItem value="at_risk">At Risk</SelectItem>
+                                                    <SelectItem value="on_hold">On Hold</SelectItem>
                                                     <SelectItem value="not_started">Not Started</SelectItem>
                                                   </SelectContent>
                                                 </Select>

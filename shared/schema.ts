@@ -359,7 +359,7 @@ export const actions = pgTable("actions", {
   targetValue: text("target_value"),
   currentValue: text("current_value"),
   measurementUnit: text("measurement_unit"),
-  status: text("status").notNull().default('in_progress'), // 'in_progress', 'achieved', 'at_risk', 'not_started'
+  status: text("status").notNull().default('in_progress'), // 'in_progress', 'achieved', 'at_risk', 'on_hold', 'not_started'
   achievedDate: timestamp("achieved_date"), // When action status was set to 'achieved'
   dueDate: timestamp("due_date"),
   isArchived: text("is_archived").notNull().default('false'), // 'true' or 'false' for cascade archival

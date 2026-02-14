@@ -2700,6 +2700,7 @@ function GraphReport({ strategies, projects, actions, dependencies }: {
     if (s === "achieved" || s === "c" || s === "completed" || s === "done") return "#22C55E";
     if (s === "in_progress" || s === "ot" || s === "on track") return "#3B82F6";
     if (s === "behind" || s === "b" || s === "at risk" || s === "blocked") return "#EF4444";
+    if (s === "on_hold") return "#F97316";
     return "#9CA3AF";
   };
   
@@ -2710,6 +2711,7 @@ function GraphReport({ strategies, projects, actions, dependencies }: {
     if (s === "behind" || s === "b") return "BEHIND";
     if (s === "at risk") return "AT RISK";
     if (s === "blocked") return "BLOCKED";
+    if (s === "on_hold") return "ON HOLD";
     if (s === "not_started" || s === "nys") return "NOT STARTED";
     return status?.toUpperCase() || "";
   };

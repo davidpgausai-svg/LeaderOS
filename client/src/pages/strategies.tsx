@@ -315,12 +315,13 @@ export default function Strategies() {
     const dueDate = new Date(action.dueDate);
     const diffTime = dueDate.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const formattedDate = dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     
-    if (diffDays === 0) return { text: 'Due today', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' };
-    if (diffDays === 1) return { text: 'Due tomorrow', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' };
-    if (diffDays < 0) return { text: `Overdue by ${Math.abs(diffDays)} day${Math.abs(diffDays) !== 1 ? 's' : ''}`, color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' };
-    if (diffDays <= 7) return { text: `Due in ${diffDays} day${diffDays !== 1 ? 's' : ''}`, color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' };
-    return { text: `Due in ${diffDays} days`, color: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' };
+    if (diffDays === 0) return { text: 'Due today', date: formattedDate, color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' };
+    if (diffDays === 1) return { text: 'Due tomorrow', date: formattedDate, color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' };
+    if (diffDays < 0) return { text: `Overdue by ${Math.abs(diffDays)} day${Math.abs(diffDays) !== 1 ? 's' : ''}`, date: formattedDate, color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' };
+    if (diffDays <= 7) return { text: `Due in ${diffDays} day${diffDays !== 1 ? 's' : ''}`, date: formattedDate, color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' };
+    return { text: `Due in ${diffDays} days`, date: formattedDate, color: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' };
   };
 
   // Helper to get action status circle color
@@ -329,6 +330,7 @@ export default function Strategies() {
       case 'achieved': return 'bg-green-500';
       case 'in_progress': return 'bg-blue-500';
       case 'at_risk': return 'bg-red-500';
+      case 'on_hold': return 'bg-orange-500';
       default: return 'bg-gray-400';
     }
   };
@@ -338,6 +340,7 @@ export default function Strategies() {
     { value: 'achieved', label: 'Achieved' },
     { value: 'in_progress', label: 'In Progress' },
     { value: 'at_risk', label: 'At Risk' },
+    { value: 'on_hold', label: 'On Hold' },
     { value: 'not_started', label: 'Not Started' },
   ];
 
@@ -620,6 +623,7 @@ export default function Strategies() {
       case 'achieved': return 'fill-green-500 text-green-500';
       case 'in_progress': return 'fill-blue-500 text-blue-500';
       case 'at_risk': return 'fill-yellow-500 text-yellow-500';
+      case 'on_hold': return 'fill-orange-500 text-orange-500';
       default: return 'fill-gray-300 text-gray-300';
     }
   };
@@ -630,6 +634,7 @@ export default function Strategies() {
       case 'achieved': return { label: 'Achieved', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' };
       case 'in_progress': return { label: 'In Progress', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' };
       case 'at_risk': return { label: 'At Risk', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' };
+      case 'on_hold': return { label: 'On Hold', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' };
       default: return { label: 'Not Started', color: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' };
     }
   };
@@ -2089,18 +2094,21 @@ export default function Strategies() {
                                               <div className="flex items-center gap-1 flex-shrink-0">
                                                 {/* Due date pill - view only if read-only */}
                                                 {dueDateDisplay && (
-                                                  <Badge 
-                                                    className={`text-xs px-1.5 py-0 ${isStrategyReadOnly(strategy.id) ? '' : 'cursor-pointer'} ${dueDateDisplay.color}`}
-                                                    onClick={(e) => {
-                                                      e.stopPropagation();
-                                                      if (!isStrategyReadOnly(strategy.id)) {
-                                                        setDueDateModalAction(action);
-                                                      }
-                                                    }}
-                                                    data-testid={`action-due-date-${action.id}`}
-                                                  >
-                                                    {dueDateDisplay.text}
-                                                  </Badge>
+                                                  <>
+                                                    <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{dueDateDisplay.date}</span>
+                                                    <Badge 
+                                                      className={`text-xs px-1.5 py-0 ${isStrategyReadOnly(strategy.id) ? '' : 'cursor-pointer'} ${dueDateDisplay.color}`}
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (!isStrategyReadOnly(strategy.id)) {
+                                                          setDueDateModalAction(action);
+                                                        }
+                                                      }}
+                                                      data-testid={`action-due-date-${action.id}`}
+                                                    >
+                                                      {dueDateDisplay.text}
+                                                    </Badge>
+                                                  </>
                                                 )}
                                                 
                                                 {/* People assigned - 1st */}
