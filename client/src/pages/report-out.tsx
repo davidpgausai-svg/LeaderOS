@@ -53,6 +53,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import PptxGenJS from "pptxgenjs";
+import muLogoPath from "@assets/mu-logo.png";
 
 interface Slide {
   id: string;
@@ -79,13 +80,36 @@ interface ReportDeck {
 
 type ViewMode = "list" | "editor" | "presentation";
 
+const MU_BRAND = {
+  black: "#000000",
+  gold: "#FDB719",
+  blackTint1: "#333333",
+  blackTint2: "#989898",
+  blackTint3: "#D4D4D4",
+  goldTint1: "#FFD17D",
+  goldTint2: "#FFDFA5",
+  goldTint3: "#FFEDCF",
+  bluff: "#453D3F",
+  limestone: "#D4D4D4",
+  burrOak: "#7F4A0F",
+  slate: "#4A596E",
+  mulberry: "#6E0026",
+  sunrise: "#EF553F",
+  sunriseShade: "#993429",
+  sunriseTint: "#F2715F",
+  botanic: "#008486",
+  botanicShade: "#004243",
+  botanicTint: "#99CECF",
+  white: "#FFFFFF",
+};
+
 const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  NYS: { bg: "#E5E7EB", text: "#6B7280", label: "Not Yet Started" },
-  IP: { bg: "#DBEAFE", text: "#2563EB", label: "In Progress" },
-  OT: { bg: "#D1FAE5", text: "#059669", label: "On Track" },
-  B: { bg: "#FEF3C7", text: "#D97706", label: "Behind" },
-  CR: { bg: "#FEE2E2", text: "#DC2626", label: "Critical" },
-  C: { bg: "#DBEAFE", text: "#2563EB", label: "Complete" },
+  NYS: { bg: MU_BRAND.limestone, text: MU_BRAND.bluff, label: "Not Yet Started" },
+  IP: { bg: MU_BRAND.goldTint3, text: MU_BRAND.burrOak, label: "In Progress" },
+  OT: { bg: MU_BRAND.botanicTint, text: MU_BRAND.botanicShade, label: "On Track" },
+  B: { bg: MU_BRAND.goldTint1, text: MU_BRAND.burrOak, label: "Behind" },
+  CR: { bg: MU_BRAND.sunriseTint, text: MU_BRAND.black, label: "Critical" },
+  C: { bg: MU_BRAND.botanicTint, text: MU_BRAND.botanicShade, label: "Complete" },
 };
 
 function getStatusStyle(status: string) {
@@ -116,30 +140,38 @@ function TitleSlide({ slide, scale = 1 }: { slide: Slide; scale?: number }) {
     <div
       className="w-full h-full rounded-xl flex flex-col items-center justify-center relative overflow-hidden"
       style={{
-        background: "linear-gradient(135deg, #1e3a5f 0%, #2563eb 50%, #3b82f6 100%)",
+        backgroundColor: MU_BRAND.black,
         padding: `${2 * scale}rem`,
       }}
     >
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-white/20 -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full bg-white/10 translate-y-1/2 -translate-x-1/2" />
+      <div className="absolute inset-0">
+        <div className="absolute top-0 right-0 w-96 h-96 rounded-full -translate-y-1/2 translate-x-1/2" style={{ backgroundColor: MU_BRAND.blackTint1 }} />
+        <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full translate-y-1/2 -translate-x-1/2" style={{ backgroundColor: MU_BRAND.blackTint1 }} />
       </div>
+      <div className="absolute top-0 left-0 w-full h-1.5" style={{ backgroundColor: MU_BRAND.gold }} />
       <div className="relative z-10 text-center max-w-3xl">
         <h1
-          className="font-bold text-white mb-4 leading-tight"
-          style={{ fontSize: `${2.5 * scale}rem` }}
+          className="font-bold mb-4 leading-tight"
+          style={{ fontSize: `${2.5 * scale}rem`, color: MU_BRAND.gold }}
         >
           {slide.title}
         </h1>
         {slide.subtitle && (
           <p
-            className="text-blue-100 font-light"
-            style={{ fontSize: `${1.25 * scale}rem` }}
+            className="font-light"
+            style={{ fontSize: `${1.25 * scale}rem`, color: MU_BRAND.white }}
           >
             {slide.subtitle}
           </p>
         )}
       </div>
+      <div className="absolute bottom-0 left-0 w-full h-1.5" style={{ backgroundColor: MU_BRAND.gold }} />
+      <img
+        src={muLogoPath}
+        alt="University of Missouri"
+        className="absolute bottom-3 right-4 z-10"
+        style={{ height: `${2.5 * scale}rem`, opacity: 0.9 }}
+      />
     </div>
   );
 }
@@ -151,8 +183,8 @@ function TrendBadge({ value, label, invert = false }: { value: number; label?: s
     <span
       className="inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full"
       style={{
-        backgroundColor: isPositive ? '#DCFCE7' : '#FEE2E2',
-        color: isPositive ? '#166534' : '#991B1B',
+        backgroundColor: isPositive ? MU_BRAND.botanicTint : MU_BRAND.sunriseTint,
+        color: isPositive ? MU_BRAND.botanicShade : MU_BRAND.black,
       }}
     >
       {value > 0 ? '+' : ''}{value}{label}
@@ -178,47 +210,51 @@ function SummarySlide({ slide, scale = 1 }: { slide: Slide; scale?: number }) {
 
   return (
     <div
-      className="w-full h-full rounded-xl bg-white flex flex-col overflow-auto"
+      className="w-full h-full rounded-xl bg-white flex flex-col overflow-auto relative"
       style={{ padding: `${1.5 * scale}rem` }}
     >
-      <h2
-        className="font-bold mb-4"
-        style={{ fontSize: `${1.5 * scale}rem`, color: "#1D1D1F" }}
-      >
-        {slide.title}
-      </h2>
+      <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: MU_BRAND.gold }} />
+      <div className="mb-4">
+        <h2
+          className="font-bold"
+          style={{ fontSize: `${1.5 * scale}rem`, color: MU_BRAND.black }}
+        >
+          {slide.title}
+        </h2>
+        <div className="mt-1 h-0.5 w-16" style={{ backgroundColor: MU_BRAND.gold }} />
+      </div>
       <div className="grid grid-cols-2 gap-3 flex-1">
         <div
           className="rounded-xl p-4 flex flex-col justify-center"
-          style={{ backgroundColor: "#EEF2FF" }}
+          style={{ backgroundColor: MU_BRAND.goldTint3 }}
         >
           <div className="flex items-center gap-2 mb-1">
-            <Target className="w-4 h-4" style={{ color: "#4F46E5" }} />
-            <span className="text-xs font-medium" style={{ color: "#4F46E5" }}>
+            <Target className="w-4 h-4" style={{ color: MU_BRAND.burrOak }} />
+            <span className="text-xs font-medium" style={{ color: MU_BRAND.burrOak }}>
               Active Strategies
             </span>
           </div>
           <span
             className="font-bold"
-            style={{ fontSize: `${1.75 * scale}rem`, color: "#4F46E5" }}
+            style={{ fontSize: `${1.75 * scale}rem`, color: MU_BRAND.black }}
           >
             {strategiesCount}
           </span>
         </div>
         <div
           className="rounded-xl p-4 flex flex-col justify-center"
-          style={{ backgroundColor: "#F0FDF4" }}
+          style={{ backgroundColor: MU_BRAND.goldTint3 }}
         >
           <div className="flex items-center gap-2 mb-1">
-            <TrendingUp className="w-4 h-4" style={{ color: "#059669" }} />
-            <span className="text-xs font-medium" style={{ color: "#059669" }}>
+            <TrendingUp className="w-4 h-4" style={{ color: MU_BRAND.burrOak }} />
+            <span className="text-xs font-medium" style={{ color: MU_BRAND.burrOak }}>
               Avg Progress
             </span>
           </div>
           <div className="flex items-center gap-2">
             <span
               className="font-bold"
-              style={{ fontSize: `${1.75 * scale}rem`, color: "#059669" }}
+              style={{ fontSize: `${1.75 * scale}rem`, color: MU_BRAND.botanic }}
             >
               {Math.round(avgProgress)}%
             </span>
@@ -227,11 +263,11 @@ function SummarySlide({ slide, scale = 1 }: { slide: Slide; scale?: number }) {
         </div>
         <div
           className="rounded-xl p-4 col-span-2"
-          style={{ backgroundColor: "#F8FAFC" }}
+          style={{ backgroundColor: MU_BRAND.goldTint3 }}
         >
           <span
             className="text-xs font-medium block mb-2"
-            style={{ color: "#64748B" }}
+            style={{ color: MU_BRAND.bluff }}
           >
             Projects by Status ({projects.total || 0} total)
           </span>
@@ -269,11 +305,11 @@ function SummarySlide({ slide, scale = 1 }: { slide: Slide; scale?: number }) {
         </div>
         <div
           className="rounded-xl p-4 flex flex-col justify-center"
-          style={{ backgroundColor: "#FFFBEB" }}
+          style={{ backgroundColor: MU_BRAND.goldTint3 }}
         >
           <div className="flex items-center gap-2 mb-1">
-            <CheckCircle className="w-4 h-4" style={{ color: "#D97706" }} />
-            <span className="text-xs font-medium" style={{ color: "#D97706" }}>
+            <CheckCircle className="w-4 h-4" style={{ color: MU_BRAND.burrOak }} />
+            <span className="text-xs font-medium" style={{ color: MU_BRAND.burrOak }}>
               Actions
             </span>
           </div>
@@ -281,11 +317,11 @@ function SummarySlide({ slide, scale = 1 }: { slide: Slide; scale?: number }) {
             <div>
               <span
                 className="font-bold block"
-                style={{ fontSize: `${1.25 * scale}rem`, color: "#D97706" }}
+                style={{ fontSize: `${1.25 * scale}rem`, color: MU_BRAND.black }}
               >
                 {actionsData.inProgress || 0}
               </span>
-              <span className="text-[10px]" style={{ color: "#92400E" }}>
+              <span className="text-[10px]" style={{ color: MU_BRAND.burrOak }}>
                 In Progress
               </span>
             </div>
@@ -293,13 +329,13 @@ function SummarySlide({ slide, scale = 1 }: { slide: Slide; scale?: number }) {
               <div className="flex items-center gap-1">
                 <span
                   className="font-bold block"
-                  style={{ fontSize: `${1.25 * scale}rem`, color: "#059669" }}
+                  style={{ fontSize: `${1.25 * scale}rem`, color: MU_BRAND.botanic }}
                 >
                   {actionsData.achieved || 0}
                 </span>
                 {trends && <TrendBadge value={trends.actionsAchievedChange} />}
               </div>
-              <span className="text-[10px]" style={{ color: "#065F46" }}>
+              <span className="text-[10px]" style={{ color: MU_BRAND.botanicShade }}>
                 Achieved
               </span>
             </div>
@@ -307,21 +343,21 @@ function SummarySlide({ slide, scale = 1 }: { slide: Slide; scale?: number }) {
         </div>
         <div
           className="rounded-xl p-4 flex flex-col justify-center"
-          style={{ backgroundColor: "#FEF2F2" }}
+          style={{ backgroundColor: MU_BRAND.goldTint3 }}
         >
           <div className="flex items-center gap-2 mb-1">
-            <AlertTriangle className="w-4 h-4" style={{ color: "#DC2626" }} />
-            <span className="text-xs font-medium" style={{ color: "#DC2626" }}>
+            <AlertTriangle className="w-4 h-4" style={{ color: MU_BRAND.sunrise }} />
+            <span className="text-xs font-medium" style={{ color: MU_BRAND.sunrise }}>
               Active Barriers
             </span>
           </div>
           <span
             className="font-bold"
-            style={{ fontSize: `${1.75 * scale}rem`, color: "#DC2626" }}
+            style={{ fontSize: `${1.75 * scale}rem`, color: MU_BRAND.sunrise }}
           >
             {barriersData.active || 0}
             {barriersData.high > 0 && (
-              <span className="text-xs font-normal ml-1" style={{ color: "#991B1B" }}>
+              <span className="text-xs font-normal ml-1" style={{ color: MU_BRAND.sunriseShade }}>
                 ({barriersData.high} high)
               </span>
             )}
@@ -329,7 +365,7 @@ function SummarySlide({ slide, scale = 1 }: { slide: Slide; scale?: number }) {
         </div>
       </div>
       {trends && (
-        <div className="mt-3 pt-2 border-t border-gray-100 text-[10px] text-gray-400 text-right">
+        <div className="mt-3 pt-2 border-t text-[10px] text-right" style={{ borderColor: MU_BRAND.blackTint3, color: MU_BRAND.blackTint2 }}>
           Compared to {new Date(trends.previousDate).toLocaleDateString()}
         </div>
       )}
@@ -359,9 +395,10 @@ function StrategySlide({ slide, scale = 1 }: { slide: Slide; scale?: number }) {
 
   return (
     <div
-      className="w-full h-full rounded-xl bg-white flex flex-col overflow-auto"
+      className="w-full h-full rounded-xl bg-white flex flex-col overflow-auto relative"
       style={{ padding: `${1.5 * scale}rem` }}
     >
+      <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: MU_BRAND.gold }} />
       <div className="flex items-center gap-3 mb-3">
         <div
           className="w-4 h-4 rounded-full flex-shrink-0"
@@ -369,7 +406,7 @@ function StrategySlide({ slide, scale = 1 }: { slide: Slide; scale?: number }) {
         />
         <h2
           className="font-bold flex-1"
-          style={{ fontSize: `${1.25 * scale}rem`, color: "#1D1D1F" }}
+          style={{ fontSize: `${1.25 * scale}rem`, color: MU_BRAND.black }}
         >
           {slide.title}
         </h2>
@@ -377,19 +414,19 @@ function StrategySlide({ slide, scale = 1 }: { slide: Slide; scale?: number }) {
       <div className="mb-4">
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500">Progress</span>
+            <span className="text-xs" style={{ color: MU_BRAND.bluff }}>Progress</span>
             {trend && <TrendBadge value={trend.progressChange} label="%" />}
           </div>
-          <span className="text-xs font-semibold" style={{ color: colorCode }}>
+          <span className="text-xs font-semibold" style={{ color: MU_BRAND.burrOak }}>
             {Math.round(progress)}%
           </span>
         </div>
-        <div className="w-full h-2.5 rounded-full bg-gray-100">
+        <div className="w-full h-2.5 rounded-full" style={{ backgroundColor: MU_BRAND.blackTint3 }}>
           <div
             className="h-full rounded-full transition-all"
             style={{
               width: `${Math.min(progress, 100)}%`,
-              backgroundColor: colorCode,
+              backgroundColor: MU_BRAND.gold,
             }}
           />
         </div>
@@ -419,16 +456,16 @@ function StrategySlide({ slide, scale = 1 }: { slide: Slide; scale?: number }) {
                     <div
                       key={i}
                       className="text-xs py-0.5 px-2 rounded flex items-center gap-2"
-                      style={{ color: "#374151" }}
+                      style={{ color: MU_BRAND.black }}
                     >
                       <span>{p.title}</span>
                       {p.statusChange && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 font-medium whitespace-nowrap">
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap" style={{ backgroundColor: MU_BRAND.goldTint3, color: MU_BRAND.burrOak }}>
                           {p.statusChange}
                         </span>
                       )}
                       {p.barrierCount > 0 && (
-                        <span className="text-[9px] px-1 py-0.5 rounded bg-red-50 text-red-600">
+                        <span className="text-[9px] px-1 py-0.5 rounded" style={{ backgroundColor: MU_BRAND.sunriseTint, color: MU_BRAND.mulberry }}>
                           {p.barrierCount} barrier{p.barrierCount > 1 ? 's' : ''}
                         </span>
                       )}
@@ -439,17 +476,17 @@ function StrategySlide({ slide, scale = 1 }: { slide: Slide; scale?: number }) {
             );
           })}
       </div>
-      <div className="flex gap-4 mt-3 pt-3 border-t border-gray-100">
+      <div className="flex gap-4 mt-3 pt-3" style={{ borderTop: `1px solid ${MU_BRAND.blackTint3}` }}>
         <div className="flex items-center gap-1.5">
-          <Clock className="w-3 h-3 text-gray-400" />
-          <span className="text-xs text-gray-500">
+          <Clock className="w-3 h-3" style={{ color: MU_BRAND.bluff }} />
+          <span className="text-xs" style={{ color: MU_BRAND.bluff }}>
             {actionsAchieved}/{actionsTotal} Actions Achieved
           </span>
         </div>
         {barriersActive > 0 && (
           <div className="flex items-center gap-1.5">
-            <AlertTriangle className="w-3 h-3 text-red-400" />
-            <span className="text-xs text-red-500">
+            <AlertTriangle className="w-3 h-3" style={{ color: MU_BRAND.sunrise }} />
+            <span className="text-xs" style={{ color: MU_BRAND.sunrise }}>
               {barriersActive} Barrier{barriersActive > 1 ? 's' : ''}{barriersHigh > 0 ? ` (${barriersHigh} high)` : ''}
             </span>
           </div>
@@ -465,12 +502,13 @@ function StrategyDetailSlide({ slide, scale = 1 }: { slide: Slide; scale?: numbe
 
   return (
     <div
-      className="w-full h-full rounded-xl bg-white flex flex-col overflow-auto"
+      className="w-full h-full rounded-xl bg-white flex flex-col overflow-auto relative"
       style={{ padding: `${1.5 * scale}rem` }}
     >
+      <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: MU_BRAND.gold }} />
       <h2
         className="font-bold mb-4"
-        style={{ fontSize: `${1.25 * scale}rem`, color: "#1D1D1F" }}
+        style={{ fontSize: `${1.25 * scale}rem`, color: MU_BRAND.black }}
       >
         {slide.title}
       </h2>
@@ -478,8 +516,8 @@ function StrategyDetailSlide({ slide, scale = 1 }: { slide: Slide; scale?: numbe
         {problemProjects.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
-              <CheckCircle className="w-8 h-8 mx-auto mb-2" style={{ color: "#059669" }} />
-              <p className="text-sm text-gray-500">All projects on track</p>
+              <CheckCircle className="w-8 h-8 mx-auto mb-2" style={{ color: MU_BRAND.botanic }} />
+              <p className="text-sm" style={{ color: MU_BRAND.botanic }}>All projects on track</p>
             </div>
           </div>
         ) : (
@@ -492,7 +530,7 @@ function StrategyDetailSlide({ slide, scale = 1 }: { slide: Slide; scale?: numbe
                 style={{ borderColor: statusStyle.text + "40" }}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-semibold text-sm" style={{ color: "#1D1D1F" }}>
+                  <span className="font-semibold text-sm" style={{ color: MU_BRAND.black }}>
                     {project.title}
                   </span>
                   <span
@@ -503,8 +541,8 @@ function StrategyDetailSlide({ slide, scale = 1 }: { slide: Slide; scale?: numbe
                   </span>
                 </div>
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs text-gray-500">Progress:</span>
-                  <div className="flex-1 h-1.5 rounded-full bg-gray-100">
+                  <span className="text-xs" style={{ color: MU_BRAND.bluff }}>Progress:</span>
+                  <div className="flex-1 h-1.5 rounded-full" style={{ backgroundColor: MU_BRAND.blackTint3 }}>
                     <div
                       className="h-full rounded-full"
                       style={{
@@ -519,16 +557,16 @@ function StrategyDetailSlide({ slide, scale = 1 }: { slide: Slide; scale?: numbe
                 </div>
                 {project.barriers && project.barriers.length > 0 && (
                   <div className="mb-1">
-                    <span className="text-[10px] font-medium text-red-600 uppercase">
+                    <span className="text-[10px] font-medium uppercase" style={{ color: MU_BRAND.mulberry }}>
                       Barriers
                     </span>
                     <ul className="mt-0.5 space-y-0.5">
                       {project.barriers.map((b: any, bi: number) => (
-                        <li key={bi} className="text-xs text-gray-600 flex items-start gap-1">
-                          <AlertTriangle className="w-3 h-3 text-red-400 mt-0.5 flex-shrink-0" />
+                        <li key={bi} className="text-xs flex items-start gap-1" style={{ color: MU_BRAND.bluff }}>
+                          <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: MU_BRAND.mulberry }} />
                           {typeof b === 'string' ? b : b.title}
                           {b.severity && (b.severity === 'high' || b.severity === 'critical') && (
-                            <span className="text-[9px] px-1 py-0.5 rounded bg-red-100 text-red-700 font-medium ml-1">{b.severity}</span>
+                            <span className="text-[9px] px-1 py-0.5 rounded font-medium ml-1" style={{ backgroundColor: MU_BRAND.sunriseTint, color: MU_BRAND.mulberry }}>{b.severity}</span>
                           )}
                         </li>
                       ))}
@@ -536,7 +574,7 @@ function StrategyDetailSlide({ slide, scale = 1 }: { slide: Slide; scale?: numbe
                   </div>
                 )}
                 <div className="flex gap-3 mt-1">
-                  <span className="text-[10px] text-gray-400">
+                  <span className="text-[10px]" style={{ color: MU_BRAND.blackTint2 }}>
                     {project.actionsAchieved || 0}/{project.actionsTotal || 0} Actions Achieved
                   </span>
                 </div>
@@ -648,15 +686,23 @@ async function exportToPptx(slides: Slide[], title: string) {
 
     if (slide.type === "title") {
       pptSlide.background = {
-        fill: "1e3a5f",
+        fill: "000000",
       };
+      pptSlide.addShape(pptx.ShapeType.rect, {
+        x: 0, y: 0, w: "100%", h: 0.08,
+        fill: { color: "FDB719" },
+      });
+      pptSlide.addShape(pptx.ShapeType.rect, {
+        x: 0, y: 5.17, w: "100%", h: 0.08,
+        fill: { color: "FDB719" },
+      });
       pptSlide.addText(slide.title, {
         x: 1,
         y: 2,
         w: "80%",
         fontSize: 36,
         bold: true,
-        color: "FFFFFF",
+        color: "FDB719",
         align: "center",
       });
       if (slide.subtitle) {
@@ -665,28 +711,36 @@ async function exportToPptx(slides: Slide[], title: string) {
           y: 3.5,
           w: "80%",
           fontSize: 18,
-          color: "B0C4DE",
+          color: "FFFFFF",
           align: "center",
         });
       }
     } else if (slide.type === "summary") {
       const data = slide.data || {};
+      pptSlide.addShape(pptx.ShapeType.rect, {
+        x: 0, y: 0, w: "100%", h: 0.06,
+        fill: { color: "FDB719" },
+      });
       pptSlide.addText(slide.title, {
         x: 0.5,
         y: 0.3,
         w: "90%",
         fontSize: 24,
         bold: true,
-        color: "1D1D1F",
+        color: "000000",
+      });
+      pptSlide.addShape(pptx.ShapeType.rect, {
+        x: 0.5, y: 0.65, w: 1.2, h: 0.04,
+        fill: { color: "FDB719" },
       });
       const metrics = [
-        { label: "Active Strategies", value: String(data.strategiesCount || 0), color: "4F46E5" },
-        { label: "Avg Progress", value: `${Math.round(data.avgProgress || 0)}%`, color: "059669" },
-        { label: "Active Barriers", value: String(data.barriers?.active || 0), color: "DC2626" },
+        { label: "Active Strategies", value: String(data.strategiesCount || 0), color: "7F4A0F" },
+        { label: "Avg Progress", value: `${Math.round(data.avgProgress || 0)}%`, color: "008486" },
+        { label: "Active Barriers", value: String(data.barriers?.active || 0), color: "EF553F" },
         {
           label: "Actions Achieved",
           value: `${data.actions?.achieved || 0}/${data.actions?.total || 0}`,
-          color: "D97706",
+          color: "7F4A0F",
         },
       ];
       metrics.forEach((m, i) => {
@@ -697,7 +751,7 @@ async function exportToPptx(slides: Slide[], title: string) {
           y: 1.2 + row * 1.8,
           w: 4,
           h: 1.5,
-          fill: { color: "F8FAFC" },
+          fill: { color: "FFEDCF" },
           rectRadius: 0.1,
         });
         pptSlide.addText(m.label, {
@@ -705,7 +759,7 @@ async function exportToPptx(slides: Slide[], title: string) {
           y: 1.3 + row * 1.8,
           w: 3.6,
           fontSize: 11,
-          color: "64748B",
+          color: "453D3F",
         });
         pptSlide.addText(m.value, {
           x: 0.7 + col * 4.5,
@@ -730,18 +784,22 @@ async function exportToPptx(slides: Slide[], title: string) {
           y: 4.8,
           w: "90%",
           fontSize: 10,
-          color: "64748B",
+          color: "453D3F",
         });
       }
     } else if (slide.type === "strategy") {
       const data = slide.data || {};
+      pptSlide.addShape(pptx.ShapeType.rect, {
+        x: 0, y: 0, w: "100%", h: 0.06,
+        fill: { color: "FDB719" },
+      });
       pptSlide.addText(slide.title, {
         x: 0.5,
         y: 0.3,
         w: "90%",
         fontSize: 22,
         bold: true,
-        color: "1D1D1F",
+        color: "000000",
       });
       const progress = data.progress || 0;
       pptSlide.addShape(pptx.ShapeType.roundRect, {
@@ -749,7 +807,7 @@ async function exportToPptx(slides: Slide[], title: string) {
         y: 1,
         w: 8.5,
         h: 0.3,
-        fill: { color: "E5E7EB" },
+        fill: { color: "D4D4D4" },
         rectRadius: 0.05,
       });
       if (progress > 0) {
@@ -758,7 +816,7 @@ async function exportToPptx(slides: Slide[], title: string) {
           y: 1,
           w: Math.max(0.1, (progress / 100) * 8.5),
           h: 0.3,
-          fill: { color: (data.colorCode || "#007AFF").replace("#", "") },
+          fill: { color: "FDB719" },
           rectRadius: 0.05,
         });
       }
@@ -768,7 +826,7 @@ async function exportToPptx(slides: Slide[], title: string) {
         w: 1,
         fontSize: 12,
         bold: true,
-        color: (data.colorCode || "#007AFF").replace("#", ""),
+        color: "7F4A0F",
       });
 
       const projects = data.projects || [];
@@ -797,7 +855,7 @@ async function exportToPptx(slides: Slide[], title: string) {
               y: yPos,
               w: 8,
               fontSize: 10,
-              color: "374151",
+              color: "000000",
             });
             yPos += 0.25;
           }
@@ -812,18 +870,22 @@ async function exportToPptx(slides: Slide[], title: string) {
           y: 5,
           w: 8,
           fontSize: 10,
-          color: "6B7280",
+          color: "453D3F",
         }
       );
     } else if (slide.type === "strategy_detail") {
       const data = slide.data || {};
+      pptSlide.addShape(pptx.ShapeType.rect, {
+        x: 0, y: 0, w: "100%", h: 0.06,
+        fill: { color: "FDB719" },
+      });
       pptSlide.addText(slide.title, {
         x: 0.5,
         y: 0.3,
         w: "90%",
         fontSize: 22,
         bold: true,
-        color: "1D1D1F",
+        color: "000000",
       });
       const detailProjects = data.projects || [];
       let yPos = 1.2;
@@ -845,7 +907,7 @@ async function exportToPptx(slides: Slide[], title: string) {
           w: 6,
           fontSize: 12,
           bold: true,
-          color: "1D1D1F",
+          color: "000000",
         });
         pptSlide.addText(statusStyle.label, {
           x: 7.5,
@@ -860,7 +922,7 @@ async function exportToPptx(slides: Slide[], title: string) {
           y: yPos + 0.45,
           w: 4,
           fontSize: 9,
-          color: "6B7280",
+          color: "453D3F",
         });
         if (project.barriers && project.barriers.length > 0) {
           const barrierNames = project.barriers.map((b: any) => typeof b === 'string' ? b : b.title).join(", ");
@@ -869,7 +931,7 @@ async function exportToPptx(slides: Slide[], title: string) {
             y: yPos + 0.7,
             w: 8.5,
             fontSize: 8,
-            color: "DC2626",
+            color: "6E0026",
           });
         }
         yPos += 1.2;
@@ -880,7 +942,7 @@ async function exportToPptx(slides: Slide[], title: string) {
           y: 2.5,
           w: "90%",
           fontSize: 16,
-          color: "059669",
+          color: "008486",
           align: "center",
         });
       }
