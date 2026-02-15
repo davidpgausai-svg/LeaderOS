@@ -92,7 +92,7 @@ export default function ResetPassword() {
             ERP Team
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Our ERP Operating System
+            The ERP Operating System
           </p>
         </div>
 
