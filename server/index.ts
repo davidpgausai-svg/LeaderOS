@@ -5,8 +5,7 @@ import { registerRoutes } from "./routes";
 import { startDueDateScheduler, startBillingScheduler, startEmailReminderScheduler } from "./scheduler";
 import { validateCsrf } from "./jwtAuth";
 import { logger } from "./logger";
-import { runMigrations } from 'stripe-replit-sync';
-import { getStripeSync } from './stripeClient';
+import { runMigrations } from './migrate';
 import { WebhookHandlers } from './webhookHandlers';
 import fs from "fs";
 import path from "path";
@@ -161,7 +160,7 @@ app.use((req, res, next) => {
     "img-src 'self' data: https:",
     "font-src 'self' data:",
     // Allow database and API connections
-    "connect-src 'self' https://ep-lucky-haze-adzxnn4p.c-2.us-east-1.aws.neon.tech wss://ep-lucky-haze-adzxnn4p.c-2.us-east-1.aws.neon.tech https://api.openai.com https://generativelanguage.googleapis.com",
+    "connect-src 'self' https://api.openai.com https://generativelanguage.googleapis.com",
     "frame-src https://www.youtube.com",
     "object-src 'none'",
     "base-uri 'self'",
@@ -245,50 +244,26 @@ function serveStatic(app: express.Express) {
   });
 }
 
-async function initStripe() {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    console.log('DATABASE_URL not set, skipping Stripe initialization');
+function initStripe() {
+  const hasStripeKeys = process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PUBLISHABLE_KEY;
+  if (!hasStripeKeys) {
+    console.log('Stripe keys not configured, skipping Stripe initialization');
     return;
   }
 
-  try {
-    console.log('Initializing Stripe schema...');
-    await runMigrations({ databaseUrl, schema: 'stripe' });
-    
-    const stripeSync = await getStripeSync();
-    
-    // Use APP_URL for production webhook, fall back to REPLIT_DOMAINS for dev
-    let webhookBaseUrl: string;
-    if (process.env.APP_URL) {
-      webhookBaseUrl = process.env.APP_URL.replace(/\/$/, '');
-      console.log('Using APP_URL for Stripe webhook:', webhookBaseUrl);
-    } else {
-      const replitDomains = process.env.REPLIT_DOMAINS;
-      if (!replitDomains) {
-        console.log('Neither APP_URL nor REPLIT_DOMAINS set, skipping webhook registration');
-        return;
-      }
-      webhookBaseUrl = `https://${replitDomains.split(',')[0]}`;
-    }
-    
-    const { webhook } = await stripeSync.findOrCreateManagedWebhook(
-      `${webhookBaseUrl}/api/stripe/webhook`,
-      { enabled_events: ['*'] }
-    );
-    console.log(`Stripe webhook configured: ${webhook.url}`);
-    
-    stripeSync.syncBackfill().then(() => console.log('Stripe data synced')).catch(console.error);
-  } catch (error) {
-    console.error('Failed to initialize Stripe:', error);
+  if (!process.env.STRIPE_WEBHOOK_SECRET) {
+    console.log('STRIPE_WEBHOOK_SECRET not set — Stripe webhooks will not be verified');
   }
+
+  console.log('Stripe initialized with direct API keys');
 }
 
 (async () => {
-  // SQLite tables are created automatically in sqlite.ts on import
+  // Run SQLite migrations via Drizzle
+  runMigrations();
   
-  // Initialize Stripe schema and webhooks
-  await initStripe();
+  // Initialize Stripe (just validates keys are present)
+  initStripe();
   
   const server = await registerRoutes(app);
 

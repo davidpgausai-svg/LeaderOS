@@ -44,7 +44,7 @@ import {
   intakeForms, intakeSubmissions
 } from '@shared/schema';
 
-export class PostgresStorage implements IStorage {
+export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;
@@ -1503,7 +1503,7 @@ export async function markPasswordResetTokenUsed(tokenId: string): Promise<void>
 
 export async function cleanupExpiredTokens(): Promise<void> {
   await db.delete(passwordResetTokens)
-    .where(sql`${passwordResetTokens.expiresAt} < NOW() OR ${passwordResetTokens.usedAt} IS NOT NULL`);
+    .where(sql`${passwordResetTokens.expiresAt} < (strftime('%s','now') * 1000) OR ${passwordResetTokens.usedAt} IS NOT NULL`);
 }
 
 // Two-Factor Authentication Code Functions
@@ -1565,7 +1565,7 @@ export async function deleteTwoFactorCodes(userId: string): Promise<void> {
 
 export async function cleanupExpiredTwoFactorCodes(): Promise<void> {
   await db.delete(twoFactorCodes)
-    .where(sql`${twoFactorCodes.expiresAt} < NOW() OR ${twoFactorCodes.usedAt} IS NOT NULL`);
+    .where(sql`${twoFactorCodes.expiresAt} < (strftime('%s','now') * 1000) OR ${twoFactorCodes.usedAt} IS NOT NULL`);
 }
 
 // ============================================================================
@@ -1626,12 +1626,13 @@ export async function markAllOrganizationsAsLegacy(): Promise<number> {
 
 export async function getOrganizationsWithPendingDowngrade(): Promise<Organization[]> {
   return db.select().from(organizations)
-    .where(sql`${organizations.pendingDowngradePlan} IS NOT NULL AND ${organizations.currentPeriodEnd} <= NOW()`);
+    .where(sql`${organizations.pendingDowngradePlan} IS NOT NULL AND ${organizations.currentPeriodEnd} <= (strftime('%s','now') * 1000)`);
 }
 
 export async function getOrganizationsWithFailedPayments(): Promise<Organization[]> {
   return db.select().from(organizations)
     .where(sql`${organizations.paymentFailedAt} IS NOT NULL AND ${organizations.subscriptionStatus} != 'canceled'`);
+
 }
 
 // Billing History Functions

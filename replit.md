@@ -18,7 +18,7 @@ The frontend is built with React 18, TypeScript, Wouter for routing, Zustand for
 The backend is an Express.js REST API with TypeScript, featuring an abstracted storage interface, Zod for schema validation, and centralized error handling.
 
 ### Data Storage
-PostgreSQL (via Replit's built-in Neon-backed database) is used for persistent data storage across deployments. The database is managed through Drizzle ORM with schema defined in `shared/schema.ts`.
+SQLite (via better-sqlite3) is used for persistent data storage, stored at `data/leaderos.db`. WAL mode is enabled for concurrent read performance. The database is managed through Drizzle ORM with schema defined in `shared/schema.ts`. Tables are created via explicit CREATE TABLE IF NOT EXISTS statements in `server/migrate.ts`.
 
 ### Deployment
 The application supports Docker and DigitalOcean App Platform deployment, utilizing environment variables for configuration (`JWT_SECRET`, `INITIAL_REGISTRATION_TOKEN`, `DATA_DIR`, `NODE_ENV`).
@@ -160,7 +160,7 @@ The project uses Vite for development, Tailwind CSS for styling, and TypeScript 
 - `tailwindcss`
 - `class-variance-authority`
 - `lucide-react`
-- `@neondatabase/serverless`
+- `better-sqlite3`
 - `resend`
 - `drizzle-orm`
 - `express`

@@ -1,157 +1,461 @@
-import { migrate } from "drizzle-orm/neon-serverless/migrator";
-import { drizzle } from "drizzle-orm/neon-serverless";
-import { pool } from "./db";
+import Database from "better-sqlite3";
 import path from "path";
-import { fileURLToPath } from "url";
 import fs from "fs";
-import crypto from "crypto";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), "data", "leaderos.db");
 
-async function seedMigrationJournalIfNeeded(client: any) {
-  // Check if any app tables exist (e.g., users table)
-  const appTablesCheck = await client.query(`
-    SELECT EXISTS (
-      SELECT FROM information_schema.tables 
-      WHERE table_schema = 'public' 
-      AND table_name = 'users'
-    );
-  `);
-
-  const appTablesExist = appTablesCheck.rows[0].exists;
-
-  // If app tables exist, always check for missing migrations in the journal
-  // This handles cases where:
-  // 1. Journal doesn't exist but tables do
-  // 2. Journal is empty but tables exist
-  // 3. Journal has some entries but is missing newer migrations for tables that exist
-  if (appTablesExist) {
-    console.log("[INFO] Checking for missing migration journal entries...");
-    await seedJournal(client);
-  }
-}
-
-async function seedJournal(client: any) {
-  // Create the drizzle schema and migrations table if needed
-  await client.query(`CREATE SCHEMA IF NOT EXISTS drizzle;`);
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS drizzle.__drizzle_migrations (
-      id SERIAL PRIMARY KEY,
-      hash TEXT NOT NULL,
-      created_at BIGINT NOT NULL
-    );
-  `);
-
-  // Read migration files
-  const migrationsDir = path.join(__dirname, "..", "migrations");
-  const journalPath = path.join(migrationsDir, "meta", "_journal.json");
-
-  if (!fs.existsSync(journalPath)) {
-    console.log("[WARN] No migration journal found - skipping seed");
-    return;
-  }
-
-  const journal = JSON.parse(fs.readFileSync(journalPath, "utf-8"));
-
-  // Check existing migrations
-  const existingMigrations = await client.query(
-    "SELECT hash FROM drizzle.__drizzle_migrations"
-  );
-  const existingHashes = new Set(existingMigrations.rows.map((r: any) => r.hash));
-
-  for (const entry of journal.entries) {
-    const migrationFile = path.join(migrationsDir, `${entry.tag}.sql`);
-    
-    if (!fs.existsSync(migrationFile)) {
-      continue;
-    }
-
-    const content = fs.readFileSync(migrationFile, "utf-8");
-    const hash = crypto.createHash("sha256").update(content).digest("hex");
-
-    if (existingHashes.has(hash)) {
-      continue;
-    }
-
-    // Check if the first table from this migration exists
-    const tableMatch = content.match(/CREATE TABLE "([^"]+)"/);
-    if (tableMatch) {
-      const tableName = tableMatch[1];
-      const tableExists = await client.query(`
-        SELECT EXISTS (
-          SELECT FROM information_schema.tables 
-          WHERE table_schema = 'public' 
-          AND table_name = $1
-        );
-      `, [tableName]);
-
-      if (tableExists.rows[0].exists) {
-        // Table exists, mark migration as applied
-        await client.query(
-          "INSERT INTO drizzle.__drizzle_migrations (hash, created_at) VALUES ($1, $2)",
-          [hash, entry.when]
-        );
-        console.log(`[INFO] Auto-seeded migration: ${entry.tag}`);
-      }
-    } else {
-      // For DROP TABLE migrations, check if it's a cleanup migration
-      const dropMatch = content.match(/DROP TABLE "([^"]+)"/);
-      if (dropMatch) {
-        const tableName = dropMatch[1];
-        const tableExists = await client.query(`
-          SELECT EXISTS (
-            SELECT FROM information_schema.tables 
-            WHERE table_schema = 'public' 
-            AND table_name = $1
-          );
-        `, [tableName]);
-
-        if (!tableExists.rows[0].exists) {
-          // Table doesn't exist (was dropped), mark migration as applied
-          await client.query(
-            "INSERT INTO drizzle.__drizzle_migrations (hash, created_at) VALUES ($1, $2)",
-            [hash, entry.when]
-          );
-          console.log(`[INFO] Auto-seeded migration: ${entry.tag}`);
-        }
-      }
-    }
-  }
-}
-
-export async function runMigrations() {
+export function runMigrations() {
   console.log("[INFO] Running database migrations...");
-  
-  const client = await pool.connect();
-  
-  try {
-    // Acquire advisory lock - this will WAIT if another process has it
-    // This ensures all instances wait for migrations to complete before starting
-    console.log("[INFO] Acquiring migration lock...");
-    await client.query("SELECT pg_advisory_lock(12345)");
-    console.log("[INFO] Migration lock acquired");
-    
-    // Auto-seed migration journal if tables exist but aren't tracked
-    await seedMigrationJournalIfNeeded(client);
-    
-    // Create a dedicated drizzle instance for migration
-    const migrationDb = drizzle({ client });
-    
-    await migrate(migrationDb, {
-      migrationsFolder: path.join(__dirname, "..", "migrations"),
-    });
-    
-    console.log("[INFO] Database migrations completed successfully");
-    
-    // Release advisory lock
-    await client.query("SELECT pg_advisory_unlock(12345)");
-  } catch (error) {
-    // Release lock on error
-    await client.query("SELECT pg_advisory_unlock(12345)").catch(() => {});
-    console.error("[ERROR] Database migration failed:", error);
-    throw error;
-  } finally {
-    client.release();
-  }
+
+  const dataDir = path.dirname(DB_PATH);
+  fs.mkdirSync(dataDir, { recursive: true });
+
+  const sqlite = new Database(DB_PATH);
+  sqlite.pragma("journal_mode = WAL");
+  sqlite.pragma("foreign_keys = ON");
+
+  const statements = getCreateTableStatements();
+
+  sqlite.transaction(() => {
+    for (const stmt of statements) {
+      sqlite.exec(stmt);
+    }
+  })();
+
+  sqlite.close();
+  console.log("[INFO] Database migrations completed successfully");
+}
+
+function getCreateTableStatements(): string[] {
+  return [
+    `CREATE TABLE IF NOT EXISTS "organizations" (
+      "id" text PRIMARY KEY,
+      "name" text NOT NULL,
+      "registration_token" text NOT NULL UNIQUE,
+      "subscription_plan" text NOT NULL DEFAULT 'starter',
+      "subscription_status" text NOT NULL DEFAULT 'active',
+      "billing_interval" text NOT NULL DEFAULT 'monthly',
+      "stripe_customer_id" text,
+      "stripe_subscription_id" text UNIQUE,
+      "stripe_price_id" text,
+      "current_period_start" integer,
+      "current_period_end" integer,
+      "trial_ends_at" integer,
+      "cancel_at_period_end" text NOT NULL DEFAULT 'false',
+      "pending_downgrade_plan" text,
+      "max_users" integer NOT NULL DEFAULT 1,
+      "extra_seats" integer NOT NULL DEFAULT 0,
+      "pending_extra_seats" integer,
+      "is_legacy" text NOT NULL DEFAULT 'false',
+      "payment_failed_at" integer,
+      "last_payment_reminder_at" integer,
+      "created_at" integer,
+      "updated_at" integer
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "billing_history" (
+      "id" text PRIMARY KEY,
+      "organization_id" text NOT NULL,
+      "event_type" text NOT NULL,
+      "description" text NOT NULL,
+      "amount_cents" integer,
+      "currency" text DEFAULT 'usd',
+      "stripe_invoice_id" text,
+      "stripe_payment_intent_id" text,
+      "plan_before" text,
+      "plan_after" text,
+      "seats_before" integer,
+      "seats_after" integer,
+      "metadata" text,
+      "created_at" integer
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "payment_failures" (
+      "id" text PRIMARY KEY,
+      "organization_id" text NOT NULL,
+      "stripe_invoice_id" text,
+      "stripe_payment_intent_id" text,
+      "amount_cents" integer NOT NULL,
+      "currency" text DEFAULT 'usd',
+      "failure_reason" text,
+      "reminders_sent" integer NOT NULL DEFAULT 0,
+      "last_reminder_at" integer,
+      "grace_period_ends_at" integer NOT NULL,
+      "resolved_at" integer,
+      "created_at" integer
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "processed_stripe_events" (
+      "event_id" text PRIMARY KEY,
+      "event_type" text NOT NULL,
+      "processed_at" integer
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "sent_email_notifications" (
+      "id" text PRIMARY KEY,
+      "organization_id" text NOT NULL,
+      "email_type" text NOT NULL,
+      "recipient_email" text NOT NULL,
+      "stripe_subscription_id" text,
+      "sent_at" integer
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "sessions" (
+      "sid" text PRIMARY KEY,
+      "sess" text NOT NULL,
+      "expire" integer NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "sessions" ("expire")`,
+
+    `CREATE TABLE IF NOT EXISTS "users" (
+      "id" text PRIMARY KEY,
+      "email" text UNIQUE,
+      "password_hash" text,
+      "first_name" text,
+      "last_name" text,
+      "profile_image_url" text,
+      "role" text NOT NULL DEFAULT 'co_lead',
+      "timezone" text DEFAULT 'America/Chicago',
+      "organization_id" text,
+      "is_super_admin" text NOT NULL DEFAULT 'false',
+      "fte" text DEFAULT '1.0',
+      "salary" integer,
+      "service_delivery_hours" text DEFAULT '0',
+      "two_factor_enabled" text NOT NULL DEFAULT 'false',
+      "must_change_password" text NOT NULL DEFAULT 'false',
+      "created_at" integer,
+      "updated_at" integer
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "password_reset_tokens" (
+      "id" text PRIMARY KEY,
+      "user_id" text NOT NULL,
+      "token_hash" text NOT NULL,
+      "expires_at" integer NOT NULL,
+      "used_at" integer,
+      "created_at" integer
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "two_factor_codes" (
+      "id" text PRIMARY KEY,
+      "user_id" text NOT NULL,
+      "code_hash" text NOT NULL,
+      "type" text NOT NULL DEFAULT 'login',
+      "expires_at" integer NOT NULL,
+      "used_at" integer,
+      "attempts" integer NOT NULL DEFAULT 0,
+      "organization_id" text,
+      "created_at" integer
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "user_strategy_assignments" (
+      "id" text PRIMARY KEY,
+      "user_id" text NOT NULL,
+      "strategy_id" text NOT NULL,
+      "assigned_by" text NOT NULL,
+      "assigned_at" integer,
+      UNIQUE("user_id", "strategy_id")
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "project_resource_assignments" (
+      "id" text PRIMARY KEY,
+      "project_id" text NOT NULL,
+      "user_id" text NOT NULL,
+      "hours_per_week" text NOT NULL DEFAULT '0',
+      "organization_id" text NOT NULL,
+      "assigned_by" text NOT NULL,
+      "created_at" integer,
+      "updated_at" integer,
+      UNIQUE("project_id", "user_id")
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "action_people_assignments" (
+      "id" text PRIMARY KEY,
+      "action_id" text NOT NULL,
+      "user_id" text NOT NULL,
+      "organization_id" text NOT NULL,
+      "assigned_by" text NOT NULL,
+      "created_at" integer,
+      UNIQUE("action_id", "user_id")
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "strategies" (
+      "id" text PRIMARY KEY,
+      "title" text NOT NULL,
+      "description" text NOT NULL,
+      "goal" text,
+      "start_date" integer,
+      "target_date" integer,
+      "metrics" text NOT NULL,
+      "status" text NOT NULL DEFAULT 'Active',
+      "completion_date" integer,
+      "color_code" text NOT NULL DEFAULT '#3B82F6',
+      "display_order" integer NOT NULL DEFAULT 0,
+      "progress" integer NOT NULL DEFAULT 0,
+      "case_for_change" text NOT NULL DEFAULT 'To be defined',
+      "vision_statement" text NOT NULL DEFAULT 'To be defined',
+      "success_metrics" text NOT NULL DEFAULT 'To be defined',
+      "stakeholder_map" text NOT NULL DEFAULT 'To be defined',
+      "readiness_rating" text NOT NULL DEFAULT 'To be defined',
+      "risk_exposure_rating" text NOT NULL DEFAULT 'To be defined',
+      "change_champion_assignment" text NOT NULL DEFAULT 'To be defined',
+      "reinforcement_plan" text NOT NULL DEFAULT 'To be defined',
+      "benefits_realization_plan" text NOT NULL DEFAULT 'To be defined',
+      "hidden_continuum_sections" text DEFAULT '[]',
+      "custom_continuum_sections" text DEFAULT '[]',
+      "organization_id" text,
+      "executive_goal_id" text,
+      "created_by" text NOT NULL,
+      "created_at" integer
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "projects" (
+      "id" text PRIMARY KEY,
+      "title" text NOT NULL,
+      "description" text NOT NULL,
+      "strategy_id" text NOT NULL,
+      "kpi" text,
+      "kpi_tracking" text,
+      "accountable_leaders" text NOT NULL,
+      "resources_required" text,
+      "start_date" integer NOT NULL,
+      "due_date" integer NOT NULL,
+      "status" text NOT NULL DEFAULT 'NYS',
+      "completion_date" integer,
+      "progress" integer NOT NULL DEFAULT 0,
+      "is_archived" text NOT NULL DEFAULT 'false',
+      "archive_reason" text,
+      "archived_at" integer,
+      "archived_by" text,
+      "progress_at_archive" integer,
+      "wake_up_date" integer,
+      "document_folder_url" text,
+      "communication_url" text,
+      "organization_id" text,
+      "created_by" text NOT NULL,
+      "created_at" integer
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "project_snapshots" (
+      "id" text PRIMARY KEY,
+      "project_id" text NOT NULL,
+      "snapshot_data" text NOT NULL,
+      "snapshot_type" text NOT NULL,
+      "reason" text,
+      "created_by" text NOT NULL,
+      "organization_id" text,
+      "created_at" integer
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "barriers" (
+      "id" text PRIMARY KEY,
+      "project_id" text NOT NULL,
+      "title" text NOT NULL,
+      "description" text NOT NULL,
+      "severity" text NOT NULL DEFAULT 'medium',
+      "status" text NOT NULL DEFAULT 'active',
+      "owner_id" text,
+      "identified_date" integer,
+      "target_resolution_date" integer,
+      "resolution_date" integer,
+      "resolution_notes" text,
+      "organization_id" text,
+      "created_by" text NOT NULL,
+      "created_at" integer,
+      "updated_at" integer
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "activities" (
+      "id" text PRIMARY KEY,
+      "type" text NOT NULL,
+      "description" text NOT NULL,
+      "user_id" text NOT NULL,
+      "strategy_id" text,
+      "project_id" text,
+      "organization_id" text,
+      "created_at" integer
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "actions" (
+      "id" text PRIMARY KEY,
+      "title" text NOT NULL,
+      "description" text NOT NULL,
+      "strategy_id" text NOT NULL,
+      "project_id" text,
+      "target_value" text,
+      "current_value" text,
+      "measurement_unit" text,
+      "status" text NOT NULL DEFAULT 'in_progress',
+      "achieved_date" integer,
+      "due_date" integer,
+      "is_archived" text NOT NULL DEFAULT 'false',
+      "document_folder_url" text,
+      "notes" text,
+      "organization_id" text,
+      "created_by" text NOT NULL,
+      "created_at" integer
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "action_documents" (
+      "id" text PRIMARY KEY,
+      "action_id" text NOT NULL,
+      "name" text NOT NULL,
+      "url" text NOT NULL,
+      "created_at" integer
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "action_checklist_items" (
+      "id" text PRIMARY KEY,
+      "action_id" text NOT NULL,
+      "title" text NOT NULL,
+      "is_completed" text NOT NULL DEFAULT 'false',
+      "order_index" integer NOT NULL DEFAULT 0,
+      "indent_level" integer NOT NULL DEFAULT 1,
+      "created_at" integer
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "notifications" (
+      "id" text PRIMARY KEY,
+      "user_id" text NOT NULL,
+      "type" text NOT NULL,
+      "title" text NOT NULL,
+      "message" text NOT NULL,
+      "related_entity_id" text,
+      "related_entity_type" text,
+      "is_read" text NOT NULL DEFAULT 'false',
+      "organization_id" text,
+      "created_at" integer
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "meeting_notes" (
+      "id" text PRIMARY KEY,
+      "title" text NOT NULL,
+      "meeting_date" integer NOT NULL,
+      "strategy_id" text NOT NULL,
+      "selected_project_ids" text NOT NULL,
+      "selected_action_ids" text NOT NULL,
+      "notes" text NOT NULL,
+      "organization_id" text,
+      "created_by" text NOT NULL,
+      "created_at" integer,
+      "updated_at" integer
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "dependencies" (
+      "id" text PRIMARY KEY,
+      "source_type" text NOT NULL,
+      "source_id" text NOT NULL,
+      "target_type" text NOT NULL,
+      "target_id" text NOT NULL,
+      "relationship" text NOT NULL DEFAULT 'blocks',
+      "organization_id" text,
+      "created_by" text NOT NULL,
+      "created_at" integer,
+      UNIQUE("source_type", "source_id", "target_type", "target_id")
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "template_types" (
+      "id" text PRIMARY KEY,
+      "name" text NOT NULL UNIQUE,
+      "display_order" integer NOT NULL DEFAULT 0,
+      "created_at" integer
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "executive_goals" (
+      "id" text PRIMARY KEY,
+      "name" text NOT NULL,
+      "description" text,
+      "organization_id" text NOT NULL,
+      "created_by" text NOT NULL,
+      "created_at" integer
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "strategy_executive_goals" (
+      "id" text PRIMARY KEY,
+      "strategy_id" text NOT NULL,
+      "executive_goal_id" text NOT NULL,
+      "organization_id" text NOT NULL,
+      UNIQUE("strategy_id", "executive_goal_id")
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "team_tags" (
+      "id" text PRIMARY KEY,
+      "name" text NOT NULL,
+      "color_hex" text NOT NULL DEFAULT '#3B82F6',
+      "organization_id" text NOT NULL,
+      "created_by" text NOT NULL,
+      "created_at" integer
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "project_team_tags" (
+      "id" text PRIMARY KEY,
+      "project_id" text NOT NULL,
+      "team_tag_id" text NOT NULL,
+      "organization_id" text NOT NULL,
+      UNIQUE("project_id", "team_tag_id")
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "user_team_tags" (
+      "id" text PRIMARY KEY,
+      "user_id" text NOT NULL,
+      "team_tag_id" text NOT NULL,
+      "organization_id" text NOT NULL,
+      "is_primary" integer NOT NULL DEFAULT 0,
+      UNIQUE("user_id", "team_tag_id")
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "pto_entries" (
+      "id" text PRIMARY KEY,
+      "user_id" text NOT NULL,
+      "start_date" text NOT NULL,
+      "end_date" text NOT NULL,
+      "type" text NOT NULL DEFAULT 'pto',
+      "notes" text,
+      "organization_id" text NOT NULL,
+      "created_at" integer
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "holidays" (
+      "id" text PRIMARY KEY,
+      "name" text NOT NULL,
+      "date" text NOT NULL,
+      "organization_id" text NOT NULL,
+      "created_at" integer
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "intake_forms" (
+      "id" text PRIMARY KEY,
+      "title" text NOT NULL,
+      "description" text,
+      "slug" text NOT NULL,
+      "fields" text NOT NULL DEFAULT '[]',
+      "is_active" text NOT NULL DEFAULT 'true',
+      "expires_at" integer,
+      "max_submissions_per_email" integer,
+      "max_total_submissions" integer,
+      "thank_you_message" text DEFAULT 'Thank you for your submission!',
+      "default_strategy_id" text,
+      "default_project_id" text,
+      "organization_id" text NOT NULL,
+      "created_by" text NOT NULL,
+      "created_at" integer,
+      "updated_at" integer,
+      UNIQUE("organization_id", "slug")
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "intake_submissions" (
+      "id" text PRIMARY KEY,
+      "form_id" text NOT NULL,
+      "data" text NOT NULL DEFAULT '{}',
+      "submitter_email" text,
+      "submitter_name" text,
+      "status" text NOT NULL DEFAULT 'new',
+      "assigned_strategy_id" text,
+      "assigned_project_id" text,
+      "reviewed_by" text,
+      "reviewed_at" integer,
+      "organization_id" text NOT NULL,
+      "submitted_at" integer
+    )`,
+  ];
 }

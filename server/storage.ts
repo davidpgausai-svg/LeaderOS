@@ -195,6 +195,6 @@ export interface IStorage {
   countTotalSubmissions(formId: string): Promise<number>;
 }
 
-// Use PostgreSQL storage
-import { PostgresStorage } from './pgStorage';
-export const storage: IStorage = new PostgresStorage();
+// Use SQLite storage
+import { DatabaseStorage } from './pgStorage';
+export const storage: IStorage = new DatabaseStorage();

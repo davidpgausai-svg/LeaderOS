@@ -4,7 +4,7 @@ import { logger } from "./logger";
 import { differenceInDays } from "date-fns";
 import { sendPaymentFailedEmail } from "./email";
 import * as pgFunctions from "./pgStorage";
-import { PostgresStorage } from "./pgStorage";
+import { DatabaseStorage } from "./pgStorage";
 
 // Track which actions have already been notified for which thresholds
 // to prevent duplicate notifications
@@ -108,7 +108,7 @@ export function startDueDateScheduler(intervalMinutes: number = 60) {
   logger.info(`Due date notification scheduler started (checking every ${intervalMinutes} minutes)`);
 }
 
-const pgStorage = new PostgresStorage();
+const pgStorage = new DatabaseStorage();
 
 /**
  * Check for organizations with failed payments and send reminder emails

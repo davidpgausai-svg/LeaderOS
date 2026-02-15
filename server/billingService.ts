@@ -1,10 +1,10 @@
 import type Stripe from 'stripe';
 import { getUncachableStripeClient } from './stripeClient';
-import { PostgresStorage } from './pgStorage';
+import { DatabaseStorage } from './pgStorage';
 import * as pgFunctions from './pgStorage';
 import type { Organization, SubscriptionPlan, SubscriptionStatus, BillingInterval } from '@shared/schema';
 
-const pgStorage = new PostgresStorage();
+const pgStorage = new DatabaseStorage();
 
 // Organizations with free access (bypass all billing restrictions)
 // These are legacy/test organizations that should have full access

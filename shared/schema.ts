@@ -1,9 +1,18 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, jsonb, index, unique, serial, boolean } from "drizzle-orm/pg-core";
+import { sqliteTable, text, integer, unique, index } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+const randomUUID = (): string => {
+  if (typeof globalThis.crypto !== 'undefined' && globalThis.crypto.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
 
-// Subscription plan types
 export const subscriptionPlanEnum = ['starter', 'leaderpro', 'team', 'legacy'] as const;
 export type SubscriptionPlan = typeof subscriptionPlanEnum[number];
 
@@ -13,9 +22,8 @@ export type SubscriptionStatus = typeof subscriptionStatusEnum[number];
 export const billingIntervalEnum = ['monthly', 'annual'] as const;
 export type BillingInterval = typeof billingIntervalEnum[number];
 
-// Organizations table for multi-tenancy with subscription info
-export const organizations = pgTable("organizations", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+export const organizations = sqliteTable("organizations", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
   name: text("name").notNull(),
   registrationToken: text("registration_token").notNull().unique(),
   subscriptionPlan: text("subscription_plan").notNull().default('starter'),
@@ -24,19 +32,19 @@ export const organizations = pgTable("organizations", {
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id").unique(),
   stripePriceId: text("stripe_price_id"),
-  currentPeriodStart: timestamp("current_period_start"),
-  currentPeriodEnd: timestamp("current_period_end"),
-  trialEndsAt: timestamp("trial_ends_at"),
+  currentPeriodStart: integer("current_period_start", { mode: "timestamp" }),
+  currentPeriodEnd: integer("current_period_end", { mode: "timestamp" }),
+  trialEndsAt: integer("trial_ends_at", { mode: "timestamp" }),
   cancelAtPeriodEnd: text("cancel_at_period_end").notNull().default('false'),
   pendingDowngradePlan: text("pending_downgrade_plan"),
   maxUsers: integer("max_users").notNull().default(1),
   extraSeats: integer("extra_seats").notNull().default(0),
   pendingExtraSeats: integer("pending_extra_seats"),
   isLegacy: text("is_legacy").notNull().default('false'),
-  paymentFailedAt: timestamp("payment_failed_at"),
-  lastPaymentReminderAt: timestamp("last_payment_reminder_at"),
-  createdAt: timestamp("created_at").default(sql`now()`),
-  updatedAt: timestamp("updated_at").default(sql`now()`),
+  paymentFailedAt: integer("payment_failed_at", { mode: "timestamp" }),
+  lastPaymentReminderAt: integer("last_payment_reminder_at", { mode: "timestamp" }),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
 export const insertOrganizationSchema = createInsertSchema(organizations).omit({
@@ -48,10 +56,9 @@ export const insertOrganizationSchema = createInsertSchema(organizations).omit({
 export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
 export type Organization = typeof organizations.$inferSelect;
 
-// Billing History - Track all billing events
-export const billingHistory = pgTable("billing_history", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  organizationId: varchar("organization_id").notNull(),
+export const billingHistory = sqliteTable("billing_history", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  organizationId: text("organization_id").notNull(),
   eventType: text("event_type").notNull(),
   description: text("description").notNull(),
   amountCents: integer("amount_cents"),
@@ -63,7 +70,7 @@ export const billingHistory = pgTable("billing_history", {
   seatsBefore: integer("seats_before"),
   seatsAfter: integer("seats_after"),
   metadata: text("metadata"),
-  createdAt: timestamp("created_at").default(sql`now()`),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
 export const insertBillingHistorySchema = createInsertSchema(billingHistory).omit({
@@ -74,20 +81,19 @@ export const insertBillingHistorySchema = createInsertSchema(billingHistory).omi
 export type InsertBillingHistory = z.infer<typeof insertBillingHistorySchema>;
 export type BillingHistory = typeof billingHistory.$inferSelect;
 
-// Payment Failures - Track failed payments and retry attempts
-export const paymentFailures = pgTable("payment_failures", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  organizationId: varchar("organization_id").notNull(),
+export const paymentFailures = sqliteTable("payment_failures", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  organizationId: text("organization_id").notNull(),
   stripeInvoiceId: text("stripe_invoice_id"),
   stripePaymentIntentId: text("stripe_payment_intent_id"),
   amountCents: integer("amount_cents").notNull(),
   currency: text("currency").default('usd'),
   failureReason: text("failure_reason"),
   remindersSent: integer("reminders_sent").notNull().default(0),
-  lastReminderAt: timestamp("last_reminder_at"),
-  gracePeriodEndsAt: timestamp("grace_period_ends_at").notNull(),
-  resolvedAt: timestamp("resolved_at"),
-  createdAt: timestamp("created_at").default(sql`now()`),
+  lastReminderAt: integer("last_reminder_at", { mode: "timestamp" }),
+  gracePeriodEndsAt: integer("grace_period_ends_at", { mode: "timestamp" }).notNull(),
+  resolvedAt: integer("resolved_at", { mode: "timestamp" }),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
 export const insertPaymentFailureSchema = createInsertSchema(paymentFailures).omit({
@@ -99,23 +105,21 @@ export const insertPaymentFailureSchema = createInsertSchema(paymentFailures).om
 export type InsertPaymentFailure = z.infer<typeof insertPaymentFailureSchema>;
 export type PaymentFailure = typeof paymentFailures.$inferSelect;
 
-// Processed Stripe Events - Track processed webhook events for idempotency
-export const processedStripeEvents = pgTable("processed_stripe_events", {
-  eventId: varchar("event_id").primaryKey(),
+export const processedStripeEvents = sqliteTable("processed_stripe_events", {
+  eventId: text("event_id").primaryKey(),
   eventType: text("event_type").notNull(),
-  processedAt: timestamp("processed_at").default(sql`now()`),
+  processedAt: integer("processed_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
 export type ProcessedStripeEvent = typeof processedStripeEvents.$inferSelect;
 
-// Sent Email Notifications - Track sent emails to prevent duplicates
-export const sentEmailNotifications = pgTable("sent_email_notifications", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  organizationId: varchar("organization_id").notNull(),
-  emailType: text("email_type").notNull(), // 'trial_day_3', 'trial_day_5', 'trial_day_7', 'cancel_3_days', 'cancel_day_of'
+export const sentEmailNotifications = sqliteTable("sent_email_notifications", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  organizationId: text("organization_id").notNull(),
+  emailType: text("email_type").notNull(),
   recipientEmail: text("recipient_email").notNull(),
   stripeSubscriptionId: text("stripe_subscription_id"),
-  sentAt: timestamp("sent_at").default(sql`now()`),
+  sentAt: integer("sent_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
 export const insertSentEmailNotificationSchema = createInsertSchema(sentEmailNotifications).omit({
@@ -126,46 +130,43 @@ export const insertSentEmailNotificationSchema = createInsertSchema(sentEmailNot
 export type InsertSentEmailNotification = z.infer<typeof insertSentEmailNotificationSchema>;
 export type SentEmailNotification = typeof sentEmailNotifications.$inferSelect;
 
-// Session storage table for Replit Auth
-export const sessions = pgTable(
+export const sessions = sqliteTable(
   "sessions",
   {
-    sid: varchar("sid").primaryKey(),
-    sess: jsonb("sess").notNull(),
-    expire: timestamp("expire").notNull(),
+    sid: text("sid").primaryKey(),
+    sess: text("sess", { mode: "json" }).notNull(),
+    expire: integer("expire", { mode: "timestamp" }).notNull(),
   },
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table for Replit Auth
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar("email").unique(),
-  passwordHash: text("password_hash"), // For email/password authentication
-  firstName: varchar("first_name"),
-  lastName: varchar("last_name"),
-  profileImageUrl: varchar("profile_image_url"),
-  role: text("role").notNull().default('co_lead'), // 'administrator', 'co_lead', 'view', or 'sme'
-  timezone: varchar("timezone").default('America/Chicago'), // User's timezone (e.g., 'America/Chicago', 'America/New_York')
-  organizationId: varchar("organization_id"), // Foreign key to organizations table
-  isSuperAdmin: text("is_super_admin").notNull().default('false'), // 'true' or 'false' - Super Admin can manage all organizations
-  fte: text("fte").default('1.0'), // Full-time equivalent (1.0 = 40 hours/week, 0.5 = 20 hours/week)
-  salary: integer("salary"), // Annual salary for cost calculations (nullable for future use)
-  serviceDeliveryHours: text("service_delivery_hours").default('0'), // Hours for individual contributor work, meetings, etc.
-  twoFactorEnabled: text("two_factor_enabled").notNull().default('false'), // 'true' or 'false' - 2FA via email
-  mustChangePassword: text("must_change_password").notNull().default('false'), // 'true' or 'false' - force password change on first login
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+export const users = sqliteTable("users", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  email: text("email").unique(),
+  passwordHash: text("password_hash"),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  profileImageUrl: text("profile_image_url"),
+  role: text("role").notNull().default('co_lead'),
+  timezone: text("timezone").default('America/Chicago'),
+  organizationId: text("organization_id"),
+  isSuperAdmin: text("is_super_admin").notNull().default('false'),
+  fte: text("fte").default('1.0'),
+  salary: integer("salary"),
+  serviceDeliveryHours: text("service_delivery_hours").default('0'),
+  twoFactorEnabled: text("two_factor_enabled").notNull().default('false'),
+  mustChangePassword: text("must_change_password").notNull().default('false'),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
-// Password Reset Tokens for email-based password recovery
-export const passwordResetTokens = pgTable("password_reset_tokens", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull(),
-  tokenHash: text("token_hash").notNull(), // Hashed token for security
-  expiresAt: timestamp("expires_at").notNull(),
-  usedAt: timestamp("used_at"), // Null if not used yet
-  createdAt: timestamp("created_at").default(sql`now()`),
+export const passwordResetTokens = sqliteTable("password_reset_tokens", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  userId: text("user_id").notNull(),
+  tokenHash: text("token_hash").notNull(),
+  expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+  usedAt: integer("used_at", { mode: "timestamp" }),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
 export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTokens).omit({
@@ -176,17 +177,16 @@ export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTo
 export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 
-// Two-Factor Authentication Codes for email-based 2FA
-export const twoFactorCodes = pgTable("two_factor_codes", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull(),
-  codeHash: text("code_hash").notNull(), // Hashed 6-digit code for security
-  type: text("type").notNull().default('login'), // 'login' or 'setup' - purpose of the code
-  expiresAt: timestamp("expires_at").notNull(),
-  usedAt: timestamp("used_at"), // Null if not used yet
-  attempts: integer("attempts").notNull().default(0), // Track failed attempts for rate limiting
-  organizationId: varchar("organization_id"), // For multi-tenancy
-  createdAt: timestamp("created_at").default(sql`now()`),
+export const twoFactorCodes = sqliteTable("two_factor_codes", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  userId: text("user_id").notNull(),
+  codeHash: text("code_hash").notNull(),
+  type: text("type").notNull().default('login'),
+  expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+  usedAt: integer("used_at", { mode: "timestamp" }),
+  attempts: integer("attempts").notNull().default(0),
+  organizationId: text("organization_id"),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
 export const insertTwoFactorCodeSchema = createInsertSchema(twoFactorCodes).omit({
@@ -198,27 +198,25 @@ export const insertTwoFactorCodeSchema = createInsertSchema(twoFactorCodes).omit
 export type InsertTwoFactorCode = z.infer<typeof insertTwoFactorCodeSchema>;
 export type TwoFactorCode = typeof twoFactorCodes.$inferSelect;
 
-// User Strategy Assignments - Links users to strategies they can access
-export const userStrategyAssignments = pgTable("user_strategy_assignments", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull(), // User being assigned
-  strategyId: varchar("strategy_id").notNull(), // Strategy they can access
-  assignedBy: varchar("assigned_by").notNull(), // Administrator who made the assignment
-  assignedAt: timestamp("assigned_at").default(sql`now()`),
+export const userStrategyAssignments = sqliteTable("user_strategy_assignments", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  userId: text("user_id").notNull(),
+  strategyId: text("strategy_id").notNull(),
+  assignedBy: text("assigned_by").notNull(),
+  assignedAt: integer("assigned_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 }, (table) => ({
   uniqueUserStrategy: unique().on(table.userId, table.strategyId),
 }));
 
-// Project Resource Assignments - Links users to projects with hours per week for capacity planning
-export const projectResourceAssignments = pgTable("project_resource_assignments", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  projectId: varchar("project_id").notNull(), // Project being assigned to
-  userId: varchar("user_id").notNull(), // User being assigned
-  hoursPerWeek: text("hours_per_week").notNull().default('0'), // Hours per week assigned to this project
-  organizationId: varchar("organization_id").notNull(), // For multi-tenancy
-  assignedBy: varchar("assigned_by").notNull(), // User who made the assignment
-  createdAt: timestamp("created_at").default(sql`now()`),
-  updatedAt: timestamp("updated_at").default(sql`now()`),
+export const projectResourceAssignments = sqliteTable("project_resource_assignments", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  projectId: text("project_id").notNull(),
+  userId: text("user_id").notNull(),
+  hoursPerWeek: text("hours_per_week").notNull().default('0'),
+  organizationId: text("organization_id").notNull(),
+  assignedBy: text("assigned_by").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 }, (table) => ({
   uniqueProjectUser: unique().on(table.projectId, table.userId),
 }));
@@ -232,14 +230,13 @@ export const insertProjectResourceAssignmentSchema = createInsertSchema(projectR
 export type InsertProjectResourceAssignment = z.infer<typeof insertProjectResourceAssignmentSchema>;
 export type ProjectResourceAssignment = typeof projectResourceAssignments.$inferSelect;
 
-// Action People Assignments - Links users to actions for to-do list tracking (no hours/FTE)
-export const actionPeopleAssignments = pgTable("action_people_assignments", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  actionId: varchar("action_id").notNull(),
-  userId: varchar("user_id").notNull(),
-  organizationId: varchar("organization_id").notNull(),
-  assignedBy: varchar("assigned_by").notNull(),
-  createdAt: timestamp("created_at").default(sql`now()`),
+export const actionPeopleAssignments = sqliteTable("action_people_assignments", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  actionId: text("action_id").notNull(),
+  userId: text("user_id").notNull(),
+  organizationId: text("organization_id").notNull(),
+  assignedBy: text("assigned_by").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 }, (table) => ({
   uniqueActionUser: unique().on(table.actionId, table.userId),
 }));
@@ -252,173 +249,166 @@ export const insertActionPeopleAssignmentSchema = createInsertSchema(actionPeopl
 export type InsertActionPeopleAssignment = z.infer<typeof insertActionPeopleAssignmentSchema>;
 export type ActionPeopleAssignment = typeof actionPeopleAssignments.$inferSelect;
 
-export const strategies = pgTable("strategies", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+export const strategies = sqliteTable("strategies", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
   title: text("title").notNull(),
   description: text("description").notNull(),
-  goal: text("goal"), // Strategic goal statement
-  startDate: timestamp("start_date"), // Optional - derived from child projects on Timeline
-  targetDate: timestamp("target_date"), // Optional - derived from child projects on Timeline
+  goal: text("goal"),
+  startDate: integer("start_date", { mode: "timestamp" }),
+  targetDate: integer("target_date", { mode: "timestamp" }),
   metrics: text("metrics").notNull(),
-  status: text("status").notNull().default('Active'), // 'Active', 'Completed', 'Archived'
-  completionDate: timestamp("completion_date"),
-  colorCode: text("color_code").notNull().default('#3B82F6'), // Hex color for strategy grouping
-  displayOrder: integer("display_order").notNull().default(0), // Order for framework ranking
-  progress: integer("progress").notNull().default(0), // 0-100, auto-calculated from projects
-  // Change Continuum fields - specific framework fields
+  status: text("status").notNull().default('Active'),
+  completionDate: integer("completion_date", { mode: "timestamp" }),
+  colorCode: text("color_code").notNull().default('#3B82F6'),
+  displayOrder: integer("display_order").notNull().default(0),
+  progress: integer("progress").notNull().default(0),
   caseForChange: text("case_for_change").notNull().default("To be defined"),
   visionStatement: text("vision_statement").notNull().default("To be defined"),
   successMetrics: text("success_metrics").notNull().default("To be defined"),
   stakeholderMap: text("stakeholder_map").notNull().default("To be defined"),
-  readinessRating: text("readiness_rating").notNull().default("To be defined"), // RAG (Red/Amber/Green)
+  readinessRating: text("readiness_rating").notNull().default("To be defined"),
   riskExposureRating: text("risk_exposure_rating").notNull().default("To be defined"),
   changeChampionAssignment: text("change_champion_assignment").notNull().default("To be defined"),
   reinforcementPlan: text("reinforcement_plan").notNull().default("To be defined"),
   benefitsRealizationPlan: text("benefits_realization_plan").notNull().default("To be defined"),
   hiddenContinuumSections: text("hidden_continuum_sections").default("[]"),
   customContinuumSections: text("custom_continuum_sections").default("[]"),
-  organizationId: varchar("organization_id"), // Foreign key to organizations table
-  executiveGoalId: varchar("executive_goal_id"), // Foreign key to executive_goals table for tagging
-  createdBy: varchar("created_by").notNull(),
-  createdAt: timestamp("created_at").default(sql`now()`),
+  organizationId: text("organization_id"),
+  executiveGoalId: text("executive_goal_id"),
+  createdBy: text("created_by").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
-export const projects = pgTable("projects", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  title: text("title").notNull(), // Component 2: Project name
-  description: text("description").notNull(), // Component 3: Project description
-  strategyId: varchar("strategy_id").notNull(), // Component 1: Strategy it is linked to
-  kpi: text("kpi"), // Component 4: Key Performance Indicator (optional)
-  kpiTracking: text("kpi_tracking"), // Component 5: Tracking the KPI (current value/measurement)
-  accountableLeaders: text("accountable_leaders").notNull(), // Component 6: Accountable Leaders (JSON array of user IDs)
-  resourcesRequired: text("resources_required"), // Component 7: Resources Required (open text field)
-  startDate: timestamp("start_date").notNull(), // Component 8: Timeline - Start Date
-  dueDate: timestamp("due_date").notNull(), // Component 8: Timeline - End Date
-  status: text("status").notNull().default('NYS'), // Component 9: Status (C, OT, OH, B, NYS)
-  completionDate: timestamp("completion_date"), // When project status was set to 'C' (Complete)
-  progress: integer("progress").notNull().default(0), // 0-100
-  isArchived: text("is_archived").notNull().default('false'), // 'true' or 'false' for cascade archival
-  archiveReason: text("archive_reason"), // Optional note when archiving
-  archivedAt: timestamp("archived_at"), // When project was archived
-  archivedBy: varchar("archived_by"), // User who archived the project
-  progressAtArchive: integer("progress_at_archive"), // Progress percentage at time of archive
-  wakeUpDate: timestamp("wake_up_date"), // Optional date to notify user to reactivate
-  documentFolderUrl: text("document_folder_url"), // OneDrive/Google Drive URL for project documents
-  communicationUrl: text("communication_url"), // Custom communication template URL
-  organizationId: varchar("organization_id"), // Foreign key to organizations table
-  createdBy: varchar("created_by").notNull(),
-  createdAt: timestamp("created_at").default(sql`now()`),
-});
-
-// Project Snapshots - Version history for archived/unarchived projects
-export const projectSnapshots = pgTable("project_snapshots", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  projectId: varchar("project_id").notNull(), // Original project ID
-  snapshotData: text("snapshot_data").notNull(), // JSON of project + actions at time of snapshot
-  snapshotType: text("snapshot_type").notNull(), // 'archive' or 'unarchive'
-  reason: text("reason"), // Optional reason for the snapshot
-  createdBy: varchar("created_by").notNull(),
-  organizationId: varchar("organization_id"),
-  createdAt: timestamp("created_at").default(sql`now()`),
-});
-
-// Barriers - Risk and obstacle tracking at the project level
-export const barriers = pgTable("barriers", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  projectId: varchar("project_id").notNull(), // Project this barrier belongs to
-  title: text("title").notNull(), // Short summary of the barrier
-  description: text("description").notNull(), // Detailed description of the barrier
-  severity: text("severity").notNull().default('medium'), // 'low', 'medium', 'high'
-  status: text("status").notNull().default('active'), // 'active', 'mitigated', 'resolved', 'closed'
-  ownerId: varchar("owner_id"), // User responsible for resolving this barrier
-  identifiedDate: timestamp("identified_date").default(sql`now()`), // When the barrier was identified
-  targetResolutionDate: timestamp("target_resolution_date"), // When it should be resolved by
-  resolutionDate: timestamp("resolution_date"), // When it was actually resolved
-  resolutionNotes: text("resolution_notes"), // How the barrier was resolved
-  organizationId: varchar("organization_id"), // Foreign key to organizations table
-  createdBy: varchar("created_by").notNull(),
-  createdAt: timestamp("created_at").default(sql`now()`),
-  updatedAt: timestamp("updated_at").default(sql`now()`),
-});
-
-export const activities = pgTable("activities", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  type: text("type").notNull(), // 'strategy_created', 'project_completed', 'project_overdue', etc.
-  description: text("description").notNull(),
-  userId: varchar("user_id").notNull(),
-  strategyId: varchar("strategy_id"),
-  projectId: varchar("project_id"),
-  organizationId: varchar("organization_id"), // Foreign key to organizations table
-  createdAt: timestamp("created_at").default(sql`now()`),
-});
-
-export const actions = pgTable("actions", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+export const projects = sqliteTable("projects", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
   title: text("title").notNull(),
   description: text("description").notNull(),
-  strategyId: varchar("strategy_id").notNull(),
-  projectId: varchar("project_id"), // Optional - actions can be linked to projects
+  strategyId: text("strategy_id").notNull(),
+  kpi: text("kpi"),
+  kpiTracking: text("kpi_tracking"),
+  accountableLeaders: text("accountable_leaders").notNull(),
+  resourcesRequired: text("resources_required"),
+  startDate: integer("start_date", { mode: "timestamp" }).notNull(),
+  dueDate: integer("due_date", { mode: "timestamp" }).notNull(),
+  status: text("status").notNull().default('NYS'),
+  completionDate: integer("completion_date", { mode: "timestamp" }),
+  progress: integer("progress").notNull().default(0),
+  isArchived: text("is_archived").notNull().default('false'),
+  archiveReason: text("archive_reason"),
+  archivedAt: integer("archived_at", { mode: "timestamp" }),
+  archivedBy: text("archived_by"),
+  progressAtArchive: integer("progress_at_archive"),
+  wakeUpDate: integer("wake_up_date", { mode: "timestamp" }),
+  documentFolderUrl: text("document_folder_url"),
+  communicationUrl: text("communication_url"),
+  organizationId: text("organization_id"),
+  createdBy: text("created_by").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+});
+
+export const projectSnapshots = sqliteTable("project_snapshots", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  projectId: text("project_id").notNull(),
+  snapshotData: text("snapshot_data").notNull(),
+  snapshotType: text("snapshot_type").notNull(),
+  reason: text("reason"),
+  createdBy: text("created_by").notNull(),
+  organizationId: text("organization_id"),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+});
+
+export const barriers = sqliteTable("barriers", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  projectId: text("project_id").notNull(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  severity: text("severity").notNull().default('medium'),
+  status: text("status").notNull().default('active'),
+  ownerId: text("owner_id"),
+  identifiedDate: integer("identified_date", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  targetResolutionDate: integer("target_resolution_date", { mode: "timestamp" }),
+  resolutionDate: integer("resolution_date", { mode: "timestamp" }),
+  resolutionNotes: text("resolution_notes"),
+  organizationId: text("organization_id"),
+  createdBy: text("created_by").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+});
+
+export const activities = sqliteTable("activities", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  type: text("type").notNull(),
+  description: text("description").notNull(),
+  userId: text("user_id").notNull(),
+  strategyId: text("strategy_id"),
+  projectId: text("project_id"),
+  organizationId: text("organization_id"),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+});
+
+export const actions = sqliteTable("actions", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  strategyId: text("strategy_id").notNull(),
+  projectId: text("project_id"),
   targetValue: text("target_value"),
   currentValue: text("current_value"),
   measurementUnit: text("measurement_unit"),
-  status: text("status").notNull().default('in_progress'), // 'in_progress', 'achieved', 'at_risk', 'on_hold', 'not_started'
-  achievedDate: timestamp("achieved_date"), // When action status was set to 'achieved'
-  dueDate: timestamp("due_date"),
-  isArchived: text("is_archived").notNull().default('false'), // 'true' or 'false' for cascade archival
-  documentFolderUrl: text("document_folder_url"), // External folder URL (ClickUp, OneDrive, etc.)
-  notes: text("notes"), // User notes for the action
-  organizationId: varchar("organization_id"), // Foreign key to organizations table
-  createdBy: varchar("created_by").notNull(),
-  createdAt: timestamp("created_at").default(sql`now()`),
+  status: text("status").notNull().default('in_progress'),
+  achievedDate: integer("achieved_date", { mode: "timestamp" }),
+  dueDate: integer("due_date", { mode: "timestamp" }),
+  isArchived: text("is_archived").notNull().default('false'),
+  documentFolderUrl: text("document_folder_url"),
+  notes: text("notes"),
+  organizationId: text("organization_id"),
+  createdBy: text("created_by").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
-// Action Documents - Links to external documents (OneDrive, Google Docs, etc.)
-export const actionDocuments = pgTable("action_documents", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  actionId: varchar("action_id").notNull(), // Action this document belongs to
-  name: text("name").notNull(), // Display name for the document
-  url: text("url").notNull(), // URL to the document
-  createdAt: timestamp("created_at").default(sql`now()`),
+export const actionDocuments = sqliteTable("action_documents", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  actionId: text("action_id").notNull(),
+  name: text("name").notNull(),
+  url: text("url").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
-// Action Checklist Items - Checklist for each action
-export const actionChecklistItems = pgTable("action_checklist_items", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  actionId: varchar("action_id").notNull(), // Action this checklist item belongs to
-  title: text("title").notNull(), // Checklist item description
-  isCompleted: text("is_completed").notNull().default('false'), // 'true' or 'false'
-  orderIndex: integer("order_index").notNull().default(0), // For sorting items
-  indentLevel: integer("indent_level").notNull().default(1), // 1 = bold, 2 = regular, 3 = lowercase
-  createdAt: timestamp("created_at").default(sql`now()`),
+export const actionChecklistItems = sqliteTable("action_checklist_items", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  actionId: text("action_id").notNull(),
+  title: text("title").notNull(),
+  isCompleted: text("is_completed").notNull().default('false'),
+  orderIndex: integer("order_index").notNull().default(0),
+  indentLevel: integer("indent_level").notNull().default(1),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
-// Notifications - User notifications for strategic planning events
-export const notifications = pgTable("notifications", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull(), // User receiving the notification
-  type: text("type").notNull(), // Type of notification (action_completed, progress_milestone, etc.)
-  title: text("title").notNull(), // Short notification title
-  message: text("message").notNull(), // Full notification message
-  relatedEntityId: varchar("related_entity_id"), // Optional - ID of related strategy/tactic/outcome
-  relatedEntityType: text("related_entity_type"), // Optional - 'strategy', 'project', 'action'
-  isRead: text("is_read").notNull().default('false'), // 'true' or 'false'
-  organizationId: varchar("organization_id"), // Foreign key to organizations table
-  createdAt: timestamp("created_at").default(sql`now()`),
+export const notifications = sqliteTable("notifications", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  userId: text("user_id").notNull(),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  relatedEntityId: text("related_entity_id"),
+  relatedEntityType: text("related_entity_type"),
+  isRead: text("is_read").notNull().default('false'),
+  organizationId: text("organization_id"),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
-// Meeting Notes - Report-out meeting notes with dynamic strategy/project/action selection
-export const meetingNotes = pgTable("meeting_notes", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  title: text("title").notNull(), // Meeting title
-  meetingDate: timestamp("meeting_date").notNull(), // When the meeting occurred
-  strategyId: varchar("strategy_id").notNull(), // Strategy this meeting is about
-  selectedProjectIds: text("selected_project_ids").notNull(), // JSON array of selected project IDs
-  selectedActionIds: text("selected_action_ids").notNull(), // JSON array of selected action IDs
-  notes: text("notes").notNull(), // Meeting notes content
-  organizationId: varchar("organization_id"), // Foreign key to organizations table
-  createdBy: varchar("created_by").notNull(), // User who created these notes
-  createdAt: timestamp("created_at").default(sql`now()`),
-  updatedAt: timestamp("updated_at").default(sql`now()`),
+export const meetingNotes = sqliteTable("meeting_notes", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  title: text("title").notNull(),
+  meetingDate: integer("meeting_date", { mode: "timestamp" }).notNull(),
+  strategyId: text("strategy_id").notNull(),
+  selectedProjectIds: text("selected_project_ids").notNull(),
+  selectedActionIds: text("selected_action_ids").notNull(),
+  notes: text("notes").notNull(),
+  organizationId: text("organization_id"),
+  createdBy: text("created_by").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
 export const upsertUserSchema = createInsertSchema(users).omit({
@@ -438,7 +428,6 @@ export const insertStrategySchema = createInsertSchema(strategies).omit({
 }).extend({
   startDate: z.coerce.date().optional().nullable(),
   targetDate: z.coerce.date().optional().nullable(),
-  // Change Continuum fields - optional with default fallback to "To be defined"
   caseForChange: z.string().optional().transform(val => val?.trim() || "To be defined"),
   visionStatement: z.string().optional().transform(val => val?.trim() || "To be defined"),
   successMetrics: z.string().optional().transform(val => val?.trim() || "To be defined"),
@@ -455,7 +444,7 @@ export const insertStrategySchema = createInsertSchema(strategies).omit({
 export const insertProjectSchema = createInsertSchema(projects).omit({
   id: true,
   createdAt: true,
-  progress: true, // Progress is auto-calculated, not user-provided
+  progress: true,
 }).extend({
   startDate: z.coerce.date(),
   dueDate: z.coerce.date(),
@@ -496,7 +485,7 @@ export const insertActionDocumentSchema = createInsertSchema(actionDocuments).om
 export const insertActionChecklistItemSchema = createInsertSchema(actionChecklistItems).omit({
   id: true,
   createdAt: true,
-  actionId: true, // actionId comes from URL params, not request body
+  actionId: true,
 });
 
 export const insertUserStrategyAssignmentSchema = createInsertSchema(userStrategyAssignments).omit({
@@ -560,7 +549,6 @@ export type InsertActionDocument = z.infer<typeof insertActionDocumentSchema>;
 export type ActionDocument = typeof actionDocuments.$inferSelect;
 export type InsertActionChecklistItem = z.infer<typeof insertActionChecklistItemSchema>;
 export type ActionChecklistItem = typeof actionChecklistItems.$inferSelect;
-// Full insert type including actionId for storage layer (actionId comes from URL params)
 export type CreateActionChecklistItem = InsertActionChecklistItem & { actionId: string };
 export type InsertUserStrategyAssignment = z.infer<typeof insertUserStrategyAssignmentSchema>;
 export type UserStrategyAssignment = typeof userStrategyAssignments.$inferSelect;
@@ -571,16 +559,15 @@ export type Barrier = typeof barriers.$inferSelect;
 export type InsertProjectSnapshot = z.infer<typeof insertProjectSnapshotSchema>;
 export type ProjectSnapshot = typeof projectSnapshots.$inferSelect;
 
-// Dependencies - Track dependencies between projects and actions
-export const dependencies = pgTable("dependencies", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  sourceType: text("source_type").notNull(), // 'project' or 'action'
-  sourceId: varchar("source_id").notNull(), // ID of the project or action that has the dependency
-  targetType: text("target_type").notNull(), // 'project' or 'action'
-  targetId: varchar("target_id").notNull(), // ID of the project or action it depends on
-  organizationId: varchar("organization_id"), // Foreign key to organizations table
-  createdBy: varchar("created_by").notNull(),
-  createdAt: timestamp("created_at").default(sql`now()`),
+export const dependencies = sqliteTable("dependencies", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  sourceType: text("source_type").notNull(),
+  sourceId: text("source_id").notNull(),
+  targetType: text("target_type").notNull(),
+  targetId: text("target_id").notNull(),
+  organizationId: text("organization_id"),
+  createdBy: text("created_by").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 }, (table) => ({
   uniqueDependency: unique().on(table.sourceType, table.sourceId, table.targetType, table.targetId),
 }));
@@ -595,14 +582,13 @@ export const insertDependencySchema = createInsertSchema(dependencies).omit({
 export type InsertDependency = z.infer<typeof insertDependencySchema>;
 export type Dependency = typeof dependencies.$inferSelect;
 
-// Template Types - Categories for template organization (admin-managed)
-export const templateTypes = pgTable("template_types", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: text("name").notNull().unique(), // e.g., "Strategic Planning", "Project Management", "Daily Tasks"
-  description: text("description"), // Optional description
+export const templateTypes = sqliteTable("template_types", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  name: text("name").notNull().unique(),
+  description: text("description"),
   displayOrder: integer("display_order").notNull().default(0),
-  createdBy: varchar("created_by").notNull(),
-  createdAt: timestamp("created_at").default(sql`now()`),
+  createdBy: text("created_by").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
 export const insertTemplateTypeSchema = createInsertSchema(templateTypes).omit({
@@ -613,14 +599,13 @@ export const insertTemplateTypeSchema = createInsertSchema(templateTypes).omit({
 export type InsertTemplateType = z.infer<typeof insertTemplateTypeSchema>;
 export type TemplateType = typeof templateTypes.$inferSelect;
 
-// Executive Goals - Organization-level tags for strategic planning
-export const executiveGoals = pgTable("executive_goals", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+export const executiveGoals = sqliteTable("executive_goals", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
   name: text("name").notNull(),
   description: text("description"),
-  organizationId: varchar("organization_id").notNull(),
-  createdBy: varchar("created_by").notNull(),
-  createdAt: timestamp("created_at").default(sql`now()`),
+  organizationId: text("organization_id").notNull(),
+  createdBy: text("created_by").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
 export const insertExecutiveGoalSchema = createInsertSchema(executiveGoals).omit({
@@ -633,13 +618,12 @@ export const insertExecutiveGoalSchema = createInsertSchema(executiveGoals).omit
 export type InsertExecutiveGoal = z.infer<typeof insertExecutiveGoalSchema>;
 export type ExecutiveGoal = typeof executiveGoals.$inferSelect;
 
-// Strategy Executive Goals - Junction table for many-to-many relationship
-export const strategyExecutiveGoals = pgTable("strategy_executive_goals", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  strategyId: varchar("strategy_id").notNull(),
-  executiveGoalId: varchar("executive_goal_id").notNull(),
-  organizationId: varchar("organization_id").notNull(),
-  createdAt: timestamp("created_at").default(sql`now()`),
+export const strategyExecutiveGoals = sqliteTable("strategy_executive_goals", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  strategyId: text("strategy_id").notNull(),
+  executiveGoalId: text("executive_goal_id").notNull(),
+  organizationId: text("organization_id").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 }, (table) => ({
   uniqueStrategyGoal: unique().on(table.strategyId, table.executiveGoalId),
 }));
@@ -652,14 +636,13 @@ export const insertStrategyExecutiveGoalSchema = createInsertSchema(strategyExec
 export type InsertStrategyExecutiveGoal = z.infer<typeof insertStrategyExecutiveGoalSchema>;
 export type StrategyExecutiveGoal = typeof strategyExecutiveGoals.$inferSelect;
 
-// Team Tags - Organization-level team labels for projects
-export const teamTags = pgTable("team_tags", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+export const teamTags = sqliteTable("team_tags", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
   name: text("name").notNull(),
   colorHex: text("color_hex").notNull().default('#3B82F6'),
-  organizationId: varchar("organization_id").notNull(),
-  createdBy: varchar("created_by").notNull(),
-  createdAt: timestamp("created_at").default(sql`now()`),
+  organizationId: text("organization_id").notNull(),
+  createdBy: text("created_by").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
 export const insertTeamTagSchema = createInsertSchema(teamTags).omit({
@@ -672,13 +655,12 @@ export const insertTeamTagSchema = createInsertSchema(teamTags).omit({
 export type InsertTeamTag = z.infer<typeof insertTeamTagSchema>;
 export type TeamTag = typeof teamTags.$inferSelect;
 
-// Project Team Tags - Junction table for many-to-many relationship between projects and team tags
-export const projectTeamTags = pgTable("project_team_tags", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  projectId: varchar("project_id").notNull(),
-  teamTagId: varchar("team_tag_id").notNull(),
-  organizationId: varchar("organization_id").notNull(),
-  createdAt: timestamp("created_at").default(sql`now()`),
+export const projectTeamTags = sqliteTable("project_team_tags", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  projectId: text("project_id").notNull(),
+  teamTagId: text("team_tag_id").notNull(),
+  organizationId: text("organization_id").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 }, (table) => ({
   uniqueProjectTag: unique().on(table.projectId, table.teamTagId),
 }));
@@ -691,14 +673,13 @@ export const insertProjectTeamTagSchema = createInsertSchema(projectTeamTags).om
 export type InsertProjectTeamTag = z.infer<typeof insertProjectTeamTagSchema>;
 export type ProjectTeamTag = typeof projectTeamTags.$inferSelect;
 
-// User Team Tags - Junction table for many-to-many relationship between users and team tags
-export const userTeamTags = pgTable("user_team_tags", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull(),
-  teamTagId: varchar("team_tag_id").notNull(),
-  organizationId: varchar("organization_id").notNull(),
-  isPrimary: boolean("is_primary").default(false).notNull(),
-  createdAt: timestamp("created_at").default(sql`now()`),
+export const userTeamTags = sqliteTable("user_team_tags", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  userId: text("user_id").notNull(),
+  teamTagId: text("team_tag_id").notNull(),
+  organizationId: text("organization_id").notNull(),
+  isPrimary: integer("is_primary", { mode: "boolean" }).default(false).notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 }, (table) => ({
   uniqueUserTag: unique().on(table.userId, table.teamTagId),
 }));
@@ -711,15 +692,14 @@ export const insertUserTeamTagSchema = createInsertSchema(userTeamTags).omit({
 export type InsertUserTeamTag = z.infer<typeof insertUserTeamTagSchema>;
 export type UserTeamTag = typeof userTeamTags.$inferSelect;
 
-// PTO Entries - Track time off for users
-export const ptoEntries = pgTable("pto_entries", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull(),
-  organizationId: varchar("organization_id").notNull(),
-  startDate: timestamp("start_date").notNull(),
-  endDate: timestamp("end_date").notNull(),
+export const ptoEntries = sqliteTable("pto_entries", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  userId: text("user_id").notNull(),
+  organizationId: text("organization_id").notNull(),
+  startDate: integer("start_date", { mode: "timestamp" }).notNull(),
+  endDate: integer("end_date", { mode: "timestamp" }).notNull(),
   notes: text("notes"),
-  createdAt: timestamp("created_at").default(sql`now()`),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
 export const insertPtoEntrySchema = createInsertSchema(ptoEntries).omit({
@@ -735,14 +715,13 @@ export const insertPtoEntrySchema = createInsertSchema(ptoEntries).omit({
 export type InsertPtoEntry = z.infer<typeof insertPtoEntrySchema>;
 export type PtoEntry = typeof ptoEntries.$inferSelect;
 
-// Holidays - Organization-wide holidays
-export const holidays = pgTable("holidays", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  organizationId: varchar("organization_id").notNull(),
-  date: timestamp("date").notNull(),
-  name: varchar("name", { length: 255 }).notNull(),
+export const holidays = sqliteTable("holidays", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  organizationId: text("organization_id").notNull(),
+  date: integer("date", { mode: "timestamp" }).notNull(),
+  name: text("name").notNull(),
   description: text("description"),
-  createdAt: timestamp("created_at").default(sql`now()`),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
 export const insertHolidaySchema = createInsertSchema(holidays).omit({
@@ -757,25 +736,24 @@ export const insertHolidaySchema = createInsertSchema(holidays).omit({
 export type InsertHoliday = z.infer<typeof insertHolidaySchema>;
 export type Holiday = typeof holidays.$inferSelect;
 
-// Intake Forms - External non-login forms for collecting submissions
-export const intakeForms = pgTable("intake_forms", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  organizationId: varchar("organization_id").notNull(),
+export const intakeForms = sqliteTable("intake_forms", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  organizationId: text("organization_id").notNull(),
   title: text("title").notNull(),
   description: text("description"),
   slug: text("slug").notNull(),
-  fields: text("fields").notNull().default("[]"), // JSON array of field definitions
-  status: text("status").notNull().default('active'), // 'active' or 'inactive'
-  expiresAt: timestamp("expires_at"), // Optional expiration date
-  thankYouMessage: text("thank_you_message"), // Custom message after submission
-  maxSubmissionsPerEmail: integer("max_submissions_per_email"), // null = unlimited
-  maxTotalSubmissions: integer("max_total_submissions"), // null = unlimited
-  requireEmail: text("require_email").notNull().default('true'), // 'true' or 'false'
-  defaultStrategyId: varchar("default_strategy_id"),
-  defaultProjectId: varchar("default_project_id"),
-  createdBy: varchar("created_by").notNull(),
-  createdAt: timestamp("created_at").default(sql`now()`),
-  updatedAt: timestamp("updated_at").default(sql`now()`),
+  fields: text("fields").notNull().default("[]"),
+  status: text("status").notNull().default('active'),
+  expiresAt: integer("expires_at", { mode: "timestamp" }),
+  thankYouMessage: text("thank_you_message"),
+  maxSubmissionsPerEmail: integer("max_submissions_per_email"),
+  maxTotalSubmissions: integer("max_total_submissions"),
+  requireEmail: text("require_email").notNull().default('true'),
+  defaultStrategyId: text("default_strategy_id"),
+  defaultProjectId: text("default_project_id"),
+  createdBy: text("created_by").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 }, (table) => ({
   uniqueOrgSlug: unique().on(table.organizationId, table.slug),
 }));
@@ -797,21 +775,20 @@ export const insertIntakeFormSchema = createInsertSchema(intakeForms).omit({
 export type InsertIntakeForm = z.infer<typeof insertIntakeFormSchema>;
 export type IntakeForm = typeof intakeForms.$inferSelect;
 
-// Intake Submissions - Responses submitted to intake forms
-export const intakeSubmissions = pgTable("intake_submissions", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  formId: varchar("form_id").notNull(),
-  organizationId: varchar("organization_id").notNull(),
-  data: text("data").notNull().default("{}"), // JSON snapshot of submitted answers
+export const intakeSubmissions = sqliteTable("intake_submissions", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  formId: text("form_id").notNull(),
+  organizationId: text("organization_id").notNull(),
+  data: text("data").notNull().default("{}"),
   submitterEmail: text("submitter_email"),
   submitterName: text("submitter_name"),
-  status: text("status").notNull().default('new'), // 'new', 'under_review', 'assigned', 'dismissed'
-  assignedStrategyId: varchar("assigned_strategy_id"),
-  assignedProjectId: varchar("assigned_project_id"),
-  assignedActionId: varchar("assigned_action_id"),
-  reviewedBy: varchar("reviewed_by"),
-  reviewedAt: timestamp("reviewed_at"),
-  submittedAt: timestamp("submitted_at").default(sql`now()`),
+  status: text("status").notNull().default('new'),
+  assignedStrategyId: text("assigned_strategy_id"),
+  assignedProjectId: text("assigned_project_id"),
+  assignedActionId: text("assigned_action_id"),
+  reviewedBy: text("reviewed_by"),
+  reviewedAt: integer("reviewed_at", { mode: "timestamp" }),
+  submittedAt: integer("submitted_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
 export const insertIntakeSubmissionSchema = createInsertSchema(intakeSubmissions).omit({

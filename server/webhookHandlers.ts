@@ -1,13 +1,13 @@
-import { getStripeSync, getUncachableStripeClient } from './stripeClient';
+import { getUncachableStripeClient } from './stripeClient';
 import { billingService } from './billingService';
 import { sendWelcomeEmail } from './email';
 import type Stripe from 'stripe';
 import { db } from './db';
-import { sql, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { processedStripeEvents } from '@shared/schema';
 
 export class WebhookHandlers {
-  static async processWebhook(payload: Buffer, signature: string, uuid: string): Promise<void> {
+  static async processWebhook(payload: Buffer, signature: string, _uuid: string): Promise<void> {
     if (!Buffer.isBuffer(payload)) {
       throw new Error(
         'STRIPE WEBHOOK ERROR: Payload must be a Buffer. ' +
@@ -17,34 +17,17 @@ export class WebhookHandlers {
       );
     }
 
-    // Get webhook secret from database for managed webhooks
-    const result = await db.execute(
-      sql`SELECT secret FROM "stripe"."_managed_webhooks" WHERE uuid = ${uuid}`
-    );
-    
-    if (!result.rows || result.rows.length === 0) {
-      throw new Error(`No managed webhook found with UUID: ${uuid}`);
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      throw new Error('STRIPE_WEBHOOK_SECRET environment variable is not set');
     }
     
-    const webhookSecret = result.rows[0].secret as string;
-    
-    // Construct the event ourselves using Stripe SDK so we can use it for custom handling
     const stripe = await getUncachableStripeClient();
     const event = await stripe.webhooks.constructEventAsync(payload, signature, webhookSecret);
     
     console.log(`[Stripe Webhook] Received event: ${event.type} (${event.id})`);
     
-    // First, run our custom handlers (for account provisioning, etc.)
     await WebhookHandlers.handleStripeEvent(event);
-    
-    // Then, let the sync library handle data persistence (it will re-construct the event internally)
-    try {
-      const sync = await getStripeSync();
-      await sync.processWebhook(payload, signature, uuid);
-    } catch (syncError) {
-      // Log sync errors but don't fail - our custom handler already ran
-      console.error('[Stripe Webhook] Sync library error (continuing):', syncError);
-    }
   }
 
   static async handleStripeEvent(event: Stripe.Event): Promise<void> {
