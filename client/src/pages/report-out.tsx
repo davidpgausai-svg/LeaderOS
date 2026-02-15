@@ -53,7 +53,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import PptxGenJS from "pptxgenjs";
-import muLogoPath from "@assets/mu-logo.png";
+
 
 interface Slide {
   id: string;
@@ -166,12 +166,6 @@ function TitleSlide({ slide, scale = 1 }: { slide: Slide; scale?: number }) {
         )}
       </div>
       <div className="absolute bottom-0 left-0 w-full h-1.5" style={{ backgroundColor: MU_BRAND.gold }} />
-      <img
-        src={muLogoPath}
-        alt="University of Missouri"
-        className="absolute bottom-3 right-4 z-10"
-        style={{ height: `${2.5 * scale}rem`, opacity: 0.9 }}
-      />
     </div>
   );
 }
