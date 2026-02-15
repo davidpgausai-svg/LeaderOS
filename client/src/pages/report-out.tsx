@@ -49,6 +49,8 @@ import {
   TrendingUp,
   Loader2,
   RefreshCw,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import PptxGenJS from "pptxgenjs";
 
@@ -1044,6 +1046,68 @@ export default function ReportOut() {
     );
   };
 
+  const handleSlideUpdate = (index: number, updates: Partial<Slide>) => {
+    setSlides((prev) =>
+      prev.map((s, i) => (i === index ? { ...s, ...updates } : s))
+    );
+  };
+
+  const handleSlideDataUpdate = (index: number, dataUpdates: Record<string, any>) => {
+    setSlides((prev) =>
+      prev.map((s, i) =>
+        i === index ? { ...s, data: { ...s.data, ...dataUpdates } } : s
+      )
+    );
+  };
+
+  const handleProjectDataUpdate = (slideIndex: number, projectIndex: number, field: string, value: any) => {
+    setSlides((prev) =>
+      prev.map((s, i) => {
+        if (i !== slideIndex) return s;
+        const projects = [...(s.data?.projects || [])];
+        projects[projectIndex] = { ...projects[projectIndex], [field]: value };
+        return { ...s, data: { ...s.data, projects } };
+      })
+    );
+  };
+
+  const handleMoveSlide = (fromIndex: number, direction: "up" | "down") => {
+    const toIndex = direction === "up" ? fromIndex - 1 : fromIndex + 1;
+    if (toIndex < 0 || toIndex >= slides.length) return;
+    setSlides((prev) => {
+      const newSlides = [...prev];
+      [newSlides[fromIndex], newSlides[toIndex]] = [newSlides[toIndex], newSlides[fromIndex]];
+      return newSlides;
+    });
+    setSelectedSlideIndex(toIndex);
+  };
+
+  const handleDeleteSlide = (index: number) => {
+    setSlides((prev) => prev.filter((_, i) => i !== index));
+    if (selectedSlideIndex >= slides.length - 1) {
+      setSelectedSlideIndex(Math.max(0, slides.length - 2));
+    }
+  };
+
+  const handleAddCustomSlide = () => {
+    const newSlide: Slide = {
+      id: `custom-${Date.now()}`,
+      type: "title",
+      title: "Custom Slide",
+      subtitle: "Add your content here",
+      included: true,
+      commentary: "",
+      data: {},
+    };
+    const insertAt = selectedSlideIndex + 1;
+    setSlides((prev) => [
+      ...prev.slice(0, insertAt),
+      newSlide,
+      ...prev.slice(insertAt),
+    ]);
+    setSelectedSlideIndex(insertAt);
+  };
+
   const handleExportPptx = async () => {
     try {
       await exportToPptx(slides, deckTitle);
@@ -1110,6 +1174,15 @@ export default function ReportOut() {
               className="w-40 text-sm"
             />
             <div className="flex-1" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleAddCustomSlide}
+              className="flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Add Slide
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -1227,6 +1300,30 @@ export default function ReportOut() {
                           {slide.title}
                         </p>
                       </div>
+                      {selectedSlideIndex === index && (
+                        <div className="flex flex-col gap-0.5" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            className="p-0.5 rounded hover:bg-gray-200 disabled:opacity-30"
+                            disabled={index === 0}
+                            onClick={() => handleMoveSlide(index, "up")}
+                          >
+                            <ChevronUp className="w-3 h-3 text-gray-500" />
+                          </button>
+                          <button
+                            className="p-0.5 rounded hover:bg-gray-200 disabled:opacity-30"
+                            disabled={index === slides.length - 1}
+                            onClick={() => handleMoveSlide(index, "down")}
+                          >
+                            <ChevronDown className="w-3 h-3 text-gray-500" />
+                          </button>
+                          <button
+                            className="p-0.5 rounded hover:bg-red-100"
+                            onClick={() => handleDeleteSlide(index)}
+                          >
+                            <Trash2 className="w-3 h-3 text-red-400" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                     {!slide.included && (
                       <div className="mt-1 ml-6">
@@ -1249,21 +1346,88 @@ export default function ReportOut() {
                   >
                     <SlideRenderer slide={currentSlide} scale={1} />
                   </div>
-                  <div className="rounded-xl bg-white p-4 shadow-sm" style={{ border: "1px solid rgba(0,0,0,0.08)" }}>
-                    <label
-                      className="text-xs font-medium mb-2 block"
-                      style={{ color: "#86868B" }}
-                    >
-                      Commentary / Talking Points
-                    </label>
-                    <Textarea
-                      value={currentSlide.commentary || ""}
-                      onChange={(e) =>
-                        handleCommentaryChange(selectedSlideIndex, e.target.value)
-                      }
-                      placeholder="Add notes for this slide..."
-                      className="min-h-[80px] resize-none border-none bg-gray-50 focus-visible:ring-1 focus-visible:ring-blue-200"
-                    />
+
+                  <div className="rounded-xl bg-white p-4 shadow-sm space-y-4" style={{ border: "1px solid rgba(0,0,0,0.08)" }}>
+                    <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+                      <Edit className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm font-semibold" style={{ color: "#1D1D1F" }}>Edit Slide Content</span>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-medium mb-1 block" style={{ color: "#86868B" }}>
+                        Title
+                      </label>
+                      <Input
+                        value={currentSlide.title}
+                        onChange={(e) => handleSlideUpdate(selectedSlideIndex, { title: e.target.value })}
+                        className="bg-gray-50 focus-visible:ring-1 focus-visible:ring-blue-200"
+                      />
+                    </div>
+
+                    {(currentSlide.type === "title") && (
+                      <div>
+                        <label className="text-xs font-medium mb-1 block" style={{ color: "#86868B" }}>
+                          Subtitle
+                        </label>
+                        <Input
+                          value={currentSlide.subtitle || ""}
+                          onChange={(e) => handleSlideUpdate(selectedSlideIndex, { subtitle: e.target.value })}
+                          placeholder="Add a subtitle..."
+                          className="bg-gray-50 focus-visible:ring-1 focus-visible:ring-blue-200"
+                        />
+                      </div>
+                    )}
+
+                    {(currentSlide.type === "strategy" || currentSlide.type === "strategy_detail") && currentSlide.data?.description !== undefined && (
+                      <div>
+                        <label className="text-xs font-medium mb-1 block" style={{ color: "#86868B" }}>
+                          Description
+                        </label>
+                        <Textarea
+                          value={currentSlide.data?.description || ""}
+                          onChange={(e) => handleSlideDataUpdate(selectedSlideIndex, { description: e.target.value })}
+                          placeholder="Strategy description..."
+                          className="min-h-[60px] resize-none bg-gray-50 focus-visible:ring-1 focus-visible:ring-blue-200"
+                        />
+                      </div>
+                    )}
+
+                    {(currentSlide.type === "strategy" || currentSlide.type === "strategy_detail") && currentSlide.data?.projects?.length > 0 && (
+                      <div>
+                        <label className="text-xs font-medium mb-2 block" style={{ color: "#86868B" }}>
+                          Projects
+                        </label>
+                        <div className="space-y-2">
+                          {currentSlide.data.projects.map((project: any, pi: number) => (
+                            <div key={pi} className="flex items-center gap-2 p-2 rounded-lg bg-gray-50">
+                              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getStatusStyle(project.status || "NYS").text }} />
+                              <Input
+                                value={project.title}
+                                onChange={(e) => handleProjectDataUpdate(selectedSlideIndex, pi, "title", e.target.value)}
+                                className="flex-1 h-8 text-sm border-none bg-transparent focus-visible:ring-1 focus-visible:ring-blue-200"
+                              />
+                              <span className="text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0" style={{ backgroundColor: getStatusStyle(project.status || "NYS").bg, color: getStatusStyle(project.status || "NYS").text }}>
+                                {getStatusStyle(project.status || "NYS").label}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="text-xs font-medium mb-1 block" style={{ color: "#86868B" }}>
+                        Commentary / Talking Points
+                      </label>
+                      <Textarea
+                        value={currentSlide.commentary || ""}
+                        onChange={(e) =>
+                          handleCommentaryChange(selectedSlideIndex, e.target.value)
+                        }
+                        placeholder="Add notes for this slide..."
+                        className="min-h-[80px] resize-none bg-gray-50 focus-visible:ring-1 focus-visible:ring-blue-200"
+                      />
+                    </div>
                   </div>
                 </div>
               ) : (
