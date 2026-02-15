@@ -261,6 +261,10 @@ function initStripe() {
 (async () => {
   // Run SQLite migrations via Drizzle
   runMigrations();
+
+  // Ensure a default organization exists (creates one if DB is empty)
+  const { ensureDefaultOrganization } = await import('./pgStorage');
+  await ensureDefaultOrganization();
   
   // Initialize Stripe (just validates keys are present)
   initStripe();
