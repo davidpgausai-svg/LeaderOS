@@ -189,7 +189,7 @@ export interface IStorage {
   getIntakeSubmissionsByOrganization(organizationId: string): Promise<IntakeSubmission[]>;
   getIntakeSubmissionsByForm(formId: string): Promise<IntakeSubmission[]>;
   getIntakeSubmission(id: string): Promise<IntakeSubmission | undefined>;
-  createIntakeSubmission(submission: InsertIntakeSubmission): Promise<IntakeSubmission>;
+  createIntakeSubmission(submission: InsertIntakeSubmission & { status?: string; assignedStrategyId?: string; assignedProjectId?: string }): Promise<IntakeSubmission>;
   updateIntakeSubmission(id: string, updates: Partial<IntakeSubmission>): Promise<IntakeSubmission | undefined>;
   countSubmissionsByEmail(formId: string, email: string): Promise<number>;
   countTotalSubmissions(formId: string): Promise<number>;

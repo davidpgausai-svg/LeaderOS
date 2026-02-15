@@ -5400,13 +5400,21 @@ ${outputTemplate}`;
         return res.status(400).json({ message: "Email address is required. Please add an email field to your form." });
       }
 
-      const submission = await storage.createIntakeSubmission({
+      const submissionData: any = {
         formId: form.id,
         organizationId: form.organizationId,
         data: typeof data === 'string' ? data : JSON.stringify(data),
         submitterEmail: emailLower || null,
         submitterName: submitterName?.trim() || null,
-      });
+      };
+
+      if (form.defaultStrategyId || form.defaultProjectId) {
+        submissionData.status = 'assigned';
+        if (form.defaultStrategyId) submissionData.assignedStrategyId = form.defaultStrategyId;
+        if (form.defaultProjectId) submissionData.assignedProjectId = form.defaultProjectId;
+      }
+
+      const submission = await storage.createIntakeSubmission(submissionData);
 
       res.status(201).json({
         success: true,

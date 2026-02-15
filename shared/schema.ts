@@ -771,6 +771,8 @@ export const intakeForms = pgTable("intake_forms", {
   maxSubmissionsPerEmail: integer("max_submissions_per_email"), // null = unlimited
   maxTotalSubmissions: integer("max_total_submissions"), // null = unlimited
   requireEmail: text("require_email").notNull().default('true'), // 'true' or 'false'
+  defaultStrategyId: varchar("default_strategy_id"),
+  defaultProjectId: varchar("default_project_id"),
   createdBy: varchar("created_by").notNull(),
   createdAt: timestamp("created_at").default(sql`now()`),
   updatedAt: timestamp("updated_at").default(sql`now()`),
@@ -788,6 +790,8 @@ export const insertIntakeFormSchema = createInsertSchema(intakeForms).omit({
   expiresAt: z.coerce.date().optional().nullable(),
   maxSubmissionsPerEmail: z.number().int().min(1).optional().nullable(),
   maxTotalSubmissions: z.number().int().min(1).optional().nullable(),
+  defaultStrategyId: z.string().optional().nullable(),
+  defaultProjectId: z.string().optional().nullable(),
 });
 
 export type InsertIntakeForm = z.infer<typeof insertIntakeFormSchema>;

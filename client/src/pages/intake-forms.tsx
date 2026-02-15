@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRole } from "@/hooks/use-role";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -56,7 +56,7 @@ import {
   ChevronDown,
   X,
 } from "lucide-react";
-import type { IntakeForm } from "@shared/schema";
+import type { IntakeForm, Strategy, Project } from "@shared/schema";
 
 interface FormField {
   id: string;
@@ -78,6 +78,8 @@ interface FormState {
   requireEmail: boolean;
   maxSubmissionsPerEmail: string;
   maxTotalSubmissions: string;
+  defaultStrategyId: string;
+  defaultProjectId: string;
 }
 
 const generateSlug = (title: string) =>
@@ -96,6 +98,8 @@ const emptyFormState: FormState = {
   requireEmail: true,
   maxSubmissionsPerEmail: '',
   maxTotalSubmissions: '',
+  defaultStrategyId: '',
+  defaultProjectId: '',
 };
 
 const fieldTypeOptions = [
@@ -127,6 +131,21 @@ export default function IntakeForms() {
   const { data: intakeForms, isLoading } = useQuery<IntakeForm[]>({
     queryKey: ['/api/intake-forms'],
   });
+
+  const { data: strategies } = useQuery<Strategy[]>({
+    queryKey: ['/api/strategies'],
+    enabled: isAdmin,
+  });
+
+  const { data: allProjects } = useQuery<Project[]>({
+    queryKey: ['/api/projects'],
+    enabled: isAdmin,
+  });
+
+  const filteredProjects = useMemo(() => {
+    if (!formState.defaultStrategyId || !allProjects) return [];
+    return allProjects.filter((p) => p.strategyId === formState.defaultStrategyId);
+  }, [formState.defaultStrategyId, allProjects]);
 
   const { data: submissionCounts } = useQuery<Record<string, number>>({
     queryKey: ['/api/intake-forms', 'submission-counts'],
@@ -228,6 +247,8 @@ export default function IntakeForms() {
       requireEmail: form.requireEmail === 'true',
       maxSubmissionsPerEmail: form.maxSubmissionsPerEmail?.toString() || '',
       maxTotalSubmissions: form.maxTotalSubmissions?.toString() || '',
+      defaultStrategyId: form.defaultStrategyId || '',
+      defaultProjectId: form.defaultProjectId || '',
     });
     setSlugManuallyEdited(true);
     setExpandedFields(new Set());
@@ -311,6 +332,8 @@ export default function IntakeForms() {
       requireEmail: formState.requireEmail ? 'true' : 'false',
       maxSubmissionsPerEmail: formState.maxSubmissionsPerEmail ? parseInt(formState.maxSubmissionsPerEmail) : null,
       maxTotalSubmissions: formState.maxTotalSubmissions ? parseInt(formState.maxTotalSubmissions) : null,
+      defaultStrategyId: formState.defaultStrategyId || null,
+      defaultProjectId: formState.defaultProjectId || null,
     };
 
     if (editingForm) {
@@ -743,6 +766,60 @@ export default function IntakeForms() {
                       onChange={(e) => setFormState(prev => ({ ...prev, maxTotalSubmissions: e.target.value }))}
                       placeholder="Unlimited"
                     />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Default Assignment</h3>
+                <p className="text-xs text-gray-500">Submissions will be automatically assigned to the selected strategy and/or project. Leave blank to assign manually later.</p>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label>Strategy (optional)</Label>
+                    <Select
+                      value={formState.defaultStrategyId || "__none"}
+                      onValueChange={(val) => {
+                        const strategyId = val === "__none" ? "" : val;
+                        setFormState(prev => ({
+                          ...prev,
+                          defaultStrategyId: strategyId,
+                          defaultProjectId: strategyId ? prev.defaultProjectId : '',
+                        }));
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="No default strategy" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none">No default strategy</SelectItem>
+                        {strategies?.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: s.colorCode }} />
+                              {s.title}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Project (optional)</Label>
+                    <Select
+                      value={formState.defaultProjectId || "__none"}
+                      onValueChange={(val) => setFormState(prev => ({ ...prev, defaultProjectId: val === "__none" ? "" : val }))}
+                      disabled={!formState.defaultStrategyId}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={formState.defaultStrategyId ? "No default project" : "Select a strategy first"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none">No default project</SelectItem>
+                        {filteredProjects.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </div>

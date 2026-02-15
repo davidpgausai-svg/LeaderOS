@@ -1344,7 +1344,7 @@ export class PostgresStorage implements IStorage {
     return submission || undefined;
   }
 
-  async createIntakeSubmission(submission: InsertIntakeSubmission): Promise<IntakeSubmission> {
+  async createIntakeSubmission(submission: InsertIntakeSubmission & { status?: string; assignedStrategyId?: string; assignedProjectId?: string }): Promise<IntakeSubmission> {
     const [created] = await db.insert(intakeSubmissions).values({
       id: randomUUID(),
       ...submission,
