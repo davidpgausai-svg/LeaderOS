@@ -46,6 +46,7 @@ import {
   XCircle,
   Clock,
   AlertCircle,
+  Download,
 } from "lucide-react";
 import type { IntakeSubmission, IntakeForm, Strategy, Project } from "@shared/schema";
 
@@ -207,6 +208,81 @@ export default function IntakeSubmissions() {
     );
   };
 
+  const handleExportCSV = () => {
+    if (!filteredSubmissions.length) return;
+
+    const allFieldIds = new Map<string, string>();
+    for (const sub of filteredSubmissions) {
+      const form = formsMap.get(sub.formId);
+      const formFields = parseJsonSafe(form?.fields, []);
+      const subData = parseJsonSafe(sub.data, {});
+      for (const key of Object.keys(subData)) {
+        if (!allFieldIds.has(key)) {
+          allFieldIds.set(key, getFieldLabel(formFields, key));
+        }
+      }
+    }
+
+    const fieldEntries = Array.from(allFieldIds.entries());
+
+    const escapeCsv = (val: string) => {
+      if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+        return `"${val.replace(/"/g, '""')}"`;
+      }
+      return val;
+    };
+
+    const headers = [
+      'Form',
+      'Submitter Name',
+      'Submitter Email',
+      'Submitted Date',
+      'Status',
+      'Assigned Strategy',
+      'Assigned Project',
+      ...fieldEntries.map(([, label]) => label),
+    ];
+
+    const rows = filteredSubmissions.map((sub) => {
+      const form = formsMap.get(sub.formId);
+      const formFields = parseJsonSafe(form?.fields, []);
+      const subData = parseJsonSafe(sub.data, {});
+      const strategy = sub.assignedStrategyId ? strategiesMap.get(sub.assignedStrategyId) : null;
+      const project = sub.assignedProjectId ? projectsMap.get(sub.assignedProjectId) : null;
+
+      return [
+        form?.title || 'Unknown',
+        sub.submitterName || '',
+        sub.submitterEmail || '',
+        sub.submittedAt ? format(new Date(sub.submittedAt), 'yyyy-MM-dd HH:mm') : '',
+        statusConfig[sub.status]?.label || sub.status,
+        strategy?.title || '',
+        project?.title || '',
+        ...fieldEntries.map(([fieldId]) => {
+          const val = subData[fieldId];
+          if (val === undefined || val === null) return '';
+          if (Array.isArray(val)) return val.join('; ');
+          return String(val);
+        }),
+      ];
+    });
+
+    const csvContent = [
+      headers.map(escapeCsv).join(','),
+      ...rows.map((row) => row.map(escapeCsv).join(',')),
+    ].join('\n');
+
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `intake-submissions-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   if (!canAccess) {
     return (
       <div className="flex h-screen" style={{ backgroundColor: "#F5F5F7" }}>
@@ -273,8 +349,20 @@ export default function IntakeSubmissions() {
                 </p>
               </div>
             </div>
-            <div className="text-sm" style={{ color: "#86868B" }}>
-              {filteredSubmissions.length} of {submissions?.length || 0} submissions
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportCSV}
+                disabled={filteredSubmissions.length === 0}
+                className="flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Export CSV
+              </Button>
+              <span className="text-sm" style={{ color: "#86868B" }}>
+                {filteredSubmissions.length} of {submissions?.length || 0} submissions
+              </span>
             </div>
           </div>
         </header>
