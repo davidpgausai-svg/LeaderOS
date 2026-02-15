@@ -39,7 +39,7 @@ export default function CheckoutSuccess() {
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center mb-6">
-            <img src={strategyPlanLogo} alt="LeaderOS Logo" className="w-24 h-24 object-contain" />
+            <img src={strategyPlanLogo} alt="ERP Team Logo" className="w-24 h-24 object-contain" />
           </div>
         </div>
 
@@ -49,7 +49,7 @@ export default function CheckoutSuccess() {
               <CheckCircle className="w-10 h-10 text-green-600 dark:text-green-400" />
             </div>
             <CardTitle className="text-2xl text-gray-900 dark:text-white">
-              Welcome to LeaderOS!
+              Welcome to ERP Team!
             </CardTitle>
             <CardDescription className="text-base">
               Your payment was successful and your account is ready.

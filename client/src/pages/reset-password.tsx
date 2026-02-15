@@ -85,14 +85,14 @@ export default function ResetPassword() {
         <div className="text-center mb-8">
           <img 
             src={strategyPlanLogo} 
-            alt="LeaderOS Logo" 
+            alt="ERP Team Logo" 
             className="h-16 w-auto mx-auto mb-6"
           />
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            LeaderOS
+            ERP Team
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            The Leader Operating System
+            Our ERP Operating System
           </p>
         </div>
 

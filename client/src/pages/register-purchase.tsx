@@ -113,7 +113,7 @@ export default function RegisterPurchase() {
 
       toast({
         title: "Account created!",
-        description: "Welcome to LeaderOS. Your subscription is active.",
+        description: "Welcome to ERP Team. Your subscription is active.",
       });
       
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
@@ -180,11 +180,11 @@ export default function RegisterPurchase() {
         <div className="text-center mb-8">
           <img 
             src={strategyPlanLogo} 
-            alt="LeaderOS Logo" 
+            alt="ERP Team Logo" 
             className="h-16 w-auto mx-auto mb-6"
           />
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            LeaderOS
+            ERP Team
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
             Complete your account setup

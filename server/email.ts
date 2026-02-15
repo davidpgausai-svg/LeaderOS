@@ -74,9 +74,9 @@ export async function sendPasswordResetEmail(
     const greeting = firstName ? `Hi ${firstName},` : 'Hi,';
 
     const { data, error } = await client.emails.send({
-      from: fromEmail || 'LeaderOS <noreply@resend.dev>',
+      from: fromEmail || 'ERP Team <noreply@resend.dev>',
       to: toEmail,
-      subject: 'Reset Your LeaderOS Password',
+      subject: 'Reset Your ERP Team Password',
       html: `
         <!DOCTYPE html>
         <html>
@@ -86,14 +86,14 @@ export async function sendPasswordResetEmail(
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">LeaderOS</h1>
+            <h1 style="color: white; margin: 0; font-size: 28px;">ERP Team</h1>
           </div>
           
           <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
             <p style="font-size: 16px; margin-bottom: 20px;">${greeting}</p>
             
             <p style="font-size: 16px; margin-bottom: 20px;">
-              We received a request to reset your password for your LeaderOS account.
+              We received a request to reset your password for your ERP Team account.
             </p>
             
             <div style="text-align: center; margin: 30px 0;">
@@ -120,7 +120,7 @@ export async function sendPasswordResetEmail(
           </div>
           
           <p style="font-size: 12px; color: #999; text-align: center; margin-top: 20px;">
-            &copy; ${new Date().getFullYear()} LeaderOS powered by Gaus LLC. All rights reserved.
+            &copy; ${new Date().getFullYear()} ERP Team powered by Gaus LLC. All rights reserved.
           </p>
         </body>
         </html>
@@ -152,9 +152,9 @@ export async function sendTwoFactorCode(
     const greeting = firstName ? `Hi ${firstName},` : 'Hi,';
 
     const { data, error } = await client.emails.send({
-      from: fromEmail || 'LeaderOS <noreply@resend.dev>',
+      from: fromEmail || 'ERP Team <noreply@resend.dev>',
       to: toEmail,
-      subject: 'Your LeaderOS Verification Code',
+      subject: 'Your ERP Team Verification Code',
       html: `
         <!DOCTYPE html>
         <html>
@@ -164,7 +164,7 @@ export async function sendTwoFactorCode(
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">LeaderOS</h1>
+            <h1 style="color: white; margin: 0; font-size: 28px;">ERP Team</h1>
           </div>
           
           <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
@@ -185,18 +185,18 @@ export async function sendTwoFactorCode(
             </p>
             
             <p style="font-size: 14px; color: #666;">
-              If you didn't try to log in to LeaderOS, please ignore this email and consider changing your password.
+              If you didn't try to log in to ERP Team, please ignore this email and consider changing your password.
             </p>
             
             <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
             
             <p style="font-size: 12px; color: #999; text-align: center;">
-              This is an automated security message from LeaderOS.
+              This is an automated security message from ERP Team.
             </p>
           </div>
           
           <p style="font-size: 12px; color: #999; text-align: center; margin-top: 20px;">
-            &copy; ${new Date().getFullYear()} LeaderOS powered by Gaus LLC. All rights reserved.
+            &copy; ${new Date().getFullYear()} ERP Team powered by Gaus LLC. All rights reserved.
           </p>
         </body>
         </html>
@@ -245,7 +245,7 @@ export async function sendPaymentFailedEmail(
     });
 
     const { data, error } = await client.emails.send({
-      from: fromEmail || 'LeaderOS <noreply@resend.dev>',
+      from: fromEmail || 'ERP Team <noreply@resend.dev>',
       to: toEmail,
       subject: `Action Required: Payment Failed for ${organizationName}`,
       html: `
@@ -257,7 +257,7 @@ export async function sendPaymentFailedEmail(
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">LeaderOS</h1>
+            <h1 style="color: white; margin: 0; font-size: 28px;">ERP Team</h1>
           </div>
           
           <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
@@ -292,7 +292,7 @@ export async function sendPaymentFailedEmail(
           </div>
           
           <p style="font-size: 12px; color: #999; text-align: center; margin-top: 20px;">
-            &copy; ${new Date().getFullYear()} LeaderOS powered by Gaus LLC. All rights reserved.
+            &copy; ${new Date().getFullYear()} ERP Team powered by Gaus LLC. All rights reserved.
           </p>
         </body>
         </html>
@@ -341,9 +341,9 @@ export async function sendTrialEndingEmail(
     });
 
     const { data, error } = await client.emails.send({
-      from: fromEmail || 'LeaderOS <noreply@resend.dev>',
+      from: fromEmail || 'ERP Team <noreply@resend.dev>',
       to: toEmail,
-      subject: `Your LeaderOS ${planName} Trial Ends in ${daysRemaining} Days`,
+      subject: `Your ERP Team ${planName} Trial Ends in ${daysRemaining} Days`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -353,7 +353,7 @@ export async function sendTrialEndingEmail(
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">LeaderOS</h1>
+            <h1 style="color: white; margin: 0; font-size: 28px;">ERP Team</h1>
           </div>
           
           <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
@@ -388,7 +388,7 @@ export async function sendTrialEndingEmail(
           </div>
           
           <p style="font-size: 12px; color: #999; text-align: center; margin-top: 20px;">
-            &copy; ${new Date().getFullYear()} LeaderOS powered by Gaus LLC. All rights reserved.
+            &copy; ${new Date().getFullYear()} ERP Team powered by Gaus LLC. All rights reserved.
           </p>
         </body>
         </html>
@@ -435,9 +435,9 @@ export async function sendSubscriptionCanceledEmail(
     });
 
     const { data, error } = await client.emails.send({
-      from: fromEmail || 'LeaderOS <noreply@resend.dev>',
+      from: fromEmail || 'ERP Team <noreply@resend.dev>',
       to: toEmail,
-      subject: `Your LeaderOS Subscription Has Been Canceled`,
+      subject: `Your ERP Team Subscription Has Been Canceled`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -447,7 +447,7 @@ export async function sendSubscriptionCanceledEmail(
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #6B7280 0%, #4B5563 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">LeaderOS</h1>
+            <h1 style="color: white; margin: 0; font-size: 28px;">ERP Team</h1>
           </div>
           
           <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
@@ -486,7 +486,7 @@ export async function sendSubscriptionCanceledEmail(
           </div>
           
           <p style="font-size: 12px; color: #999; text-align: center; margin-top: 20px;">
-            &copy; ${new Date().getFullYear()} LeaderOS powered by Gaus LLC. All rights reserved.
+            &copy; ${new Date().getFullYear()} ERP Team powered by Gaus LLC. All rights reserved.
           </p>
         </body>
         </html>
@@ -527,9 +527,9 @@ export async function sendWelcomeEmail(
     const greeting = firstName ? `Hi ${firstName},` : 'Hi,';
 
     const { data, error } = await client.emails.send({
-      from: fromEmail || 'LeaderOS <noreply@resend.dev>',
+      from: fromEmail || 'ERP Team <noreply@resend.dev>',
       to: toEmail,
-      subject: 'Welcome to LeaderOS - Your Account is Ready!',
+      subject: 'Welcome to ERP Team - Your Account is Ready!',
       html: `
         <!DOCTYPE html>
         <html>
@@ -539,14 +539,14 @@ export async function sendWelcomeEmail(
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to LeaderOS!</h1>
+            <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to ERP Team!</h1>
           </div>
           
           <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
             <p style="font-size: 16px; margin-bottom: 20px;">${greeting}</p>
             
             <p style="font-size: 16px; margin-bottom: 20px;">
-              Thank you for subscribing to LeaderOS! Your account has been created and is ready to use.
+              Thank you for subscribing to ERP Team! Your account has been created and is ready to use.
             </p>
             
             <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
@@ -562,7 +562,7 @@ export async function sendWelcomeEmail(
             <div style="text-align: center; margin: 30px 0;">
               <a href="${loginLink}" 
                  style="background: #3B82F6; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block;">
-                Log In to LeaderOS
+                Log In to ERP Team
               </a>
             </div>
             
@@ -574,7 +574,7 @@ export async function sendWelcomeEmail(
           </div>
           
           <p style="font-size: 12px; color: #999; text-align: center; margin-top: 20px;">
-            &copy; ${new Date().getFullYear()} LeaderOS powered by Gaus LLC. All rights reserved.
+            &copy; ${new Date().getFullYear()} ERP Team powered by Gaus LLC. All rights reserved.
           </p>
         </body>
         </html>
@@ -612,11 +612,11 @@ export async function sendTrialReminderEmail(
       : `You have ${daysRemaining} days left on your free trial.`;
     
     const subject = daysRemaining <= 0 
-      ? 'Your LeaderOS trial ends today'
-      : `${daysRemaining} days left on your LeaderOS trial`;
+      ? 'Your ERP Team trial ends today'
+      : `${daysRemaining} days left on your ERP Team trial`;
 
     const { data, error } = await client.emails.send({
-      from: fromEmail || 'LeaderOS <noreply@resend.dev>',
+      from: fromEmail || 'ERP Team <noreply@resend.dev>',
       to: toEmail,
       subject,
       html: `
@@ -628,7 +628,7 @@ export async function sendTrialReminderEmail(
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">LeaderOS</h1>
+            <h1 style="color: white; margin: 0; font-size: 28px;">ERP Team</h1>
           </div>
           
           <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
@@ -639,7 +639,7 @@ export async function sendTrialReminderEmail(
             </p>
             
             <p style="font-size: 16px; margin-bottom: 20px;">
-              We hope you've been enjoying LeaderOS. To keep access to all your strategic planning tools and data, upgrade to a paid plan before your trial ends.
+              We hope you've been enjoying ERP Team. To keep access to all your strategic planning tools and data, upgrade to a paid plan before your trial ends.
             </p>
             
             <div style="text-align: center; margin: 30px 0;">
@@ -655,7 +655,7 @@ export async function sendTrialReminderEmail(
           </div>
           
           <p style="font-size: 12px; color: #999; text-align: center; margin-top: 20px;">
-            &copy; ${new Date().getFullYear()} LeaderOS powered by Gaus LLC. All rights reserved.
+            &copy; ${new Date().getFullYear()} ERP Team powered by Gaus LLC. All rights reserved.
           </p>
         </body>
         </html>
@@ -695,15 +695,15 @@ export async function sendCancellationReminderEmail(
     
     const isToday = daysUntilCancel <= 0;
     const subject = isToday 
-      ? 'Your LeaderOS subscription has ended'
-      : `Your LeaderOS subscription ends in ${daysUntilCancel} days`;
+      ? 'Your ERP Team subscription has ended'
+      : `Your ERP Team subscription ends in ${daysUntilCancel} days`;
     
     const message = isToday
-      ? `Your LeaderOS subscription has ended as of ${formattedDate}. Thank you for trying LeaderOS - we hope it was helpful for your strategic planning needs.`
-      : `Your LeaderOS subscription will end on ${formattedDate}. We wanted to give you a heads up so you can export any data you need.`;
+      ? `Your ERP Team subscription has ended as of ${formattedDate}. Thank you for trying ERP Team - we hope it was helpful for your strategic planning needs.`
+      : `Your ERP Team subscription will end on ${formattedDate}. We wanted to give you a heads up so you can export any data you need.`;
 
     const { data, error } = await client.emails.send({
-      from: fromEmail || 'LeaderOS <noreply@resend.dev>',
+      from: fromEmail || 'ERP Team <noreply@resend.dev>',
       to: toEmail,
       subject,
       html: `
@@ -715,7 +715,7 @@ export async function sendCancellationReminderEmail(
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">LeaderOS</h1>
+            <h1 style="color: white; margin: 0; font-size: 28px;">ERP Team</h1>
           </div>
           
           <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
@@ -727,7 +727,7 @@ export async function sendCancellationReminderEmail(
             
             ${!isToday ? `
             <p style="font-size: 14px; color: #666; margin-bottom: 20px;">
-              If you'd like to continue using LeaderOS, you can reactivate your subscription anytime from your account settings.
+              If you'd like to continue using ERP Team, you can reactivate your subscription anytime from your account settings.
             </p>
             ` : `
             <p style="font-size: 14px; color: #666; margin-bottom: 20px;">
@@ -736,12 +736,12 @@ export async function sendCancellationReminderEmail(
             `}
             
             <p style="font-size: 14px; color: #666;">
-              Thank you for being part of LeaderOS.
+              Thank you for being part of ERP Team.
             </p>
           </div>
           
           <p style="font-size: 12px; color: #999; text-align: center; margin-top: 20px;">
-            &copy; ${new Date().getFullYear()} LeaderOS powered by Gaus LLC. All rights reserved.
+            &copy; ${new Date().getFullYear()} ERP Team powered by Gaus LLC. All rights reserved.
           </p>
         </body>
         </html>
