@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertStrategySchema, insertProjectSchema, insertActionSchema, insertActionDocumentSchema, insertActionChecklistItemSchema, insertMeetingNoteSchema, insertBarrierSchema, insertDependencySchema, insertTemplateTypeSchema, insertExecutiveGoalSchema, insertTeamTagSchema, insertUserStrategyAssignmentSchema, insertProjectResourceAssignmentSchema, insertActionPeopleAssignmentSchema, insertPtoEntrySchema, insertHolidaySchema, insertIntakeFormSchema } from "@shared/schema";
+import { insertStrategySchema, insertProjectSchema, insertActionSchema, insertActionDocumentSchema, insertActionChecklistItemSchema, insertMeetingNoteSchema, insertBarrierSchema, insertDependencySchema, insertTemplateTypeSchema, insertExecutiveGoalSchema, insertTeamTagSchema, insertUserStrategyAssignmentSchema, insertProjectResourceAssignmentSchema, insertActionPeopleAssignmentSchema, insertPtoEntrySchema, insertHolidaySchema, insertIntakeFormSchema, insertReportOutDeckSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./jwtAuth";
 import { z, ZodSchema, ZodError } from "zod";
 import { logger } from "./logger";
@@ -5519,6 +5519,351 @@ ${outputTemplate}`;
     } catch (error) {
       logger.error("Failed to update intake submission", error);
       res.status(500).json({ message: "Failed to update submission" });
+    }
+  });
+
+  // Report Out Deck routes
+  app.get("/api/report-out-decks", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+
+      const decks = user.organizationId
+        ? await storage.getReportOutDecksByOrganization(user.organizationId)
+        : [];
+      res.json(decks);
+    } catch (error) {
+      logger.error("Failed to fetch report out decks", error);
+      res.status(500).json({ message: "Failed to fetch report out decks" });
+    }
+  });
+
+  app.get("/api/report-out-decks/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+
+      const deck = await storage.getReportOutDeck(req.params.id);
+      if (!deck) return res.status(404).json({ message: "Report out deck not found" });
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== deck.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      res.json(deck);
+    } catch (error) {
+      logger.error("Failed to fetch report out deck", error);
+      res.status(500).json({ message: "Failed to fetch report out deck" });
+    }
+  });
+
+  app.post("/api/report-out-decks/generate", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) return res.status(401).json({ message: "User not found" });
+
+      const orgId = user.organizationId;
+      const strategies = await storage.getStrategiesByOrganization(orgId);
+      const projects = await storage.getProjectsByOrganization(orgId);
+      const actions = await storage.getActionsByOrganization(orgId);
+      const barriers = await storage.getAllBarriers(orgId);
+
+      // Get previous deck for trend comparison
+      const existingDecks = await storage.getReportOutDecksByOrganization(orgId);
+      let previousSnapshot: any = null;
+      if (existingDecks.length > 0) {
+        try {
+          previousSnapshot = JSON.parse(existingDecks[0].snapshotData as string);
+        } catch { /* ignore parse errors */ }
+      }
+
+      const activeStrategies = strategies.filter(s => s.status === 'Active');
+
+      const slides: any[] = [];
+
+      // Title slide
+      slides.push({
+        type: 'title',
+        title: 'Strategic Report Out',
+        subtitle: `Status Update — ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`,
+        commentary: '',
+        included: true,
+      });
+
+      // Executive summary slide
+      const totalProjects = projects.filter(p => p.isArchived !== 'true');
+      const criticalProjects = totalProjects.filter(p => p.status === 'CR');
+      const behindProjects = totalProjects.filter(p => p.status === 'B');
+      const onTrackProjects = totalProjects.filter(p => p.status === 'OT');
+      const completedProjects = totalProjects.filter(p => p.status === 'C');
+      const totalActions = actions.filter(a => a.isArchived !== 'true');
+      const achievedActions = totalActions.filter(a => a.status === 'achieved');
+      const activeBarriers = barriers.filter(b => b.status === 'active');
+
+      // Compute trend data from previous snapshot
+      let summaryTrends: any = null;
+      if (previousSnapshot) {
+        const prevProjects = previousSnapshot.projects || [];
+        const prevActions = previousSnapshot.actions || [];
+        const prevStrategies = previousSnapshot.strategies || [];
+        const prevAvgProgress = prevStrategies.length > 0
+          ? Math.round(prevStrategies.reduce((sum: number, s: any) => sum + (s.progress || 0), 0) / prevStrategies.length)
+          : 0;
+        const currentAvgProgress = activeStrategies.length > 0
+          ? Math.round(activeStrategies.reduce((sum, s) => sum + (s.progress || 0), 0) / activeStrategies.length)
+          : 0;
+        summaryTrends = {
+          previousDate: previousSnapshot.capturedAt,
+          avgProgressChange: currentAvgProgress - prevAvgProgress,
+          projectsChange: totalProjects.length - prevProjects.length,
+          criticalChange: criticalProjects.length - prevProjects.filter((p: any) => p.status === 'CR').length,
+          behindChange: behindProjects.length - prevProjects.filter((p: any) => p.status === 'B').length,
+          completedChange: completedProjects.length - prevProjects.filter((p: any) => p.status === 'C').length,
+          actionsAchievedChange: achievedActions.length - prevActions.filter((a: any) => a.status === 'achieved').length,
+        };
+      }
+
+      slides.push({
+        type: 'summary',
+        title: 'Executive Summary',
+        data: {
+          strategiesCount: activeStrategies.length,
+          avgProgress: activeStrategies.length > 0
+            ? Math.round(activeStrategies.reduce((sum, s) => sum + (s.progress || 0), 0) / activeStrategies.length)
+            : 0,
+          projects: {
+            total: totalProjects.length,
+            critical: criticalProjects.length,
+            behind: behindProjects.length,
+            onTrack: onTrackProjects.length,
+            completed: completedProjects.length,
+            notStarted: totalProjects.filter(p => p.status === 'NYS').length,
+          },
+          actions: {
+            total: totalActions.length,
+            achieved: achievedActions.length,
+            inProgress: totalActions.filter(a => a.status === 'in_progress').length,
+          },
+          barriers: {
+            active: activeBarriers.length,
+            high: activeBarriers.filter(b => b.severity === 'high' || b.severity === 'critical').length,
+          },
+          trends: summaryTrends,
+        },
+        commentary: '',
+        included: true,
+      });
+
+      // Per-strategy slides
+      for (const strategy of activeStrategies) {
+        const stratProjects = projects.filter(p => p.strategyId === strategy.id && p.isArchived !== 'true');
+        const stratActions = actions.filter(a => a.strategyId === strategy.id && a.isArchived !== 'true');
+        const stratBarriers = barriers.filter(b => {
+          const projIds = stratProjects.map(p => p.id);
+          return projIds.includes(b.projectId) && b.status === 'active';
+        });
+
+        const projectBreakdown = stratProjects.map(p => {
+          let statusChange: string | null = null;
+          if (previousSnapshot) {
+            const prevProj = (previousSnapshot.projects || []).find((pp: any) => pp.id === p.id);
+            if (prevProj && prevProj.status !== p.status) {
+              statusChange = `${prevProj.status} → ${p.status}`;
+            }
+          }
+          return {
+            id: p.id,
+            title: p.title,
+            status: p.status,
+            progress: p.progress || 0,
+            dueDate: p.dueDate,
+            barrierCount: stratBarriers.filter(b => b.projectId === p.id).length,
+            statusChange,
+          };
+        });
+
+        let strategyTrend: any = null;
+        if (previousSnapshot) {
+          const prevStrat = (previousSnapshot.strategies || []).find((s: any) => s.id === strategy.id);
+          if (prevStrat) {
+            strategyTrend = {
+              progressChange: (strategy.progress || 0) - (prevStrat.progress || 0),
+              previousProgress: prevStrat.progress || 0,
+            };
+          }
+        }
+
+        slides.push({
+          type: 'strategy',
+          title: strategy.title,
+          strategyId: strategy.id,
+          data: {
+            description: strategy.description,
+            progress: strategy.progress || 0,
+            status: strategy.status,
+            colorCode: strategy.colorCode,
+            projects: projectBreakdown,
+            actionsTotal: stratActions.length,
+            actionsAchieved: stratActions.filter(a => a.status === 'achieved').length,
+            barriersActive: stratBarriers.length,
+            barriersHigh: stratBarriers.filter(b => b.severity === 'high' || b.severity === 'critical').length,
+            trend: strategyTrend,
+          },
+          commentary: '',
+          included: true,
+        });
+
+        // Detail slides for strategies with critical/behind projects
+        const problemProjects = stratProjects.filter(p => p.status === 'CR' || p.status === 'B');
+        if (problemProjects.length > 0) {
+          const detailProjects = problemProjects.map(p => {
+            const projBarriers = stratBarriers.filter(b => b.projectId === p.id);
+            const projActions = stratActions.filter(a => a.projectId === p.id);
+            return {
+              id: p.id,
+              title: p.title,
+              status: p.status,
+              progress: p.progress || 0,
+              dueDate: p.dueDate,
+              barriers: projBarriers.map(b => ({ title: b.title, severity: b.severity, description: b.description })),
+              actionsTotal: projActions.length,
+              actionsAchieved: projActions.filter(a => a.status === 'achieved').length,
+            };
+          });
+
+          slides.push({
+            type: 'strategy_detail',
+            title: `${strategy.title} — Attention Needed`,
+            strategyId: strategy.id,
+            data: {
+              colorCode: strategy.colorCode,
+              projects: detailProjects,
+            },
+            commentary: '',
+            included: true,
+          });
+        }
+      }
+
+      // Build snapshot data for trend tracking
+      const snapshotData = {
+        capturedAt: new Date().toISOString(),
+        strategies: activeStrategies.map(s => ({
+          id: s.id,
+          title: s.title,
+          progress: s.progress || 0,
+          status: s.status,
+        })),
+        projects: projects.filter(p => p.isArchived !== 'true').map(p => ({
+          id: p.id,
+          title: p.title,
+          strategyId: p.strategyId,
+          status: p.status,
+          progress: p.progress || 0,
+        })),
+        actions: actions.filter(a => a.isArchived !== 'true').map(a => ({
+          id: a.id,
+          strategyId: a.strategyId,
+          status: a.status,
+        })),
+      };
+
+      res.json({ slides, snapshotData });
+    } catch (error) {
+      logger.error("Failed to generate report out data", error);
+      res.status(500).json({ message: "Failed to generate report out data" });
+    }
+  });
+
+  app.post("/api/report-out-decks", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user || !user.organizationId) return res.status(401).json({ message: "User not found" });
+
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
+        const canWrite = user.role === 'co_lead' || user.role === 'view';
+        if (!canWrite) return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { title, reportDate, slides, snapshotData, status } = req.body;
+      if (!title || !reportDate) {
+        return res.status(400).json({ message: "Title and report date are required" });
+      }
+
+      const deck = await storage.createReportOutDeck({
+        title,
+        reportDate: new Date(reportDate),
+        slides: typeof slides === 'string' ? slides : JSON.stringify(slides || []),
+        snapshotData: typeof snapshotData === 'string' ? snapshotData : JSON.stringify(snapshotData || {}),
+        status: status || 'draft',
+        createdBy: userId,
+        organizationId: user.organizationId,
+      });
+      res.status(201).json(deck);
+    } catch (error) {
+      logger.error("Failed to create report out deck", error);
+      res.status(500).json({ message: "Failed to create report out deck" });
+    }
+  });
+
+  app.patch("/api/report-out-decks/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+
+      const existing = await storage.getReportOutDeck(req.params.id);
+      if (!existing) return res.status(404).json({ message: "Report out deck not found" });
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== existing.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { title, reportDate, slides, snapshotData, status } = req.body;
+      const updates: any = {};
+      if (title !== undefined) updates.title = title;
+      if (reportDate !== undefined) updates.reportDate = new Date(reportDate);
+      if (slides !== undefined) updates.slides = typeof slides === 'string' ? slides : JSON.stringify(slides);
+      if (snapshotData !== undefined) updates.snapshotData = typeof snapshotData === 'string' ? snapshotData : JSON.stringify(snapshotData);
+      if (status !== undefined) updates.status = status;
+
+      const deck = await storage.updateReportOutDeck(req.params.id, updates);
+      res.json(deck);
+    } catch (error) {
+      logger.error("Failed to update report out deck", error);
+      res.status(500).json({ message: "Failed to update report out deck" });
+    }
+  });
+
+  app.delete("/api/report-out-decks/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+
+      const existing = await storage.getReportOutDeck(req.params.id);
+      if (!existing) return res.status(404).json({ message: "Report out deck not found" });
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== existing.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true' && existing.createdBy !== userId) {
+        return res.status(403).json({ message: "Only the creator or an administrator can delete this deck" });
+      }
+
+      const deleted = await storage.deleteReportOutDeck(req.params.id);
+      if (!deleted) return res.status(500).json({ message: "Failed to delete deck" });
+      res.json({ message: "Report out deck deleted" });
+    } catch (error) {
+      logger.error("Failed to delete report out deck", error);
+      res.status(500).json({ message: "Failed to delete report out deck" });
     }
   });
 

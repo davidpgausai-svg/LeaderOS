@@ -41,7 +41,8 @@ import {
   type SentEmailNotification, type InsertSentEmailNotification,
   type IntakeForm, type InsertIntakeForm,
   type IntakeSubmission, type InsertIntakeSubmission,
-  intakeForms, intakeSubmissions
+  intakeForms, intakeSubmissions, reportOutDecks,
+  type ReportOutDeck, type InsertReportOutDeck,
 } from '@shared/schema';
 
 export class DatabaseStorage implements IStorage {
@@ -1373,6 +1374,38 @@ export class DatabaseStorage implements IStorage {
     const results = await db.select().from(intakeSubmissions)
       .where(eq(intakeSubmissions.formId, formId));
     return results.length;
+  }
+
+  async getReportOutDecksByOrganization(organizationId: string): Promise<ReportOutDeck[]> {
+    return db.select().from(reportOutDecks)
+      .where(eq(reportOutDecks.organizationId, organizationId))
+      .orderBy(desc(reportOutDecks.reportDate));
+  }
+
+  async getReportOutDeck(id: string): Promise<ReportOutDeck | undefined> {
+    const [deck] = await db.select().from(reportOutDecks).where(eq(reportOutDecks.id, id));
+    return deck || undefined;
+  }
+
+  async createReportOutDeck(deck: InsertReportOutDeck & { createdBy: string; organizationId: string }): Promise<ReportOutDeck> {
+    const [created] = await db.insert(reportOutDecks).values({
+      id: randomUUID(),
+      ...deck,
+    }).returning();
+    return created;
+  }
+
+  async updateReportOutDeck(id: string, updates: Partial<ReportOutDeck>): Promise<ReportOutDeck | undefined> {
+    const [deck] = await db.update(reportOutDecks)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(reportOutDecks.id, id))
+      .returning();
+    return deck || undefined;
+  }
+
+  async deleteReportOutDeck(id: string): Promise<boolean> {
+    const result = await db.delete(reportOutDecks).where(eq(reportOutDecks.id, id)).returning();
+    return result.length > 0;
   }
 }
 

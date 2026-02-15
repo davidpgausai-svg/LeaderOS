@@ -23,6 +23,7 @@ import {
   Crown,
   ClipboardList,
   Inbox,
+  Presentation,
 } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import logoImage from "@assets/Strategy_Plan_Logo_2.0_-_dark_1764957298563.png";
@@ -37,6 +38,7 @@ const secondaryNavigation = [
   { name: "Calendar", href: "/calendar", icon: CalendarDays },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Meeting Notes", href: "/meeting-notes", icon: PenLine },
+  { name: "Report Out", href: "/report-out", icon: Presentation },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 

@@ -144,6 +144,17 @@ A real-time notification system for action completions, project progress, strate
 ### Meeting Notes (Report-Out Meetings)
 Allows creation and management of report-out meeting notes tied to strategies, with dynamic selection of projects and actions, rich text fields, PDF export, and authorization controls.
 
+### Report Out Decks
+An executive reporting feature that auto-generates presentation-style slide decks from live strategy and project data. Key features:
+- **Auto-Generation**: Creates slides from current strategy/project/action/barrier data — title slide, executive summary, per-strategy breakdowns, and attention-needed detail slides for critical/behind projects
+- **Slide Editor**: Left panel slide navigator with include/exclude checkboxes; right panel shows visual slide preview with editable commentary fields for adding talking points
+- **Presentation Mode**: Full-screen in-app slideshow with keyboard navigation (arrow keys, ESC to exit), only showing included slides
+- **PowerPoint Export**: Downloads .pptx file using pptxgenjs with matching visual layout (title slide, metric boxes, progress bars, project tables)
+- **Trend Tracking**: Compares current data against the most recent saved report's snapshot to show changes — progress delta badges, status change indicators on projects, and "compared to [date]" reference
+- **Saved Reports**: Decks are persisted with title, date, slides JSON, and snapshot data for historical comparison. Supports draft/finalized status.
+- **Data Storage**: `report_out_decks` table with slides and snapshot stored as JSON text. Route: `/report-out`
+- **Dependencies**: `pptxgenjs` for PowerPoint file generation
+
 ### Templates Feature
 A collection of strategic planning, project management, and productivity templates (e.g., Strategy on a Page, PESTLE Analysis, SWOT Analysis) accessible via the sidebar. All templates support Word document export, and administrators can manage custom template categories.
 
@@ -177,3 +188,4 @@ The project uses Vite for development, Tailwind CSS for styling, and TypeScript 
 - `docx`
 - `openai`
 - `@google/generative-ai`
+- `pptxgenjs`

@@ -804,3 +804,32 @@ export const insertIntakeSubmissionSchema = createInsertSchema(intakeSubmissions
 
 export type InsertIntakeSubmission = z.infer<typeof insertIntakeSubmissionSchema>;
 export type IntakeSubmission = typeof intakeSubmissions.$inferSelect;
+
+export const reportOutDecks = sqliteTable("report_out_decks", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  title: text("title").notNull(),
+  reportDate: integer("report_date", { mode: "timestamp" }).notNull(),
+  organizationId: text("organization_id").notNull(),
+  createdBy: text("created_by").notNull(),
+  slides: text("slides").notNull().default("[]"),
+  snapshotData: text("snapshot_data").notNull().default("{}"),
+  status: text("status").notNull().default('draft'),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+});
+
+export const insertReportOutDeckSchema = createInsertSchema(reportOutDecks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  createdBy: true,
+  organizationId: true,
+}).extend({
+  reportDate: z.coerce.date(),
+  slides: z.string().optional().default("[]"),
+  snapshotData: z.string().optional().default("{}"),
+  status: z.enum(['draft', 'finalized']).optional().default('draft'),
+});
+
+export type InsertReportOutDeck = z.infer<typeof insertReportOutDeckSchema>;
+export type ReportOutDeck = typeof reportOutDecks.$inferSelect;
