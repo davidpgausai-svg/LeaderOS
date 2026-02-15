@@ -695,7 +695,7 @@ export default function Strategies() {
       const matchesSearch = strategy.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            strategy.description.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStrategyFilter = strategyFilter === "all" || strategy.id === strategyFilter;
-      return matchesSearch && matchesStrategyFilter && strategy.status === 'Archived';
+      return matchesSearch && matchesStrategyFilter && strategy.status?.toLowerCase() === 'archived';
     })
     .sort((a: any, b: any) => (a.displayOrder || 0) - (b.displayOrder || 0));
 
@@ -1611,7 +1611,7 @@ export default function Strategies() {
                                   <Tag className="h-4 w-4 mr-2" />
                                   Tag Executive Goals
                                 </DropdownMenuItem>
-                                {strategy.status === 'Active' && (
+                                {strategy.status?.toLowerCase() === 'active' && (
                                   <DropdownMenuItem
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -1623,7 +1623,7 @@ export default function Strategies() {
                                     Mark as Completed
                                   </DropdownMenuItem>
                                 )}
-                                {strategy.status === 'Completed' && (
+                                {strategy.status?.toLowerCase() === 'completed' && (
                                   <DropdownMenuItem
                                     onClick={(e) => {
                                       e.stopPropagation();

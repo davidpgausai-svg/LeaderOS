@@ -13,13 +13,13 @@ async function checkDueDateNotifications() {
     const allStrategies = await storage.getAllStrategies();
     
     for (const strategy of allStrategies) {
-      if (strategy.status === 'Archived') continue;
+      if (strategy.status?.toLowerCase() === 'archived') continue;
       
       const projects = await storage.getProjectsByStrategy(strategy.id);
       for (const project of projects) {
         const actions = await storage.getActionsByProject(project.id);
         for (const action of actions) {
-          if (action.status === 'Completed' || action.status === 'Achieved') continue;
+          if (action.status?.toLowerCase() === 'completed' || action.status?.toLowerCase() === 'achieved') continue;
           if (!action.dueDate) continue;
 
           const now = new Date();
@@ -33,7 +33,8 @@ async function checkDueDateNotifications() {
           }
           const notified = notifiedActions.get(actionKey)!;
 
-          const assignedUserIds = action.assignedTo ? [action.assignedTo] : [];
+          const assignments = await storage.getActionPeopleAssignments(action.id);
+          const assignedUserIds = assignments.map(a => a.userId);
           if (assignedUserIds.length === 0) continue;
 
           if (diffDays === 14 && !notified.has('due_14')) {

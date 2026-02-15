@@ -832,8 +832,8 @@ Respond ONLY with a valid JSON object in this exact format:
         }
         
         // Clean up dependencies when strategy is archived or completed
-        if ((strategy.status === 'Archived' || strategy.status === 'Completed') && 
-            oldStrategy.status !== 'Archived' && oldStrategy.status !== 'Completed') {
+        if ((strategy.status?.toLowerCase() === 'archived' || strategy.status?.toLowerCase() === 'completed') && 
+            oldStrategy.status?.toLowerCase() !== 'archived' && oldStrategy.status?.toLowerCase() !== 'completed') {
           const strategyProjects = await storage.getProjectsByStrategy(req.params.id);
           const strategyActions = await storage.getActionsByStrategy(req.params.id);
           const projectIds = strategyProjects.map((p: any) => p.id);
@@ -4946,7 +4946,7 @@ ${outputTemplate}`;
         } catch { /* ignore parse errors */ }
       }
 
-      const activeStrategies = strategies.filter(s => s.status === 'Active');
+      const activeStrategies = strategies.filter(s => s.status?.toLowerCase() === 'active');
 
       const slides: any[] = [];
 

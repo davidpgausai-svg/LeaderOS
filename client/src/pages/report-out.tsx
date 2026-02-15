@@ -48,6 +48,7 @@ import {
   Clock,
   TrendingUp,
   Loader2,
+  RefreshCw,
 } from "lucide-react";
 import PptxGenJS from "pptxgenjs";
 
@@ -1109,6 +1110,20 @@ export default function ReportOut() {
               className="w-40 text-sm"
             />
             <div className="flex-1" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => generateMutation.mutate()}
+              disabled={generateMutation.isPending}
+              className="flex items-center gap-2"
+            >
+              {generateMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+              Refresh Data
+            </Button>
             <Button
               variant="outline"
               size="sm"
