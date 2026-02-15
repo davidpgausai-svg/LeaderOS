@@ -32,72 +32,8 @@ function getCreateTableStatements(): string[] {
       "id" text PRIMARY KEY,
       "name" text NOT NULL,
       "registration_token" text NOT NULL UNIQUE,
-      "subscription_plan" text NOT NULL DEFAULT 'starter',
-      "subscription_status" text NOT NULL DEFAULT 'active',
-      "billing_interval" text NOT NULL DEFAULT 'monthly',
-      "stripe_customer_id" text,
-      "stripe_subscription_id" text UNIQUE,
-      "stripe_price_id" text,
-      "current_period_start" integer,
-      "current_period_end" integer,
-      "trial_ends_at" integer,
-      "cancel_at_period_end" text NOT NULL DEFAULT 'false',
-      "pending_downgrade_plan" text,
-      "max_users" integer NOT NULL DEFAULT 1,
-      "extra_seats" integer NOT NULL DEFAULT 0,
-      "pending_extra_seats" integer,
-      "is_legacy" text NOT NULL DEFAULT 'false',
-      "payment_failed_at" integer,
-      "last_payment_reminder_at" integer,
       "created_at" integer,
       "updated_at" integer
-    )`,
-
-    `CREATE TABLE IF NOT EXISTS "billing_history" (
-      "id" text PRIMARY KEY,
-      "organization_id" text NOT NULL,
-      "event_type" text NOT NULL,
-      "description" text NOT NULL,
-      "amount_cents" integer,
-      "currency" text DEFAULT 'usd',
-      "stripe_invoice_id" text,
-      "stripe_payment_intent_id" text,
-      "plan_before" text,
-      "plan_after" text,
-      "seats_before" integer,
-      "seats_after" integer,
-      "metadata" text,
-      "created_at" integer
-    )`,
-
-    `CREATE TABLE IF NOT EXISTS "payment_failures" (
-      "id" text PRIMARY KEY,
-      "organization_id" text NOT NULL,
-      "stripe_invoice_id" text,
-      "stripe_payment_intent_id" text,
-      "amount_cents" integer NOT NULL,
-      "currency" text DEFAULT 'usd',
-      "failure_reason" text,
-      "reminders_sent" integer NOT NULL DEFAULT 0,
-      "last_reminder_at" integer,
-      "grace_period_ends_at" integer NOT NULL,
-      "resolved_at" integer,
-      "created_at" integer
-    )`,
-
-    `CREATE TABLE IF NOT EXISTS "processed_stripe_events" (
-      "event_id" text PRIMARY KEY,
-      "event_type" text NOT NULL,
-      "processed_at" integer
-    )`,
-
-    `CREATE TABLE IF NOT EXISTS "sent_email_notifications" (
-      "id" text PRIMARY KEY,
-      "organization_id" text NOT NULL,
-      "email_type" text NOT NULL,
-      "recipient_email" text NOT NULL,
-      "stripe_subscription_id" text,
-      "sent_at" integer
     )`,
 
     `CREATE TABLE IF NOT EXISTS "sessions" (

@@ -13,36 +13,10 @@ const randomUUID = (): string => {
   });
 };
 
-export const subscriptionPlanEnum = ['starter', 'leaderpro', 'team', 'legacy'] as const;
-export type SubscriptionPlan = typeof subscriptionPlanEnum[number];
-
-export const subscriptionStatusEnum = ['active', 'trialing', 'past_due', 'canceled', 'suspended'] as const;
-export type SubscriptionStatus = typeof subscriptionStatusEnum[number];
-
-export const billingIntervalEnum = ['monthly', 'annual'] as const;
-export type BillingInterval = typeof billingIntervalEnum[number];
-
 export const organizations = sqliteTable("organizations", {
   id: text("id").primaryKey().$defaultFn(() => randomUUID()),
   name: text("name").notNull(),
   registrationToken: text("registration_token").notNull().unique(),
-  subscriptionPlan: text("subscription_plan").notNull().default('starter'),
-  subscriptionStatus: text("subscription_status").notNull().default('active'),
-  billingInterval: text("billing_interval").notNull().default('monthly'),
-  stripeCustomerId: text("stripe_customer_id"),
-  stripeSubscriptionId: text("stripe_subscription_id").unique(),
-  stripePriceId: text("stripe_price_id"),
-  currentPeriodStart: integer("current_period_start", { mode: "timestamp" }),
-  currentPeriodEnd: integer("current_period_end", { mode: "timestamp" }),
-  trialEndsAt: integer("trial_ends_at", { mode: "timestamp" }),
-  cancelAtPeriodEnd: text("cancel_at_period_end").notNull().default('false'),
-  pendingDowngradePlan: text("pending_downgrade_plan"),
-  maxUsers: integer("max_users").notNull().default(1),
-  extraSeats: integer("extra_seats").notNull().default(0),
-  pendingExtraSeats: integer("pending_extra_seats"),
-  isLegacy: text("is_legacy").notNull().default('false'),
-  paymentFailedAt: integer("payment_failed_at", { mode: "timestamp" }),
-  lastPaymentReminderAt: integer("last_payment_reminder_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
@@ -55,80 +29,6 @@ export const insertOrganizationSchema = createInsertSchema(organizations).omit({
 
 export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
 export type Organization = typeof organizations.$inferSelect;
-
-export const billingHistory = sqliteTable("billing_history", {
-  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
-  organizationId: text("organization_id").notNull(),
-  eventType: text("event_type").notNull(),
-  description: text("description").notNull(),
-  amountCents: integer("amount_cents"),
-  currency: text("currency").default('usd'),
-  stripeInvoiceId: text("stripe_invoice_id"),
-  stripePaymentIntentId: text("stripe_payment_intent_id"),
-  planBefore: text("plan_before"),
-  planAfter: text("plan_after"),
-  seatsBefore: integer("seats_before"),
-  seatsAfter: integer("seats_after"),
-  metadata: text("metadata"),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-});
-
-export const insertBillingHistorySchema = createInsertSchema(billingHistory).omit({
-  id: true,
-  createdAt: true,
-});
-
-export type InsertBillingHistory = z.infer<typeof insertBillingHistorySchema>;
-export type BillingHistory = typeof billingHistory.$inferSelect;
-
-export const paymentFailures = sqliteTable("payment_failures", {
-  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
-  organizationId: text("organization_id").notNull(),
-  stripeInvoiceId: text("stripe_invoice_id"),
-  stripePaymentIntentId: text("stripe_payment_intent_id"),
-  amountCents: integer("amount_cents").notNull(),
-  currency: text("currency").default('usd'),
-  failureReason: text("failure_reason"),
-  remindersSent: integer("reminders_sent").notNull().default(0),
-  lastReminderAt: integer("last_reminder_at", { mode: "timestamp" }),
-  gracePeriodEndsAt: integer("grace_period_ends_at", { mode: "timestamp" }).notNull(),
-  resolvedAt: integer("resolved_at", { mode: "timestamp" }),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-});
-
-export const insertPaymentFailureSchema = createInsertSchema(paymentFailures).omit({
-  id: true,
-  createdAt: true,
-  remindersSent: true,
-});
-
-export type InsertPaymentFailure = z.infer<typeof insertPaymentFailureSchema>;
-export type PaymentFailure = typeof paymentFailures.$inferSelect;
-
-export const processedStripeEvents = sqliteTable("processed_stripe_events", {
-  eventId: text("event_id").primaryKey(),
-  eventType: text("event_type").notNull(),
-  processedAt: integer("processed_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-});
-
-export type ProcessedStripeEvent = typeof processedStripeEvents.$inferSelect;
-
-export const sentEmailNotifications = sqliteTable("sent_email_notifications", {
-  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
-  organizationId: text("organization_id").notNull(),
-  emailType: text("email_type").notNull(),
-  recipientEmail: text("recipient_email").notNull(),
-  stripeSubscriptionId: text("stripe_subscription_id"),
-  sentAt: integer("sent_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-});
-
-export const insertSentEmailNotificationSchema = createInsertSchema(sentEmailNotifications).omit({
-  id: true,
-  sentAt: true,
-});
-
-export type InsertSentEmailNotification = z.infer<typeof insertSentEmailNotificationSchema>;
-export type SentEmailNotification = typeof sentEmailNotifications.$inferSelect;
 
 export const sessions = sqliteTable(
   "sessions",

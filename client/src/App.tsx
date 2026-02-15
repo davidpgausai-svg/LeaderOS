@@ -4,7 +4,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { UserInitializer } from "@/components/user-initializer";
-import { GlobalUpgradeModal } from "@/components/global-upgrade-modal";
 import { useAuth } from "@/hooks/useAuth";
 import Dashboard from "@/pages/dashboard";
 import Strategies from "@/pages/strategies";
@@ -16,11 +15,9 @@ import Calendar from "@/pages/calendar";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Register from "@/pages/register";
-import RegisterPurchase from "@/pages/register-purchase";
 import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
 import SuperAdmin from "@/pages/super-admin";
-import CheckoutSuccess from "@/pages/checkout-success";
 import ForceChangePassword from "@/pages/force-change-password";
 import IntakeForms from "@/pages/intake-forms";
 import IntakeSubmissions from "@/pages/intake-submissions";
@@ -39,8 +36,6 @@ function Router() {
     return (
       <Switch>
         <Route path="/register/:token" component={Register} />
-        <Route path="/register/purchase" component={RegisterPurchase} />
-        <Route path="/checkout-success" component={CheckoutSuccess} />
         <Route path="/intake/:slug" component={PublicIntake} />
         <Route path="/forgot-password" component={ForgotPassword} />
         <Route path="/reset-password" component={ResetPassword} />
@@ -85,7 +80,6 @@ function App() {
       <UserInitializer>
         <TooltipProvider>
           <Toaster />
-          <GlobalUpgradeModal />
           <Router />
         </TooltipProvider>
       </UserInitializer>

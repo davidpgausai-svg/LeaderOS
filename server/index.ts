@@ -2,11 +2,10 @@ import express, { type Request, Response, NextFunction } from "express";
 import cookieParser from "cookie-parser";
 import { rateLimit } from "express-rate-limit";
 import { registerRoutes } from "./routes";
-import { startDueDateScheduler, startBillingScheduler, startEmailReminderScheduler } from "./scheduler";
+import { startDueDateScheduler } from "./scheduler";
 import { validateCsrf } from "./jwtAuth";
 import { logger } from "./logger";
 import { runMigrations } from './migrate';
-import { WebhookHandlers } from './webhookHandlers';
 import fs from "fs";
 import path from "path";
 
@@ -19,10 +18,9 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
   skip: (req) => {
     // Skip rate limiting for auth endpoints (they have their own stricter limits)
-    // and Stripe webhooks (they use signature verification)
     // Use originalUrl since middleware is mounted at /api
     const fullPath = req.originalUrl || req.path;
-    return fullPath.startsWith('/api/auth/') || fullPath.startsWith('/api/stripe/webhook');
+    return fullPath.startsWith('/api/auth/');
   },
   handler: (req, res, next, options) => {
     const fullPath = req.originalUrl || req.path;
@@ -39,13 +37,12 @@ const writeOperationLimiter = rateLimit({
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   skip: (req) => {
-    // Only apply to write operations, skip auth endpoints and Stripe webhooks
+    // Only apply to write operations, skip auth endpoints
     const isWriteOperation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
     // Use originalUrl since middleware is mounted at /api
     const fullPath = req.originalUrl || req.path;
     const isAuthEndpoint = fullPath.startsWith('/api/auth/');
-    const isStripeWebhook = fullPath.startsWith('/api/stripe/webhook');
-    return !isWriteOperation || isAuthEndpoint || isStripeWebhook;
+    return !isWriteOperation || isAuthEndpoint;
   },
   handler: (req, res, next, options) => {
     const fullPath = req.originalUrl || req.path;
@@ -72,30 +69,6 @@ const app = express();
 // Trust proxy - necessary for rate limiting behind reverse proxy (Replit)
 app.set('trust proxy', 1);
 
-// CORS for external marketing site (leaderos.app) - specific endpoints only
-const ALLOWED_CORS_ORIGINS = ['https://leaderos.app', 'https://www.leaderos.app'];
-const CORS_ALLOWED_ENDPOINTS = ['/api/billing/create-anonymous-checkout'];
-
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  const fullPath = req.originalUrl || req.path;
-  
-  // Only allow CORS for specific endpoints from allowed origins
-  if (origin && ALLOWED_CORS_ORIGINS.includes(origin) && CORS_ALLOWED_ENDPOINTS.some(ep => fullPath.startsWith(ep))) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    res.setHeader('Access-Control-Max-Age', '86400');
-    
-    // Handle preflight requests
-    if (req.method === 'OPTIONS') {
-      return res.status(204).end();
-    }
-  }
-  
-  next();
-});
-
 // Cookie parser for HTTP-only auth cookies
 app.use(cookieParser());
 
@@ -117,34 +90,6 @@ function log(message: string, source = "express") {
   });
   console.log(`${formattedTime} [${source}] ${message}`);
 }
-
-// Stripe webhook route - MUST be before express.json() middleware
-// Uses raw body for signature verification
-app.post(
-  '/api/stripe/webhook/:uuid',
-  express.raw({ type: 'application/json' }),
-  async (req, res) => {
-    const signature = req.headers['stripe-signature'];
-    if (!signature) {
-      return res.status(400).json({ error: 'Missing stripe-signature' });
-    }
-
-    try {
-      const sig = Array.isArray(signature) ? signature[0] : signature;
-      if (!Buffer.isBuffer(req.body)) {
-        console.error('Webhook error: req.body is not a Buffer');
-        return res.status(500).json({ error: 'Webhook processing error' });
-      }
-
-      const { uuid } = req.params;
-      await WebhookHandlers.processWebhook(req.body as Buffer, sig, uuid);
-      res.status(200).json({ received: true });
-    } catch (error: any) {
-      console.error('Webhook error:', error.message);
-      res.status(400).json({ error: 'Webhook processing error' });
-    }
-  }
-);
 
 // Security headers
 app.use((req, res, next) => {
@@ -244,20 +189,6 @@ function serveStatic(app: express.Express) {
   });
 }
 
-function initStripe() {
-  const hasStripeKeys = process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PUBLISHABLE_KEY;
-  if (!hasStripeKeys) {
-    console.log('Stripe keys not configured, skipping Stripe initialization');
-    return;
-  }
-
-  if (!process.env.STRIPE_WEBHOOK_SECRET) {
-    console.log('STRIPE_WEBHOOK_SECRET not set — Stripe webhooks will not be verified');
-  }
-
-  console.log('Stripe initialized with direct API keys');
-}
-
 (async () => {
   // Run SQLite migrations via Drizzle
   runMigrations();
@@ -265,9 +196,6 @@ function initStripe() {
   // Ensure a default organization exists (creates one if DB is empty)
   const { ensureDefaultOrganization } = await import('./pgStorage');
   await ensureDefaultOrganization();
-  
-  // Initialize Stripe (just validates keys are present)
-  initStripe();
   
   const server = await registerRoutes(app);
 
@@ -293,15 +221,6 @@ function initStripe() {
   // Start the due date notification scheduler
   // Check every hour for actions that are due soon or overdue
   startDueDateScheduler(60);
-  
-  // Start the billing scheduler
-  // Check every 4 hours for payment reminders
-  startBillingScheduler(240);
-  
-  // Start the email reminder scheduler
-  // Sends trial reminders (day 3, 5, 7) and cancellation reminders (3 days before, day of)
-  // Runs at noon CST (18:00 UTC) daily
-  startEmailReminderScheduler();
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
   // Other ports are firewalled. Default to 5000 if not specified.

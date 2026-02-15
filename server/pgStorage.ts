@@ -8,7 +8,7 @@ import {
   meetingNotes, barriers, dependencies, templateTypes,
   organizations, passwordResetTokens, twoFactorCodes, executiveGoals, strategyExecutiveGoals,
   teamTags, projectTeamTags, userTeamTags, projectResourceAssignments, actionPeopleAssignments, ptoEntries, holidays,
-  billingHistory, paymentFailures, projectSnapshots, sentEmailNotifications,
+  projectSnapshots,
   type User, type UpsertUser, type InsertUser,
   type Strategy, type InsertStrategy,
   type Project, type InsertProject,
@@ -34,11 +34,7 @@ import {
   type ActionPeopleAssignment, type InsertActionPeopleAssignment,
   type PtoEntry, type InsertPtoEntry,
   type Holiday, type InsertHoliday,
-  type BillingHistory, type InsertBillingHistory,
-  type PaymentFailure, type InsertPaymentFailure,
-  type SubscriptionPlan, type SubscriptionStatus, type BillingInterval,
   type ProjectSnapshot, type InsertProjectSnapshot,
-  type SentEmailNotification, type InsertSentEmailNotification,
   type IntakeForm, type InsertIntakeForm,
   type IntakeSubmission, type InsertIntakeSubmission,
   intakeForms, intakeSubmissions, reportOutDecks,
@@ -1601,249 +1597,20 @@ export async function cleanupExpiredTwoFactorCodes(): Promise<void> {
     .where(sql`${twoFactorCodes.expiresAt} < (strftime('%s','now') * 1000) OR ${twoFactorCodes.usedAt} IS NOT NULL`);
 }
 
-// ============================================================================
-// BILLING AND SUBSCRIPTION FUNCTIONS
-// ============================================================================
-
-export async function updateOrganizationSubscription(
-  organizationId: string,
-  updates: {
-    subscriptionPlan?: SubscriptionPlan;
-    subscriptionStatus?: SubscriptionStatus;
-    billingInterval?: BillingInterval;
-    stripeCustomerId?: string | null;
-    stripeSubscriptionId?: string | null;
-    stripePriceId?: string | null;
-    currentPeriodStart?: Date | null;
-    currentPeriodEnd?: Date | null;
-    trialEndsAt?: Date | null;
-    cancelAtPeriodEnd?: string;
-    pendingDowngradePlan?: string | null;
-    maxUsers?: number;
-    extraSeats?: number;
-    pendingExtraSeats?: number | null;
-    isLegacy?: string;
-    paymentFailedAt?: Date | null;
-    lastPaymentReminderAt?: Date | null;
-  }
-): Promise<Organization | undefined> {
-  const [org] = await db.update(organizations)
-    .set({ ...updates, updatedAt: new Date() })
-    .where(eq(organizations.id, organizationId))
-    .returning();
-  return org || undefined;
-}
-
-export async function getOrganizationByStripeCustomerId(customerId: string): Promise<Organization | undefined> {
-  const [org] = await db.select().from(organizations).where(eq(organizations.stripeCustomerId, customerId));
-  return org || undefined;
-}
-
-export async function getOrganizationByStripeSubscriptionId(subscriptionId: string): Promise<Organization | undefined> {
-  const [org] = await db.select().from(organizations).where(eq(organizations.stripeSubscriptionId, subscriptionId));
-  return org || undefined;
-}
-
-export async function markAllOrganizationsAsLegacy(): Promise<number> {
-  const result = await db.update(organizations)
-    .set({ 
-      isLegacy: 'true', 
-      subscriptionPlan: 'team',
-      subscriptionStatus: 'active',
-      maxUsers: 6,
-      updatedAt: new Date() 
-    })
-    .returning();
-  return result.length;
-}
-
-export async function getOrganizationsWithPendingDowngrade(): Promise<Organization[]> {
-  return db.select().from(organizations)
-    .where(sql`${organizations.pendingDowngradePlan} IS NOT NULL AND ${organizations.currentPeriodEnd} <= (strftime('%s','now') * 1000)`);
-}
-
-export async function getOrganizationsWithFailedPayments(): Promise<Organization[]> {
-  return db.select().from(organizations)
-    .where(sql`${organizations.paymentFailedAt} IS NOT NULL AND ${organizations.subscriptionStatus} != 'canceled'`);
-
-}
-
-// Billing History Functions
-export async function createBillingHistoryEntry(entry: InsertBillingHistory): Promise<BillingHistory> {
-  const [created] = await db.insert(billingHistory).values({
-    id: randomUUID(),
-    ...entry,
-  }).returning();
-  return created;
-}
-
-export async function getBillingHistoryByOrganization(organizationId: string): Promise<BillingHistory[]> {
-  return db.select().from(billingHistory)
-    .where(eq(billingHistory.organizationId, organizationId))
-    .orderBy(desc(billingHistory.createdAt));
-}
-
-export async function getAllBillingHistory(): Promise<BillingHistory[]> {
-  return db.select().from(billingHistory).orderBy(desc(billingHistory.createdAt));
-}
-
-// Payment Failure Functions
-export async function createPaymentFailure(failure: InsertPaymentFailure): Promise<PaymentFailure> {
-  const [created] = await db.insert(paymentFailures).values({
-    id: randomUUID(),
-    ...failure,
-  }).returning();
-  return created;
-}
-
-export async function getPaymentFailuresByOrganization(organizationId: string): Promise<PaymentFailure[]> {
-  return db.select().from(paymentFailures)
-    .where(eq(paymentFailures.organizationId, organizationId))
-    .orderBy(desc(paymentFailures.createdAt));
-}
-
-export async function getUnresolvedPaymentFailures(): Promise<PaymentFailure[]> {
-  return db.select().from(paymentFailures)
-    .where(sql`${paymentFailures.resolvedAt} IS NULL`);
-}
-
-export async function updatePaymentFailure(
-  id: string,
-  updates: { remindersSent?: number; lastReminderAt?: Date; resolvedAt?: Date }
-): Promise<PaymentFailure | undefined> {
-  const [updated] = await db.update(paymentFailures)
-    .set(updates)
-    .where(eq(paymentFailures.id, id))
-    .returning();
-  return updated || undefined;
-}
-
-export async function resolvePaymentFailure(id: string): Promise<PaymentFailure | undefined> {
-  const [updated] = await db.update(paymentFailures)
-    .set({ resolvedAt: new Date() })
-    .where(eq(paymentFailures.id, id))
-    .returning();
-  return updated || undefined;
-}
-
-// Sent Email Notification Functions
-export async function createSentEmailNotification(notification: InsertSentEmailNotification): Promise<SentEmailNotification> {
-  const [created] = await db.insert(sentEmailNotifications).values({
-    id: randomUUID(),
-    ...notification,
-  }).returning();
-  return created;
-}
-
-export async function hasEmailBeenSent(
-  organizationId: string,
-  emailType: string,
-  stripeSubscriptionId?: string
-): Promise<boolean> {
-  const conditions = [
-    eq(sentEmailNotifications.organizationId, organizationId),
-    eq(sentEmailNotifications.emailType, emailType),
-  ];
-  
-  if (stripeSubscriptionId) {
-    conditions.push(eq(sentEmailNotifications.stripeSubscriptionId, stripeSubscriptionId));
-  }
-  
-  const [existing] = await db.select()
-    .from(sentEmailNotifications)
-    .where(sql`${sentEmailNotifications.organizationId} = ${organizationId} AND ${sentEmailNotifications.emailType} = ${emailType}${stripeSubscriptionId ? sql` AND ${sentEmailNotifications.stripeSubscriptionId} = ${stripeSubscriptionId}` : sql``}`);
-  
-  return !!existing;
-}
-
-export async function getSentEmailNotificationsByOrganization(organizationId: string): Promise<SentEmailNotification[]> {
-  return db.select().from(sentEmailNotifications)
-    .where(eq(sentEmailNotifications.organizationId, organizationId))
-    .orderBy(desc(sentEmailNotifications.sentAt));
-}
-
 // Super Admin Dashboard Functions
 export interface OrganizationStats {
   totalOrganizations: number;
-  organizationsByPlan: Record<string, number>;
-  organizationsByStatus: Record<string, number>;
   totalUsers: number;
-  legacyOrganizations: number;
-  mrr: number; // Monthly Recurring Revenue in cents
-  activeTrials: number;
-  churnedThisMonth: number;
 }
 
 export async function getOrganizationStats(): Promise<OrganizationStats> {
   const allOrgs = await getAllOrganizations();
   const allUsers = await db.select().from(users);
   
-  const now = new Date();
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-  
-  const stats: OrganizationStats = {
+  return {
     totalOrganizations: allOrgs.length,
-    organizationsByPlan: {},
-    organizationsByStatus: {},
     totalUsers: allUsers.length,
-    legacyOrganizations: 0,
-    mrr: 0,
-    activeTrials: 0,
-    churnedThisMonth: 0,
   };
-  
-  const planPrices: Record<string, number> = {
-    starter: 100, // $1.00
-    leaderpro: 1200, // $12.00
-    team: 2200, // $22.00
-  };
-  const extraSeatPrice = 600; // $6.00
-  
-  for (const org of allOrgs) {
-    // Count by plan
-    stats.organizationsByPlan[org.subscriptionPlan] = (stats.organizationsByPlan[org.subscriptionPlan] || 0) + 1;
-    
-    // Count by status
-    stats.organizationsByStatus[org.subscriptionStatus] = (stats.organizationsByStatus[org.subscriptionStatus] || 0) + 1;
-    
-    // Count legacy
-    if (org.isLegacy === 'true') {
-      stats.legacyOrganizations++;
-    }
-    
-    // Calculate MRR (only for active, non-legacy orgs)
-    if (org.subscriptionStatus === 'active' && org.isLegacy !== 'true') {
-      let monthlyPrice = planPrices[org.subscriptionPlan] || 0;
-      
-      // For annual, divide by 12 for monthly equivalent
-      if (org.billingInterval === 'annual') {
-        monthlyPrice = Math.round(monthlyPrice * 10 / 12); // 10 months paid = 12 months service
-      }
-      
-      // Add extra seats for team plan
-      if (org.subscriptionPlan === 'team' && org.extraSeats > 0) {
-        let seatPrice = extraSeatPrice;
-        if (org.billingInterval === 'annual') {
-          seatPrice = Math.round(extraSeatPrice * 10 / 12);
-        }
-        monthlyPrice += org.extraSeats * seatPrice;
-      }
-      
-      stats.mrr += monthlyPrice;
-    }
-    
-    // Count active trials
-    if (org.subscriptionStatus === 'trialing') {
-      stats.activeTrials++;
-    }
-    
-    // Count churned this month
-    if (org.subscriptionStatus === 'canceled' && org.updatedAt && org.updatedAt >= thirtyDaysAgo) {
-      stats.churnedThisMonth++;
-    }
-  }
-  
-  return stats;
 }
 
 export interface OrganizationWithDetails extends Organization {
@@ -1865,70 +1632,4 @@ export async function getAllOrganizationsWithDetails(): Promise<OrganizationWith
       adminEmails: adminEmails.filter(Boolean),
     };
   });
-}
-
-// Plan limits helper
-export interface PlanLimits {
-  maxStrategicPriorities: number;
-  maxProjects: number;
-  maxUsers: number;
-  canAddCoLead: boolean;
-  canAddViewer: boolean;
-  canTagSME: boolean;
-  hasFreeTrial: boolean;
-  hasAnnualOption: boolean;
-}
-
-export function getPlanLimits(plan: SubscriptionPlan, isLegacy: boolean = false): PlanLimits {
-  if (isLegacy) {
-    return {
-      maxStrategicPriorities: Infinity,
-      maxProjects: Infinity,
-      maxUsers: 6, // Base, can add more with extra seats
-      canAddCoLead: true,
-      canAddViewer: true,
-      canTagSME: true,
-      hasFreeTrial: false,
-      hasAnnualOption: true,
-    };
-  }
-  
-  switch (plan) {
-    case 'starter':
-      return {
-        maxStrategicPriorities: 1,
-        maxProjects: 4,
-        maxUsers: 1,
-        canAddCoLead: false,
-        canAddViewer: false,
-        canTagSME: false,
-        hasFreeTrial: false,
-        hasAnnualOption: false,
-      };
-    case 'leaderpro':
-      return {
-        maxStrategicPriorities: Infinity,
-        maxProjects: Infinity,
-        maxUsers: 1,
-        canAddCoLead: false,
-        canAddViewer: false,
-        canTagSME: true,
-        hasFreeTrial: true,
-        hasAnnualOption: true,
-      };
-    case 'team':
-    case 'legacy':
-      return {
-        maxStrategicPriorities: Infinity,
-        maxProjects: Infinity,
-        maxUsers: 6,
-        canAddCoLead: true,
-        canAddViewer: true,
-        canTagSME: true,
-        hasFreeTrial: true,
-        hasAnnualOption: true,
-      };
-    default:
-      return getPlanLimits('starter');
-  }
 }

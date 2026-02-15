@@ -6,7 +6,6 @@ import { insertStrategySchema, type InsertStrategy } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useRole } from "@/hooks/use-role";
 import { useToast } from "@/hooks/use-toast";
-import { useUpgradeModal } from "@/hooks/use-upgrade-modal";
 import {
   Dialog,
   DialogContent,
@@ -59,8 +58,6 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
   const [addingCustomSection, setAddingCustomSection] = useState(false);
   const [newSectionLabel, setNewSectionLabel] = useState("");
   const [newSectionValue, setNewSectionValue] = useState("");
-  const { openModal: openUpgradeModal } = useUpgradeModal();
-
   const form = useForm<InsertStrategy>({
     resolver: zodResolver(insertStrategySchema),
     defaultValues: {
@@ -107,7 +104,6 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/billing/strategy-permissions"] });
       toast({
         title: "Success",
         description: "Priority created successfully",
@@ -121,39 +117,11 @@ export function CreateStrategyModal({ open, onOpenChange }: CreateStrategyModalP
       onOpenChange(false);
     },
     onError: (error: any) => {
-      // Parse error - can be either a direct object or a string with status code
-      let errorCode = error.code;
-      let errorMessage = error.message || error.error;
-      
-      // If error.message is in format "403: {json}", parse it
-      if (typeof error.message === 'string' && error.message.match(/^\d+:\s*\{/)) {
-        try {
-          const jsonMatch = error.message.match(/^\d+:\s*(.+)$/);
-          if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[1]);
-            errorCode = parsed.code || errorCode;
-            errorMessage = parsed.message || parsed.error || errorMessage;
-          }
-        } catch {
-          // Fallback if parsing fails
-        }
-      }
-      
-      if (errorCode === 'PLAN_LIMIT_EXCEEDED') {
-        onOpenChange(false);
-        openUpgradeModal('limit_reached', 'priorities');
-        toast({
-          title: "Upgrade Required",
-          description: "You've reached your plan's limit for strategic priorities. Go to Settings → Billing to upgrade.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: errorMessage || "Failed to create priority",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Error",
+        description: error.message || error.error || "Failed to create priority",
+        variant: "destructive",
+      });
     },
   });
 

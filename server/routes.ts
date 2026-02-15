@@ -104,32 +104,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     await (storage as any).seedData();
   }
 
-  // Public endpoint: Get checkout session details for thank-you page (no auth required)
-  app.get("/api/checkout-session/:sessionId", async (req, res) => {
-    try {
-      const { sessionId } = req.params;
-      
-      if (!sessionId || !sessionId.startsWith('cs_')) {
-        return res.status(400).json({ message: "Invalid session ID" });
-      }
-
-      const { getUncachableStripeClient } = await import('./stripeClient');
-      const stripe = await getUncachableStripeClient();
-      
-      const session = await stripe.checkout.sessions.retrieve(sessionId);
-      
-      // Return limited info for security
-      res.json({
-        customerEmail: session.customer_details?.email || null,
-        customerName: session.customer_details?.name || null,
-        planName: session.amount_total ? `$${(session.amount_total / 100).toFixed(2)}/month` : null,
-      });
-    } catch (error: any) {
-      console.error('Error fetching checkout session:', error.message);
-      res.status(404).json({ message: "Session not found" });
-    }
-  });
-
   // Config endpoint for Syncfusion license (auth required)
   app.get("/api/config/syncfusion", isAuthenticated, (req: any, res) => {
     const licenseKey = process.env.SYNCFUSION_LICENSE_KEY || '';
@@ -292,20 +266,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const deleted = await storage.deleteUser(req.params.id);
       if (!deleted) {
         return res.status(404).json({ message: "User not found" });
-      }
-      
-      // After deleting a user, check if we should reduce extra seats
-      if (organizationId) {
-        try {
-          const { billingService } = await import('./billingService');
-          const seatResult = await billingService.adjustSeatsAfterUserDeletion(organizationId);
-          if (seatResult && seatResult.seatsReduced > 0) {
-            logger.info(`Reduced ${seatResult.seatsReduced} extra seat(s) for org ${organizationId} after user deletion`);
-          }
-        } catch (seatError) {
-          // Log but don't fail the delete operation
-          logger.error("Failed to adjust seats after user deletion", seatError);
-        }
       }
       
       res.status(204).send();
@@ -783,20 +743,6 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(403).json({ message: "Forbidden: Only administrators can create strategies" });
       }
 
-      // Check plan limits for strategy creation
-      if (user.organizationId) {
-        const { billingService } = await import('./billingService');
-        const planCheck = await billingService.checkPlanLimits(user.organizationId, 'strategy');
-        if (!planCheck.allowed) {
-          return res.status(403).json({ 
-            message: planCheck.message,
-            code: 'PLAN_LIMIT_EXCEEDED',
-            limit: planCheck.limit,
-            current: planCheck.current
-          });
-        }
-      }
-
       const validatedData = insertStrategySchema.parse(req.body);
       
       // Validate color code format
@@ -843,17 +789,6 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
       }
 
-      // Check if strategy is read-only due to plan limits (unless Super Admin)
-      if (user.isSuperAdmin !== 'true' && user.organizationId) {
-        const { billingService } = await import('./billingService');
-        const permissions = await billingService.getEditableStrategyIds(user.organizationId);
-        if (permissions.readOnlyIds.includes(req.params.id)) {
-          return res.status(403).json({ 
-            message: "This strategic priority is read-only due to your plan limits. Upgrade to edit it." 
-          });
-        }
-      }
-      
       // Use partial schema for PATCH to allow updating individual fields
       const validatedData = insertStrategySchema.partial().parse(req.body);
       
@@ -1007,17 +942,6 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
       }
 
-      // Check if strategy is read-only due to plan limits (unless Super Admin)
-      if (user.isSuperAdmin !== 'true' && user.organizationId) {
-        const { billingService } = await import('./billingService');
-        const permissions = await billingService.getEditableStrategyIds(user.organizationId);
-        if (permissions.readOnlyIds.includes(req.params.id)) {
-          return res.status(403).json({ 
-            message: "This strategic priority is read-only due to your plan limits. Upgrade to modify it." 
-          });
-        }
-      }
-
       // Only update status and completionDate, keep other fields unchanged
       const updatedStrategy = await storage.updateStrategy(req.params.id, {
         ...strategy,
@@ -1058,17 +982,6 @@ Respond ONLY with a valid JSON object in this exact format:
       // Verify organization ownership (unless Super Admin)
       if (user.isSuperAdmin !== 'true' && user.organizationId !== strategy.organizationId) {
         return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
-      }
-
-      // Check if strategy is read-only due to plan limits (unless Super Admin)
-      if (user.isSuperAdmin !== 'true' && user.organizationId) {
-        const { billingService } = await import('./billingService');
-        const permissions = await billingService.getEditableStrategyIds(user.organizationId);
-        if (permissions.readOnlyIds.includes(req.params.id)) {
-          return res.status(403).json({ 
-            message: "This strategic priority is read-only due to your plan limits. Upgrade to modify it." 
-          });
-        }
       }
 
       if (strategy.status !== 'Completed') {
@@ -1219,15 +1132,6 @@ Respond ONLY with a valid JSON object in this exact format:
         return res.status(403).json({ message: "Forbidden: View users cannot create projects" });
       }
       
-      // Check if strategy is read-only due to plan limits (for downgrades)
-      if (user.organizationId) {
-        const { billingService } = await import('./billingService');
-        const strategyPerms = await billingService.getEditableStrategyIds(user.organizationId);
-        if (strategyPerms.readOnlyIds.includes(validatedData.strategyId)) {
-          return res.status(403).json({ message: "This strategic priority is read-only due to your current plan. Upgrade to edit." });
-        }
-      }
-      
       // Validate date range
       if (validatedData.startDate && validatedData.dueDate && 
           !validateDateRange(validatedData.startDate, validatedData.dueDate)) {
@@ -1312,15 +1216,6 @@ Respond ONLY with a valid JSON object in this exact format:
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
         if (!assignedStrategyIds.includes(oldProject.strategyId)) {
           return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
-        }
-      }
-      
-      // Check if strategy is read-only due to plan limits (for downgrades)
-      if (user.organizationId) {
-        const { billingService } = await import('./billingService');
-        const strategyPerms = await billingService.getEditableStrategyIds(user.organizationId);
-        if (strategyPerms.readOnlyIds.includes(oldProject.strategyId)) {
-          return res.status(403).json({ message: "This strategic priority is read-only due to your current plan. Upgrade to edit." });
         }
       }
       
@@ -1455,15 +1350,6 @@ Respond ONLY with a valid JSON object in this exact format:
         }
       }
       
-      // Check if strategy is read-only due to plan limits (for downgrades)
-      if (user.organizationId) {
-        const { billingService } = await import('./billingService');
-        const strategyPerms = await billingService.getEditableStrategyIds(user.organizationId);
-        if (strategyPerms.readOnlyIds.includes(project.strategyId)) {
-          return res.status(403).json({ message: "This strategic priority is read-only due to your current plan. Upgrade to edit." });
-        }
-      }
-
       const deleted = await storage.deleteProject(req.params.id);
       if (!deleted) {
         return res.status(404).json({ message: "Project not found" });
@@ -2345,15 +2231,6 @@ Respond ONLY with a valid JSON object in this exact format:
         }
       }
       
-      // Check if strategy is read-only due to plan limits (for downgrades)
-      if (user.organizationId) {
-        const { billingService } = await import('./billingService');
-        const strategyPerms = await billingService.getEditableStrategyIds(user.organizationId);
-        if (strategyPerms.readOnlyIds.includes(validatedData.strategyId)) {
-          return res.status(403).json({ message: "This strategic priority is read-only due to your current plan. Upgrade to edit." });
-        }
-      }
-      
       const action = await storage.createAction({
         ...validatedData,
         organizationId: user.organizationId,
@@ -2418,15 +2295,6 @@ Respond ONLY with a valid JSON object in this exact format:
         const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
         if (!assignedStrategyIds.includes(oldAction.strategyId)) {
           return res.status(403).json({ message: "Forbidden: You do not have access to this strategy" });
-        }
-      }
-      
-      // Check if strategy is read-only due to plan limits (for downgrades)
-      if (user.organizationId) {
-        const { billingService } = await import('./billingService');
-        const strategyPerms = await billingService.getEditableStrategyIds(user.organizationId);
-        if (strategyPerms.readOnlyIds.includes(oldAction.strategyId)) {
-          return res.status(403).json({ message: "This strategic priority is read-only due to your current plan. Upgrade to edit." });
         }
       }
       
@@ -2544,15 +2412,6 @@ Respond ONLY with a valid JSON object in this exact format:
         }
       }
       
-      // Check if strategy is read-only due to plan limits (for downgrades)
-      if (user.organizationId) {
-        const { billingService } = await import('./billingService');
-        const strategyPerms = await billingService.getEditableStrategyIds(user.organizationId);
-        if (strategyPerms.readOnlyIds.includes(action.strategyId)) {
-          return res.status(403).json({ message: "This strategic priority is read-only due to your current plan. Upgrade to edit." });
-        }
-      }
-
       const deleted = await storage.deleteAction(req.params.id);
       if (!deleted) {
         return res.status(404).json({ message: "Action not found" });
@@ -3645,15 +3504,6 @@ ${outputTemplate}`;
         return res.status(403).json({ message: "Cannot modify strategies from other organizations" });
       }
 
-      // Check if strategy is read-only due to plan limits
-      const { billingService } = await import('./billingService');
-      const permissions = await billingService.getEditableStrategyIds(user.organizationId);
-      if (permissions.readOnlyIds.includes(req.params.id)) {
-        return res.status(403).json({ 
-          message: "This strategic priority is read-only due to your plan limits. Upgrade to modify it." 
-        });
-      }
-
       const { executiveGoalIds } = req.body;
       const goalIds = executiveGoalIds;
       if (!Array.isArray(goalIds)) {
@@ -4662,447 +4512,6 @@ ${outputTemplate}`;
     }
   });
 
-  // =================== BILLING ROUTES ===================
-  
-  // Get billing info for the user's organization
-  app.get("/api/billing/info", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "User not authenticated" });
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user || !user.organizationId) {
-        return res.status(403).json({ message: "User must belong to an organization" });
-      }
-
-      // Only administrators can view billing info
-      if (user.role !== 'administrator') {
-        return res.status(403).json({ message: "Only administrators can view billing information" });
-      }
-
-      const { billingService } = await import('./billingService');
-      
-      // Auto-sync from Stripe to ensure plan is up-to-date (handles missed webhooks)
-      try {
-        await billingService.syncSubscriptionFromStripe(user.organizationId);
-      } catch (syncError) {
-        // Log but don't fail - sync is best-effort to catch missed webhooks
-        console.log('[Billing] Auto-sync skipped:', (syncError as Error).message);
-      }
-      
-      const billingInfo = await billingService.getOrganizationBillingInfo(user.organizationId);
-      res.json(billingInfo);
-    } catch (error) {
-      logger.error("Failed to fetch billing info", error);
-      res.status(500).json({ message: "Failed to fetch billing information" });
-    }
-  });
-
-  // Create a Stripe checkout session for subscription
-  app.post("/api/billing/create-checkout-session", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "User not authenticated" });
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user || !user.organizationId) {
-        return res.status(403).json({ message: "User must belong to an organization" });
-      }
-
-      if (user.role !== 'administrator') {
-        return res.status(403).json({ message: "Only administrators can manage billing" });
-      }
-
-      const { priceId, trialDays } = req.body;
-      if (!priceId) {
-        return res.status(400).json({ message: "Price ID is required" });
-      }
-
-      const { billingService } = await import('./billingService');
-      
-      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-        : 'http://localhost:5000';
-      
-      const session = await billingService.createCheckoutSession(
-        user.organizationId,
-        priceId,
-        `${baseUrl}/settings?billing=success`,
-        `${baseUrl}/settings?billing=canceled`,
-        { trialDays: trialDays || 0 }
-      );
-
-      res.json({ url: session.url });
-    } catch (error) {
-      logger.error("Failed to create checkout session", error);
-      res.status(500).json({ message: "Failed to create checkout session" });
-    }
-  });
-
-  // Create a Stripe checkout session for new customers (no authentication required)
-  // Allowlist of valid price IDs for anonymous purchase (both test and live modes)
-  const VALID_ANONYMOUS_PRICE_IDS = new Set([
-    // Test mode prices
-    'price_1SdxDMAPmlCUuC3zt16HQ6hR', // Starter monthly (test)
-    'price_1SdxDMAPmlCUuC3zrwwZFojc', // LeaderPro monthly (test)
-    'price_1SdxDMAPmlCUuC3z1eidVw7P', // LeaderPro annual (test)
-    'price_1SdxDNAPmlCUuC3zCMeKd0bV', // Team monthly (test)
-    'price_1SdxDNAPmlCUuC3zOcpRsQ3S', // Team annual (test)
-    // Live mode prices
-    'price_1SdzfWH5ttU72wpZ7mVcFWqj', // Starter monthly (live)
-    'price_1SdziQH5ttU72wpZE8B3UZDf', // LeaderPro monthly (live)
-    'price_1Sdzk1H5ttU72wpZ1mDifc7R', // LeaderPro annual (live)
-    'price_1Sdzl2H5ttU72wpZhrhH2ifK', // Team monthly (live)
-    'price_1SdzmTH5ttU72wpZukNez9ok', // Team annual (live)
-    'price_1Se1VpH5ttU72wpZ2PeWFafx', // Team seat add-on (live) - $6/mo per additional member
-  ]);
-
-  app.post("/api/billing/create-anonymous-checkout", async (req, res) => {
-    try {
-      const { priceId, trialDays } = req.body;
-      if (!priceId) {
-        return res.status(400).json({ message: "Price ID is required" });
-      }
-
-      // Validate price ID against allowlist
-      if (!VALID_ANONYMOUS_PRICE_IDS.has(priceId)) {
-        return res.status(400).json({ message: "Invalid price ID" });
-      }
-
-      const { billingService } = await import('./billingService');
-      
-      const baseUrl = process.env.APP_URL || (process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-        : 'http://localhost:5000');
-      
-      const session = await billingService.createAnonymousCheckoutSession(
-        priceId,
-        `${baseUrl}/register/purchase?session_id={CHECKOUT_SESSION_ID}`,
-        `https://leaderos.app#/price`,
-        { trialDays: trialDays || 0 }
-      );
-
-      res.json({ url: session.url, sessionId: session.id });
-    } catch (error) {
-      logger.error("Failed to create anonymous checkout session", error);
-      res.status(500).json({ message: "Failed to create checkout session" });
-    }
-  });
-
-  // Retrieve checkout session details (for post-purchase registration)
-  app.get("/api/billing/checkout-session/:sessionId", async (req, res) => {
-    try {
-      const { sessionId } = req.params;
-      if (!sessionId) {
-        return res.status(400).json({ message: "Session ID is required" });
-      }
-
-      const { billingService } = await import('./billingService');
-      const session = await billingService.retrieveCheckoutSession(sessionId);
-      
-      if (!session) {
-        return res.status(404).json({ message: "Checkout session not found" });
-      }
-
-      if (session.payment_status !== 'paid' && session.status !== 'complete') {
-        return res.status(400).json({ message: "Payment not completed" });
-      }
-
-      const subscription = session.subscription as any;
-      const customer = session.customer as any;
-
-      res.json({
-        customerEmail: session.customer_details?.email || customer?.email,
-        customerName: session.customer_details?.name || customer?.name,
-        customerId: typeof session.customer === 'string' ? session.customer : session.customer?.id,
-        subscriptionId: typeof subscription === 'string' ? subscription : subscription?.id,
-        priceId: subscription?.items?.data?.[0]?.price?.id || null,
-        status: session.status,
-        paymentStatus: session.payment_status,
-      });
-    } catch (error) {
-      logger.error("Failed to retrieve checkout session", error);
-      res.status(500).json({ message: "Failed to retrieve checkout session" });
-    }
-  });
-
-  // Create Stripe Customer Portal session for billing management
-  app.post("/api/billing/create-portal-session", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "User not authenticated" });
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user || !user.organizationId) {
-        return res.status(403).json({ message: "User must belong to an organization" });
-      }
-
-      if (user.role !== 'administrator') {
-        return res.status(403).json({ message: "Only administrators can manage billing" });
-      }
-
-      const { billingService } = await import('./billingService');
-      
-      const baseUrl = process.env.APP_URL || (process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-        : 'http://localhost:5000');
-      
-      const session = await billingService.createCustomerPortalSession(
-        user.organizationId,
-        `${baseUrl}/settings`
-      );
-
-      res.json({ url: session.url });
-    } catch (error) {
-      logger.error("Failed to create portal session", error);
-      res.status(500).json({ message: "Failed to open billing portal" });
-    }
-  });
-
-  // Manually sync subscription from Stripe (for when webhooks miss)
-  app.post("/api/billing/sync", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "User not authenticated" });
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user || !user.organizationId) {
-        return res.status(403).json({ message: "User must belong to an organization" });
-      }
-
-      if (user.role !== 'administrator') {
-        return res.status(403).json({ message: "Only administrators can sync billing" });
-      }
-
-      const { billingService } = await import('./billingService');
-      const result = await billingService.syncSubscriptionFromStripe(user.organizationId);
-
-      res.json({ 
-        success: true, 
-        message: "Subscription synced from Stripe",
-        plan: result.plan,
-        status: result.status
-      });
-    } catch (error) {
-      logger.error("Failed to sync subscription", error);
-      res.status(500).json({ message: "Failed to sync subscription from Stripe" });
-    }
-  });
-
-  // Cancel subscription
-  app.post("/api/billing/cancel", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "User not authenticated" });
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user || !user.organizationId) {
-        return res.status(403).json({ message: "User must belong to an organization" });
-      }
-
-      if (user.role !== 'administrator') {
-        return res.status(403).json({ message: "Only administrators can manage billing" });
-      }
-
-      const { billingService } = await import('./billingService');
-      await billingService.cancelSubscription(user.organizationId, true);
-
-      res.json({ success: true, message: "Subscription will be canceled at the end of the billing period" });
-    } catch (error) {
-      logger.error("Failed to cancel subscription", error);
-      res.status(500).json({ message: "Failed to cancel subscription" });
-    }
-  });
-
-  // Reactivate canceled subscription
-  app.post("/api/billing/reactivate", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "User not authenticated" });
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user || !user.organizationId) {
-        return res.status(403).json({ message: "User must belong to an organization" });
-      }
-
-      if (user.role !== 'administrator') {
-        return res.status(403).json({ message: "Only administrators can manage billing" });
-      }
-
-      const { billingService } = await import('./billingService');
-      await billingService.reactivateSubscription(user.organizationId);
-
-      res.json({ success: true, message: "Subscription has been reactivated" });
-    } catch (error) {
-      logger.error("Failed to reactivate subscription", error);
-      res.status(500).json({ message: "Failed to reactivate subscription" });
-    }
-  });
-
-  // Get editable strategy IDs based on plan limits
-  app.get("/api/billing/strategy-permissions", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "User not authenticated" });
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user || !user.organizationId) {
-        return res.status(403).json({ message: "User must belong to an organization" });
-      }
-
-      const { billingService } = await import('./billingService');
-      const permissions = await billingService.getEditableStrategyIds(user.organizationId);
-
-      res.json(permissions);
-    } catch (error) {
-      logger.error("Failed to fetch strategy permissions", error);
-      res.status(500).json({ message: "Failed to fetch strategy permissions" });
-    }
-  });
-
-  // Schedule a downgrade to a lower plan at end of billing period
-  app.post("/api/billing/schedule-downgrade", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "User not authenticated" });
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user || !user.organizationId) {
-        return res.status(403).json({ message: "User must belong to an organization" });
-      }
-
-      if (user.role !== 'administrator') {
-        return res.status(403).json({ message: "Only administrators can manage billing" });
-      }
-
-      const { newPlan } = req.body;
-      if (!newPlan || !['starter', 'leaderpro', 'team'].includes(newPlan)) {
-        return res.status(400).json({ message: "Invalid plan specified" });
-      }
-
-      const { billingService } = await import('./billingService');
-      await billingService.scheduleDowngrade(user.organizationId, newPlan);
-
-      res.json({ success: true, message: `Scheduled downgrade to ${newPlan} at end of billing period` });
-    } catch (error) {
-      logger.error("Failed to schedule downgrade", error);
-      const message = error instanceof Error ? error.message : "Failed to schedule downgrade";
-      res.status(500).json({ message });
-    }
-  });
-
-  // Cancel pending downgrade
-  app.post("/api/billing/cancel-downgrade", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "User not authenticated" });
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user || !user.organizationId) {
-        return res.status(403).json({ message: "User must belong to an organization" });
-      }
-
-      if (user.role !== 'administrator') {
-        return res.status(403).json({ message: "Only administrators can manage billing" });
-      }
-
-      const { billingService } = await import('./billingService');
-      await billingService.cancelPendingDowngrade(user.organizationId);
-
-      res.json({ success: true, message: "Pending downgrade has been cancelled" });
-    } catch (error) {
-      logger.error("Failed to cancel pending downgrade", error);
-      res.status(500).json({ message: "Failed to cancel pending downgrade" });
-    }
-  });
-
-  // Add team seats to existing subscription
-  app.post("/api/billing/add-seats", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "User not authenticated" });
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user || !user.organizationId) {
-        return res.status(403).json({ message: "User must belong to an organization" });
-      }
-
-      if (user.role !== 'administrator') {
-        return res.status(403).json({ message: "Only administrators can manage billing" });
-      }
-
-      const { seatsToAdd } = req.body;
-      if (!seatsToAdd || typeof seatsToAdd !== 'number' || seatsToAdd < 1 || seatsToAdd > 100) {
-        return res.status(400).json({ message: "Invalid number of seats (1-100)" });
-      }
-
-      const { billingService } = await import('./billingService');
-      
-      const result = await billingService.addSeatsToSubscription(
-        user.organizationId,
-        seatsToAdd
-      );
-
-      res.json(result);
-    } catch (error) {
-      logger.error("Failed to add seats to subscription", error);
-      const message = error instanceof Error ? error.message : "Failed to add seats";
-      res.status(500).json({ message });
-    }
-  });
-
-  // Get seat info for the organization
-  app.get("/api/billing/seats", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "User not authenticated" });
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user || !user.organizationId) {
-        return res.status(403).json({ message: "User must belong to an organization" });
-      }
-
-      const { billingService } = await import('./billingService');
-      const billingInfo = await billingService.getOrganizationBillingInfo(user.organizationId);
-
-      res.json({
-        currentPlan: billingInfo.currentPlan,
-        userCount: billingInfo.userCount,
-        maxUsers: billingInfo.maxUsers,
-        baseUserLimit: billingInfo.baseUserLimit,
-        extraSeats: billingInfo.extraSeats,
-        pendingExtraSeats: billingInfo.pendingExtraSeats,
-        canAddSeats: billingInfo.currentPlan === 'team' && billingInfo.hasActiveSubscription,
-        seatPrice: billingInfo.interval === 'annual' ? 60 : 6,
-      });
-    } catch (error) {
-      logger.error("Failed to get seat info", error);
-      res.status(500).json({ message: "Failed to get seat info" });
-    }
-  });
-
   // =================== SUPER ADMIN ROUTES ===================
   
   // Get all organizations with details (Super Admin only)
@@ -5146,50 +4555,6 @@ ${outputTemplate}`;
     } catch (error) {
       logger.error("Failed to fetch organization stats", error);
       res.status(500).json({ message: "Failed to fetch organization stats" });
-    }
-  });
-
-  // Get billing history for a specific organization (Super Admin only)
-  app.get("/api/super-admin/organizations/:orgId/billing-history", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "User not authenticated" });
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user || user.isSuperAdmin !== 'true') {
-        return res.status(403).json({ message: "Super Admin access required" });
-      }
-
-      const { getBillingHistoryByOrganization } = await import('./pgStorage');
-      const history = await getBillingHistoryByOrganization(req.params.orgId);
-      res.json(history);
-    } catch (error) {
-      logger.error("Failed to fetch billing history", error);
-      res.status(500).json({ message: "Failed to fetch billing history" });
-    }
-  });
-
-  // Mark all organizations as legacy (Super Admin only) - one-time migration
-  app.post("/api/super-admin/mark-legacy", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "User not authenticated" });
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user || user.isSuperAdmin !== 'true') {
-        return res.status(403).json({ message: "Super Admin access required" });
-      }
-
-      const { markAllOrganizationsAsLegacy } = await import('./pgStorage');
-      const count = await markAllOrganizationsAsLegacy();
-      res.json({ success: true, count, message: `Marked ${count} organizations as legacy` });
-    } catch (error) {
-      logger.error("Failed to mark organizations as legacy", error);
-      res.status(500).json({ message: "Failed to mark organizations as legacy" });
     }
   });
 

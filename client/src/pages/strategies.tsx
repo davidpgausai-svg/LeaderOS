@@ -227,22 +227,6 @@ export default function Strategies() {
     queryKey: ["/api/strategy-executive-goals"],
   });
 
-  // Fetch strategy permissions to determine which strategies are editable based on billing plan
-  const { data: strategyPermissions } = useQuery<{
-    editableIds: string[];
-    readOnlyIds: string[];
-    limit: number | null;
-    total: number;
-  }>({
-    queryKey: ["/api/billing/strategy-permissions"],
-  });
-
-  // Helper to check if a strategy is read-only due to plan limits
-  const isStrategyReadOnly = (strategyId: string) => {
-    if (!strategyPermissions) return false;
-    return strategyPermissions.readOnlyIds.includes(strategyId);
-  };
-
   // Helper to get executive goal by ID
   const getExecutiveGoalById = (goalId: string | null | undefined) => {
     if (!goalId || !executiveGoals) return null;
@@ -1534,11 +1518,6 @@ export default function Strategies() {
                         <h3 className="text-base sm:text-lg font-bold flex-1" style={{ color: '#1D1D1F' }}>
                           {strategy.title}
                         </h3>
-                        {isStrategyReadOnly(strategy.id) && (
-                          <Badge variant="outline" className="ml-2 text-xs border-amber-400 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20">
-                            Read-only
-                          </Badge>
-                        )}
                       </div>
                       
                       {/* Row 2: Meta info and actions */}
@@ -1598,14 +1577,6 @@ export default function Strategies() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            {isStrategyReadOnly(strategy.id) && (
-                              <div className="px-2 py-1.5 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border-b">
-                                <div className="flex items-center gap-1.5">
-                                  <Eye className="h-3 w-3" />
-                                  Read-only (plan limit reached)
-                                </div>
-                              </div>
-                            )}
                             <DropdownMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1616,7 +1587,7 @@ export default function Strategies() {
                               <Eye className="h-4 w-4 mr-2" />
                               View Details
                             </DropdownMenuItem>
-                            {canEditAllStrategies() && !isStrategyReadOnly(strategy.id) && (
+                            {canEditAllStrategies() && (
                               <>
                                 <DropdownMenuItem
                                   onClick={(e) => {
@@ -1712,7 +1683,6 @@ export default function Strategies() {
                           <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                             Projects ({strategy.projects.length})
                           </h4>
-                          {!isStrategyReadOnly(strategy.id) && (
                           <div className="flex items-center gap-2">
                             <Button
                               size="sm"
@@ -1743,7 +1713,6 @@ export default function Strategies() {
                               Add Action
                             </Button>
                           </div>
-                          )}
                         </div>
 
                         {/* Project List */}
@@ -1959,7 +1928,7 @@ export default function Strategies() {
                                                   <Eye className="w-4 h-4 mr-2" />
                                                   View Details
                                                 </DropdownMenuItem>
-                                                {canEditAllStrategies() && !isStrategyReadOnly(strategy.id) && (
+                                                {canEditAllStrategies() && (
                                                   <>
                                                     <DropdownMenuItem 
                                                       onClick={(e) => {
@@ -2083,7 +2052,7 @@ export default function Strategies() {
                                                 onDrop={(e) => {
                                                   e.preventDefault();
                                                   e.currentTarget.classList.remove('ring-2', 'ring-blue-400');
-                                                  if (draggedActionId && canEditAllStrategies() && !isStrategyReadOnly(strategy.id)) {
+                                                  if (draggedActionId && canEditAllStrategies()) {
                                                     const action = projectActions.find((a: any) => a.id === draggedActionId);
                                                     if (action && action.status !== statusCol.value) {
                                                       updateActionStatusMutation.mutate({ action, status: statusCol.value });
@@ -2109,7 +2078,7 @@ export default function Strategies() {
                                                     return (
                                                       <div
                                                         key={action.id}
-                                                        draggable={canEditAllStrategies() && !isStrategyReadOnly(strategy.id)}
+                                                        draggable={canEditAllStrategies()}
                                                         onDragStart={(e) => {
                                                           setDraggedActionId(action.id);
                                                           e.dataTransfer.effectAllowed = 'move';
@@ -2117,7 +2086,7 @@ export default function Strategies() {
                                                         onDragEnd={() => setDraggedActionId(null)}
                                                         className={`bg-white dark:bg-gray-700 rounded-lg p-2 shadow-sm border border-gray-200 dark:border-gray-600 cursor-pointer hover:shadow-md transition-shadow ${
                                                           draggedActionId === action.id ? 'opacity-50' : ''
-                                                        } ${canEditAllStrategies() && !isStrategyReadOnly(strategy.id) ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                                                        } ${canEditAllStrategies() ? 'cursor-grab active:cursor-grabbing' : ''}`}
                                                         onClick={() => setChecklistModalAction(action)}
                                                         data-testid={`kanban-card-${action.id}`}
                                                       >
@@ -2163,7 +2132,7 @@ export default function Strategies() {
                                               {/* Left side: Status dropdown and title */}
                                               <div className="flex items-center gap-2 flex-1 min-w-0">
                                                 {/* Status dropdown */}
-                                                {canEditAllStrategies() && !isStrategyReadOnly(strategy.id) ? (
+                                                {canEditAllStrategies() ? (
                                                   <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
                                                       <Button
@@ -2213,12 +2182,10 @@ export default function Strategies() {
                                                   <>
                                                     <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{dueDateDisplay.date}</span>
                                                     <Badge 
-                                                      className={`text-xs px-1.5 py-0 ${isStrategyReadOnly(strategy.id) ? '' : 'cursor-pointer'} ${dueDateDisplay.color}`}
+                                                      className={`text-xs px-1.5 py-0 cursor-pointer ${dueDateDisplay.color}`}
                                                       onClick={(e) => {
                                                         e.stopPropagation();
-                                                        if (!isStrategyReadOnly(strategy.id)) {
-                                                          setDueDateModalAction(action);
-                                                        }
+                                                        setDueDateModalAction(action);
                                                       }}
                                                       data-testid={`action-due-date-${action.id}`}
                                                     >
@@ -2280,10 +2247,10 @@ export default function Strategies() {
                                                   onClick={(e) => {
                                                     e.stopPropagation();
                                                     setActionFolderUrl(action.documentFolderUrl || "");
-                                                    setActionFolderUrlEditing(!action.documentFolderUrl && canEditAllStrategies() && !isStrategyReadOnly(strategy.id));
+                                                    setActionFolderUrlEditing(!action.documentFolderUrl && canEditAllStrategies());
                                                     setFolderUrlModalAction(action);
                                                   }}
-                                                  title={action.documentFolderUrl ? "View folder link" : (isStrategyReadOnly(strategy.id) ? "No folder link" : "Add folder link")}
+                                                  title={action.documentFolderUrl ? "View folder link" : "Add folder link"}
                                                   data-testid={`action-folder-${action.id}`}
                                                 >
                                                   <FolderOpen className={`w-3 h-3 ${action.documentFolderUrl ? 'text-blue-500' : 'text-gray-400'}`} />
@@ -2306,7 +2273,7 @@ export default function Strategies() {
                                                 </Button>
                                                 
                                                 {/* Three dots menu - 6th (last) - only show when editable */}
-                                                {canEditAllStrategies() && !isStrategyReadOnly(strategy.id) && (
+                                                {canEditAllStrategies() && (
                                                   <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
                                                       <Button
@@ -2390,7 +2357,7 @@ export default function Strategies() {
                                       )}
                                         
                                         {/* Add Action button inside project */}
-                                        {canEditAllStrategies() && !isStrategyReadOnly(strategy.id) && (
+                                        {canEditAllStrategies() && (
                                           <Button
                                             variant="ghost"
                                             size="sm"
@@ -3743,7 +3710,7 @@ export default function Strategies() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
-              {isStrategyReadOnly(dueDateModalAction?.strategyId) ? "View Due Date" : "Edit Due Date"}
+              Edit Due Date
             </DialogTitle>
           </DialogHeader>
           {dueDateModalAction && (
@@ -3752,14 +3719,11 @@ export default function Strategies() {
                 <h3 className="font-semibold text-gray-900 dark:text-white">
                   {dueDateModalAction.title}
                 </h3>
-                {isStrategyReadOnly(dueDateModalAction.strategyId) && (
-                  <p className="text-xs text-amber-600 mt-1">This action belongs to a read-only strategic priority</p>
-                )}
               </div>
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                   <Calendar className="h-4 w-4" />
-                  <span className="text-sm font-medium">{isStrategyReadOnly(dueDateModalAction.strategyId) ? "Due Date" : "Select Due Date"}</span>
+                  <span className="text-sm font-medium">Select Due Date</span>
                 </div>
                 <Input
                   type="date"
@@ -3773,7 +3737,6 @@ export default function Strategies() {
                     setDueDateModalAction({ ...dueDateModalAction, dueDate: newDate });
                   }}
                   className="w-full"
-                  disabled={isStrategyReadOnly(dueDateModalAction.strategyId)}
                   data-testid="input-action-due-date"
                 />
                 {dueDateModalAction.dueDate && (
@@ -3786,8 +3749,7 @@ export default function Strategies() {
                         year: 'numeric' 
                       })}
                     </span>
-                    {!isStrategyReadOnly(dueDateModalAction.strategyId) && (
-                      <Button
+                    <Button
                         variant="ghost"
                         size="sm"
                         className="text-red-500 hover:text-red-700"
@@ -3802,7 +3764,6 @@ export default function Strategies() {
                       >
                         Clear
                       </Button>
-                    )}
                   </div>
                 )}
               </div>
@@ -3829,7 +3790,7 @@ export default function Strategies() {
               </div>
               
               {/* Add new checklist item */}
-              {canEditAllStrategies() && !isStrategyReadOnly(checklistModalAction.strategyId) && (
+              {canEditAllStrategies() && (
                 <div className="flex gap-2">
                   <Input
                     placeholder="Add checklist item..."
@@ -4149,7 +4110,7 @@ export default function Strategies() {
                     Open Folder
                   </Button>
                   
-                  {canEditAllStrategies() && !isStrategyReadOnly(folderUrlModalAction.strategyId) && (
+                  {canEditAllStrategies() && (
                     <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t">
                       <Button
                         variant="outline"
@@ -4195,7 +4156,7 @@ export default function Strategies() {
                 <div className="text-center py-6 text-gray-500 dark:text-gray-400">
                   <FolderOpen className="h-12 w-12 mx-auto mb-3 opacity-50" />
                   <p className="text-sm font-medium">No folder linked</p>
-                  {canEditAllStrategies() && !isStrategyReadOnly(folderUrlModalAction.strategyId) ? (
+                  {canEditAllStrategies() ? (
                     <Button
                       variant="outline"
                       size="sm"
@@ -4207,7 +4168,7 @@ export default function Strategies() {
                       Add Folder Link
                     </Button>
                   ) : (
-                    <p className="text-xs mt-1">{isStrategyReadOnly(folderUrlModalAction.strategyId) ? "This action belongs to a read-only strategic priority" : "Contact an administrator to add a folder link"}</p>
+                    <p className="text-xs mt-1">Contact an administrator to add a folder link</p>
                   )}
                 </div>
               )}
@@ -4249,14 +4210,11 @@ export default function Strategies() {
                   onChange={(e) => setActionNotes(e.target.value)}
                   rows={6}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
-                  disabled={!canEditAllStrategies() || isStrategyReadOnly(notesModalAction.strategyId)}
+                  disabled={!canEditAllStrategies()}
                   data-testid="textarea-action-notes"
                 />
-                {isStrategyReadOnly(notesModalAction.strategyId) && (
-                  <p className="text-xs text-amber-600">This action belongs to a read-only strategic priority</p>
-                )}
               </div>
-              {canEditAllStrategies() && !isStrategyReadOnly(notesModalAction.strategyId) && (
+              {canEditAllStrategies() && (
                 <div className="flex gap-2 justify-end">
                   <Button
                     variant="outline"
@@ -4315,7 +4273,7 @@ export default function Strategies() {
               </div>
               
               {/* Add Dependency Section */}
-              {canEditAllStrategies() && !isStrategyReadOnly(dependenciesModalAction.strategyId) && (
+              {canEditAllStrategies() && (
                 <div className="border rounded-lg p-3 bg-gray-50 dark:bg-gray-800/50">
                   {!selectedActionDependencyType ? (
                     <div className="space-y-2">
