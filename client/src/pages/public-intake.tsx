@@ -41,8 +41,6 @@ export default function PublicIntakePage() {
   const slug = params?.slug || "";
 
   const [formValues, setFormValues] = useState<Record<string, any>>({});
-  const [submitterName, setSubmitterName] = useState("");
-  const [submitterEmail, setSubmitterEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [thankYouMessage, setThankYouMessage] = useState("");
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -82,8 +80,6 @@ export default function PublicIntakePage() {
     }
   })();
 
-  const requireEmail = formData?.requireEmail === "true";
-
   const updateValue = useCallback((fieldId: string, value: any) => {
     setFormValues((prev) => ({ ...prev, [fieldId]: value }));
     setValidationErrors((prev) => {
@@ -103,14 +99,26 @@ export default function PublicIntakePage() {
     });
   }, []);
 
+  const findEmailValue = (): string => {
+    for (const field of parsedFields) {
+      if (field.type === "email" && formValues[field.id]) {
+        return String(formValues[field.id]).trim();
+      }
+    }
+    return "";
+  };
+
+  const findNameValue = (): string => {
+    for (const field of parsedFields) {
+      if (field.type === "text" && field.label.toLowerCase().includes("name") && formValues[field.id]) {
+        return String(formValues[field.id]).trim();
+      }
+    }
+    return "";
+  };
+
   const validate = (): boolean => {
     const errors: Record<string, string> = {};
-
-    if (requireEmail && !submitterEmail.trim()) {
-      errors["__email"] = "Email is required";
-    } else if (requireEmail && submitterEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(submitterEmail.trim())) {
-      errors["__email"] = "Please enter a valid email address";
-    }
 
     for (const field of parsedFields) {
       if (field.required) {
@@ -138,8 +146,8 @@ export default function PublicIntakePage() {
     if (!validate()) return;
     submitMutation.mutate({
       data: formValues,
-      submitterEmail: submitterEmail.trim(),
-      submitterName: submitterName.trim(),
+      submitterEmail: findEmailValue(),
+      submitterName: findNameValue(),
     });
   };
 
@@ -367,44 +375,6 @@ export default function PublicIntakePage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {requireEmail && (
-              <div className="space-y-4 pb-4 border-b">
-                <div className="space-y-2">
-                  <Label htmlFor="submitter-name">Your Name</Label>
-                  <Input
-                    id="submitter-name"
-                    type="text"
-                    placeholder="Enter your name (optional)"
-                    value={submitterName}
-                    onChange={(e) => setSubmitterName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="submitter-email">
-                    Your Email<span className="text-red-500 ml-1">*</span>
-                  </Label>
-                  <Input
-                    id="submitter-email"
-                    type="email"
-                    placeholder="Enter your email address"
-                    value={submitterEmail}
-                    onChange={(e) => {
-                      setSubmitterEmail(e.target.value);
-                      setValidationErrors((prev) => {
-                        const next = { ...prev };
-                        delete next["__email"];
-                        return next;
-                      });
-                    }}
-                    className={validationErrors["__email"] ? "border-red-500" : ""}
-                  />
-                  {validationErrors["__email"] && (
-                    <p className="text-sm text-red-500">{validationErrors["__email"]}</p>
-                  )}
-                </div>
-              </div>
-            )}
-
             {parsedFields.map(renderField)}
 
             {submitError && submitError.status !== 429 && (

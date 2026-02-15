@@ -5363,7 +5363,21 @@ ${outputTemplate}`;
       }
 
       const { data, submitterEmail, submitterName } = req.body;
-      const emailLower = submitterEmail?.toLowerCase()?.trim();
+      let emailLower = submitterEmail?.toLowerCase()?.trim() || '';
+
+      // If no explicit submitter email provided, try to extract from form data
+      if (!emailLower && data) {
+        try {
+          const formFields = JSON.parse(form.fields || '[]');
+          const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+          for (const field of formFields) {
+            if (field.type === 'email' && parsedData[field.id]) {
+              emailLower = String(parsedData[field.id]).toLowerCase().trim();
+              break;
+            }
+          }
+        } catch { /* ignore parse errors */ }
+      }
 
       // Check total submissions limit
       if (form.maxTotalSubmissions) {
@@ -5383,7 +5397,7 @@ ${outputTemplate}`;
 
       // Require email if form says so
       if (form.requireEmail === 'true' && !emailLower) {
-        return res.status(400).json({ message: "Email address is required" });
+        return res.status(400).json({ message: "Email address is required. Please add an email field to your form." });
       }
 
       const submission = await storage.createIntakeSubmission({
