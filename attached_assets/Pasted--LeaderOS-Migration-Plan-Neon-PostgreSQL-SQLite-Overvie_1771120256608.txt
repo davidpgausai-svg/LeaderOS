@@ -1,0 +1,254 @@
+# LeaderOS Migration Plan: Neon PostgreSQL → SQLite
+
+## Overview
+
+Migrate the LeaderOS app from Neon PostgreSQL (hosted) to SQLite (local file). The app is TypeScript + React, uses Drizzle ORM, and will be deployed on AWS EC2. Target: ~250 concurrent users max, internal strategic planning tool.
+
+---
+
+## Phase 1: Install Dependencies
+
+```bash
+npm install better-sqlite3 drizzle-orm
+npm install -D @types/better-sqlite3
+npm uninstall @neondatabase/serverless
+```
+
+If `drizzle-kit` is already installed, keep it — it supports SQLite migrations.
+
+---
+
+## Phase 2: Convert Drizzle Schema
+
+Find the existing Drizzle schema file(s) (likely in `src/db/schema.ts` or `lib/db/schema.ts`). Convert all table definitions using these rules:
+
+### Type Mapping (PostgreSQL → SQLite)
+
+| PostgreSQL (Drizzle) | SQLite (Drizzle) | Notes |
+|---|---|---|
+| `serial('id')` | `integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true })` | SQLite auto-increment |
+| `varchar('col', { length: 255 })` | `text('col')` | SQLite has no varchar limit |
+| `text('col')` | `text('col')` | Same |
+| `integer('col')` | `integer('col')` | Same |
+| `boolean('col')` | `integer('col', { mode: 'boolean' })` | SQLite stores as 0/1 |
+| `timestamp('col')` | `integer('col', { mode: 'timestamp' })` | Store as unix epoch |
+| `timestamp('col').defaultNow()` | `integer('col', { mode: 'timestamp' }).$defaultFn(() => new Date())` | Default handling |
+| `json('col')` or `jsonb('col')` | `text('col', { mode: 'json' })` | SQLite stores JSON as text |
+| `pgEnum('status', [...])` | Remove the enum. Use `text('status')` | SQLite has no enum type |
+| `uuid('id').defaultRandom()` | `text('id').$defaultFn(() => crypto.randomUUID())` | Generate UUID in app |
+| `decimal('col')` or `numeric('col')` | `real('col')` | SQLite float |
+| `date('col')` | `text('col')` | Store as ISO string 'YYYY-MM-DD' |
+| `array(...)` | `text('col', { mode: 'json' })` | Store arrays as JSON text |
+
+### Import Changes
+
+Replace:
+```typescript
+import { pgTable, serial, varchar, text, integer, boolean, timestamp, json, pgEnum } from 'drizzle-orm/pg-core';
+```
+
+With:
+```typescript
+import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
+```
+
+Replace all `pgTable(` calls with `sqliteTable(`.
+
+### Relations
+
+Drizzle relations (`relations()`) work the same way in SQLite. Keep them unchanged. Just make sure foreign key columns match the new types (e.g., if a referenced primary key changed from `serial` to `integer`, the FK column should also be `integer`).
+
+---
+
+## Phase 3: Update Database Connection
+
+Find the DB connection file (likely `src/db/index.ts` or `lib/db.ts`).
+
+Replace the Neon connection:
+
+```typescript
+// OLD - Remove this
+import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
+
+const sql = neon(process.env.DATABASE_URL!);
+export const db = drizzle(sql, { schema });
+```
+
+With SQLite connection:
+
+```typescript
+// NEW
+import Database from 'better-sqlite3';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
+import * as schema from './schema';
+import path from 'path';
+
+const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data', 'leaderos.db');
+
+const sqlite = new Database(DB_PATH);
+
+// Enable WAL mode for better concurrent read/write performance
+sqlite.pragma('journal_mode = WAL');
+sqlite.pragma('busy_timeout = 5000');
+sqlite.pragma('synchronous = NORMAL');
+sqlite.pragma('cache_size = -20000'); // 20MB cache
+sqlite.pragma('foreign_keys = ON');
+
+export const db = drizzle(sqlite, { schema });
+```
+
+Create the `data/` directory and add it to `.gitignore`:
+
+```
+# Add to .gitignore
+data/*.db
+data/*.db-wal
+data/*.db-shm
+```
+
+---
+
+## Phase 4: Update drizzle.config.ts
+
+Replace the config to target SQLite:
+
+```typescript
+import type { Config } from 'drizzle-kit';
+
+export default {
+  schema: './src/db/schema.ts', // adjust path to match your project
+  out: './drizzle',
+  dialect: 'sqlite',
+  dbCredentials: {
+    url: './data/leaderos.db',
+  },
+} satisfies Config;
+```
+
+---
+
+## Phase 5: Fix PostgreSQL-Specific Query Syntax
+
+Search the entire codebase for any raw SQL or PostgreSQL-specific Drizzle methods. Common things to fix:
+
+### 1. `ilike` → use `like` with lowercase
+```typescript
+// PostgreSQL
+import { ilike } from 'drizzle-orm';
+where(ilike(table.name, `%${search}%`))
+
+// SQLite - use like (SQLite LIKE is case-insensitive for ASCII by default)
+import { like } from 'drizzle-orm';
+where(like(table.name, `%${search}%`))
+```
+
+### 2. `now()` in queries
+```typescript
+// PostgreSQL
+import { sql } from 'drizzle-orm';
+sql`now()`
+
+// SQLite
+sql`(strftime('%s', 'now'))`
+// Or better: just pass new Date() from the app layer
+```
+
+### 3. Array operations
+If any queries use PostgreSQL array functions (`@>`, `&&`, `array_agg`), these need to be rewritten to use JSON functions or handled in application code.
+
+### 4. `RETURNING` clause
+SQLite supports `RETURNING` in newer versions (3.35+). `better-sqlite3` bundles a recent version so this should work, but verify insert/update/delete queries that use `.returning()`.
+
+### 5. `coalesce`, `count`, `sum` etc.
+These generally work the same. No changes needed.
+
+---
+
+## Phase 6: Generate and Run Migrations
+
+```bash
+# Delete old PostgreSQL migrations
+rm -rf drizzle/
+
+# Generate fresh SQLite migrations
+npx drizzle-kit generate
+
+# Push schema directly to the SQLite file (creates tables)
+npx drizzle-kit push
+```
+
+---
+
+## Phase 7: Data Migration Script (if needed)
+
+If there is existing data in Neon that needs to be preserved, create a migration script:
+
+```typescript
+// scripts/migrate-data.ts
+// This script connects to Neon, reads all data, and inserts into SQLite
+// Run once, then delete
+
+import { neon } from '@neondatabase/serverless';
+import Database from 'better-sqlite3';
+
+// 1. Connect to old Neon database
+const sql = neon(process.env.OLD_DATABASE_URL!);
+
+// 2. Connect to new SQLite
+const sqlite = new Database('./data/leaderos.db');
+sqlite.pragma('journal_mode = WAL');
+sqlite.pragma('foreign_keys = OFF'); // Disable during import
+
+// 3. For each table, SELECT * from Neon, INSERT into SQLite
+// Handle type conversions:
+//   - timestamps → unix integers
+//   - booleans → 0/1
+//   - enums → plain text strings
+//   - arrays → JSON strings
+//   - UUIDs → keep as text
+
+// 4. Re-enable foreign keys
+sqlite.pragma('foreign_keys = ON');
+```
+
+This script will need to be customized based on the actual tables in the app.
+
+---
+
+## Phase 8: Environment Variable Cleanup
+
+Remove `DATABASE_URL` from `.env` and any environment configs. Add `DB_PATH` if you want a custom database location (optional — defaults to `./data/leaderos.db`).
+
+Update any deployment scripts or Docker configs to remove PostgreSQL/Neon references.
+
+---
+
+## Phase 9: Verify
+
+1. Run `npm run dev` and confirm the app starts without database errors
+2. Test all CRUD operations — creating, reading, updating, deleting records
+3. Test any search/filter features (these are most likely to have query syntax issues)
+4. Test any features that use timestamps, booleans, or JSON columns
+5. Confirm all pages load and data displays correctly
+
+---
+
+## Common Gotchas
+
+- **`serialize` errors**: `better-sqlite3` is synchronous. If the app uses `await db.query(...)`, Drizzle handles this — but any raw `sql` calls that expect promises need to be updated.
+- **Missing `data/` directory**: The app will crash if the directory doesn't exist. Add a startup check: `fs.mkdirSync('data', { recursive: true })`.
+- **Date rendering**: If the frontend expects ISO date strings and the DB now stores unix timestamps, you may need to convert in the API layer: `new Date(row.createdAt * 1000).toISOString()`. Drizzle's `{ mode: 'timestamp' }` handles this automatically in most cases.
+- **Boolean values**: If the frontend checks `if (row.isActive === true)`, and SQLite returns `1`, Drizzle's `{ mode: 'boolean' }` should handle this. But check any strict equality comparisons.
+- **Concurrent writes**: SQLite locks on writes. The `busy_timeout = 5000` pragma tells it to retry for 5 seconds before failing. This is fine for 250 users.
+
+---
+
+## Final State
+
+After migration:
+- No external database dependency
+- Database is a single file at `./data/leaderos.db`
+- Backups = copy the file (or use Litestream to S3 on AWS)
+- Deploy = `git pull && npm install && npm run build && npm start`
+- All secrets via environment variables or AWS Parameter Store (not in code)
