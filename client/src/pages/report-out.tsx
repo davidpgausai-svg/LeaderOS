@@ -370,6 +370,7 @@ function SummarySlide({ slide, scale = 1 }: { slide: Slide; scale?: number }) {
 function StrategySlide({ slide, scale = 1 }: { slide: Slide; scale?: number }) {
   const data = slide.data || {};
   const colorCode = data.colorCode || "#007AFF";
+  const description = data.description || "";
   const progress = data.progress || 0;
   const projects = data.projects || [];
   const actionsTotal = data.actionsTotal || 0;
@@ -405,6 +406,14 @@ function StrategySlide({ slide, scale = 1 }: { slide: Slide; scale?: number }) {
           {slide.title}
         </h2>
       </div>
+      {description && (
+        <p
+          className="text-xs mb-3 leading-relaxed"
+          style={{ color: MU_BRAND.bluff }}
+        >
+          {description}
+        </p>
+      )}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
@@ -795,6 +804,15 @@ async function exportToPptx(slides: Slide[], title: string) {
         bold: true,
         color: "000000",
       });
+      if (data.description) {
+        pptSlide.addText(data.description, {
+          x: 0.5,
+          y: 0.7,
+          w: "90%",
+          fontSize: 10,
+          color: "453D3F",
+        });
+      }
       const progress = data.progress || 0;
       pptSlide.addShape(pptx.ShapeType.roundRect, {
         x: 0.5,
