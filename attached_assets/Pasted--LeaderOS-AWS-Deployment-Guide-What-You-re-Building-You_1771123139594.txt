@@ -1,0 +1,348 @@
+# LeaderOS AWS Deployment Guide
+
+## What You're Building
+
+Your app (TypeScript + React + SQLite) running on a single EC2 instance. No database server, no managed services beyond the VM itself. GitHub push → SSH in → pull and restart. Total monthly cost: ~$8-15.
+
+---
+
+## Step 1: Launch an EC2 Instance
+
+1. Log into the AWS Console → EC2 → **Launch Instance**
+2. Configure:
+   - **Name**: `leaderos`
+   - **AMI**: Ubuntu 24.04 LTS (free tier eligible)
+   - **Instance type**: `t3.small` (2 vCPU, 2GB RAM) — plenty for 250 users. `t3.micro` works too if you want to stay in free tier
+   - **Key pair**: Create a new one, name it `leaderos-key`, download the `.pem` file. **Don't lose this — it's your only way to SSH in**
+   - **Network settings**: 
+     - Allow SSH (port 22) from your IP only
+     - Allow HTTPS (port 443) from anywhere
+     - Allow HTTP (port 80) from anywhere
+   - **Storage**: 20 GB gp3 (default is fine, your SQLite DB will be tiny)
+3. Click **Launch Instance**
+
+Save your instance's **Public IPv4 address** — you'll need it everywhere below.
+
+---
+
+## Step 2: SSH Into Your Instance
+
+```bash
+# Fix permissions on your key (required or SSH refuses to connect)
+chmod 400 leaderos-key.pem
+
+# Connect
+ssh -i leaderos-key.pem ubuntu@YOUR_INSTANCE_IP
+```
+
+You're now on the server. Everything below runs here.
+
+---
+
+## Step 3: Install Node.js and Dependencies
+
+```bash
+# Update system
+sudo apt update && sudo apt upgrade -y
+
+# Install Node.js 20 (LTS)
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# Verify
+node --version  # should show v20.x
+npm --version
+
+# Install build tools (needed for better-sqlite3 native compilation)
+sudo apt install -y build-essential python3
+
+# Install pm2 globally (keeps your app running after you disconnect)
+sudo npm install -g pm2
+```
+
+---
+
+## Step 4: Clone Your Repo
+
+```bash
+cd /home/ubuntu
+
+# Clone via HTTPS (simplest)
+git clone https://github.com/YOUR_USERNAME/leaderos.git
+cd leaderos
+
+# Install dependencies
+npm install
+```
+
+If your repo is private, you'll need a GitHub personal access token. Generate one at github.com → Settings → Developer settings → Personal access tokens → Fine-grained tokens. Then clone with:
+
+```bash
+git clone https://YOUR_TOKEN@github.com/YOUR_USERNAME/leaderos.git
+```
+
+---
+
+## Step 5: Set Up Environment Variables
+
+### Option A: Simple `.env` File (Quick Start)
+
+```bash
+# Create your env file on the server (never commit this to GitHub)
+nano .env
+```
+
+Add your variables:
+
+```env
+NODE_ENV=production
+APP_URL=https://yourdomain.com
+JWT_SECRET=generate-a-long-random-string-here
+RESEND_API_KEY=re_xxxxxxxxxxxx
+SUPER_ADMIN_EMAILS=david@yourdomain.com
+DB_PATH=/home/ubuntu/leaderos/data/leaderos.db
+```
+
+Generate a secure JWT secret:
+
+```bash
+openssl rand -hex 32
+```
+
+### Option B: AWS Parameter Store (Production Best Practice)
+
+1. In AWS Console → Systems Manager → Parameter Store
+2. Create parameters:
+   - `/leaderos/JWT_SECRET` → SecureString → your secret
+   - `/leaderos/RESEND_API_KEY` → SecureString → your key
+   - `/leaderos/SUPER_ADMIN_EMAILS` → String → your email
+3. Attach an IAM role to your EC2 instance with `ssm:GetParametersByPath` permission
+4. Add a startup script that reads from Parameter Store and sets env vars:
+
+```javascript
+// scripts/load-secrets.js
+const { SSMClient, GetParametersByPathCommand } = require('@aws-sdk/client-ssm');
+
+async function loadSecrets() {
+  const client = new SSMClient({ region: 'us-east-1' }); // your region
+  const response = await client.send(new GetParametersByPathCommand({
+    Path: '/leaderos/',
+    WithDecryption: true,
+  }));
+  
+  for (const param of response.Parameters) {
+    const key = param.Name.split('/').pop();
+    process.env[key] = param.Value;
+  }
+}
+
+module.exports = { loadSecrets };
+```
+
+Start with Option A. Move to Option B when you're ready to harden things.
+
+---
+
+## Step 6: Build and Start
+
+```bash
+# Create the data directory for SQLite
+mkdir -p data
+
+# Build the app
+npm run build
+
+# Start with pm2 (keeps it running, auto-restarts on crash)
+pm2 start npm --name "leaderos" -- run start
+
+# Save pm2 process list (survives server reboot)
+pm2 save
+
+# Set pm2 to start on boot
+pm2 startup
+# Run the command it outputs (starts with sudo)
+```
+
+Verify it's running:
+
+```bash
+pm2 status           # Should show "leaderos" as "online"
+pm2 logs leaderos    # Check for errors
+curl http://localhost:5000  # Should return HTML
+```
+
+---
+
+## Step 7: Set Up Caddy as Reverse Proxy (HTTPS)
+
+Caddy automatically handles SSL certificates via Let's Encrypt. No manual cert management.
+
+```bash
+# Install Caddy
+sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+sudo apt update
+sudo apt install caddy
+```
+
+Configure Caddy:
+
+```bash
+sudo nano /etc/caddy/Caddyfile
+```
+
+Contents:
+
+```
+yourdomain.com {
+    reverse_proxy localhost:5000
+}
+```
+
+Replace `yourdomain.com` with your actual domain. Point your domain's DNS A record to your EC2 instance's public IP.
+
+```bash
+# Restart Caddy
+sudo systemctl restart caddy
+
+# Check status
+sudo systemctl status caddy
+```
+
+Caddy will automatically obtain and renew SSL certificates. Your app is now live at `https://yourdomain.com`.
+
+**No domain yet?** Use your EC2 public IP directly with HTTP for testing:
+
+```
+:80 {
+    reverse_proxy localhost:5000
+}
+```
+
+---
+
+## Step 8: SQLite Backups
+
+### Option A: EBS Snapshots (Simplest)
+
+AWS Console → EC2 → Elastic Block Store → Snapshots → Create snapshot of your instance's volume. Schedule daily via Amazon Data Lifecycle Manager.
+
+### Option B: Litestream to S3 (Continuous Replication)
+
+```bash
+# Install Litestream
+wget https://github.com/benbjohnson/litestream/releases/latest/download/litestream-linux-amd64.deb
+sudo dpkg -i litestream-linux-amd64.deb
+```
+
+Create config:
+
+```bash
+sudo nano /etc/litestream.yml
+```
+
+```yaml
+dbs:
+  - path: /home/ubuntu/leaderos/data/leaderos.db
+    replicas:
+      - url: s3://your-bucket-name/leaderos-backup
+        region: us-east-1
+```
+
+Create an S3 bucket first (AWS Console → S3 → Create bucket). Attach an IAM role to your EC2 instance with S3 write permissions.
+
+```bash
+# Start Litestream as a service
+sudo systemctl enable litestream
+sudo systemctl start litestream
+```
+
+Litestream continuously streams SQLite WAL changes to S3. Recovery is: download the backup, point your app at it, done.
+
+---
+
+## Step 9: Deploy Updates
+
+When you push new code to GitHub:
+
+```bash
+# SSH into your server
+ssh -i leaderos-key.pem ubuntu@YOUR_INSTANCE_IP
+
+# Pull, build, restart
+cd /home/ubuntu/leaderos
+git pull
+npm install
+npm run build
+pm2 restart leaderos
+```
+
+That's 4 commands. Takes about 60 seconds.
+
+### Optional: Auto-Deploy with GitHub Actions
+
+Create `.github/workflows/deploy.yml` in your repo:
+
+```yaml
+name: Deploy to EC2
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/leaderos
+            git pull origin main
+            npm install
+            npm run build
+            pm2 restart leaderos
+```
+
+Add these as GitHub repo secrets (Settings → Secrets):
+- `EC2_HOST`: Your instance's public IP
+- `EC2_SSH_KEY`: Contents of your `.pem` file
+
+Now every push to `main` auto-deploys.
+
+---
+
+## Quick Reference
+
+| Task | Command |
+|------|---------|
+| Check app status | `pm2 status` |
+| View logs | `pm2 logs leaderos` |
+| Restart app | `pm2 restart leaderos` |
+| Stop app | `pm2 stop leaderos` |
+| Check Caddy | `sudo systemctl status caddy` |
+| Pull latest code | `cd ~/leaderos && git pull` |
+| Full redeploy | `git pull && npm install && npm run build && pm2 restart leaderos` |
+| Backup DB manually | `cp data/leaderos.db data/leaderos-backup-$(date +%Y%m%d).db` |
+| Check disk space | `df -h` |
+| Check memory | `free -m` |
+| SSH in | `ssh -i leaderos-key.pem ubuntu@YOUR_IP` |
+
+---
+
+## Cost Estimate
+
+| Component | Monthly Cost |
+|-----------|-------------|
+| EC2 t3.small | ~$15 |
+| EC2 t3.micro (free tier) | $0 first year, ~$8 after |
+| EBS 20GB gp3 | ~$1.60 |
+| S3 for backups | < $0.10 |
+| Caddy + Let's Encrypt SSL | Free |
+| **Total** | **~$10-17/month** |
+
+Compare to Neon + Vercel/Railway: similar or more, with more moving parts.
