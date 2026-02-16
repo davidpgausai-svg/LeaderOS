@@ -53,6 +53,7 @@ interface CreateActionModalProps {
   strategyId?: string;
   projectId?: string;
   workstreamId?: string;
+  defaultPhaseId?: string;
   isWorkstreamTask?: boolean;
 }
 
@@ -69,11 +70,17 @@ type Project = {
   strategyId: string;
 };
 
-export function CreateActionModal({ open, onOpenChange, strategyId, projectId, workstreamId, isWorkstreamTask }: CreateActionModalProps) {
+export function CreateActionModal({ open, onOpenChange, strategyId, projectId, workstreamId, defaultPhaseId, isWorkstreamTask }: CreateActionModalProps) {
   const { currentUser } = useRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
+  const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(defaultPhaseId || null);
+
+  useEffect(() => {
+    if (open) {
+      setSelectedPhaseId(defaultPhaseId || null);
+    }
+  }, [open, defaultPhaseId]);
 
   const { data: strategies } = useQuery({
     queryKey: ["/api/strategies"],
@@ -120,16 +127,9 @@ export function CreateActionModal({ open, onOpenChange, strategyId, projectId, w
   const createActionMutation = useMutation({
     mutationFn: async (data: InsertAction) => {
       if (isWorkstreamTask && workstreamId) {
-        const response = await apiRequest("POST", "/api/workstream-tasks", {
-          name: data.title,
-          workstreamId,
-          phaseId: selectedPhaseId || null,
-          projectId: data.projectId,
-          description: data.description,
-          status: data.status,
-          isMilestone: "false",
-        });
-        return response.json();
+        data.workstreamId = workstreamId;
+        data.phaseId = selectedPhaseId || null;
+        data.isMilestone = false;
       }
       const response = await apiRequest("POST", "/api/actions", data);
       return response.json();
@@ -139,12 +139,6 @@ export function CreateActionModal({ open, onOpenChange, strategyId, projectId, w
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
       queryClient.invalidateQueries({ queryKey: ["/api/my-todos"] });
-      if (isWorkstreamTask) {
-        queryClient.invalidateQueries({ predicate: (query) => {
-          const key = query.queryKey[0];
-          return typeof key === 'string' && (key.startsWith('/api/workstream-tasks') || key.startsWith('/api/workstream-calculations'));
-        }});
-      }
       toast({
         title: "Success",
         description: isWorkstreamTask ? "Task created successfully" : "Action created successfully",

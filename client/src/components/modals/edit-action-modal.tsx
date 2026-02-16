@@ -161,12 +161,6 @@ export function EditActionModal({ open, onOpenChange, action }: EditActionModalP
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
       queryClient.invalidateQueries({ queryKey: ["/api/my-todos"] });
-      if (isWorkstreamTask) {
-        queryClient.invalidateQueries({ predicate: (query) => {
-          const key = query.queryKey[0];
-          return typeof key === 'string' && (key.startsWith('/api/workstream-tasks') || key.startsWith('/api/workstream-calculations'));
-        }});
-      }
       toast({
         title: "Success",
         description: isWorkstreamTask ? "Task updated successfully" : "Action updated successfully",

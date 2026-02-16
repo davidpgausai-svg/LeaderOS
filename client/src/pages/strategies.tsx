@@ -10,7 +10,6 @@ import { CreateProjectModal } from "@/components/modals/create-project-modal";
 import { EditProjectModal } from "@/components/modals/edit-project-modal";
 import { ViewProjectModal } from "@/components/modals/view-project-modal";
 import { ManageBarriersModal } from "@/components/modals/manage-barriers-modal";
-import { WorkstreamModal } from "@/components/modals/workstream-modal";
 import { CreateActionModal } from "@/components/modals/create-action-modal";
 import { EditActionModal } from "@/components/modals/edit-action-modal";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -63,7 +62,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ChevronLeft, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen, TrendingUp, AlertTriangle, Users, Megaphone, Link2, ExternalLink, X, Clock, ListChecks, StickyNote, Tag, Indent, Outdent, Hash, List, LayoutGrid, GripVertical, Network, Flag } from "lucide-react";
+import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ChevronLeft, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen, TrendingUp, AlertTriangle, Users, Megaphone, Link2, ExternalLink, X, Clock, ListChecks, StickyNote, Tag, Indent, Outdent, Hash, List, LayoutGrid, GripVertical, Flag } from "lucide-react";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { PeopleSelector } from "@/components/ui/people-selector";
 import { useLocation, Link } from "wouter";
@@ -116,6 +115,7 @@ export default function Strategies() {
   const [wsTaskWorkstreamId, setWsTaskWorkstreamId] = useState<string | null>(null);
   const [wsTaskProjectId, setWsTaskProjectId] = useState<string | null>(null);
   const [wsTaskStrategyId, setWsTaskStrategyId] = useState<string | null>(null);
+  const [wsTaskPhaseId, setWsTaskPhaseId] = useState<string | null>(null);
   const [urlSaving, setUrlSaving] = useState(false);
   const [dependenciesModalProject, setDependenciesModalProject] = useState<any>(null);
   const [selectedDependencyType, setSelectedDependencyType] = useState<"project" | "action" | null>(null);
@@ -154,10 +154,6 @@ export default function Strategies() {
   const [kanbanViewProjects, setKanbanViewProjects] = useState<Set<string>>(new Set());
   const [draggedActionId, setDraggedActionId] = useState<string | null>(null);
   
-  // Workstream modal state
-  const [workstreamModalStrategyId, setWorkstreamModalStrategyId] = useState<string | null>(null);
-  const [workstreamModalTitle, setWorkstreamModalTitle] = useState<string>("");
-
   // Executive Goal tagging state
   const [executiveGoalModalStrategy, setExecutiveGoalModalStrategy] = useState<any>(null);
   const [selectedGoalIds, setSelectedGoalIds] = useState<string[]>([]);
@@ -1064,10 +1060,6 @@ export default function Strategies() {
       queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
-      queryClient.invalidateQueries({ predicate: (query) => {
-        const key = query.queryKey[0];
-        return typeof key === 'string' && (key.startsWith('/api/workstream-tasks') || key.startsWith('/api/workstream-calculations'));
-      }});
       toast({
         title: "Success",
         description: "Action status updated",
@@ -1205,10 +1197,6 @@ export default function Strategies() {
       queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
-      queryClient.invalidateQueries({ predicate: (query) => {
-        const key = query.queryKey[0];
-        return typeof key === 'string' && (key.startsWith('/api/workstream-tasks') || key.startsWith('/api/workstream-calculations'));
-      }});
       toast({
         title: "Success",
         description: "Action deleted",
@@ -1612,16 +1600,6 @@ export default function Strategies() {
                             >
                               <Eye className="h-4 w-4 mr-2" />
                               View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setWorkstreamModalStrategyId(strategy.id);
-                                setWorkstreamModalTitle(strategy.title || "");
-                              }}
-                            >
-                              <Network className="h-4 w-4 mr-2" />
-                              Workstreams
                             </DropdownMenuItem>
                             {canEditAllStrategies() && (
                               <>
@@ -2063,13 +2041,6 @@ export default function Strategies() {
                                             <Badge className="text-[10px] px-1.5 py-0 bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">
                                               {wsActions.length} workstream action{wsActions.length !== 1 ? 's' : ''}
                                             </Badge>
-                                            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-indigo-600 dark:text-indigo-400" onClick={(e) => {
-                                              e.stopPropagation();
-                                              setWorkstreamModalStrategyId(project.strategyId);
-                                              setWorkstreamModalTitle(strategies?.find((s: any) => s.id === project.strategyId)?.title || "");
-                                            }}>
-                                              Open Full Workstream View
-                                            </Button>
                                           </div>
                                           {canEditAllStrategies() && (
                                             <Button
@@ -2081,6 +2052,7 @@ export default function Strategies() {
                                                 setWsTaskStrategyId(project.strategyId);
                                                 setWsTaskProjectId(project.id);
                                                 setWsTaskWorkstreamId(project.workstreamId);
+                                                setWsTaskPhaseId(null);
                                                 setIsCreateWsTaskOpen(true);
                                               }}
                                             >
@@ -2091,13 +2063,32 @@ export default function Strategies() {
                                         </div>
                                         {strategyPhases.map((phase: any) => {
                                           const phaseActions = wsActions.filter((a: any) => a.phaseId === phase.id);
-                                          if (phaseActions.length === 0) return null;
                                           return (
                                             <div key={phase.id} className="mb-3">
-                                              <div className="flex items-center gap-2 mb-1.5">
-                                                <div className="w-2 h-2 rounded-full bg-indigo-400" />
-                                                <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">{phase.name}</span>
-                                                <span className="text-xs text-gray-400">({phaseActions.length})</span>
+                                              <div className="flex items-center justify-between mb-1.5">
+                                                <div className="flex items-center gap-2">
+                                                  <div className="w-2 h-2 rounded-full bg-indigo-400" />
+                                                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">{phase.name}</span>
+                                                  <span className="text-xs text-gray-400">({phaseActions.length})</span>
+                                                </div>
+                                                {canEditAllStrategies() && phaseActions.length === 0 && (
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-5 px-2 text-xs text-gray-500 hover:text-gray-700"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setWsTaskStrategyId(project.strategyId);
+                                                      setWsTaskProjectId(project.id);
+                                                      setWsTaskWorkstreamId(project.workstreamId);
+                                                      setWsTaskPhaseId(phase.id);
+                                                      setIsCreateWsTaskOpen(true);
+                                                    }}
+                                                  >
+                                                    <Plus className="w-3 h-3 mr-1" />
+                                                    Add
+                                                  </Button>
+                                                )}
                                               </div>
                                               <div className="space-y-1 ml-4">
                                                 {phaseActions.map((action: any) => {
@@ -2375,6 +2366,7 @@ export default function Strategies() {
                                               setWsTaskStrategyId(project.strategyId);
                                               setWsTaskProjectId(project.id);
                                               setWsTaskWorkstreamId(project.workstreamId);
+                                              setWsTaskPhaseId(null);
                                               setIsCreateWsTaskOpen(true);
                                             }}
                                           >
@@ -2853,12 +2845,6 @@ export default function Strategies() {
         open={isViewStrategyOpen}
         onOpenChange={setIsViewStrategyOpen}
         strategy={selectedStrategy}
-      />
-      <WorkstreamModal
-        open={!!workstreamModalStrategyId}
-        onOpenChange={(open) => { if (!open) setWorkstreamModalStrategyId(null); }}
-        strategyId={workstreamModalStrategyId || ""}
-        strategyTitle={workstreamModalTitle}
       />
       <CreateProjectModal
         isOpen={isCreateProjectOpen}
@@ -4104,11 +4090,13 @@ export default function Strategies() {
             setWsTaskStrategyId(null);
             setWsTaskProjectId(null);
             setWsTaskWorkstreamId(null);
+            setWsTaskPhaseId(null);
           }
         }}
         strategyId={wsTaskStrategyId || undefined}
         projectId={wsTaskProjectId || undefined}
         workstreamId={wsTaskWorkstreamId || undefined}
+        defaultPhaseId={wsTaskPhaseId || undefined}
         isWorkstreamTask
       />
 
