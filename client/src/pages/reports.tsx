@@ -1156,7 +1156,7 @@ export default function Reports() {
                                       <span className="text-sm font-medium">{cellTaskCount}</span>
                                       {cellTaskCount > 0 && <span className="text-xs text-gray-500">tasks</span>}
                                     </div>
-                                    {gateRag && (
+                                    {gateRag && gateRag !== "NONE" && (
                                       <div className="flex items-center justify-center gap-1 mt-1">
                                         <ErpRagDot status={gateRag} />
                                         <span className="text-xs text-gray-500">Gate</span>

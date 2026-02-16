@@ -6262,7 +6262,7 @@ ${outputTemplate}`;
         for (const phase of phases) {
           const phaseTasks = tasks.filter(t => t.workstreamId === ws.id && t.phaseId === phase.id);
           if (phaseTasks.length === 0) {
-            workstreamGateRag[ws.id][phase.id] = "GREEN";
+            workstreamGateRag[ws.id][phase.id] = "NONE";
           } else {
             const rags = phaseTasks.map(t => taskRag[t.id]?.rag || "GREEN");
             if (rags.includes("RED")) {
@@ -6292,12 +6292,17 @@ ${outputTemplate}`;
         }
         const unmetCriteria = allCriteria.filter(c => c.isMet !== "true");
 
-        if (wsRags.includes("RED") || unmetCriteria.length > 0) {
+        const activeWsRags = wsRags.filter(r => r !== "NONE");
+        if (activeWsRags.length === 0 && allCriteria.length === 0) {
+          programGateRag[phase.id] = "NONE";
+        } else if (activeWsRags.includes("RED") || unmetCriteria.length > 0) {
           programGateRag[phase.id] = "RED";
-        } else if (wsRags.includes("AMBER")) {
+        } else if (activeWsRags.includes("AMBER")) {
           programGateRag[phase.id] = "AMBER";
-        } else if (wsRags.every(r => r === "COMPLETE") && allCriteria.length > 0 && unmetCriteria.length === 0) {
+        } else if (activeWsRags.length > 0 && activeWsRags.every(r => r === "COMPLETE") && allCriteria.length > 0 && unmetCriteria.length === 0) {
           programGateRag[phase.id] = "COMPLETE";
+        } else if (activeWsRags.length === 0) {
+          programGateRag[phase.id] = "NONE";
         } else {
           programGateRag[phase.id] = "GREEN";
         }
