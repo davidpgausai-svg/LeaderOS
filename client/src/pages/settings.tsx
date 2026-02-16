@@ -1385,6 +1385,21 @@ export default function Settings() {
     enabled: !!wsSelectedStrategyId,
   });
 
+  const invalidateWorkstreamData = () => {
+    queryClient.invalidateQueries({ predicate: (query) => {
+      const key = query.queryKey[0];
+      return typeof key === 'string' && (
+        key.startsWith('/api/workstreams') ||
+        key.startsWith('/api/phases') ||
+        key.startsWith('/api/workstream-tasks') ||
+        key.startsWith('/api/workstream-calculations')
+      );
+    }});
+    queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
+  };
+
   const createWorkstreamMutation = useMutation({
     mutationFn: async (data: { strategyId: string; name: string; lead?: string }) => {
       const res = await apiRequest("POST", "/api/workstreams", data);
@@ -1392,8 +1407,7 @@ export default function Settings() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/workstreams', wsSelectedStrategyId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      invalidateWorkstreamData();
       setWsNewName(""); setWsNewLead(""); setWsShowAddForm(false);
       toast({ title: "Success", description: "Workstream created" });
     },
@@ -1407,8 +1421,7 @@ export default function Settings() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/workstreams', wsSelectedStrategyId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      invalidateWorkstreamData();
       setWsEditingId(null);
       toast({ title: "Success", description: "Workstream updated" });
     },
@@ -1421,9 +1434,7 @@ export default function Settings() {
       if (!res.ok) throw new Error('Failed to delete workstream');
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/workstreams', wsSelectedStrategyId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+      invalidateWorkstreamData();
       toast({ title: "Success", description: "Workstream deleted" });
     },
     onError: (err: Error) => { toast({ title: "Error", description: err.message, variant: "destructive" }); },
@@ -1436,8 +1447,7 @@ export default function Settings() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/phases', wsSelectedStrategyId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/phases"] });
+      invalidateWorkstreamData();
       setPhNewName(""); setPhNewSequence(""); setPhNewPlannedStart(""); setPhNewPlannedEnd(""); setPhShowAddForm(false);
       toast({ title: "Success", description: "Phase created" });
     },
@@ -1451,8 +1461,7 @@ export default function Settings() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/phases', wsSelectedStrategyId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/phases"] });
+      invalidateWorkstreamData();
       setPhEditingId(null);
       toast({ title: "Success", description: "Phase updated" });
     },
@@ -1465,8 +1474,7 @@ export default function Settings() {
       if (!res.ok) throw new Error('Failed to delete phase');
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/phases', wsSelectedStrategyId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/phases"] });
+      invalidateWorkstreamData();
       toast({ title: "Success", description: "Phase deleted" });
     },
     onError: (err: Error) => { toast({ title: "Error", description: err.message, variant: "destructive" }); },
@@ -1479,12 +1487,7 @@ export default function Settings() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/workstreams', wsSelectedStrategyId] });
-      queryClient.invalidateQueries({ queryKey: ['/api/phases', wsSelectedStrategyId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/phases"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
+      invalidateWorkstreamData();
       toast({ title: "Success", description: "ERP program defaults have been seeded" });
     },
     onError: (err: Error) => { toast({ title: "Error", description: err.message, variant: "destructive" }); },
