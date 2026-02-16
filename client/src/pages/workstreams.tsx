@@ -183,7 +183,7 @@ export default function Workstreams() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState("matrix");
+  const [activeTab, setActiveTab] = useState("workstream");
   const [selectedPhaseId, setSelectedPhaseId] = useState<string>("");
   const [selectedWorkstreamId, setSelectedWorkstreamId] = useState<string>("");
   const [cellPanel, setCellPanel] = useState<{ workstreamId: string; phaseId: string } | null>(null);
@@ -554,6 +554,10 @@ export default function Workstreams() {
           <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="mb-6">
+                <TabsTrigger value="workstream" className="gap-2">
+                  <List className="w-4 h-4" />
+                  Workstream View
+                </TabsTrigger>
                 <TabsTrigger value="matrix" className="gap-2">
                   <LayoutGrid className="w-4 h-4" />
                   Matrix View
@@ -565,10 +569,6 @@ export default function Workstreams() {
                 <TabsTrigger value="phase-gate" className="gap-2">
                   <Shield className="w-4 h-4" />
                   Phase Gate Review
-                </TabsTrigger>
-                <TabsTrigger value="workstream" className="gap-2">
-                  <List className="w-4 h-4" />
-                  Workstream View
                 </TabsTrigger>
               </TabsList>
 

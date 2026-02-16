@@ -6007,7 +6007,59 @@ ${outputTemplate}`;
       );
 
       const createdGates = [];
+      const createdCriteria = [];
       if (pmGovernanceWorkstream) {
+        const gateCriteriaByPhase: Record<string, string[]> = {
+          "Mobilize & Staff": [
+            "All workstream leads identified and assigned",
+            "Program charter approved by steering committee",
+            "Resource plan finalized with committed FTEs",
+            "Governance structure and escalation paths defined",
+          ],
+          "Prepare & Plan": [
+            "Detailed project plan baselined with milestones",
+            "Business process scope and fit-gap analysis complete",
+            "Data migration strategy documented and approved",
+            "Change management and communications plan finalized",
+            "Risk register reviewed and mitigations assigned",
+          ],
+          "Architect & Design": [
+            "All functional design documents (FDDs) signed off",
+            "Technical architecture blueprint approved",
+            "Integration specifications documented for all interfaces",
+            "Security and access model designed and reviewed",
+            "Reporting requirements mapped to solution capabilities",
+          ],
+          "Build & Configure": [
+            "System configuration complete per approved FDDs",
+            "Unit testing passed for all configured modules",
+            "Data conversion programs developed and unit tested",
+            "Integration interfaces built and connectivity verified",
+            "Training environment provisioned and validated",
+          ],
+          "Test & Validate": [
+            "Zero P1 defects open at gate review",
+            "System integration testing (SIT) cycles complete with sign-off",
+            "User acceptance testing (UAT) passed by business owners",
+            "Performance and load testing results within thresholds",
+            "Data migration dry run executed with reconciliation complete",
+          ],
+          "Deploy & Cutover": [
+            "Go/No-Go decision approved by executive committee",
+            "Cutover checklist 100% complete with verification",
+            "End-user training delivered and attendance confirmed",
+            "Hypercare support team staffed and schedule published",
+            "Production environment smoke-tested and operational",
+          ],
+          "Stabilize & Optimize": [
+            "All critical P1/P2 defects resolved post go-live",
+            "Business process performance metrics baselined",
+            "Knowledge transfer to BAU support team complete",
+            "Lessons learned documented and reviewed",
+            "Transition to steady-state support model confirmed",
+          ],
+        };
+
         for (const phase of createdPhases) {
           const gate = await storage.createWorkstreamTask({
             workstreamId: pmGovernanceWorkstream.id,
@@ -6022,13 +6074,45 @@ ${outputTemplate}`;
             organizationId: user.organizationId,
           });
           createdGates.push(gate);
+
+          const criteriaDescriptions = gateCriteriaByPhase[phase.name] || [];
+          for (const desc of criteriaDescriptions) {
+            const criterion = await storage.createGateCriteria({
+              gateTaskId: gate.id,
+              description: desc,
+              isMet: "false",
+            });
+            createdCriteria.push(criterion);
+          }
         }
+      }
+
+      const createdProjects = [];
+      for (const ws of createdWorkstreams) {
+        const project = await storage.createProject({
+          title: ws.name,
+          description: `ERP workstream project for ${ws.name}`,
+          strategyId,
+          accountableLeaders: "[]",
+          startDate: new Date(),
+          dueDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+          status: "IP",
+          isWorkstream: "true",
+          workstreamId: ws.id,
+          documentFolderUrl: null,
+          communicationUrl: null,
+          createdBy: userId,
+          organizationId: user.organizationId,
+        });
+        createdProjects.push(project);
       }
 
       res.status(201).json({
         workstreams: createdWorkstreams,
         phases: createdPhases,
         programGates: createdGates,
+        gateCriteria: createdCriteria,
+        projects: createdProjects,
       });
     } catch (error) {
       logger.error("Failed to seed ERP program", error);

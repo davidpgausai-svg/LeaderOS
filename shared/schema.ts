@@ -201,6 +201,8 @@ export const projects = sqliteTable("projects", {
   wakeUpDate: integer("wake_up_date", { mode: "timestamp" }),
   documentFolderUrl: text("document_folder_url"),
   communicationUrl: text("communication_url"),
+  isWorkstream: text("is_workstream").notNull().default('false'),
+  workstreamId: text("workstream_id"),
   organizationId: text("organization_id"),
   createdBy: text("created_by").notNull(),
   createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
@@ -357,6 +359,8 @@ export const insertProjectSchema = createInsertSchema(projects).omit({
   }),
   documentFolderUrl: z.string().url("Invalid document folder URL format").nullable().optional().or(z.literal('')).transform(val => val || null),
   communicationUrl: z.string().url("Invalid communication URL format").nullable().optional().or(z.literal('')).transform(val => val || null),
+  isWorkstream: z.enum(["true", "false"]).default("false"),
+  workstreamId: z.string().nullable().optional(),
 });
 
 export const insertActivitySchema = createInsertSchema(activities).omit({

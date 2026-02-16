@@ -1764,11 +1764,20 @@ export default function Strategies() {
                                   {/* Project Row */}
                                   <div
                                     className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-                                    onClick={(e) => toggleProjectCollapse(project.id, e)}
+                                    onClick={(e) => {
+                                      if (project.isWorkstream === 'true') {
+                                        e.stopPropagation();
+                                        setLocation(`/workstreams/${project.strategyId}`);
+                                      } else {
+                                        toggleProjectCollapse(project.id, e);
+                                      }
+                                    }}
                                   >
                                     <div className="flex items-center space-x-3 flex-1 min-w-0">
                                       {/* Expand chevron */}
-                                      {isProjectExpanded ? (
+                                      {project.isWorkstream === 'true' ? (
+                                        <Network className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+                                      ) : isProjectExpanded ? (
                                         <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
                                       ) : (
                                         <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
@@ -1790,6 +1799,11 @@ export default function Strategies() {
                                             <span className="font-medium text-base text-gray-900 dark:text-white truncate">
                                               {project.title}
                                             </span>
+                                            {project.isWorkstream === 'true' && (
+                                              <Badge className="text-[10px] px-1.5 py-0 bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 border-indigo-200 dark:border-indigo-700 shrink-0">
+                                                ERP Workstream
+                                              </Badge>
+                                            )}
                                             {/* Status dropdown - immediately after title */}
                                             {canEditAllStrategies() ? (
                                             <DropdownMenu>
@@ -2010,8 +2024,8 @@ export default function Strategies() {
                                     </div>
                                   </div>
 
-                                  {/* Expanded Actions */}
-                                  {isProjectExpanded && (
+                                  {/* Expanded Actions - only for regular projects */}
+                                  {isProjectExpanded && project.isWorkstream !== 'true' && (
                                     <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30 px-4 py-2">
                                       {/* List/Kanban toggle */}
                                       {projectActions.length > 0 && (

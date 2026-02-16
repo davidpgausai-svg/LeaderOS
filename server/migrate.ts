@@ -22,8 +22,24 @@ export function runMigrations() {
     }
   })();
 
+  runAlterTableMigrations(sqlite);
+
   sqlite.close();
   console.log("[INFO] Database migrations completed successfully");
+}
+
+function safeAddColumn(sqlite: InstanceType<typeof Database>, table: string, column: string, definition: string) {
+  try {
+    const cols = sqlite.pragma(`table_info(${table})`) as { name: string }[];
+    if (!cols.find(c => c.name === column)) {
+      sqlite.exec(`ALTER TABLE "${table}" ADD COLUMN "${column}" ${definition}`);
+    }
+  } catch {}
+}
+
+function runAlterTableMigrations(sqlite: InstanceType<typeof Database>) {
+  safeAddColumn(sqlite, "projects", "is_workstream", "text NOT NULL DEFAULT 'false'");
+  safeAddColumn(sqlite, "projects", "workstream_id", "text");
 }
 
 function getCreateTableStatements(): string[] {
@@ -167,6 +183,8 @@ function getCreateTableStatements(): string[] {
       "wake_up_date" integer,
       "document_folder_url" text,
       "communication_url" text,
+      "is_workstream" text NOT NULL DEFAULT 'false',
+      "workstream_id" text,
       "organization_id" text,
       "created_by" text NOT NULL,
       "created_at" integer
