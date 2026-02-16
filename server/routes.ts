@@ -5713,6 +5713,7 @@ ${outputTemplate}`;
         title: name || rest.title || "Untitled Task",
         description: rest.description || "",
         strategyId: workstream.strategyId,
+        projectId: rest.projectId || null,
         workstreamId,
         phaseId: phaseId || null,
         documentFolderUrl: null,

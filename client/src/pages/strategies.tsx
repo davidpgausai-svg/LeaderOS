@@ -112,6 +112,10 @@ export default function Strategies() {
   const [documentUrlEditing, setDocumentUrlEditing] = useState(false);
   const [communicationUrlInput, setCommunicationUrlInput] = useState("");
   const [communicationUrlEditing, setCommunicationUrlEditing] = useState(false);
+  const [wsAddTaskProjectId, setWsAddTaskProjectId] = useState<string | null>(null);
+  const [wsNewTaskName, setWsNewTaskName] = useState("");
+  const [wsNewTaskPhaseId, setWsNewTaskPhaseId] = useState<string>("");
+  const [wsNewTaskIsMilestone, setWsNewTaskIsMilestone] = useState(false);
   const [urlSaving, setUrlSaving] = useState(false);
   const [dependenciesModalProject, setDependenciesModalProject] = useState<any>(null);
   const [selectedDependencyType, setSelectedDependencyType] = useState<"project" | "action" | null>(null);
@@ -836,6 +840,31 @@ export default function Strategies() {
         description: "Failed to remove resource",
         variant: "destructive",
       });
+    },
+  });
+
+  const createWsTaskMutation = useMutation({
+    mutationFn: async (data: { name: string; workstreamId: string; phaseId: string | null; isMilestone: string; projectId: string }) => {
+      const response = await apiRequest("POST", "/api/workstream-tasks", {
+        name: data.name,
+        workstreamId: data.workstreamId,
+        phaseId: data.phaseId || null,
+        isMilestone: data.isMilestone,
+        status: "not_started",
+        projectId: data.projectId,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+      setWsAddTaskProjectId(null);
+      setWsNewTaskName("");
+      setWsNewTaskPhaseId("");
+      setWsNewTaskIsMilestone(false);
+      toast({ title: "Success", description: "Task added" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to add task", variant: "destructive" });
     },
   });
 
@@ -2061,7 +2090,114 @@ export default function Strategies() {
                                               Open Full Workstream View
                                             </Button>
                                           </div>
+                                          {canEditAllStrategies() && (
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              className="h-6 px-2 text-xs gap-1"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (wsAddTaskProjectId === project.id) {
+                                                  setWsAddTaskProjectId(null);
+                                                  setWsNewTaskName("");
+                                                  setWsNewTaskPhaseId("");
+                                                  setWsNewTaskIsMilestone(false);
+                                                } else {
+                                                  setWsAddTaskProjectId(project.id);
+                                                  setWsNewTaskName("");
+                                                  setWsNewTaskPhaseId(strategyPhases.length > 0 ? strategyPhases[0].id : "");
+                                                  setWsNewTaskIsMilestone(false);
+                                                }
+                                              }}
+                                            >
+                                              <Plus className="w-3 h-3" />
+                                              Add Task
+                                            </Button>
+                                          )}
                                         </div>
+                                        {wsAddTaskProjectId === project.id && (
+                                          <div className="mb-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-indigo-200 dark:border-indigo-700 space-y-2" onClick={(e) => e.stopPropagation()}>
+                                            <div className="flex gap-2">
+                                              <input
+                                                type="text"
+                                                placeholder="Task name..."
+                                                value={wsNewTaskName}
+                                                onChange={(e) => setWsNewTaskName(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                  if (e.key === 'Enter' && wsNewTaskName.trim()) {
+                                                    createWsTaskMutation.mutate({
+                                                      name: wsNewTaskName.trim(),
+                                                      workstreamId: project.workstreamId!,
+                                                      phaseId: wsNewTaskPhaseId || null,
+                                                      isMilestone: wsNewTaskIsMilestone ? "true" : "false",
+                                                      projectId: project.id,
+                                                    });
+                                                  }
+                                                  if (e.key === 'Escape') {
+                                                    setWsAddTaskProjectId(null);
+                                                  }
+                                                }}
+                                                className="flex-1 text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                                autoFocus
+                                              />
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                              {strategyPhases.length > 0 && (
+                                                <select
+                                                  value={wsNewTaskPhaseId}
+                                                  onChange={(e) => setWsNewTaskPhaseId(e.target.value)}
+                                                  className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                                                >
+                                                  <option value="">No phase</option>
+                                                  {strategyPhases.map((p: any) => (
+                                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                                  ))}
+                                                </select>
+                                              )}
+                                              <label className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 cursor-pointer">
+                                                <input
+                                                  type="checkbox"
+                                                  checked={wsNewTaskIsMilestone}
+                                                  onChange={(e) => setWsNewTaskIsMilestone(e.target.checked)}
+                                                  className="rounded border-gray-300"
+                                                />
+                                                Milestone
+                                              </label>
+                                              <div className="flex-1" />
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-6 px-2 text-xs"
+                                                onClick={() => {
+                                                  setWsAddTaskProjectId(null);
+                                                  setWsNewTaskName("");
+                                                  setWsNewTaskPhaseId("");
+                                                  setWsNewTaskIsMilestone(false);
+                                                }}
+                                              >
+                                                Cancel
+                                              </Button>
+                                              <Button
+                                                size="sm"
+                                                className="h-6 px-3 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
+                                                disabled={!wsNewTaskName.trim() || createWsTaskMutation.isPending}
+                                                onClick={() => {
+                                                  if (wsNewTaskName.trim()) {
+                                                    createWsTaskMutation.mutate({
+                                                      name: wsNewTaskName.trim(),
+                                                      workstreamId: project.workstreamId!,
+                                                      phaseId: wsNewTaskPhaseId || null,
+                                                      isMilestone: wsNewTaskIsMilestone ? "true" : "false",
+                                                      projectId: project.id,
+                                                    });
+                                                  }
+                                                }}
+                                              >
+                                                {createWsTaskMutation.isPending ? "Adding..." : "Add"}
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        )}
                                         {strategyPhases.map((phase: any) => {
                                           const phaseActions = wsActions.filter((a: any) => a.phaseId === phase.id);
                                           if (phaseActions.length === 0) return null;
@@ -2144,8 +2280,8 @@ export default function Strategies() {
                                             </div>
                                           </div>
                                         )}
-                                        {wsActions.length === 0 && (
-                                          <p className="text-sm text-gray-400 dark:text-gray-500 italic py-2">No workstream actions yet. Open the full workstream view to add tasks.</p>
+                                        {wsActions.length === 0 && wsAddTaskProjectId !== project.id && (
+                                          <p className="text-sm text-gray-400 dark:text-gray-500 italic py-2">No workstream actions yet. Use the Add Task button above to get started.</p>
                                         )}
                                       </div>
                                     );
