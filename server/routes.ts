@@ -2231,10 +2231,15 @@ Respond ONLY with a valid JSON object in this exact format:
         }
       }
       
-      const action = await storage.createAction({
-        ...validatedData,
-        organizationId: user.organizationId,
-      });
+      let finalData = { ...validatedData, organizationId: user.organizationId };
+      if (validatedData.projectId) {
+        const project = await storage.getProject(validatedData.projectId);
+        if (project && project.isWorkstream === 'true' && project.workstreamId) {
+          finalData.workstreamId = project.workstreamId;
+        }
+      }
+
+      const action = await storage.createAction(finalData);
       
       await storage.createActivity({
         type: "action_created",
@@ -2302,6 +2307,13 @@ Respond ONLY with a valid JSON object in this exact format:
       const updateData = { ...req.body };
       if (updateData.dueDate) {
         updateData.dueDate = new Date(updateData.dueDate);
+      }
+      
+      if (updateData.projectId && updateData.projectId !== oldAction.projectId) {
+        const newProject = await storage.getProject(updateData.projectId);
+        if (newProject && newProject.isWorkstream === 'true' && newProject.workstreamId) {
+          updateData.workstreamId = newProject.workstreamId;
+        }
       }
       
       // Check if due date changed - if so, clear notification tracking and delete stale notifications
@@ -5523,6 +5535,13 @@ ${outputTemplate}`;
       if (!existing) return res.status(404).json({ message: "Workstream not found" });
       if (user.isSuperAdmin !== 'true' && user.organizationId !== existing.organizationId) {
         return res.status(403).json({ message: "Access denied" });
+      }
+
+      const wsActions = await storage.getWorkstreamActionsByStrategy(existing.strategyId);
+      for (const act of wsActions) {
+        if (act.workstreamId === req.params.id) {
+          await storage.updateAction(act.id, { workstreamId: null, phaseId: null });
+        }
       }
 
       const allProjects = await storage.getProjectsByOrganization(existing.organizationId);
