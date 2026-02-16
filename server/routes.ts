@@ -5440,6 +5440,23 @@ ${outputTemplate}`;
         ...parsed,
         organizationId: user.organizationId,
       });
+
+      await storage.createProject({
+        title: workstream.name,
+        description: `ERP workstream project for ${workstream.name}`,
+        strategyId: parsed.strategyId,
+        accountableLeaders: "[]",
+        startDate: new Date(),
+        dueDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+        status: "IP",
+        isWorkstream: "true",
+        workstreamId: workstream.id,
+        documentFolderUrl: null,
+        communicationUrl: null,
+        createdBy: userId,
+        organizationId: user.organizationId,
+      });
+
       res.status(201).json(workstream);
     } catch (error) {
       if (error instanceof ZodError) {
@@ -5506,6 +5523,17 @@ ${outputTemplate}`;
       if (!existing) return res.status(404).json({ message: "Workstream not found" });
       if (user.isSuperAdmin !== 'true' && user.organizationId !== existing.organizationId) {
         return res.status(403).json({ message: "Access denied" });
+      }
+
+      const allProjects = await storage.getProjectsByOrganization(existing.organizationId);
+      const linkedProjects = allProjects.filter(
+        (p: any) => p.isWorkstream === 'true' && (
+          p.workstreamId === req.params.id ||
+          (p.title === existing.name && p.strategyId === existing.strategyId)
+        )
+      );
+      for (const proj of linkedProjects) {
+        await storage.deleteProject(proj.id);
       }
 
       const deleted = await storage.deleteWorkstream(req.params.id);
