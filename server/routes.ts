@@ -5471,10 +5471,17 @@ ${outputTemplate}`;
       if (req.body.name && req.body.name !== existing.name) {
         const allProjects = await storage.getProjectsByOrganization(existing.organizationId);
         const linkedProjects = allProjects.filter(
-          (p: any) => p.isWorkstream === 'true' && p.workstreamId === req.params.id
+          (p: any) => p.isWorkstream === 'true' && (
+            p.workstreamId === req.params.id ||
+            (p.title === existing.name && p.strategyId === existing.strategyId)
+          )
         );
         for (const proj of linkedProjects) {
-          await storage.updateProject(proj.id, { title: req.body.name });
+          const updates: any = { title: req.body.name };
+          if (proj.workstreamId !== req.params.id) {
+            updates.workstreamId = req.params.id;
+          }
+          await storage.updateProject(proj.id, updates);
         }
       }
 
