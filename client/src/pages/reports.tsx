@@ -203,6 +203,30 @@ function ErpRagDot({ status }: { status?: string }) {
   return <span className={`w-3 h-3 rounded-full inline-block ${ERP_RAG_COLORS[status] || "bg-gray-300"}`} />;
 }
 
+function ErpRagLegend() {
+  return (
+    <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5">
+      <span className="font-semibold text-gray-700 mr-1">Status Key:</span>
+      <span className="flex items-center gap-1.5">
+        <span className="w-3 h-3 rounded-full bg-green-500 inline-block" />
+        <span>On Track / Complete</span>
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="w-3 h-3 rounded-full bg-amber-500 inline-block" />
+        <span>At Risk (within 5-day buffer)</span>
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="w-3 h-3 rounded-full bg-red-500 inline-block" />
+        <span>Behind Schedule / Blocked / Unmet Criteria</span>
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="w-3 h-3 rounded-full bg-gray-300 inline-block" />
+        <span>No Data</span>
+      </span>
+    </div>
+  );
+}
+
 export default function Reports() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -1093,7 +1117,9 @@ export default function Reports() {
                       <p className="text-gray-600">Configure workstreams and phases in Settings first.</p>
                     </div>
                   ) : (
-                    <div className="overflow-x-auto">
+                    <div className="space-y-3">
+                      <ErpRagLegend />
+                      <div className="overflow-x-auto">
                       <table className="w-full border-collapse">
                         <thead>
                           <tr>
@@ -1156,6 +1182,7 @@ export default function Reports() {
                           </tr>
                         </tbody>
                       </table>
+                      </div>
                     </div>
                   )}
                 </CardContent>
@@ -1201,7 +1228,9 @@ export default function Reports() {
                   </CardContent>
                 </Card>
               ) : (
-                sortedErpPhases.map((phase) => {
+                <>
+                <ErpRagLegend />
+                {sortedErpPhases.map((phase) => {
                   const programRag = erpCalculations?.programGateRags?.[phase.id];
                   const programGate = erpProgramGateTasks.find(t => t.phaseId === phase.id);
                   const wsGates = erpWorkstreamGateTasks.filter(t => t.phaseId === phase.id);
@@ -1255,7 +1284,8 @@ export default function Reports() {
                       </CardContent>
                     </Card>
                   );
-                })
+                })}
+                </>
               )}
             </TabsContent>
           </Tabs>
