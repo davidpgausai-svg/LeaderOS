@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertStrategySchema, insertProjectSchema, insertActionSchema, insertActionDocumentSchema, insertActionChecklistItemSchema, insertMeetingNoteSchema, insertBarrierSchema, insertDependencySchema, insertTemplateTypeSchema, insertExecutiveGoalSchema, insertTeamTagSchema, insertUserStrategyAssignmentSchema, insertProjectResourceAssignmentSchema, insertActionPeopleAssignmentSchema, insertPtoEntrySchema, insertHolidaySchema, insertIntakeFormSchema, insertReportOutDeckSchema, insertDecisionSchema, insertDecisionRaciSchema } from "@shared/schema";
+import { insertStrategySchema, insertProjectSchema, insertActionSchema, insertActionDocumentSchema, insertActionChecklistItemSchema, insertMeetingNoteSchema, insertBarrierSchema, insertDependencySchema, insertTemplateTypeSchema, insertExecutiveGoalSchema, insertTeamTagSchema, insertUserStrategyAssignmentSchema, insertProjectResourceAssignmentSchema, insertActionPeopleAssignmentSchema, insertPtoEntrySchema, insertHolidaySchema, insertIntakeFormSchema, insertReportOutDeckSchema, insertDecisionSchema, insertDecisionRaciSchema, insertWorkstreamSchema, insertPhaseSchema, insertWorkstreamTaskSchema, insertWorkstreamDependencySchema, insertGateCriteriaSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./jwtAuth";
 import { z, ZodSchema, ZodError } from "zod";
 import { logger } from "./logger";
@@ -5369,6 +5369,847 @@ ${outputTemplate}`;
     } catch (error) {
       logger.error("Failed to delete decision", error);
       res.status(500).json({ message: "Failed to delete decision" });
+    }
+  });
+
+  // ==================== WORKSTREAM ROUTES ====================
+
+  app.get("/api/workstreams", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+
+      const strategyId = req.query.strategyId as string;
+      if (!strategyId) return res.status(400).json({ message: "strategyId is required" });
+
+      const strategy = await storage.getStrategy(strategyId);
+      if (!strategy) return res.status(404).json({ message: "Strategy not found" });
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== strategy.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const workstreams = await storage.getWorkstreamsByStrategy(strategyId);
+      res.json(workstreams);
+    } catch (error) {
+      logger.error("Failed to fetch workstreams", error);
+      res.status(500).json({ message: "Failed to fetch workstreams" });
+    }
+  });
+
+  app.get("/api/workstreams/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+
+      const workstream = await storage.getWorkstream(req.params.id);
+      if (!workstream) return res.status(404).json({ message: "Workstream not found" });
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== workstream.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      res.json(workstream);
+    } catch (error) {
+      logger.error("Failed to fetch workstream", error);
+      res.status(500).json({ message: "Failed to fetch workstream" });
+    }
+  });
+
+  app.post("/api/workstreams", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+      if (!user.organizationId) return res.status(400).json({ message: "User has no organization" });
+      if (user.role !== 'administrator' && user.role !== 'co_lead' && user.isSuperAdmin !== 'true') {
+        return res.status(403).json({ message: "Insufficient permissions" });
+      }
+
+      const parsed = insertWorkstreamSchema.parse(req.body);
+      const strategy = await storage.getStrategy(parsed.strategyId);
+      if (!strategy) return res.status(404).json({ message: "Strategy not found" });
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== strategy.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const workstream = await storage.createWorkstream({
+        ...parsed,
+        organizationId: user.organizationId,
+      });
+      res.status(201).json(workstream);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      logger.error("Failed to create workstream", error);
+      res.status(500).json({ message: "Failed to create workstream" });
+    }
+  });
+
+  app.patch("/api/workstreams/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+      if (user.role !== 'administrator' && user.role !== 'co_lead' && user.isSuperAdmin !== 'true') {
+        return res.status(403).json({ message: "Insufficient permissions" });
+      }
+
+      const existing = await storage.getWorkstream(req.params.id);
+      if (!existing) return res.status(404).json({ message: "Workstream not found" });
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== existing.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const workstream = await storage.updateWorkstream(req.params.id, req.body);
+      res.json(workstream);
+    } catch (error) {
+      logger.error("Failed to update workstream", error);
+      res.status(500).json({ message: "Failed to update workstream" });
+    }
+  });
+
+  app.delete("/api/workstreams/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
+        return res.status(403).json({ message: "Only administrators can delete workstreams" });
+      }
+
+      const existing = await storage.getWorkstream(req.params.id);
+      if (!existing) return res.status(404).json({ message: "Workstream not found" });
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== existing.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const deleted = await storage.deleteWorkstream(req.params.id);
+      if (!deleted) return res.status(500).json({ message: "Failed to delete workstream" });
+      res.json({ message: "Workstream deleted" });
+    } catch (error) {
+      logger.error("Failed to delete workstream", error);
+      res.status(500).json({ message: "Failed to delete workstream" });
+    }
+  });
+
+  // ==================== PHASE ROUTES ====================
+
+  app.get("/api/phases", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+
+      const strategyId = req.query.strategyId as string;
+      if (!strategyId) return res.status(400).json({ message: "strategyId is required" });
+
+      const strategy = await storage.getStrategy(strategyId);
+      if (!strategy) return res.status(404).json({ message: "Strategy not found" });
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== strategy.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const phases = await storage.getPhasesByStrategy(strategyId);
+      res.json(phases);
+    } catch (error) {
+      logger.error("Failed to fetch phases", error);
+      res.status(500).json({ message: "Failed to fetch phases" });
+    }
+  });
+
+  app.get("/api/phases/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+
+      const phase = await storage.getPhase(req.params.id);
+      if (!phase) return res.status(404).json({ message: "Phase not found" });
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== phase.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      res.json(phase);
+    } catch (error) {
+      logger.error("Failed to fetch phase", error);
+      res.status(500).json({ message: "Failed to fetch phase" });
+    }
+  });
+
+  app.post("/api/phases", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+      if (!user.organizationId) return res.status(400).json({ message: "User has no organization" });
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
+        return res.status(403).json({ message: "Only administrators can create phases" });
+      }
+
+      const parsed = insertPhaseSchema.parse(req.body);
+      const strategy = await storage.getStrategy(parsed.strategyId);
+      if (!strategy) return res.status(404).json({ message: "Strategy not found" });
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== strategy.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const phase = await storage.createPhase({
+        ...parsed,
+        organizationId: user.organizationId,
+      });
+      res.status(201).json(phase);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      logger.error("Failed to create phase", error);
+      res.status(500).json({ message: "Failed to create phase" });
+    }
+  });
+
+  app.patch("/api/phases/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
+        return res.status(403).json({ message: "Only administrators can update phases" });
+      }
+
+      const existing = await storage.getPhase(req.params.id);
+      if (!existing) return res.status(404).json({ message: "Phase not found" });
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== existing.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const phase = await storage.updatePhase(req.params.id, req.body);
+      res.json(phase);
+    } catch (error) {
+      logger.error("Failed to update phase", error);
+      res.status(500).json({ message: "Failed to update phase" });
+    }
+  });
+
+  app.delete("/api/phases/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
+        return res.status(403).json({ message: "Only administrators can delete phases" });
+      }
+
+      const existing = await storage.getPhase(req.params.id);
+      if (!existing) return res.status(404).json({ message: "Phase not found" });
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== existing.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const deleted = await storage.deletePhase(req.params.id);
+      if (!deleted) return res.status(500).json({ message: "Failed to delete phase" });
+      res.json({ message: "Phase deleted" });
+    } catch (error) {
+      logger.error("Failed to delete phase", error);
+      res.status(500).json({ message: "Failed to delete phase" });
+    }
+  });
+
+  // ==================== WORKSTREAM TASK ROUTES ====================
+
+  app.get("/api/workstream-tasks", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+
+      const strategyId = req.query.strategyId as string;
+      const workstreamId = req.query.workstreamId as string;
+      const phaseId = req.query.phaseId as string;
+
+      if (!strategyId) return res.status(400).json({ message: "strategyId is required" });
+
+      const strategy = await storage.getStrategy(strategyId);
+      if (!strategy) return res.status(404).json({ message: "Strategy not found" });
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== strategy.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      let tasks = await storage.getWorkstreamTasksByStrategy(strategyId);
+
+      if (workstreamId) {
+        tasks = tasks.filter(t => t.workstreamId === workstreamId);
+      }
+      if (phaseId) {
+        tasks = tasks.filter(t => t.phaseId === phaseId);
+      }
+
+      res.json(tasks);
+    } catch (error) {
+      logger.error("Failed to fetch workstream tasks", error);
+      res.status(500).json({ message: "Failed to fetch workstream tasks" });
+    }
+  });
+
+  app.get("/api/workstream-tasks/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+
+      const task = await storage.getWorkstreamTask(req.params.id);
+      if (!task) return res.status(404).json({ message: "Task not found" });
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== task.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      res.json(task);
+    } catch (error) {
+      logger.error("Failed to fetch workstream task", error);
+      res.status(500).json({ message: "Failed to fetch workstream task" });
+    }
+  });
+
+  app.post("/api/workstream-tasks", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+      if (!user.organizationId) return res.status(400).json({ message: "User has no organization" });
+      if (user.role !== 'administrator' && user.role !== 'co_lead' && user.isSuperAdmin !== 'true') {
+        return res.status(403).json({ message: "Insufficient permissions" });
+      }
+
+      const parsed = insertWorkstreamTaskSchema.parse(req.body);
+
+      const workstream = await storage.getWorkstream(parsed.workstreamId);
+      if (!workstream) return res.status(404).json({ message: "Workstream not found" });
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== workstream.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const task = await storage.createWorkstreamTask({
+        ...parsed,
+        organizationId: user.organizationId,
+      });
+      res.status(201).json(task);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      logger.error("Failed to create workstream task", error);
+      res.status(500).json({ message: "Failed to create workstream task" });
+    }
+  });
+
+  app.patch("/api/workstream-tasks/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+      if (user.role !== 'administrator' && user.role !== 'co_lead' && user.isSuperAdmin !== 'true') {
+        return res.status(403).json({ message: "Insufficient permissions" });
+      }
+
+      const existing = await storage.getWorkstreamTask(req.params.id);
+      if (!existing) return res.status(404).json({ message: "Task not found" });
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== existing.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const task = await storage.updateWorkstreamTask(req.params.id, req.body);
+      res.json(task);
+    } catch (error) {
+      logger.error("Failed to update workstream task", error);
+      res.status(500).json({ message: "Failed to update workstream task" });
+    }
+  });
+
+  app.delete("/api/workstream-tasks/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+      if (user.role !== 'administrator' && user.role !== 'co_lead' && user.isSuperAdmin !== 'true') {
+        return res.status(403).json({ message: "Insufficient permissions" });
+      }
+
+      const existing = await storage.getWorkstreamTask(req.params.id);
+      if (!existing) return res.status(404).json({ message: "Task not found" });
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== existing.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const deleted = await storage.deleteWorkstreamTask(req.params.id);
+      if (!deleted) return res.status(500).json({ message: "Failed to delete task" });
+      res.json({ message: "Task deleted" });
+    } catch (error) {
+      logger.error("Failed to delete workstream task", error);
+      res.status(500).json({ message: "Failed to delete workstream task" });
+    }
+  });
+
+  // ==================== WORKSTREAM DEPENDENCY ROUTES ====================
+
+  app.get("/api/workstream-dependencies", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+
+      const strategyId = req.query.strategyId as string;
+      if (!strategyId) return res.status(400).json({ message: "strategyId is required" });
+
+      const strategy = await storage.getStrategy(strategyId);
+      if (!strategy) return res.status(404).json({ message: "Strategy not found" });
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== strategy.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const dependencies = await storage.getWorkstreamDependenciesByStrategy(strategyId);
+      res.json(dependencies);
+    } catch (error) {
+      logger.error("Failed to fetch workstream dependencies", error);
+      res.status(500).json({ message: "Failed to fetch workstream dependencies" });
+    }
+  });
+
+  app.post("/api/workstream-dependencies", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+      if (user.role !== 'administrator' && user.role !== 'co_lead' && user.isSuperAdmin !== 'true') {
+        return res.status(403).json({ message: "Insufficient permissions" });
+      }
+
+      const parsed = insertWorkstreamDependencySchema.parse(req.body);
+
+      const predecessorTask = await storage.getWorkstreamTask(parsed.predecessorTaskId);
+      if (!predecessorTask) return res.status(404).json({ message: "Predecessor task not found" });
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== predecessorTask.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const dependency = await storage.createWorkstreamDependency(parsed);
+      res.status(201).json(dependency);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      logger.error("Failed to create workstream dependency", error);
+      res.status(500).json({ message: "Failed to create workstream dependency" });
+    }
+  });
+
+  app.delete("/api/workstream-dependencies/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+      if (user.role !== 'administrator' && user.role !== 'co_lead' && user.isSuperAdmin !== 'true') {
+        return res.status(403).json({ message: "Insufficient permissions" });
+      }
+
+      const deleted = await storage.deleteWorkstreamDependency(req.params.id);
+      if (!deleted) return res.status(404).json({ message: "Dependency not found" });
+      res.json({ message: "Dependency deleted" });
+    } catch (error) {
+      logger.error("Failed to delete workstream dependency", error);
+      res.status(500).json({ message: "Failed to delete workstream dependency" });
+    }
+  });
+
+  // ==================== GATE CRITERIA ROUTES ====================
+
+  app.get("/api/gate-criteria", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+
+      const gateTaskId = req.query.gateTaskId as string;
+      if (!gateTaskId) return res.status(400).json({ message: "gateTaskId is required" });
+
+      const task = await storage.getWorkstreamTask(gateTaskId);
+      if (!task) return res.status(404).json({ message: "Gate task not found" });
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== task.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const criteria = await storage.getGateCriteriaByTask(gateTaskId);
+      res.json(criteria);
+    } catch (error) {
+      logger.error("Failed to fetch gate criteria", error);
+      res.status(500).json({ message: "Failed to fetch gate criteria" });
+    }
+  });
+
+  app.post("/api/gate-criteria", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+      if (user.role !== 'administrator' && user.role !== 'co_lead' && user.isSuperAdmin !== 'true') {
+        return res.status(403).json({ message: "Insufficient permissions" });
+      }
+
+      const parsed = insertGateCriteriaSchema.parse(req.body);
+
+      const task = await storage.getWorkstreamTask(parsed.gateTaskId);
+      if (!task) return res.status(404).json({ message: "Gate task not found" });
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== task.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const criteria = await storage.createGateCriteria(parsed);
+      res.status(201).json(criteria);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      logger.error("Failed to create gate criteria", error);
+      res.status(500).json({ message: "Failed to create gate criteria" });
+    }
+  });
+
+  app.patch("/api/gate-criteria/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+      if (user.role !== 'administrator' && user.role !== 'co_lead' && user.isSuperAdmin !== 'true') {
+        return res.status(403).json({ message: "Insufficient permissions" });
+      }
+
+      const existing = await storage.getGateCriteriaByTask(req.params.id);
+      const criteriaItem = (await storage.updateGateCriteria(req.params.id, req.body));
+      if (!criteriaItem) return res.status(404).json({ message: "Gate criteria not found" });
+
+      res.json(criteriaItem);
+    } catch (error) {
+      logger.error("Failed to update gate criteria", error);
+      res.status(500).json({ message: "Failed to update gate criteria" });
+    }
+  });
+
+  app.delete("/api/gate-criteria/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+      if (user.role !== 'administrator' && user.role !== 'co_lead' && user.isSuperAdmin !== 'true') {
+        return res.status(403).json({ message: "Insufficient permissions" });
+      }
+
+      const deleted = await storage.deleteGateCriteria(req.params.id);
+      if (!deleted) return res.status(404).json({ message: "Gate criteria not found" });
+      res.json({ message: "Gate criteria deleted" });
+    } catch (error) {
+      logger.error("Failed to delete gate criteria", error);
+      res.status(500).json({ message: "Failed to delete gate criteria" });
+    }
+  });
+
+  // ==================== SEED ERP PROGRAM ====================
+
+  app.post("/api/workstreams/seed-program", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+      if (!user.organizationId) return res.status(400).json({ message: "User has no organization" });
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
+        return res.status(403).json({ message: "Only administrators can seed programs" });
+      }
+
+      const { strategyId } = req.body;
+      if (!strategyId) return res.status(400).json({ message: "strategyId is required" });
+
+      const strategy = await storage.getStrategy(strategyId);
+      if (!strategy) return res.status(404).json({ message: "Strategy not found" });
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== strategy.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const defaultWorkstreamNames = [
+        "HCM & Payroll",
+        "Finance & Grants",
+        "Supply Chain",
+        "Integrations",
+        "Data Conversion",
+        "Reporting & Analytics",
+        "Security & Access",
+        "Technical Infrastructure",
+        "OCM/Communications & Training",
+        "Program Management & Governance",
+      ];
+
+      const defaultPhaseNames = [
+        "Mobilize & Staff",
+        "Prepare & Plan",
+        "Architect & Design",
+        "Build & Configure",
+        "Test & Validate",
+        "Deploy & Cutover",
+        "Stabilize & Optimize",
+      ];
+
+      const createdWorkstreams = [];
+      for (let i = 0; i < defaultWorkstreamNames.length; i++) {
+        const ws = await storage.createWorkstream({
+          strategyId,
+          name: defaultWorkstreamNames[i],
+          sortOrder: i + 1,
+          status: "active",
+          organizationId: user.organizationId,
+        });
+        createdWorkstreams.push(ws);
+      }
+
+      const createdPhases = [];
+      for (let i = 0; i < defaultPhaseNames.length; i++) {
+        const phase = await storage.createPhase({
+          strategyId,
+          name: defaultPhaseNames[i],
+          sequence: i + 1,
+          organizationId: user.organizationId,
+        });
+        createdPhases.push(phase);
+      }
+
+      const pmGovernanceWorkstream = createdWorkstreams.find(
+        ws => ws.name === "Program Management & Governance"
+      );
+
+      const createdGates = [];
+      if (pmGovernanceWorkstream) {
+        for (const phase of createdPhases) {
+          const gate = await storage.createWorkstreamTask({
+            workstreamId: pmGovernanceWorkstream.id,
+            phaseId: phase.id,
+            name: `${phase.name} Gate`,
+            isMilestone: "true",
+            milestoneType: "program_gate",
+            status: "not_started",
+            durationDays: 1,
+            percentComplete: 0,
+            sortOrder: phase.sequence ?? 0,
+            organizationId: user.organizationId,
+          });
+          createdGates.push(gate);
+        }
+      }
+
+      res.status(201).json({
+        workstreams: createdWorkstreams,
+        phases: createdPhases,
+        programGates: createdGates,
+      });
+    } catch (error) {
+      logger.error("Failed to seed ERP program", error);
+      res.status(500).json({ message: "Failed to seed ERP program" });
+    }
+  });
+
+  // ==================== WORKSTREAM CALCULATIONS (RAG + CRITICAL PATH) ====================
+
+  app.get("/api/workstream-calculations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+
+      const strategyId = req.query.strategyId as string;
+      if (!strategyId) return res.status(400).json({ message: "strategyId is required" });
+
+      const strategy = await storage.getStrategy(strategyId);
+      if (!strategy) return res.status(404).json({ message: "Strategy not found" });
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== strategy.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const [tasks, workstreams, phases, dependencies] = await Promise.all([
+        storage.getWorkstreamTasksByStrategy(strategyId),
+        storage.getWorkstreamsByStrategy(strategyId),
+        storage.getPhasesByStrategy(strategyId),
+        storage.getWorkstreamDependenciesByStrategy(strategyId),
+      ]);
+
+      const BUFFER_DAYS = 5;
+      const now = new Date();
+
+      const taskRag: Record<string, { rag: string; task: any }> = {};
+      for (const task of tasks) {
+        let rag = "GREEN";
+        if (task.status === "complete") {
+          rag = "GREEN";
+        } else if (task.status === "blocked") {
+          rag = "RED";
+        } else {
+          const plannedEnd = task.plannedEnd ? new Date(task.plannedEnd) : null;
+          if (plannedEnd) {
+            const daysRemaining = Math.ceil((plannedEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            const pctLeft = 100 - (task.percentComplete || 0);
+            const daysOfWorkRemaining = Math.ceil((pctLeft / 100) * (task.durationDays || 1));
+            if (daysRemaining < daysOfWorkRemaining) {
+              rag = "RED";
+            } else if (daysRemaining < daysOfWorkRemaining + BUFFER_DAYS) {
+              rag = "AMBER";
+            }
+          }
+        }
+        taskRag[task.id] = { rag, task };
+      }
+
+      const workstreamGateRag: Record<string, Record<string, string>> = {};
+      for (const ws of workstreams) {
+        workstreamGateRag[ws.id] = {};
+        for (const phase of phases) {
+          const phaseTasks = tasks.filter(t => t.workstreamId === ws.id && t.phaseId === phase.id);
+          if (phaseTasks.length === 0) {
+            workstreamGateRag[ws.id][phase.id] = "GREEN";
+          } else {
+            const rags = phaseTasks.map(t => taskRag[t.id]?.rag || "GREEN");
+            if (rags.includes("RED")) {
+              workstreamGateRag[ws.id][phase.id] = "RED";
+            } else if (rags.includes("AMBER")) {
+              workstreamGateRag[ws.id][phase.id] = "AMBER";
+            } else {
+              workstreamGateRag[ws.id][phase.id] = "GREEN";
+            }
+          }
+        }
+      }
+
+      const programGateRag: Record<string, string> = {};
+      for (const phase of phases) {
+        const wsRags = workstreams.map(ws => workstreamGateRag[ws.id]?.[phase.id] || "GREEN");
+
+        const gateTasks = tasks.filter(
+          t => t.phaseId === phase.id && t.isMilestone === "true" && t.milestoneType === "program_gate"
+        );
+        const allCriteria: any[] = [];
+        for (const gt of gateTasks) {
+          const criteria = await storage.getGateCriteriaByTask(gt.id);
+          allCriteria.push(...criteria);
+        }
+        const unmetCriteria = allCriteria.filter(c => c.isMet !== "true");
+
+        if (wsRags.includes("RED") || unmetCriteria.length > 0) {
+          programGateRag[phase.id] = "RED";
+        } else if (wsRags.includes("AMBER")) {
+          programGateRag[phase.id] = "AMBER";
+        } else {
+          programGateRag[phase.id] = "GREEN";
+        }
+      }
+
+      const taskMap = new Map(tasks.map(t => [t.id, t]));
+      const successors = new Map<string, string[]>();
+      const predecessors = new Map<string, string[]>();
+      for (const dep of dependencies) {
+        if (!successors.has(dep.predecessorTaskId)) successors.set(dep.predecessorTaskId, []);
+        successors.get(dep.predecessorTaskId)!.push(dep.successorTaskId);
+        if (!predecessors.has(dep.successorTaskId)) predecessors.set(dep.successorTaskId, []);
+        predecessors.get(dep.successorTaskId)!.push(dep.predecessorTaskId);
+      }
+
+      const earlyStart: Record<string, number> = {};
+      const earlyEnd: Record<string, number> = {};
+      const lateStart: Record<string, number> = {};
+      const lateEnd: Record<string, number> = {};
+
+      const topoOrder: string[] = [];
+      const inDegree: Record<string, number> = {};
+      for (const t of tasks) {
+        inDegree[t.id] = (predecessors.get(t.id) || []).length;
+      }
+      const queue: string[] = tasks.filter(t => inDegree[t.id] === 0).map(t => t.id);
+      while (queue.length > 0) {
+        const current = queue.shift()!;
+        topoOrder.push(current);
+        for (const succ of (successors.get(current) || [])) {
+          inDegree[succ]--;
+          if (inDegree[succ] === 0) queue.push(succ);
+        }
+      }
+
+      for (const taskId of topoOrder) {
+        const t = taskMap.get(taskId)!;
+        const preds = predecessors.get(taskId) || [];
+        if (preds.length === 0) {
+          earlyStart[taskId] = 0;
+        } else {
+          earlyStart[taskId] = Math.max(...preds.map(p => earlyEnd[p] || 0));
+        }
+        earlyEnd[taskId] = earlyStart[taskId] + (t.durationDays || 1);
+      }
+
+      const projectEnd = Math.max(...tasks.map(t => earlyEnd[t.id] || 0), 0);
+
+      for (let i = topoOrder.length - 1; i >= 0; i--) {
+        const taskId = topoOrder[i];
+        const t = taskMap.get(taskId)!;
+        const succs = successors.get(taskId) || [];
+        if (succs.length === 0) {
+          lateEnd[taskId] = projectEnd;
+        } else {
+          lateEnd[taskId] = Math.min(...succs.map(s => lateStart[s] ?? projectEnd));
+        }
+        lateStart[taskId] = lateEnd[taskId] - (t.durationDays || 1);
+      }
+
+      const criticalPath: Record<string, { earlyStart: number; earlyEnd: number; lateStart: number; lateEnd: number; totalFloat: number; isCritical: boolean }> = {};
+      for (const taskId of topoOrder) {
+        const float = (lateStart[taskId] ?? 0) - (earlyStart[taskId] ?? 0);
+        criticalPath[taskId] = {
+          earlyStart: earlyStart[taskId] ?? 0,
+          earlyEnd: earlyEnd[taskId] ?? 0,
+          lateStart: lateStart[taskId] ?? 0,
+          lateEnd: lateEnd[taskId] ?? 0,
+          totalFloat: float,
+          isCritical: float === 0,
+        };
+      }
+
+      res.json({
+        taskRag: Object.fromEntries(
+          Object.entries(taskRag).map(([id, v]) => [id, v.rag])
+        ),
+        workstreamGateRag,
+        programGateRag,
+        criticalPath,
+        projectDurationDays: projectEnd,
+      });
+    } catch (error) {
+      logger.error("Failed to calculate workstream data", error);
+      res.status(500).json({ message: "Failed to calculate workstream data" });
     }
   });
 

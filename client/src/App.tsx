@@ -24,6 +24,7 @@ import IntakeSubmissions from "@/pages/intake-submissions";
 import PublicIntake from "@/pages/public-intake";
 import ReportOut from "@/pages/report-out";
 import DecisionLog from "@/pages/decision-log";
+import Workstreams from "@/pages/workstreams";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -69,6 +70,7 @@ function Router() {
         <Route path="/intake-forms" component={IntakeForms} />
         <Route path="/intake-submissions" component={IntakeSubmissions} />
         <Route path="/intake/:slug" component={PublicIntake} />
+        <Route path="/workstreams/:strategyId" component={Workstreams} />
         <Route path="/super-admin" component={SuperAdmin} />
         <Route component={NotFound} />
       </Switch>

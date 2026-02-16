@@ -42,6 +42,12 @@ import {
   decisions, decisionRaciAssignments,
   type Decision, type InsertDecision,
   type DecisionRaci, type InsertDecisionRaci,
+  workstreams, phases, workstreamTasks, workstreamDependencies, gateCriteria,
+  type Workstream, type InsertWorkstream,
+  type Phase, type InsertPhase,
+  type WorkstreamTask, type InsertWorkstreamTask,
+  type WorkstreamDependency, type InsertWorkstreamDependency,
+  type GateCriteria, type InsertGateCriteria,
 } from '@shared/schema';
 
 export class DatabaseStorage implements IStorage {
@@ -1455,6 +1461,219 @@ export class DatabaseStorage implements IStorage {
       role: a.role,
     }));
     return db.insert(decisionRaciAssignments).values(toInsert).returning();
+  }
+
+  // Workstream methods
+  async getWorkstreamsByStrategy(strategyId: string): Promise<Workstream[]> {
+    return db.select().from(workstreams)
+      .where(eq(workstreams.strategyId, strategyId))
+      .orderBy(workstreams.sortOrder);
+  }
+
+  async getWorkstream(id: string): Promise<Workstream | undefined> {
+    const [ws] = await db.select().from(workstreams).where(eq(workstreams.id, id));
+    return ws || undefined;
+  }
+
+  async createWorkstream(workstream: InsertWorkstream & { organizationId: string }): Promise<Workstream> {
+    const [created] = await db.insert(workstreams).values({
+      id: randomUUID(),
+      ...workstream,
+    }).returning();
+    return created;
+  }
+
+  async updateWorkstream(id: string, updates: Partial<Workstream>): Promise<Workstream | undefined> {
+    const [ws] = await db.update(workstreams)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(workstreams.id, id))
+      .returning();
+    return ws || undefined;
+  }
+
+  async deleteWorkstream(id: string): Promise<boolean> {
+    const tasks = await db.select().from(workstreamTasks).where(eq(workstreamTasks.workstreamId, id));
+    for (const task of tasks) {
+      await db.delete(gateCriteria).where(eq(gateCriteria.gateTaskId, task.id));
+      await db.delete(workstreamDependencies).where(
+        or(
+          eq(workstreamDependencies.predecessorTaskId, task.id),
+          eq(workstreamDependencies.successorTaskId, task.id)
+        )
+      );
+    }
+    await db.delete(workstreamTasks).where(eq(workstreamTasks.workstreamId, id));
+    const result = await db.delete(workstreams).where(eq(workstreams.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // Phase methods
+  async getPhasesByStrategy(strategyId: string): Promise<Phase[]> {
+    return db.select().from(phases)
+      .where(eq(phases.strategyId, strategyId))
+      .orderBy(phases.sequence);
+  }
+
+  async getPhase(id: string): Promise<Phase | undefined> {
+    const [phase] = await db.select().from(phases).where(eq(phases.id, id));
+    return phase || undefined;
+  }
+
+  async createPhase(phase: InsertPhase & { organizationId: string }): Promise<Phase> {
+    const [created] = await db.insert(phases).values({
+      id: randomUUID(),
+      ...phase,
+    }).returning();
+    return created;
+  }
+
+  async updatePhase(id: string, updates: Partial<Phase>): Promise<Phase | undefined> {
+    const [phase] = await db.update(phases)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(phases.id, id))
+      .returning();
+    return phase || undefined;
+  }
+
+  async deletePhase(id: string): Promise<boolean> {
+    const tasks = await db.select().from(workstreamTasks).where(eq(workstreamTasks.phaseId, id));
+    for (const task of tasks) {
+      await db.delete(gateCriteria).where(eq(gateCriteria.gateTaskId, task.id));
+      await db.delete(workstreamDependencies).where(
+        or(
+          eq(workstreamDependencies.predecessorTaskId, task.id),
+          eq(workstreamDependencies.successorTaskId, task.id)
+        )
+      );
+    }
+    await db.delete(workstreamTasks).where(eq(workstreamTasks.phaseId, id));
+    const result = await db.delete(phases).where(eq(phases.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // Workstream Task methods
+  async getWorkstreamTasksByStrategy(strategyId: string): Promise<WorkstreamTask[]> {
+    const strategyWorkstreams = await db.select({ id: workstreams.id }).from(workstreams)
+      .where(eq(workstreams.strategyId, strategyId));
+    if (strategyWorkstreams.length === 0) return [];
+    const wsIds = strategyWorkstreams.map(w => w.id);
+    return db.select().from(workstreamTasks)
+      .where(inArray(workstreamTasks.workstreamId, wsIds))
+      .orderBy(workstreamTasks.sortOrder);
+  }
+
+  async getWorkstreamTasksByWorkstream(workstreamId: string): Promise<WorkstreamTask[]> {
+    return db.select().from(workstreamTasks)
+      .where(eq(workstreamTasks.workstreamId, workstreamId))
+      .orderBy(workstreamTasks.sortOrder);
+  }
+
+  async getWorkstreamTasksByPhase(phaseId: string): Promise<WorkstreamTask[]> {
+    return db.select().from(workstreamTasks)
+      .where(eq(workstreamTasks.phaseId, phaseId))
+      .orderBy(workstreamTasks.sortOrder);
+  }
+
+  async getWorkstreamTask(id: string): Promise<WorkstreamTask | undefined> {
+    const [task] = await db.select().from(workstreamTasks).where(eq(workstreamTasks.id, id));
+    return task || undefined;
+  }
+
+  async createWorkstreamTask(task: InsertWorkstreamTask & { organizationId: string }): Promise<WorkstreamTask> {
+    const [created] = await db.insert(workstreamTasks).values({
+      id: randomUUID(),
+      ...task,
+    }).returning();
+    return created;
+  }
+
+  async updateWorkstreamTask(id: string, updates: Partial<WorkstreamTask>): Promise<WorkstreamTask | undefined> {
+    const [task] = await db.update(workstreamTasks)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(workstreamTasks.id, id))
+      .returning();
+    return task || undefined;
+  }
+
+  async deleteWorkstreamTask(id: string): Promise<boolean> {
+    await db.delete(gateCriteria).where(eq(gateCriteria.gateTaskId, id));
+    await db.delete(workstreamDependencies).where(
+      or(
+        eq(workstreamDependencies.predecessorTaskId, id),
+        eq(workstreamDependencies.successorTaskId, id)
+      )
+    );
+    const result = await db.delete(workstreamTasks).where(eq(workstreamTasks.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // Workstream Dependency methods
+  async getWorkstreamDependenciesByTask(taskId: string): Promise<WorkstreamDependency[]> {
+    return db.select().from(workstreamDependencies)
+      .where(
+        or(
+          eq(workstreamDependencies.predecessorTaskId, taskId),
+          eq(workstreamDependencies.successorTaskId, taskId)
+        )
+      );
+  }
+
+  async getWorkstreamDependenciesByStrategy(strategyId: string): Promise<WorkstreamDependency[]> {
+    const strategyWorkstreams = await db.select({ id: workstreams.id }).from(workstreams)
+      .where(eq(workstreams.strategyId, strategyId));
+    if (strategyWorkstreams.length === 0) return [];
+    const wsIds = strategyWorkstreams.map(w => w.id);
+    const tasks = await db.select({ id: workstreamTasks.id }).from(workstreamTasks)
+      .where(inArray(workstreamTasks.workstreamId, wsIds));
+    if (tasks.length === 0) return [];
+    const taskIds = tasks.map(t => t.id);
+    return db.select().from(workstreamDependencies)
+      .where(
+        or(
+          inArray(workstreamDependencies.predecessorTaskId, taskIds),
+          inArray(workstreamDependencies.successorTaskId, taskIds)
+        )
+      );
+  }
+
+  async createWorkstreamDependency(dep: InsertWorkstreamDependency): Promise<WorkstreamDependency> {
+    const [created] = await db.insert(workstreamDependencies).values({
+      id: randomUUID(),
+      ...dep,
+    }).returning();
+    return created;
+  }
+
+  async deleteWorkstreamDependency(id: string): Promise<boolean> {
+    const result = await db.delete(workstreamDependencies).where(eq(workstreamDependencies.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // Gate Criteria methods
+  async getGateCriteriaByTask(gateTaskId: string): Promise<GateCriteria[]> {
+    return db.select().from(gateCriteria)
+      .where(eq(gateCriteria.gateTaskId, gateTaskId));
+  }
+
+  async createGateCriteria(criteria: InsertGateCriteria): Promise<GateCriteria> {
+    const [created] = await db.insert(gateCriteria).values({
+      id: randomUUID(),
+      ...criteria,
+    }).returning();
+    return created;
+  }
+
+  async updateGateCriteria(id: string, updates: Partial<GateCriteria>): Promise<GateCriteria | undefined> {
+    const [criteria] = await db.update(gateCriteria)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(gateCriteria.id, id))
+      .returning();
+    return criteria || undefined;
+  }
+
+  async deleteGateCriteria(id: string): Promise<boolean> {
+    const result = await db.delete(gateCriteria).where(eq(gateCriteria.id, id)).returning();
+    return result.length > 0;
   }
 }
 

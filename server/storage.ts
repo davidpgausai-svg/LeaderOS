@@ -1,4 +1,4 @@
-import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Project, type InsertProject, type Activity, type InsertActivity, type Action, type InsertAction, type Notification, type InsertNotification, type ActionDocument, type InsertActionDocument, type ActionChecklistItem, type InsertActionChecklistItem, type CreateActionChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, type Barrier, type InsertBarrier, type Dependency, type InsertDependency, type TemplateType, type InsertTemplateType, type ExecutiveGoal, type InsertExecutiveGoal, type StrategyExecutiveGoal, type TeamTag, type InsertTeamTag, type ProjectTeamTag, type UserTeamTag, type ProjectResourceAssignment, type InsertProjectResourceAssignment, type ActionPeopleAssignment, type InsertActionPeopleAssignment, type PtoEntry, type InsertPtoEntry, type Holiday, type InsertHoliday, type ProjectSnapshot, type InsertProjectSnapshot, type IntakeForm, type InsertIntakeForm, type IntakeSubmission, type InsertIntakeSubmission, type ReportOutDeck, type InsertReportOutDeck, type Decision, type InsertDecision, type DecisionRaci, type InsertDecisionRaci } from "@shared/schema";
+import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Project, type InsertProject, type Activity, type InsertActivity, type Action, type InsertAction, type Notification, type InsertNotification, type ActionDocument, type InsertActionDocument, type ActionChecklistItem, type InsertActionChecklistItem, type CreateActionChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, type Barrier, type InsertBarrier, type Dependency, type InsertDependency, type TemplateType, type InsertTemplateType, type ExecutiveGoal, type InsertExecutiveGoal, type StrategyExecutiveGoal, type TeamTag, type InsertTeamTag, type ProjectTeamTag, type UserTeamTag, type ProjectResourceAssignment, type InsertProjectResourceAssignment, type ActionPeopleAssignment, type InsertActionPeopleAssignment, type PtoEntry, type InsertPtoEntry, type Holiday, type InsertHoliday, type ProjectSnapshot, type InsertProjectSnapshot, type IntakeForm, type InsertIntakeForm, type IntakeSubmission, type InsertIntakeSubmission, type ReportOutDeck, type InsertReportOutDeck, type Decision, type InsertDecision, type DecisionRaci, type InsertDecisionRaci, type Workstream, type InsertWorkstream, type Phase, type InsertPhase, type WorkstreamTask, type InsertWorkstreamTask, type WorkstreamDependency, type InsertWorkstreamDependency, type GateCriteria, type InsertGateCriteria } from "@shared/schema";
 
 export interface IStorage {
   // User methods
@@ -211,6 +211,41 @@ export interface IStorage {
   // Decision RACI Assignment methods
   getDecisionRaciAssignments(decisionId: string): Promise<DecisionRaci[]>;
   setDecisionRaciAssignments(decisionId: string, assignments: InsertDecisionRaci[]): Promise<DecisionRaci[]>;
+
+  // Workstream methods
+  getWorkstreamsByStrategy(strategyId: string): Promise<Workstream[]>;
+  getWorkstream(id: string): Promise<Workstream | undefined>;
+  createWorkstream(workstream: InsertWorkstream & { organizationId: string }): Promise<Workstream>;
+  updateWorkstream(id: string, updates: Partial<Workstream>): Promise<Workstream | undefined>;
+  deleteWorkstream(id: string): Promise<boolean>;
+
+  // Phase methods
+  getPhasesByStrategy(strategyId: string): Promise<Phase[]>;
+  getPhase(id: string): Promise<Phase | undefined>;
+  createPhase(phase: InsertPhase & { organizationId: string }): Promise<Phase>;
+  updatePhase(id: string, updates: Partial<Phase>): Promise<Phase | undefined>;
+  deletePhase(id: string): Promise<boolean>;
+
+  // Workstream Task methods
+  getWorkstreamTasksByStrategy(strategyId: string): Promise<WorkstreamTask[]>;
+  getWorkstreamTasksByWorkstream(workstreamId: string): Promise<WorkstreamTask[]>;
+  getWorkstreamTasksByPhase(phaseId: string): Promise<WorkstreamTask[]>;
+  getWorkstreamTask(id: string): Promise<WorkstreamTask | undefined>;
+  createWorkstreamTask(task: InsertWorkstreamTask & { organizationId: string }): Promise<WorkstreamTask>;
+  updateWorkstreamTask(id: string, updates: Partial<WorkstreamTask>): Promise<WorkstreamTask | undefined>;
+  deleteWorkstreamTask(id: string): Promise<boolean>;
+
+  // Workstream Dependency methods
+  getWorkstreamDependenciesByTask(taskId: string): Promise<WorkstreamDependency[]>;
+  getWorkstreamDependenciesByStrategy(strategyId: string): Promise<WorkstreamDependency[]>;
+  createWorkstreamDependency(dep: InsertWorkstreamDependency): Promise<WorkstreamDependency>;
+  deleteWorkstreamDependency(id: string): Promise<boolean>;
+
+  // Gate Criteria methods
+  getGateCriteriaByTask(gateTaskId: string): Promise<GateCriteria[]>;
+  createGateCriteria(criteria: InsertGateCriteria): Promise<GateCriteria>;
+  updateGateCriteria(id: string, updates: Partial<GateCriteria>): Promise<GateCriteria | undefined>;
+  deleteGateCriteria(id: string): Promise<boolean>;
 }
 
 // Use SQLite storage

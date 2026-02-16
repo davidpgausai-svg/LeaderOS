@@ -45,6 +45,8 @@ Input validation is enforced using Zod schema validation middleware across all A
 - **Meeting Notes**: Allows creation and management of report-out meeting notes tied to strategies, with rich text and PDF export.
 - **Report Out Decks**: Auto-generates presentation-style slide decks from live data, with a slide editor, presentation mode, PowerPoint export, trend tracking, and saved reports functionality.
 - **Templates Feature**: Provides a collection of strategic planning and project management templates with Word export, and custom template category management for administrators.
+- **Decision Log**: RACI-based governance decision tracking with four escalation tiers (Work Stream Lead, Work Stream, Steering Committee, Executive Committee), decision categories, and RACI assignments (Responsible, Accountable, Consulted, Informed).
+- **Workstreams**: ERP program management with workstream × phase matrix. Five entity model (Workstreams, Phases, Tasks, Dependencies, Gate Criteria). Features include: Setup ERP Program seeding (10 default workstreams, 7 phases, program gates), four views (Matrix, Executive, Phase Gate Review, Workstream), RAG status calculation at task/workstream-gate/program-gate levels, Critical Path Method (CPM) computation, milestone-based handoffs (Option B), and gate criteria checklists that block milestone completion. Workstreams are linked to strategies (required strategyId). Accessed via strategy dropdown menu → Workstreams.
 
 ## External Dependencies
 

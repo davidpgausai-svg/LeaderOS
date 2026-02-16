@@ -62,10 +62,10 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ChevronLeft, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen, TrendingUp, AlertTriangle, Users, Megaphone, Link2, ExternalLink, X, Clock, ListChecks, StickyNote, Tag, Indent, Outdent, Hash, List, LayoutGrid, GripVertical } from "lucide-react";
+import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ChevronLeft, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen, TrendingUp, AlertTriangle, Users, Megaphone, Link2, ExternalLink, X, Clock, ListChecks, StickyNote, Tag, Indent, Outdent, Hash, List, LayoutGrid, GripVertical, Network } from "lucide-react";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { PeopleSelector } from "@/components/ui/people-selector";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import {
   Collapsible,
   CollapsibleContent,
@@ -1586,6 +1586,15 @@ export default function Strategies() {
                             >
                               <Eye className="h-4 w-4 mr-2" />
                               View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setLocation(`/workstreams/${strategy.id}`);
+                              }}
+                            >
+                              <Network className="h-4 w-4 mr-2" />
+                              Workstreams
                             </DropdownMenuItem>
                             {canEditAllStrategies() && (
                               <>
