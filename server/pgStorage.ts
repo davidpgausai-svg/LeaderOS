@@ -39,6 +39,9 @@ import {
   type IntakeSubmission, type InsertIntakeSubmission,
   intakeForms, intakeSubmissions, reportOutDecks,
   type ReportOutDeck, type InsertReportOutDeck,
+  decisions, decisionRaciAssignments,
+  type Decision, type InsertDecision,
+  type DecisionRaci, type InsertDecisionRaci,
 } from '@shared/schema';
 
 export class DatabaseStorage implements IStorage {
@@ -1402,6 +1405,56 @@ export class DatabaseStorage implements IStorage {
   async deleteReportOutDeck(id: string): Promise<boolean> {
     const result = await db.delete(reportOutDecks).where(eq(reportOutDecks.id, id)).returning();
     return result.length > 0;
+  }
+
+  async getDecisionsByOrganization(organizationId: string): Promise<Decision[]> {
+    return db.select().from(decisions)
+      .where(eq(decisions.organizationId, organizationId))
+      .orderBy(desc(decisions.createdAt));
+  }
+
+  async getDecision(id: string): Promise<Decision | undefined> {
+    const [decision] = await db.select().from(decisions).where(eq(decisions.id, id));
+    return decision || undefined;
+  }
+
+  async createDecision(decision: InsertDecision & { createdBy: string; organizationId: string }): Promise<Decision> {
+    const [created] = await db.insert(decisions).values({
+      id: randomUUID(),
+      ...decision,
+    }).returning();
+    return created;
+  }
+
+  async updateDecision(id: string, updates: Partial<Decision>): Promise<Decision | undefined> {
+    const [decision] = await db.update(decisions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(decisions.id, id))
+      .returning();
+    return decision || undefined;
+  }
+
+  async deleteDecision(id: string): Promise<boolean> {
+    await db.delete(decisionRaciAssignments).where(eq(decisionRaciAssignments.decisionId, id));
+    const result = await db.delete(decisions).where(eq(decisions.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getDecisionRaciAssignments(decisionId: string): Promise<DecisionRaci[]> {
+    return db.select().from(decisionRaciAssignments)
+      .where(eq(decisionRaciAssignments.decisionId, decisionId));
+  }
+
+  async setDecisionRaciAssignments(decisionId: string, assignments: InsertDecisionRaci[]): Promise<DecisionRaci[]> {
+    await db.delete(decisionRaciAssignments).where(eq(decisionRaciAssignments.decisionId, decisionId));
+    if (assignments.length === 0) return [];
+    const toInsert = assignments.map(a => ({
+      id: randomUUID(),
+      decisionId,
+      userId: a.userId,
+      role: a.role,
+    }));
+    return db.insert(decisionRaciAssignments).values(toInsert).returning();
   }
 }
 

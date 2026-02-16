@@ -23,6 +23,7 @@ import IntakeForms from "@/pages/intake-forms";
 import IntakeSubmissions from "@/pages/intake-submissions";
 import PublicIntake from "@/pages/public-intake";
 import ReportOut from "@/pages/report-out";
+import DecisionLog from "@/pages/decision-log";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -61,6 +62,7 @@ function Router() {
         {/* Graph moved to Reports tab - redirect for backward compatibility */}
         <Route path="/graph">{() => { window.location.replace('/reports?tab=graph'); return null; }}</Route>
         <Route path="/meeting-notes" component={MeetingNotes} />
+        <Route path="/decision-log" component={DecisionLog} />
         <Route path="/report-out" component={ReportOut} />
         <Route path="/reports" component={Reports} />
         <Route path="/settings" component={Settings} />

@@ -1,4 +1,4 @@
-import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Project, type InsertProject, type Activity, type InsertActivity, type Action, type InsertAction, type Notification, type InsertNotification, type ActionDocument, type InsertActionDocument, type ActionChecklistItem, type InsertActionChecklistItem, type CreateActionChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, type Barrier, type InsertBarrier, type Dependency, type InsertDependency, type TemplateType, type InsertTemplateType, type ExecutiveGoal, type InsertExecutiveGoal, type StrategyExecutiveGoal, type TeamTag, type InsertTeamTag, type ProjectTeamTag, type UserTeamTag, type ProjectResourceAssignment, type InsertProjectResourceAssignment, type ActionPeopleAssignment, type InsertActionPeopleAssignment, type PtoEntry, type InsertPtoEntry, type Holiday, type InsertHoliday, type ProjectSnapshot, type InsertProjectSnapshot, type IntakeForm, type InsertIntakeForm, type IntakeSubmission, type InsertIntakeSubmission, type ReportOutDeck, type InsertReportOutDeck } from "@shared/schema";
+import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Project, type InsertProject, type Activity, type InsertActivity, type Action, type InsertAction, type Notification, type InsertNotification, type ActionDocument, type InsertActionDocument, type ActionChecklistItem, type InsertActionChecklistItem, type CreateActionChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, type Barrier, type InsertBarrier, type Dependency, type InsertDependency, type TemplateType, type InsertTemplateType, type ExecutiveGoal, type InsertExecutiveGoal, type StrategyExecutiveGoal, type TeamTag, type InsertTeamTag, type ProjectTeamTag, type UserTeamTag, type ProjectResourceAssignment, type InsertProjectResourceAssignment, type ActionPeopleAssignment, type InsertActionPeopleAssignment, type PtoEntry, type InsertPtoEntry, type Holiday, type InsertHoliday, type ProjectSnapshot, type InsertProjectSnapshot, type IntakeForm, type InsertIntakeForm, type IntakeSubmission, type InsertIntakeSubmission, type ReportOutDeck, type InsertReportOutDeck, type Decision, type InsertDecision, type DecisionRaci, type InsertDecisionRaci } from "@shared/schema";
 
 export interface IStorage {
   // User methods
@@ -200,6 +200,17 @@ export interface IStorage {
   createReportOutDeck(deck: InsertReportOutDeck & { createdBy: string; organizationId: string }): Promise<ReportOutDeck>;
   updateReportOutDeck(id: string, updates: Partial<ReportOutDeck>): Promise<ReportOutDeck | undefined>;
   deleteReportOutDeck(id: string): Promise<boolean>;
+
+  // Decision Log methods
+  getDecisionsByOrganization(organizationId: string): Promise<Decision[]>;
+  getDecision(id: string): Promise<Decision | undefined>;
+  createDecision(decision: InsertDecision & { createdBy: string; organizationId: string }): Promise<Decision>;
+  updateDecision(id: string, updates: Partial<Decision>): Promise<Decision | undefined>;
+  deleteDecision(id: string): Promise<boolean>;
+
+  // Decision RACI Assignment methods
+  getDecisionRaciAssignments(decisionId: string): Promise<DecisionRaci[]>;
+  setDecisionRaciAssignments(decisionId: string, assignments: InsertDecisionRaci[]): Promise<DecisionRaci[]>;
 }
 
 // Use SQLite storage

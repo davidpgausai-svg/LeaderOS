@@ -733,3 +733,59 @@ export const insertReportOutDeckSchema = createInsertSchema(reportOutDecks).omit
 
 export type InsertReportOutDeck = z.infer<typeof insertReportOutDeckSchema>;
 export type ReportOutDeck = typeof reportOutDecks.$inferSelect;
+
+export const decisions = sqliteTable("decisions", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  organizationId: text("organization_id").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  category: text("category").notNull().default("strategic"),
+  status: text("status").notNull().default("proposed"),
+  escalationLevel: text("escalation_level").notNull().default("work_stream_lead"),
+  outcome: text("outcome"),
+  rationale: text("rationale"),
+  impactNotes: text("impact_notes"),
+  strategyId: text("strategy_id"),
+  dueDate: integer("due_date", { mode: "timestamp" }),
+  decisionDate: integer("decision_date", { mode: "timestamp" }),
+  createdBy: text("created_by").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+});
+
+export const insertDecisionSchema = createInsertSchema(decisions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  createdBy: true,
+  organizationId: true,
+}).extend({
+  category: z.enum(["strategic", "technical", "process", "resource", "budget", "scope"]).default("strategic"),
+  status: z.enum(["proposed", "under_review", "decided", "superseded"]).default("proposed"),
+  escalationLevel: z.enum(["work_stream_lead", "work_stream", "steering_committee", "executive_committee"]).default("work_stream_lead"),
+  dueDate: z.coerce.date().optional().nullable(),
+  decisionDate: z.coerce.date().optional().nullable(),
+});
+
+export type InsertDecision = z.infer<typeof insertDecisionSchema>;
+export type Decision = typeof decisions.$inferSelect;
+
+export const decisionRaciAssignments = sqliteTable("decision_raci_assignments", {
+  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+  decisionId: text("decision_id").notNull(),
+  userId: text("user_id").notNull(),
+  role: text("role").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+}, (table) => ({
+  uniqueAssignment: unique().on(table.decisionId, table.userId, table.role),
+}));
+
+export const insertDecisionRaciSchema = createInsertSchema(decisionRaciAssignments).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  role: z.enum(["responsible", "accountable", "consulted", "informed"]),
+});
+
+export type InsertDecisionRaci = z.infer<typeof insertDecisionRaciSchema>;
+export type DecisionRaci = typeof decisionRaciAssignments.$inferSelect;

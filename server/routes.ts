@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertStrategySchema, insertProjectSchema, insertActionSchema, insertActionDocumentSchema, insertActionChecklistItemSchema, insertMeetingNoteSchema, insertBarrierSchema, insertDependencySchema, insertTemplateTypeSchema, insertExecutiveGoalSchema, insertTeamTagSchema, insertUserStrategyAssignmentSchema, insertProjectResourceAssignmentSchema, insertActionPeopleAssignmentSchema, insertPtoEntrySchema, insertHolidaySchema, insertIntakeFormSchema, insertReportOutDeckSchema } from "@shared/schema";
+import { insertStrategySchema, insertProjectSchema, insertActionSchema, insertActionDocumentSchema, insertActionChecklistItemSchema, insertMeetingNoteSchema, insertBarrierSchema, insertDependencySchema, insertTemplateTypeSchema, insertExecutiveGoalSchema, insertTeamTagSchema, insertUserStrategyAssignmentSchema, insertProjectResourceAssignmentSchema, insertActionPeopleAssignmentSchema, insertPtoEntrySchema, insertHolidaySchema, insertIntakeFormSchema, insertReportOutDeckSchema, insertDecisionSchema, insertDecisionRaciSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./jwtAuth";
 import { z, ZodSchema, ZodError } from "zod";
 import { logger } from "./logger";
@@ -5229,6 +5229,146 @@ ${outputTemplate}`;
     } catch (error) {
       logger.error("Failed to delete report out deck", error);
       res.status(500).json({ message: "Failed to delete report out deck" });
+    }
+  });
+
+  // Decision Log routes
+  app.get("/api/decisions", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+      if (user.role === 'sme') return res.status(403).json({ message: "Access denied" });
+
+      const allDecisions = user.organizationId
+        ? await storage.getDecisionsByOrganization(user.organizationId)
+        : [];
+
+      if (user.role === 'administrator' || user.isSuperAdmin === 'true') {
+        res.json(allDecisions);
+      } else {
+        const assignedStrategyIds = await storage.getUserAssignedStrategyIds(userId);
+        const filtered = allDecisions.filter(d =>
+          !d.strategyId || assignedStrategyIds.includes(d.strategyId)
+        );
+        res.json(filtered);
+      }
+    } catch (error) {
+      logger.error("Failed to fetch decisions", error);
+      res.status(500).json({ message: "Failed to fetch decisions" });
+    }
+  });
+
+  app.get("/api/decisions/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+
+      const decision = await storage.getDecision(req.params.id);
+      if (!decision) return res.status(404).json({ message: "Decision not found" });
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== decision.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const raciAssignments = await storage.getDecisionRaciAssignments(decision.id);
+      res.json({ ...decision, raciAssignments });
+    } catch (error) {
+      logger.error("Failed to fetch decision", error);
+      res.status(500).json({ message: "Failed to fetch decision" });
+    }
+  });
+
+  app.post("/api/decisions", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+      if (!user.organizationId) return res.status(400).json({ message: "User has no organization" });
+      if (user.role === 'sme' || user.role === 'view') {
+        return res.status(403).json({ message: "Insufficient permissions" });
+      }
+
+      const { raciAssignments, ...decisionData } = req.body;
+      const parsed = insertDecisionSchema.parse(decisionData);
+      const decision = await storage.createDecision({
+        ...parsed,
+        createdBy: userId,
+        organizationId: user.organizationId,
+      });
+
+      if (raciAssignments && Array.isArray(raciAssignments) && raciAssignments.length > 0) {
+        await storage.setDecisionRaciAssignments(decision.id, raciAssignments);
+      }
+
+      const finalDecision = await storage.getDecision(decision.id);
+      const finalRaci = await storage.getDecisionRaciAssignments(decision.id);
+      res.status(201).json({ ...finalDecision, raciAssignments: finalRaci });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      logger.error("Failed to create decision", error);
+      res.status(500).json({ message: "Failed to create decision" });
+    }
+  });
+
+  app.patch("/api/decisions/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+      if (user.role === 'sme' || user.role === 'view') {
+        return res.status(403).json({ message: "Insufficient permissions" });
+      }
+
+      const existing = await storage.getDecision(req.params.id);
+      if (!existing) return res.status(404).json({ message: "Decision not found" });
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== existing.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { raciAssignments, ...updates } = req.body;
+      const decision = await storage.updateDecision(req.params.id, updates);
+
+      if (raciAssignments && Array.isArray(raciAssignments)) {
+        await storage.setDecisionRaciAssignments(req.params.id, raciAssignments);
+      }
+
+      const finalRaci = await storage.getDecisionRaciAssignments(req.params.id);
+      res.json({ ...decision, raciAssignments: finalRaci });
+    } catch (error) {
+      logger.error("Failed to update decision", error);
+      res.status(500).json({ message: "Failed to update decision" });
+    }
+  });
+
+  app.delete("/api/decisions/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(401).json({ message: "User not found" });
+      if (user.role !== 'administrator' && user.isSuperAdmin !== 'true') {
+        return res.status(403).json({ message: "Only administrators can delete decisions" });
+      }
+
+      const existing = await storage.getDecision(req.params.id);
+      if (!existing) return res.status(404).json({ message: "Decision not found" });
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== existing.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const deleted = await storage.deleteDecision(req.params.id);
+      if (!deleted) return res.status(500).json({ message: "Failed to delete decision" });
+      res.json({ message: "Decision deleted" });
+    } catch (error) {
+      logger.error("Failed to delete decision", error);
+      res.status(500).json({ message: "Failed to delete decision" });
     }
   });
 

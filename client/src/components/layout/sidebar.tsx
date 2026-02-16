@@ -24,12 +24,14 @@ import {
   ClipboardList,
   Inbox,
   Presentation,
+  Scale,
 } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import logoImage from "@assets/Strategy_Plan_Logo_2.0_-_dark_1764957298563.png";
 
 const coreNavigation = [
   { name: "Priorities", href: "/strategies", icon: Target, iconColor: "#007AFF" },
+  { name: "Decision Log", href: "/decision-log", icon: Scale, iconColor: "#6B21A8" },
 ];
 
 const secondaryNavigation = [

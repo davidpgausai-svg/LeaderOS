@@ -406,5 +406,33 @@ function getCreateTableStatements(): string[] {
       "created_at" integer,
       "updated_at" integer
     )`,
+
+    `CREATE TABLE IF NOT EXISTS "decisions" (
+      "id" text PRIMARY KEY,
+      "organization_id" text NOT NULL,
+      "title" text NOT NULL,
+      "description" text,
+      "category" text NOT NULL DEFAULT 'strategic',
+      "status" text NOT NULL DEFAULT 'proposed',
+      "escalation_level" text NOT NULL DEFAULT 'work_stream_lead',
+      "outcome" text,
+      "rationale" text,
+      "impact_notes" text,
+      "strategy_id" text,
+      "due_date" integer,
+      "decision_date" integer,
+      "created_by" text NOT NULL,
+      "created_at" integer,
+      "updated_at" integer
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS "decision_raci_assignments" (
+      "id" text PRIMARY KEY,
+      "decision_id" text NOT NULL,
+      "user_id" text NOT NULL,
+      "role" text NOT NULL,
+      "created_at" integer,
+      UNIQUE("decision_id", "user_id", "role")
+    )`,
   ];
 }
