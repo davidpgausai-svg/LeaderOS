@@ -877,58 +877,6 @@ export const insertPhaseSchema = createInsertSchema(phases).omit({
 export type InsertPhase = z.infer<typeof insertPhaseSchema>;
 export type Phase = typeof phases.$inferSelect;
 
-export const workstreamTasks = sqliteTable("workstream_tasks", {
-  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
-  organizationId: text("organization_id").notNull(),
-  workstreamId: text("workstream_id").notNull(),
-  phaseId: text("phase_id").notNull(),
-  name: text("name").notNull(),
-  description: text("description"),
-  owner: text("owner"),
-  plannedStart: integer("planned_start", { mode: "timestamp" }),
-  plannedEnd: integer("planned_end", { mode: "timestamp" }),
-  actualStart: integer("actual_start", { mode: "timestamp" }),
-  actualEnd: integer("actual_end", { mode: "timestamp" }),
-  durationDays: integer("duration_days").notNull().default(1),
-  percentComplete: integer("percent_complete").notNull().default(0),
-  status: text("status").notNull().default("not_started"),
-  isMilestone: text("is_milestone").notNull().default("false"),
-  milestoneType: text("milestone_type"),
-  sortOrder: integer("sort_order").notNull().default(0),
-  isCritical: text("is_critical").notNull().default("false"),
-  earlyStart: integer("early_start", { mode: "timestamp" }),
-  earlyEnd: integer("early_end", { mode: "timestamp" }),
-  lateStart: integer("late_start", { mode: "timestamp" }),
-  lateEnd: integer("late_end", { mode: "timestamp" }),
-  totalFloat: integer("total_float"),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-});
-
-export const insertWorkstreamTaskSchema = createInsertSchema(workstreamTasks).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  organizationId: true,
-  isCritical: true,
-  earlyStart: true,
-  earlyEnd: true,
-  lateStart: true,
-  lateEnd: true,
-  totalFloat: true,
-}).extend({
-  status: z.enum(["not_started", "in_progress", "complete", "blocked"]).default("not_started"),
-  isMilestone: z.enum(["true", "false"]).default("false"),
-  milestoneType: z.enum(["workstream_gate", "program_gate"]).nullable().optional(),
-  plannedStart: z.coerce.date().optional().nullable(),
-  plannedEnd: z.coerce.date().optional().nullable(),
-  actualStart: z.coerce.date().optional().nullable(),
-  actualEnd: z.coerce.date().optional().nullable(),
-});
-
-export type InsertWorkstreamTask = z.infer<typeof insertWorkstreamTaskSchema>;
-export type WorkstreamTask = typeof workstreamTasks.$inferSelect;
-
 export const workstreamDependencies = sqliteTable("workstream_dependencies", {
   id: text("id").primaryKey().$defaultFn(() => randomUUID()),
   predecessorTaskId: text("predecessor_task_id").notNull(),

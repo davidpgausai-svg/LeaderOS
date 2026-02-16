@@ -517,34 +517,6 @@ function getCreateTableStatements(): string[] {
       "updated_at" integer
     )`,
 
-    `CREATE TABLE IF NOT EXISTS "workstream_tasks" (
-      "id" text PRIMARY KEY,
-      "organization_id" text NOT NULL,
-      "workstream_id" text NOT NULL,
-      "phase_id" text NOT NULL,
-      "name" text NOT NULL,
-      "description" text,
-      "owner" text,
-      "planned_start" integer,
-      "planned_end" integer,
-      "actual_start" integer,
-      "actual_end" integer,
-      "duration_days" integer NOT NULL DEFAULT 1,
-      "percent_complete" integer NOT NULL DEFAULT 0,
-      "status" text NOT NULL DEFAULT 'not_started',
-      "is_milestone" text NOT NULL DEFAULT 'false',
-      "milestone_type" text,
-      "sort_order" integer NOT NULL DEFAULT 0,
-      "is_critical" text NOT NULL DEFAULT 'false',
-      "early_start" integer,
-      "early_end" integer,
-      "late_start" integer,
-      "late_end" integer,
-      "total_float" integer,
-      "created_at" integer,
-      "updated_at" integer
-    )`,
-
     `CREATE TABLE IF NOT EXISTS "workstream_dependencies" (
       "id" text PRIMARY KEY,
       "predecessor_task_id" text NOT NULL,

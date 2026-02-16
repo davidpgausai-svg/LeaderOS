@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertStrategySchema, insertProjectSchema, insertActionSchema, insertActionDocumentSchema, insertActionChecklistItemSchema, insertMeetingNoteSchema, insertBarrierSchema, insertDependencySchema, insertTemplateTypeSchema, insertExecutiveGoalSchema, insertTeamTagSchema, insertUserStrategyAssignmentSchema, insertProjectResourceAssignmentSchema, insertActionPeopleAssignmentSchema, insertPtoEntrySchema, insertHolidaySchema, insertIntakeFormSchema, insertReportOutDeckSchema, insertDecisionSchema, insertDecisionRaciSchema, insertWorkstreamSchema, insertPhaseSchema, insertWorkstreamTaskSchema, insertWorkstreamDependencySchema, insertGateCriteriaSchema } from "@shared/schema";
+import { insertStrategySchema, insertProjectSchema, insertActionSchema, insertActionDocumentSchema, insertActionChecklistItemSchema, insertMeetingNoteSchema, insertBarrierSchema, insertDependencySchema, insertTemplateTypeSchema, insertExecutiveGoalSchema, insertTeamTagSchema, insertUserStrategyAssignmentSchema, insertProjectResourceAssignmentSchema, insertActionPeopleAssignmentSchema, insertPtoEntrySchema, insertHolidaySchema, insertIntakeFormSchema, insertReportOutDeckSchema, insertDecisionSchema, insertDecisionRaciSchema, insertWorkstreamSchema, insertPhaseSchema, insertWorkstreamDependencySchema, insertGateCriteriaSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./jwtAuth";
 import { z, ZodSchema, ZodError } from "zod";
 import { logger } from "./logger";
@@ -5897,7 +5897,7 @@ ${outputTemplate}`;
 
       const parsed = insertWorkstreamDependencySchema.parse(req.body);
 
-      const predecessorTask = await storage.getWorkstreamTask(parsed.predecessorTaskId);
+      const predecessorTask = await storage.getAction(parsed.predecessorTaskId);
       if (!predecessorTask) return res.status(404).json({ message: "Predecessor task not found" });
       if (user.isSuperAdmin !== 'true' && user.organizationId !== predecessorTask.organizationId) {
         return res.status(403).json({ message: "Access denied" });
@@ -5946,7 +5946,7 @@ ${outputTemplate}`;
       if (!gateTaskId) return res.status(400).json({ message: "gateTaskId is required" });
 
       const action = await storage.getAction(gateTaskId);
-      const task = action || await storage.getWorkstreamTask(gateTaskId);
+      const task = action;
       if (!task) return res.status(404).json({ message: "Gate task not found" });
       if (user.isSuperAdmin !== 'true' && user.organizationId !== task.organizationId) {
         return res.status(403).json({ message: "Access denied" });
@@ -5973,7 +5973,7 @@ ${outputTemplate}`;
       const parsed = insertGateCriteriaSchema.parse(req.body);
 
       const action = await storage.getAction(parsed.gateTaskId);
-      const task = action || await storage.getWorkstreamTask(parsed.gateTaskId);
+      const task = action;
       if (!task) return res.status(404).json({ message: "Gate task not found" });
       if (user.isSuperAdmin !== 'true' && user.organizationId !== task.organizationId) {
         return res.status(403).json({ message: "Access denied" });
