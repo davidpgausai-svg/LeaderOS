@@ -34,9 +34,6 @@ import {
   type PtoEntry, type InsertPtoEntry,
   type Holiday, type InsertHoliday,
   type ProjectSnapshot, type InsertProjectSnapshot,
-  type IntakeForm, type InsertIntakeForm,
-  type IntakeSubmission, type InsertIntakeSubmission,
-  intakeForms, intakeSubmissions,
   decisions, decisionRaciAssignments,
   type Decision, type InsertDecision,
   type DecisionRaci, type InsertDecisionRaci,
@@ -1269,94 +1266,6 @@ export class DatabaseStorage implements IStorage {
     }
 
     return newProject;
-  }
-
-  // Intake Form methods
-  async getIntakeFormsByOrganization(organizationId: string): Promise<IntakeForm[]> {
-    return db.select().from(intakeForms)
-      .where(eq(intakeForms.organizationId, organizationId))
-      .orderBy(desc(intakeForms.createdAt));
-  }
-
-  async getIntakeForm(id: string): Promise<IntakeForm | undefined> {
-    const [form] = await db.select().from(intakeForms).where(eq(intakeForms.id, id));
-    return form || undefined;
-  }
-
-  async getIntakeFormBySlug(slug: string): Promise<IntakeForm | undefined> {
-    const [form] = await db.select().from(intakeForms).where(eq(intakeForms.slug, slug));
-    return form || undefined;
-  }
-
-  async createIntakeForm(form: InsertIntakeForm & { createdBy: string; organizationId: string }): Promise<IntakeForm> {
-    const [created] = await db.insert(intakeForms).values({
-      id: randomUUID(),
-      ...form,
-    }).returning();
-    return created;
-  }
-
-  async updateIntakeForm(id: string, updates: Partial<IntakeForm>): Promise<IntakeForm | undefined> {
-    const [form] = await db.update(intakeForms)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(intakeForms.id, id))
-      .returning();
-    return form || undefined;
-  }
-
-  async deleteIntakeForm(id: string): Promise<boolean> {
-    await db.delete(intakeSubmissions).where(eq(intakeSubmissions.formId, id));
-    const result = await db.delete(intakeForms).where(eq(intakeForms.id, id)).returning();
-    return result.length > 0;
-  }
-
-  // Intake Submission methods
-  async getIntakeSubmissionsByOrganization(organizationId: string): Promise<IntakeSubmission[]> {
-    return db.select().from(intakeSubmissions)
-      .where(eq(intakeSubmissions.organizationId, organizationId))
-      .orderBy(desc(intakeSubmissions.submittedAt));
-  }
-
-  async getIntakeSubmissionsByForm(formId: string): Promise<IntakeSubmission[]> {
-    return db.select().from(intakeSubmissions)
-      .where(eq(intakeSubmissions.formId, formId))
-      .orderBy(desc(intakeSubmissions.submittedAt));
-  }
-
-  async getIntakeSubmission(id: string): Promise<IntakeSubmission | undefined> {
-    const [submission] = await db.select().from(intakeSubmissions).where(eq(intakeSubmissions.id, id));
-    return submission || undefined;
-  }
-
-  async createIntakeSubmission(submission: InsertIntakeSubmission & { status?: string; assignedStrategyId?: string; assignedProjectId?: string }): Promise<IntakeSubmission> {
-    const [created] = await db.insert(intakeSubmissions).values({
-      id: randomUUID(),
-      ...submission,
-    }).returning();
-    return created;
-  }
-
-  async updateIntakeSubmission(id: string, updates: Partial<IntakeSubmission>): Promise<IntakeSubmission | undefined> {
-    const [submission] = await db.update(intakeSubmissions)
-      .set(updates)
-      .where(eq(intakeSubmissions.id, id))
-      .returning();
-    return submission || undefined;
-  }
-
-  async countSubmissionsByEmail(formId: string, email: string): Promise<number> {
-    const results = await db.select().from(intakeSubmissions)
-      .where(and(
-        eq(intakeSubmissions.formId, formId),
-        eq(intakeSubmissions.submitterEmail, email.toLowerCase())
-      ));
-    return results.length;
-  }
-
-  async countTotalSubmissions(formId: string): Promise<number> {
-    const results = await db.select().from(intakeSubmissions)
-      .where(eq(intakeSubmissions.formId, formId));
-    return results.length;
   }
 
   async getDecisionsByOrganization(organizationId: string): Promise<Decision[]> {

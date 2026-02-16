@@ -403,41 +403,6 @@ function getCreateTableStatements(): string[] {
       "created_at" integer
     )`,
 
-    `CREATE TABLE IF NOT EXISTS "intake_forms" (
-      "id" text PRIMARY KEY,
-      "title" text NOT NULL,
-      "description" text,
-      "slug" text NOT NULL,
-      "fields" text NOT NULL DEFAULT '[]',
-      "is_active" text NOT NULL DEFAULT 'true',
-      "expires_at" integer,
-      "max_submissions_per_email" integer,
-      "max_total_submissions" integer,
-      "thank_you_message" text DEFAULT 'Thank you for your submission!',
-      "default_strategy_id" text,
-      "default_project_id" text,
-      "organization_id" text NOT NULL,
-      "created_by" text NOT NULL,
-      "created_at" integer,
-      "updated_at" integer,
-      UNIQUE("organization_id", "slug")
-    )`,
-
-    `CREATE TABLE IF NOT EXISTS "intake_submissions" (
-      "id" text PRIMARY KEY,
-      "form_id" text NOT NULL,
-      "data" text NOT NULL DEFAULT '{}',
-      "submitter_email" text,
-      "submitter_name" text,
-      "status" text NOT NULL DEFAULT 'new',
-      "assigned_strategy_id" text,
-      "assigned_project_id" text,
-      "reviewed_by" text,
-      "reviewed_at" integer,
-      "organization_id" text NOT NULL,
-      "submitted_at" integer
-    )`,
-
     `CREATE TABLE IF NOT EXISTS "decisions" (
       "id" text PRIMARY KEY,
       "organization_id" text NOT NULL,

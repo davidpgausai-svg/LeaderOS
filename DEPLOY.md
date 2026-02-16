@@ -162,7 +162,7 @@ Unlike PostgreSQL, there's no separate migration command. Just start the server 
 
 ### Resend (Email) — Recommended
 
-**What it's used for**: Password reset emails, 2FA verification codes, notification emails, scheduled email reminders, intake form notifications.
+**What it's used for**: Password reset emails, 2FA verification codes, notification emails, scheduled email reminders.
 
 **How to set up**:
 1. Sign up at [resend.com](https://resend.com) (free tier: 100 emails/day)

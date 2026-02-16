@@ -30,7 +30,6 @@ Input validation is enforced using Zod schema validation middleware across all A
 ### Key Features
 - **Password Reset System**: Email-based flow with secure, expiring tokens.
 - **Secure Registration**: Requires an organization-specific token for user registration, with the first registrant becoming an Administrator.
-- **Intake Forms System**: External, public-facing forms with a form builder, submission management, and various limits (e.g., expiration, submission caps).
 - **Personalized Dashboard**: Displays assigned "To-Dos" and "Your Projects" for the logged-in user.
 - **People Resource Features**: Allows users to be assigned to projects (with hours/week allocation) and actions (for to-do list tagging).
 - **Progress Calculation**: Backend-driven cascading progress calculation for actions, projects, and strategies.

@@ -20,8 +20,6 @@ import {
   CalendarDays,
   GanttChart,
   Crown,
-  ClipboardList,
-  Inbox,
   Scale,
 } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/notification-bell";
@@ -245,71 +243,6 @@ export function Sidebar() {
           <NotificationBell isCollapsed={isCollapsed} />
         </div>
         
-        {/* Intake Forms - Admin only */}
-        {currentRole === 'administrator' && (() => {
-          const intakeItems = [
-            { name: "Intake Forms", href: "/intake-forms", icon: ClipboardList },
-            { name: "Submissions", href: "/intake-submissions", icon: Inbox },
-          ];
-          return intakeItems.map((item) => {
-            const isActive = isActiveRoute(item.href);
-            const Icon = item.icon;
-            const linkContent = (
-              <div
-                className={`flex items-center ${isCollapsed ? 'justify-center' : ''} px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm ${
-                  isActive ? "shadow-sm" : "hover:bg-black/5"
-                }`}
-                style={{
-                  backgroundColor: isActive ? '#007AFF' : 'transparent',
-                  color: isActive ? '#FFFFFF' : '#1D1D1F',
-                }}
-              >
-                <Icon className={`${isCollapsed ? '' : 'mr-3'} h-4 w-4`} style={{ color: isActive ? '#FFFFFF' : '#86868B' }} />
-                {!isCollapsed && item.name}
-              </div>
-            );
-            return (
-              <Link key={item.name} href={item.href}>
-                {isCollapsed ? (
-                  <Tooltip>
-                    <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
-                    <TooltipContent side="right">{item.name}</TooltipContent>
-                  </Tooltip>
-                ) : linkContent}
-              </Link>
-            );
-          });
-        })()}
-
-        {/* Submissions - Co-Lead (admin already sees it above) */}
-        {currentRole === 'co_lead' && (() => {
-          const isActive = isActiveRoute("/intake-submissions");
-          const linkContent = (
-            <div
-              className={`flex items-center ${isCollapsed ? 'justify-center' : ''} px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm ${
-                isActive ? "shadow-sm" : "hover:bg-black/5"
-              }`}
-              style={{
-                backgroundColor: isActive ? '#007AFF' : 'transparent',
-                color: isActive ? '#FFFFFF' : '#1D1D1F',
-              }}
-            >
-              <Inbox className={`${isCollapsed ? '' : 'mr-3'} h-4 w-4`} style={{ color: isActive ? '#FFFFFF' : '#86868B' }} />
-              {!isCollapsed && "Submissions"}
-            </div>
-          );
-          return (
-            <Link href="/intake-submissions">
-              {isCollapsed ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
-                  <TooltipContent side="right">Submissions</TooltipContent>
-                </Tooltip>
-              ) : linkContent}
-            </Link>
-          );
-        })()}
-
         {/* Super Admin Link - Only visible to Super Admins */}
         {isSuperAdmin() && (() => {
           const isAdminActive = isActiveRoute("/super-admin");

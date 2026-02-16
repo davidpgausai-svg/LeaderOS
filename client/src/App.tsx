@@ -18,9 +18,6 @@ import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
 import SuperAdmin from "@/pages/super-admin";
 import ForceChangePassword from "@/pages/force-change-password";
-import IntakeForms from "@/pages/intake-forms";
-import IntakeSubmissions from "@/pages/intake-submissions";
-import PublicIntake from "@/pages/public-intake";
 import DecisionLog from "@/pages/decision-log";
 
 function Router() {
@@ -35,7 +32,6 @@ function Router() {
     return (
       <Switch>
         <Route path="/register/:token" component={Register} />
-        <Route path="/intake/:slug" component={PublicIntake} />
         <Route path="/forgot-password" component={ForgotPassword} />
         <Route path="/reset-password" component={ResetPassword} />
         <Route path="/landing" component={Landing} />
@@ -62,9 +58,6 @@ function Router() {
         <Route path="/decision-log" component={DecisionLog} />
         <Route path="/reports" component={Reports} />
         <Route path="/settings" component={Settings} />
-        <Route path="/intake-forms" component={IntakeForms} />
-        <Route path="/intake-submissions" component={IntakeSubmissions} />
-        <Route path="/intake/:slug" component={PublicIntake} />
         <Route path="/super-admin" component={SuperAdmin} />
         <Route component={NotFound} />
       </Switch>

@@ -1,4 +1,4 @@
-import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Project, type InsertProject, type Activity, type InsertActivity, type Action, type InsertAction, type Notification, type InsertNotification, type ActionDocument, type InsertActionDocument, type ActionChecklistItem, type InsertActionChecklistItem, type CreateActionChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type Barrier, type InsertBarrier, type Dependency, type InsertDependency, type TemplateType, type InsertTemplateType, type ExecutiveGoal, type InsertExecutiveGoal, type StrategyExecutiveGoal, type TeamTag, type InsertTeamTag, type ProjectTeamTag, type UserTeamTag, type ProjectResourceAssignment, type InsertProjectResourceAssignment, type ActionPeopleAssignment, type InsertActionPeopleAssignment, type PtoEntry, type InsertPtoEntry, type Holiday, type InsertHoliday, type ProjectSnapshot, type InsertProjectSnapshot, type IntakeForm, type InsertIntakeForm, type IntakeSubmission, type InsertIntakeSubmission, type Decision, type InsertDecision, type DecisionRaci, type InsertDecisionRaci, type Workstream, type InsertWorkstream, type Phase, type InsertPhase, type WorkstreamDependency, type InsertWorkstreamDependency, type GateCriteria, type InsertGateCriteria } from "@shared/schema";
+import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Project, type InsertProject, type Activity, type InsertActivity, type Action, type InsertAction, type Notification, type InsertNotification, type ActionDocument, type InsertActionDocument, type ActionChecklistItem, type InsertActionChecklistItem, type CreateActionChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type Barrier, type InsertBarrier, type Dependency, type InsertDependency, type TemplateType, type InsertTemplateType, type ExecutiveGoal, type InsertExecutiveGoal, type StrategyExecutiveGoal, type TeamTag, type InsertTeamTag, type ProjectTeamTag, type UserTeamTag, type ProjectResourceAssignment, type InsertProjectResourceAssignment, type ActionPeopleAssignment, type InsertActionPeopleAssignment, type PtoEntry, type InsertPtoEntry, type Holiday, type InsertHoliday, type ProjectSnapshot, type InsertProjectSnapshot, type Decision, type InsertDecision, type DecisionRaci, type InsertDecisionRaci, type Workstream, type InsertWorkstream, type Phase, type InsertPhase, type WorkstreamDependency, type InsertWorkstreamDependency, type GateCriteria, type InsertGateCriteria } from "@shared/schema";
 
 export interface IStorage {
   // User methods
@@ -171,23 +171,6 @@ export interface IStorage {
   archiveProject(projectId: string, archivedBy: string, reason?: string, wakeUpDate?: Date): Promise<Project | undefined>;
   unarchiveProject(projectId: string, restoredBy: string): Promise<Project | undefined>;
   copyProject(projectId: string, newTitle: string, createdBy: string, asTemplate?: boolean): Promise<Project | undefined>;
-
-  // Intake Form methods
-  getIntakeFormsByOrganization(organizationId: string): Promise<IntakeForm[]>;
-  getIntakeForm(id: string): Promise<IntakeForm | undefined>;
-  getIntakeFormBySlug(slug: string): Promise<IntakeForm | undefined>;
-  createIntakeForm(form: InsertIntakeForm & { createdBy: string; organizationId: string }): Promise<IntakeForm>;
-  updateIntakeForm(id: string, updates: Partial<IntakeForm>): Promise<IntakeForm | undefined>;
-  deleteIntakeForm(id: string): Promise<boolean>;
-
-  // Intake Submission methods
-  getIntakeSubmissionsByOrganization(organizationId: string): Promise<IntakeSubmission[]>;
-  getIntakeSubmissionsByForm(formId: string): Promise<IntakeSubmission[]>;
-  getIntakeSubmission(id: string): Promise<IntakeSubmission | undefined>;
-  createIntakeSubmission(submission: InsertIntakeSubmission & { status?: string; assignedStrategyId?: string; assignedProjectId?: string }): Promise<IntakeSubmission>;
-  updateIntakeSubmission(id: string, updates: Partial<IntakeSubmission>): Promise<IntakeSubmission | undefined>;
-  countSubmissionsByEmail(formId: string, email: string): Promise<number>;
-  countTotalSubmissions(formId: string): Promise<number>;
 
   // Decision Log methods
   getDecisionsByOrganization(organizationId: string): Promise<Decision[]>;
