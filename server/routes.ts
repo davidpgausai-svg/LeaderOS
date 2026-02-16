@@ -5467,6 +5467,17 @@ ${outputTemplate}`;
       }
 
       const workstream = await storage.updateWorkstream(req.params.id, req.body);
+
+      if (req.body.name && req.body.name !== existing.name) {
+        const allProjects = await storage.getProjectsByOrganization(existing.organizationId);
+        const linkedProjects = allProjects.filter(
+          (p: any) => p.isWorkstream === 'true' && p.workstreamId === req.params.id
+        );
+        for (const proj of linkedProjects) {
+          await storage.updateProject(proj.id, { title: req.body.name });
+        }
+      }
+
       res.json(workstream);
     } catch (error) {
       logger.error("Failed to update workstream", error);
