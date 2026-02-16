@@ -224,6 +224,7 @@ export interface IStorage {
 
   // Phase methods
   getPhasesByStrategy(strategyId: string): Promise<Phase[]>;
+  getPhasesByOrganization(organizationId: string): Promise<Phase[]>;
   getPhase(id: string): Promise<Phase | undefined>;
   createPhase(phase: InsertPhase & { organizationId: string }): Promise<Phase>;
   updatePhase(id: string, updates: Partial<Phase>): Promise<Phase | undefined>;

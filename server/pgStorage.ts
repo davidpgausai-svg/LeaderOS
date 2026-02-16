@@ -1531,6 +1531,12 @@ export class DatabaseStorage implements IStorage {
       .orderBy(phases.sequence);
   }
 
+  async getPhasesByOrganization(organizationId: string): Promise<Phase[]> {
+    return db.select().from(phases)
+      .where(eq(phases.organizationId, organizationId))
+      .orderBy(phases.sequence);
+  }
+
   async getPhase(id: string): Promise<Phase | undefined> {
     const [phase] = await db.select().from(phases).where(eq(phases.id, id));
     return phase || undefined;

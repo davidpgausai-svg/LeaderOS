@@ -5509,16 +5509,19 @@ ${outputTemplate}`;
       if (!user) return res.status(401).json({ message: "User not found" });
 
       const strategyId = req.query.strategyId as string;
-      if (!strategyId) return res.status(400).json({ message: "strategyId is required" });
-
-      const strategy = await storage.getStrategy(strategyId);
-      if (!strategy) return res.status(404).json({ message: "Strategy not found" });
-      if (user.isSuperAdmin !== 'true' && user.organizationId !== strategy.organizationId) {
-        return res.status(403).json({ message: "Access denied" });
+      if (strategyId) {
+        const strategy = await storage.getStrategy(strategyId);
+        if (!strategy) return res.status(404).json({ message: "Strategy not found" });
+        if (user.isSuperAdmin !== 'true' && user.organizationId !== strategy.organizationId) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+        const result = await storage.getPhasesByStrategy(strategyId);
+        return res.json(result);
       }
 
-      const phases = await storage.getPhasesByStrategy(strategyId);
-      res.json(phases);
+      if (!user.organizationId) return res.status(400).json({ message: "User has no organization" });
+      const allPhases = await storage.getPhasesByOrganization(user.organizationId);
+      res.json(allPhases);
     } catch (error) {
       logger.error("Failed to fetch phases", error);
       res.status(500).json({ message: "Failed to fetch phases" });

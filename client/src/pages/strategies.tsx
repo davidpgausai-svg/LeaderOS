@@ -214,14 +214,12 @@ export default function Strategies() {
   });
 
   const { data: phases = [] } = useQuery<any[]>({
-    queryKey: ["/api/phases", selectedStrategy?.id],
+    queryKey: ["/api/phases"],
     queryFn: async () => {
-      if (!selectedStrategy?.id) return [];
-      const res = await fetch(`/api/phases?strategyId=${selectedStrategy.id}`, { credentials: 'include' });
+      const res = await fetch(`/api/phases`, { credentials: 'include' });
       if (!res.ok) return [];
       return res.json();
     },
-    enabled: !!selectedStrategy?.id,
   });
 
   // Fetch resource assignments for the currently open modal project
@@ -2048,7 +2046,7 @@ export default function Strategies() {
                                   {isProjectExpanded && project.isWorkstream === 'true' && (() => {
                                     const wsActions = (actions || []).filter((a: any) => a.projectId === project.id && a.workstreamId);
                                     const strategyPhases = phases.filter((p: any) => p.strategyId === project.strategyId)
-                                      .sort((a: any, b: any) => (a.sequence || 0) - (b.sequence || 0));
+                                      .sort((a: any, b: any) => (a.sequence || a.orderIndex || 0) - (b.sequence || b.orderIndex || 0));
                                     const ungrouped = wsActions.filter((a: any) => !a.phaseId);
                                     return (
                                       <div className="border-t border-gray-200 dark:border-gray-700 bg-indigo-50/30 dark:bg-indigo-900/10 px-4 py-3">
