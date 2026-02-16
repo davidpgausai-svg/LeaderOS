@@ -1,0 +1,306 @@
+Here's the complete logic model. This is tool-agnostic — it works whether you're building in Smartsheet, MS Project, Jira, a custom app, or even a database-backed web tool.
+
+## Data Model
+
+You need five core entities and three relationship types.
+
+### Entities
+
+**1. Workstream** — The organizational unit that owns work.
+
+```
+Workstream {
+  id                  (unique identifier)
+  name                (e.g., "HCM & Payroll")
+  lead                (person responsible)
+  status              (Active, Complete, On Hold)
+}
+```
+
+Seed these from your program structure: HCM & Payroll, Finance & Grants, Supply Chain, Integrations, Data Conversion, Reporting & Analytics, Security & Access, Technical Infrastructure, OCM/Communications & Training, Program Management & Governance.
+
+**2. Phase** — The time-based stage of the program. These are global — they apply to every workstream.
+
+```
+Phase {
+  id
+  name                (e.g., "Design")
+  sequence            (integer for ordering: 1, 2, 3...)
+  planned_start       (date)
+  planned_end         (date)
+}
+```
+
+Seed these: Mobilize & Staff (1), Prepare & Plan (2), Architect & Design (3), Build & Configure (4), Test & Validate (5), Deploy & Cutover (6), Stabilize & Optimize (7).
+
+**3. Task** — The actual unit of work. Every task belongs to exactly one workstream and one phase.
+
+```
+Task {
+  id
+  workstream_id       (FK → Workstream)
+  phase_id            (FK → Phase)
+  name                (e.g., "Conduct Hire-to-Retire design workshops")
+  owner               (person assigned)
+  planned_start       (date)
+  planned_end         (date)
+  actual_start        (date, nullable)
+  actual_end          (date, nullable)
+  duration_days       (integer)
+  percent_complete    (0–100)
+  status              (Not Started, In Progress, Complete, Blocked)
+  is_milestone        (boolean — TRUE for zero-duration flags)
+  milestone_type      (nullable: "workstream_gate" or "program_gate")
+  sort_order          (integer for sequencing within workstream+phase)
+}
+```
+
+The key design decision: **every task lives at the intersection of one workstream and one phase.** This gives you the matrix. You can filter by workstream (vertical view for the workstream lead) or by phase (horizontal view for executives).
+
+**4. Dependency** — Links between tasks that control sequencing.
+
+```
+Dependency {
+  id
+  predecessor_task_id (FK → Task)
+  successor_task_id   (FK → Task)
+  type                (FS, FF, SS, SF — almost always FS)
+  lag_days            (integer, usually 0)
+}
+```
+
+**5. Gate Criteria** — The entry/exit conditions tied to program-level milestones.
+
+```
+GateCriteria {
+  id
+  gate_task_id        (FK → Task where milestone_type = "program_gate")
+  description         (e.g., "All FDDs signed off")
+  is_met              (boolean)
+  evidence            (text/link to artifact)
+  owner               (person who confirms)
+}
+```
+
+## Relationship Logic
+
+### How workstream milestones connect to program gates
+
+This is the core structural pattern. For each phase, you create one workstream-level milestone per workstream, then one program-level milestone that depends on all of them.
+
+```
+For each Phase P:
+  For each Workstream W:
+    Create Task:
+      workstream_id = W
+      phase_id = P
+      is_milestone = TRUE
+      milestone_type = "workstream_gate"
+      name = "{W.name} {P.name} COMPLETE"
+      
+      // Link as successor to the last non-milestone task 
+      // in this workstream+phase combination
+      Create Dependency:
+        predecessor = last task in (W, P) where is_milestone = FALSE
+        successor = this milestone
+        type = FS
+
+  Create Task:
+    workstream_id = "Program Management"  (or a dedicated "Phase Gates" workstream)
+    phase_id = P
+    is_milestone = TRUE
+    milestone_type = "program_gate"
+    name = "PG{P.sequence}: {P.name} PHASE EXIT"
+    
+    // Link ALL workstream gates for this phase as predecessors
+    For each workstream_gate in Phase P:
+      Create Dependency:
+        predecessor = workstream_gate
+        successor = this program_gate
+        type = FS
+```
+
+This means the program gate **cannot complete until every workstream gate for that phase is complete.** If one workstream slips, the program gate automatically slips. That's the mechanism that makes the matrix work.
+
+### How phases chain to each other
+
+The program gate for Phase N is a predecessor to the first task in Phase N+1 for every workstream. This enforces the gate — no workstream can start the next phase until the program-wide gate clears.
+
+```
+For each Phase P where P.sequence > 1:
+  previous_gate = program_gate where phase.sequence = P.sequence - 1
+  
+  For each Workstream W:
+    first_task = first task in (W, P) ordered by sort_order
+    Create Dependency:
+      predecessor = previous_gate
+      successor = first_task
+      type = FS
+```
+
+**However** — and this is important — in practice you'll want to soften this for certain workstreams. OCM, Integrations, and Data Conversion often start work in the next phase before every functional workstream has cleared the gate. You handle this by making those dependencies **SS (start-to-start) with a lag** instead of strict FS, or by simply not linking those workstreams to the program gate and instead linking them to their own predecessor logic. This is a judgment call you make workstream by workstream.
+
+## Date Calculation Logic
+
+### Forward pass (planned dates)
+
+```
+For each Task T, ordered by dependency chain (topological sort):
+  if T has no predecessors:
+    T.planned_start = Phase.planned_start (or manual entry)
+  else:
+    T.planned_start = MAX(
+      For each predecessor P of T:
+        if dependency.type = FS: P.planned_end + lag_days
+        if dependency.type = SS: P.planned_start + lag_days
+        if dependency.type = FF: P.planned_end + lag_days - T.duration_days
+        if dependency.type = SF: P.planned_start + lag_days - T.duration_days
+    )
+  
+  if T.is_milestone:
+    T.planned_end = T.planned_start  (zero duration)
+  else:
+    T.planned_end = T.planned_start + T.duration_days
+```
+
+### Milestone completion logic
+
+```
+For workstream_gate milestones:
+  T.status = "Complete" when:
+    ALL tasks in (T.workstream_id, T.phase_id) 
+    where is_milestone = FALSE 
+    have status = "Complete"
+
+For program_gate milestones:
+  T.status = "Complete" when:
+    ALL workstream_gate milestones for T.phase_id
+    have status = "Complete"
+    AND
+    ALL GateCriteria for T.id have is_met = TRUE
+```
+
+The second condition is important — even if all workstream tasks are technically done, the gate doesn't pass until someone has confirmed the qualitative criteria (FDDs signed off, Steering Committee approved, etc.).
+
+## RAG Status Calculation Logic
+
+This is what powers your dashboard. Calculate at three levels.
+
+### Task-level RAG
+
+```
+function calculateTaskRAG(task, today):
+  if task.status = "Complete": return GREEN
+  if task.status = "Blocked": return RED
+  
+  days_remaining = task.planned_end - today
+  days_of_work_remaining = task.duration_days * (1 - task.percent_complete / 100)
+  
+  if days_of_work_remaining <= days_remaining: return GREEN
+  if days_of_work_remaining <= days_remaining + buffer_days: return AMBER
+  return RED
+  
+  // buffer_days is a configurable threshold, typically 5–10 
+  // business days for ERP tasks
+```
+
+### Workstream-gate RAG
+
+```
+function calculateWorkstreamGateRAG(workstream_id, phase_id, today):
+  tasks = all tasks in (workstream_id, phase_id) where is_milestone = FALSE
+  
+  if ALL tasks are Complete: return GREEN
+  if ANY task is RED: return RED
+  if ANY task is AMBER: return AMBER
+  return GREEN
+```
+
+### Program-gate RAG
+
+```
+function calculateProgramGateRAG(program_gate_task, today):
+  workstream_gates = all predecessor milestones of program_gate_task
+  
+  if ALL workstream_gates are GREEN: 
+    // Also check gate criteria
+    criteria = GateCriteria for program_gate_task
+    if ALL criteria.is_met = TRUE: return GREEN
+    if program_gate_task.planned_end - today > 10: return AMBER
+    return RED
+    
+  if ANY workstream_gate is RED: return RED
+  return AMBER
+```
+
+## Critical Path Logic
+
+You need to know which tasks, if they slip, will slip the go-live date. This is the classic CPM (Critical Path Method) calculation.
+
+```
+function calculateCriticalPath(all_tasks):
+  // Forward pass: calculate earliest start/end
+  for each task in topological order:
+    task.early_start = MAX(predecessor.early_end + lag) for all predecessors
+    task.early_end = task.early_start + task.duration_days
+  
+  // Backward pass: calculate latest start/end  
+  project_end = MAX(task.early_end) for all tasks
+  for each task in reverse topological order:
+    task.late_end = MIN(successor.late_start - lag) for all successors
+    // if no successors: task.late_end = project_end
+    task.late_start = task.late_end - task.duration_days
+  
+  // Float = how much a task can slip without affecting go-live
+  for each task:
+    task.total_float = task.late_start - task.early_start
+    task.is_critical = (task.total_float == 0)
+  
+  // Critical path = all tasks where is_critical = TRUE
+  return tasks where is_critical = TRUE
+```
+
+Surface critical path tasks with a visual flag (red bar, bold line, or separate column). Your weekly PMO review should focus on tasks that are both on the critical path AND at risk.
+
+## View/Filter Logic for Different Audiences
+
+This is how you serve the same data model to different stakeholders.
+
+```
+// Workstream Lead View (vertical slice)
+filter: workstream_id = {their workstream}
+sort: phase.sequence, then sort_order
+show: all tasks and workstream milestones
+hide: other workstreams' tasks, program gates
+
+// Executive / Steering Committee View (horizontal slice)
+filter: milestone_type = "program_gate"
+show: gate name, planned date, RAG status, 
+      + rollup of workstream gate RAGs as sub-rows
+hide: all individual tasks
+
+// PMO / Program Manager View (full matrix)
+group by: workstream
+within group, sort by: phase.sequence, then sort_order
+highlight: is_critical = TRUE
+flag: RAG status on every milestone row
+
+// Phase Gate Review View (for gate meetings)
+filter: phase_id = {current phase}, is_milestone = TRUE
+show: all workstream gates + program gate + gate criteria
+sort: workstream name
+```
+
+## One Structural Decision You Need to Make
+
+**Cross-cutting workstreams** (Integrations, Data Conversion, Security) have tasks that depend on deliverables from functional workstreams. For example, "Build integration for Epic employee feed" depends on "HCM supervisory org design complete." You have two ways to model this:
+
+**Option A: Cross-workstream dependencies.** Create a dependency from the HCM task to the Integration task. This is technically correct but creates a very complex dependency web that's hard to maintain.
+
+**Option B: Shared milestone as handoff point.** The HCM workstream gate for Design is the trigger for the Integration workstream to begin building integrations that depend on HCM design decisions. You link the Integration Build tasks to the HCM Design milestone, not to individual HCM tasks. This is cleaner and more maintainable.
+
+I recommend **Option B** for program-level planning. You can always add granular task-to-task dependencies within a workstream, but across workstreams, use milestones as the handoff mechanism. It keeps the plan readable and reduces the risk of circular dependencies.
+
+---
+
+That's the complete logic. Do you want me to build out the seed data — the full task list for one workstream with all milestone flags, dependencies, and gate criteria — so you have a concrete template to code against?

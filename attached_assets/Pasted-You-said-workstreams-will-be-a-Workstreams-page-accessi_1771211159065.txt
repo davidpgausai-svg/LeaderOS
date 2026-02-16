@@ -1,0 +1,29 @@
+You said workstreams will be a "Workstreams page accessible from the sidebar." That contradicts the decision we landed on — workstreams connect to your existing Strategies, meaning they're Projects under a Strategy, not a standalone module. If you add a separate Workstreams sidebar section, you've built the standalone module we specifically decided against.
+Here's how to reconcile this: the Workstreams page should be a view within your existing Strategy/Project structure, not a new top-level navigation item. When a user clicks into an ERP Strategy, they see its workstreams (which are Projects) with the special views you described — matrix view, phase gate view, executive rollup. The views are what's new, not the navigation destination.
+If your app architecture makes that difficult and you truly need a sidebar entry, make it a shortcut that navigates to the ERP Strategy's project list with the workstream views pre-applied — not a separate data space.
+On the strategyId being optional
+Making strategyId optional on workstreams means you're allowing disconnected workstreams, which is the exact failure mode we discussed. Make it required. Every workstream must belong to a Strategy. If an administrator isn't ready to link to a Strategy yet, they aren't ready to create workstreams — they need the Strategy first. That's the correct sequencing anyway.
+On the five-table model
+The five tables are right, but clarify the relationship between workstream_tasks and your existing Actions table. You have two options:
+Option 1: workstream_tasks IS your existing Actions table with added columns (phase_id, is_milestone, milestone_type, duration_days, is_critical). This is better. You get the existing dependency logic, status tracking, assignments, and UI for free. Workstream tasks are just Actions with ERP-specific metadata.
+Option 2: workstream_tasks is a separate table. This means you're maintaining two task systems — your existing Actions and a parallel workstream task tracker. Users will ask "do I put this in Actions or in workstream tasks?" and the answer will never be clear.
+Go with Option 1. Extend Actions rather than duplicating them. The phase_id and milestone fields become nullable columns that are only populated when an Action belongs to a workstream-linked Project.
+On server-side calculations
+RAG status and milestone completion logic should be server-side, agreed. Be careful with critical path (CPM) though — it requires a full dependency graph traversal across potentially thousands of tasks. Two considerations:
+Compute on demand, cache aggressively. Don't recalculate CPM on every page load. Recalculate when a dependency or date changes, store the is_critical flag on each task, and serve the cached value. Invalidate when any task in the dependency chain is updated.
+Scope CPM to a single Strategy. Don't run it across the entire database. The critical path is only meaningful within one program's dependency graph.
+On seed data timing
+You said seed data inserts "when an organization creates its first workstream setup." Be more specific about the trigger. I'd recommend: when an administrator clicks "Create ERP Program" (or activates the template), the system creates the Strategy, the 10 workstream Projects under it, the 7 phase values, and the program-level gate milestones inside the Program Management workstream. All in one transaction. Don't trickle them in — the structure only makes sense as a complete set.
+What's missing from the plan
+Gate criteria. You have the gate_criteria table, which is good. Make sure the UI for program-level milestone Actions includes a checklist of criteria that must all be marked is_met = TRUE before the milestone can be completed. This is the qualitative layer that prevents someone from marking "PG1: Design Phase Exit" as done just because all tasks show 100% — the Steering Committee approval, the signed FDDs, the supervisory org sign-off all need explicit confirmation.
+The "contributes to" linkage. We discussed tagging workstream Projects with which Priorities they contribute to (Primary vs. Supporting). That's not in your five-table model. Either add a workstream_priorities join table or plan to handle it with your existing tagging system.
+Filtering by phase across workstreams. Your four views are good, but make sure the matrix view can be filtered to a single phase — "show me all workstreams' status in the Test phase only." That's the view the PMO will use in the weekly phase-gate readiness meeting.
+Summary of changes
+
+Not a new sidebar section — a view within your existing Strategy structure
+strategyId required, not optional
+Extend your existing Actions table instead of creating a parallel workstream_tasks table
+Cache CPM results, recompute on dependency/date changes only
+Seed all data in one transaction on template activation
+Add priority linkage to the data model
+Ensure gate criteria checklist blocks milestone completion in the UI
