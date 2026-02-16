@@ -10,6 +10,7 @@ import { CreateProjectModal } from "@/components/modals/create-project-modal";
 import { EditProjectModal } from "@/components/modals/edit-project-modal";
 import { ViewProjectModal } from "@/components/modals/view-project-modal";
 import { ManageBarriersModal } from "@/components/modals/manage-barriers-modal";
+import { WorkstreamModal } from "@/components/modals/workstream-modal";
 import { CreateActionModal } from "@/components/modals/create-action-modal";
 import { EditActionModal } from "@/components/modals/edit-action-modal";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -149,6 +150,10 @@ export default function Strategies() {
   const [kanbanViewProjects, setKanbanViewProjects] = useState<Set<string>>(new Set());
   const [draggedActionId, setDraggedActionId] = useState<string | null>(null);
   
+  // Workstream modal state
+  const [workstreamModalStrategyId, setWorkstreamModalStrategyId] = useState<string | null>(null);
+  const [workstreamModalTitle, setWorkstreamModalTitle] = useState<string>("");
+
   // Executive Goal tagging state
   const [executiveGoalModalStrategy, setExecutiveGoalModalStrategy] = useState<any>(null);
   const [selectedGoalIds, setSelectedGoalIds] = useState<string[]>([]);
@@ -1601,7 +1606,8 @@ export default function Strategies() {
                             <DropdownMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setLocation(`/workstreams/${strategy.id}`);
+                                setWorkstreamModalStrategyId(strategy.id);
+                                setWorkstreamModalTitle(strategy.title || "");
                               }}
                             >
                               <Network className="h-4 w-4 mr-2" />
@@ -2047,11 +2053,13 @@ export default function Strategies() {
                                             <Badge className="text-[10px] px-1.5 py-0 bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">
                                               {wsActions.length} workstream action{wsActions.length !== 1 ? 's' : ''}
                                             </Badge>
-                                            <Link href={`/workstreams/${project.strategyId}`}>
-                                              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-indigo-600 dark:text-indigo-400" onClick={(e) => e.stopPropagation()}>
-                                                Open Full Workstream View
-                                              </Button>
-                                            </Link>
+                                            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-indigo-600 dark:text-indigo-400" onClick={(e) => {
+                                              e.stopPropagation();
+                                              setWorkstreamModalStrategyId(project.strategyId);
+                                              setWorkstreamModalTitle(strategies?.find((s: any) => s.id === project.strategyId)?.title || "");
+                                            }}>
+                                              Open Full Workstream View
+                                            </Button>
                                           </div>
                                         </div>
                                         {strategyPhases.map((phase: any) => {
@@ -2610,6 +2618,12 @@ export default function Strategies() {
         open={isViewStrategyOpen}
         onOpenChange={setIsViewStrategyOpen}
         strategy={selectedStrategy}
+      />
+      <WorkstreamModal
+        open={!!workstreamModalStrategyId}
+        onOpenChange={(open) => { if (!open) setWorkstreamModalStrategyId(null); }}
+        strategyId={workstreamModalStrategyId || ""}
+        strategyTitle={workstreamModalTitle}
       />
       <CreateProjectModal
         isOpen={isCreateProjectOpen}

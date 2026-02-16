@@ -61,6 +61,7 @@ import {
   Building2,
   CalendarDays,
   Star,
+  LayoutGrid,
 } from "lucide-react";
 import type { TemplateType, Organization, ExecutiveGoal, TeamTag, PtoEntry, Holiday } from "@shared/schema";
 import { Pencil, X, Hash } from "lucide-react";
@@ -1285,6 +1286,25 @@ export default function Settings() {
   const [editingOrgName, setEditingOrgName] = useState(false);
   const [orgNameInput, setOrgNameInput] = useState("");
 
+  const [wsSelectedStrategyId, setWsSelectedStrategyId] = useState("");
+  const [wsNewName, setWsNewName] = useState("");
+  const [wsNewLead, setWsNewLead] = useState("");
+  const [wsShowAddForm, setWsShowAddForm] = useState(false);
+  const [wsEditingId, setWsEditingId] = useState<string | null>(null);
+  const [wsEditName, setWsEditName] = useState("");
+  const [wsEditLead, setWsEditLead] = useState("");
+  const [wsEditSortOrder, setWsEditSortOrder] = useState("");
+  const [phNewName, setPhNewName] = useState("");
+  const [phNewSequence, setPhNewSequence] = useState("");
+  const [phNewPlannedStart, setPhNewPlannedStart] = useState("");
+  const [phNewPlannedEnd, setPhNewPlannedEnd] = useState("");
+  const [phShowAddForm, setPhShowAddForm] = useState(false);
+  const [phEditingId, setPhEditingId] = useState<string | null>(null);
+  const [phEditName, setPhEditName] = useState("");
+  const [phEditSequence, setPhEditSequence] = useState("");
+  const [phEditPlannedStart, setPhEditPlannedStart] = useState("");
+  const [phEditPlannedEnd, setPhEditPlannedEnd] = useState("");
+
   const { data: users } = useQuery({
     queryKey: ["/api/users"],
   });
@@ -1320,6 +1340,144 @@ export default function Settings() {
   const currentOrg: Organization | undefined = orgInfo ? orgInfo as Organization : undefined;
 
   const canAddUsers = true;
+
+  interface Workstream {
+    id: string;
+    organizationId: string;
+    strategyId: string;
+    name: string;
+    lead: string | null;
+    status: string;
+    sortOrder: number;
+    createdAt: string | null;
+    updatedAt: string | null;
+  }
+
+  interface Phase {
+    id: string;
+    organizationId: string;
+    strategyId: string;
+    name: string;
+    sequence: number;
+    plannedStart: string | null;
+    plannedEnd: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+  }
+
+  const { data: workstreams = [], isLoading: wsLoading } = useQuery<Workstream[]>({
+    queryKey: ['/api/workstreams', wsSelectedStrategyId],
+    queryFn: async () => {
+      const res = await fetch(`/api/workstreams?strategyId=${wsSelectedStrategyId}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch workstreams');
+      return res.json();
+    },
+    enabled: !!wsSelectedStrategyId,
+  });
+
+  const { data: phases = [], isLoading: phLoading } = useQuery<Phase[]>({
+    queryKey: ['/api/phases', wsSelectedStrategyId],
+    queryFn: async () => {
+      const res = await fetch(`/api/phases?strategyId=${wsSelectedStrategyId}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch phases');
+      return res.json();
+    },
+    enabled: !!wsSelectedStrategyId,
+  });
+
+  const createWorkstreamMutation = useMutation({
+    mutationFn: async (data: { strategyId: string; name: string; lead?: string }) => {
+      const res = await apiRequest("POST", "/api/workstreams", data);
+      if (!res.ok) throw new Error('Failed to create workstream');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/workstreams', wsSelectedStrategyId] });
+      setWsNewName(""); setWsNewLead(""); setWsShowAddForm(false);
+      toast({ title: "Success", description: "Workstream created" });
+    },
+    onError: (err: Error) => { toast({ title: "Error", description: err.message, variant: "destructive" }); },
+  });
+
+  const updateWorkstreamMutation = useMutation({
+    mutationFn: async ({ id, ...data }: { id: string; name?: string; lead?: string; sortOrder?: number }) => {
+      const res = await apiRequest("PATCH", `/api/workstreams/${id}`, data);
+      if (!res.ok) throw new Error('Failed to update workstream');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/workstreams', wsSelectedStrategyId] });
+      setWsEditingId(null);
+      toast({ title: "Success", description: "Workstream updated" });
+    },
+    onError: (err: Error) => { toast({ title: "Error", description: err.message, variant: "destructive" }); },
+  });
+
+  const deleteWorkstreamMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("DELETE", `/api/workstreams/${id}`);
+      if (!res.ok) throw new Error('Failed to delete workstream');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/workstreams', wsSelectedStrategyId] });
+      toast({ title: "Success", description: "Workstream deleted" });
+    },
+    onError: (err: Error) => { toast({ title: "Error", description: err.message, variant: "destructive" }); },
+  });
+
+  const createPhaseMutation = useMutation({
+    mutationFn: async (data: { strategyId: string; name: string; sequence: number; plannedStart?: string; plannedEnd?: string }) => {
+      const res = await apiRequest("POST", "/api/phases", data);
+      if (!res.ok) throw new Error('Failed to create phase');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/phases', wsSelectedStrategyId] });
+      setPhNewName(""); setPhNewSequence(""); setPhNewPlannedStart(""); setPhNewPlannedEnd(""); setPhShowAddForm(false);
+      toast({ title: "Success", description: "Phase created" });
+    },
+    onError: (err: Error) => { toast({ title: "Error", description: err.message, variant: "destructive" }); },
+  });
+
+  const updatePhaseMutation = useMutation({
+    mutationFn: async ({ id, ...data }: { id: string; name?: string; sequence?: number; plannedStart?: string; plannedEnd?: string }) => {
+      const res = await apiRequest("PATCH", `/api/phases/${id}`, data);
+      if (!res.ok) throw new Error('Failed to update phase');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/phases', wsSelectedStrategyId] });
+      setPhEditingId(null);
+      toast({ title: "Success", description: "Phase updated" });
+    },
+    onError: (err: Error) => { toast({ title: "Error", description: err.message, variant: "destructive" }); },
+  });
+
+  const deletePhaseMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("DELETE", `/api/phases/${id}`);
+      if (!res.ok) throw new Error('Failed to delete phase');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/phases', wsSelectedStrategyId] });
+      toast({ title: "Success", description: "Phase deleted" });
+    },
+    onError: (err: Error) => { toast({ title: "Error", description: err.message, variant: "destructive" }); },
+  });
+
+  const seedProgramMutation = useMutation({
+    mutationFn: async (strategyId: string) => {
+      const res = await apiRequest("POST", "/api/workstreams/seed-program", { strategyId });
+      if (!res.ok) throw new Error('Failed to seed program');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/workstreams', wsSelectedStrategyId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/phases', wsSelectedStrategyId] });
+      toast({ title: "Success", description: "ERP program defaults have been seeded" });
+    },
+    onError: (err: Error) => { toast({ title: "Error", description: err.message, variant: "destructive" }); },
+  });
 
   // Update organization name mutation
   const updateOrgNameMutation = useMutation({
@@ -2605,6 +2763,7 @@ export default function Settings() {
                   { value: 'user-management', icon: Users, label: 'User Roles' },
                   { value: 'holidays', icon: Star, label: 'Holidays' },
                   { value: 'framework-management', icon: Target, label: 'Framework Order' },
+                  { value: 'workstreams', icon: LayoutGrid, label: 'Workstreams' },
                   { value: 'security', icon: Shield, label: 'Security' },
                   { value: 'data', icon: SettingsIcon, label: 'Data Management' },
                 ].map((tab) => {
@@ -3665,6 +3824,252 @@ export default function Settings() {
                         </Button>
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="workstreams" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <LayoutGrid className="h-5 w-5" />
+                      Workstream & Phase Configuration
+                    </CardTitle>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Manage workstream templates and phases for ERP program management. These are associated with strategies.
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-2">
+                      <Label>Select Strategy</Label>
+                      <div className="flex items-center gap-3">
+                        <Select value={wsSelectedStrategyId} onValueChange={setWsSelectedStrategyId}>
+                          <SelectTrigger className="w-[300px]">
+                            <SelectValue placeholder="Choose a strategy..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(strategies as any[])?.map((s: any) => (
+                              <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {wsSelectedStrategyId && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="outline" size="sm" disabled={seedProgramMutation.isPending}>
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                                Setup ERP Program
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Seed ERP Program Defaults</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will create default workstreams and phases for the selected strategy. Existing data will not be removed.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => seedProgramMutation.mutate(wsSelectedStrategyId)}>
+                                  Seed Defaults
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                      </div>
+                    </div>
+
+                    {wsSelectedStrategyId && (
+                      <>
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-semibold">Workstreams</h3>
+                            <Button size="sm" onClick={() => setWsShowAddForm(!wsShowAddForm)}>
+                              <Plus className="h-4 w-4 mr-2" />
+                              Add Workstream
+                            </Button>
+                          </div>
+
+                          {wsShowAddForm && (
+                            <div className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-800 space-y-3">
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Name</Label>
+                                  <Input value={wsNewName} onChange={(e) => setWsNewName(e.target.value)} placeholder="Workstream name" />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Lead</Label>
+                                  <Input value={wsNewLead} onChange={(e) => setWsNewLead(e.target.value)} placeholder="Lead (optional)" />
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button size="sm" disabled={!wsNewName.trim() || createWorkstreamMutation.isPending} onClick={() => createWorkstreamMutation.mutate({ strategyId: wsSelectedStrategyId, name: wsNewName.trim(), ...(wsNewLead.trim() ? { lead: wsNewLead.trim() } : {}) })}>
+                                  <Save className="h-4 w-4 mr-2" />
+                                  Save
+                                </Button>
+                                <Button size="sm" variant="ghost" onClick={() => { setWsShowAddForm(false); setWsNewName(""); setWsNewLead(""); }}>Cancel</Button>
+                              </div>
+                            </div>
+                          )}
+
+                          {wsLoading ? (
+                            <p className="text-sm text-gray-500">Loading workstreams...</p>
+                          ) : workstreams.length === 0 ? (
+                            <p className="text-sm text-gray-500 dark:text-gray-400">No workstreams found for this strategy.</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {workstreams.map((ws) => (
+                                <div key={ws.id} className="flex items-center justify-between p-3 border dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
+                                  {wsEditingId === ws.id ? (
+                                    <div className="flex-1 flex items-center gap-3">
+                                      <Input className="w-48" value={wsEditName} onChange={(e) => setWsEditName(e.target.value)} placeholder="Name" />
+                                      <Input className="w-36" value={wsEditLead} onChange={(e) => setWsEditLead(e.target.value)} placeholder="Lead" />
+                                      <Input className="w-20" type="number" value={wsEditSortOrder} onChange={(e) => setWsEditSortOrder(e.target.value)} placeholder="Order" />
+                                      <Button size="sm" disabled={updateWorkstreamMutation.isPending} onClick={() => updateWorkstreamMutation.mutate({ id: ws.id, name: wsEditName, lead: wsEditLead || undefined, sortOrder: wsEditSortOrder ? parseInt(wsEditSortOrder) : undefined })}>
+                                        <Save className="h-4 w-4" />
+                                      </Button>
+                                      <Button size="sm" variant="ghost" onClick={() => setWsEditingId(null)}>
+                                        <X className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <div className="flex items-center gap-3">
+                                        <span className="font-medium text-sm">{ws.name}</span>
+                                        {ws.lead && <Badge variant="secondary" className="text-xs">{ws.lead}</Badge>}
+                                        <Badge variant="outline" className="text-xs">{ws.status}</Badge>
+                                        <span className="text-xs text-gray-400">Order: {ws.sortOrder}</span>
+                                      </div>
+                                      <div className="flex items-center gap-1">
+                                        <Button variant="ghost" size="sm" onClick={() => { setWsEditingId(ws.id); setWsEditName(ws.name); setWsEditLead(ws.lead || ""); setWsEditSortOrder(String(ws.sortOrder)); }}>
+                                          <Pencil className="h-4 w-4" />
+                                        </Button>
+                                        <AlertDialog>
+                                          <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950">
+                                              <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                          </AlertDialogTrigger>
+                                          <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                              <AlertDialogTitle>Delete Workstream</AlertDialogTitle>
+                                              <AlertDialogDescription>Are you sure you want to delete "{ws.name}"? This action cannot be undone.</AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                              <AlertDialogAction onClick={() => deleteWorkstreamMutation.mutate(ws.id)} className="bg-red-600 hover:bg-red-700">Delete</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                          </AlertDialogContent>
+                                        </AlertDialog>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="border-t dark:border-gray-700 pt-6 space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-semibold">Phases</h3>
+                            <Button size="sm" onClick={() => setPhShowAddForm(!phShowAddForm)}>
+                              <Plus className="h-4 w-4 mr-2" />
+                              Add Phase
+                            </Button>
+                          </div>
+
+                          {phShowAddForm && (
+                            <div className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-800 space-y-3">
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Name</Label>
+                                  <Input value={phNewName} onChange={(e) => setPhNewName(e.target.value)} placeholder="Phase name" />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Sequence</Label>
+                                  <Input type="number" value={phNewSequence} onChange={(e) => setPhNewSequence(e.target.value)} placeholder="1" />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Planned Start</Label>
+                                  <Input type="date" value={phNewPlannedStart} onChange={(e) => setPhNewPlannedStart(e.target.value)} />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Planned End</Label>
+                                  <Input type="date" value={phNewPlannedEnd} onChange={(e) => setPhNewPlannedEnd(e.target.value)} />
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button size="sm" disabled={!phNewName.trim() || !phNewSequence || createPhaseMutation.isPending} onClick={() => createPhaseMutation.mutate({ strategyId: wsSelectedStrategyId, name: phNewName.trim(), sequence: parseInt(phNewSequence), ...(phNewPlannedStart ? { plannedStart: phNewPlannedStart } : {}), ...(phNewPlannedEnd ? { plannedEnd: phNewPlannedEnd } : {}) })}>
+                                  <Save className="h-4 w-4 mr-2" />
+                                  Save
+                                </Button>
+                                <Button size="sm" variant="ghost" onClick={() => { setPhShowAddForm(false); setPhNewName(""); setPhNewSequence(""); setPhNewPlannedStart(""); setPhNewPlannedEnd(""); }}>Cancel</Button>
+                              </div>
+                            </div>
+                          )}
+
+                          {phLoading ? (
+                            <p className="text-sm text-gray-500">Loading phases...</p>
+                          ) : phases.length === 0 ? (
+                            <p className="text-sm text-gray-500 dark:text-gray-400">No phases found for this strategy.</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {phases.map((ph) => (
+                                <div key={ph.id} className="flex items-center justify-between p-3 border dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
+                                  {phEditingId === ph.id ? (
+                                    <div className="flex-1 flex items-center gap-3">
+                                      <Input className="w-48" value={phEditName} onChange={(e) => setPhEditName(e.target.value)} placeholder="Name" />
+                                      <Input className="w-20" type="number" value={phEditSequence} onChange={(e) => setPhEditSequence(e.target.value)} placeholder="Seq" />
+                                      <Input className="w-36" type="date" value={phEditPlannedStart} onChange={(e) => setPhEditPlannedStart(e.target.value)} />
+                                      <Input className="w-36" type="date" value={phEditPlannedEnd} onChange={(e) => setPhEditPlannedEnd(e.target.value)} />
+                                      <Button size="sm" disabled={updatePhaseMutation.isPending} onClick={() => updatePhaseMutation.mutate({ id: ph.id, name: phEditName, sequence: parseInt(phEditSequence), ...(phEditPlannedStart ? { plannedStart: phEditPlannedStart } : {}), ...(phEditPlannedEnd ? { plannedEnd: phEditPlannedEnd } : {}) })}>
+                                        <Save className="h-4 w-4" />
+                                      </Button>
+                                      <Button size="sm" variant="ghost" onClick={() => setPhEditingId(null)}>
+                                        <X className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <div className="flex items-center gap-3">
+                                        <span className="font-medium text-sm">{ph.name}</span>
+                                        <Badge variant="outline" className="text-xs">Seq: {ph.sequence}</Badge>
+                                        {ph.plannedStart && <span className="text-xs text-gray-400">Start: {ph.plannedStart}</span>}
+                                        {ph.plannedEnd && <span className="text-xs text-gray-400">End: {ph.plannedEnd}</span>}
+                                      </div>
+                                      <div className="flex items-center gap-1">
+                                        <Button variant="ghost" size="sm" onClick={() => { setPhEditingId(ph.id); setPhEditName(ph.name); setPhEditSequence(String(ph.sequence)); setPhEditPlannedStart(ph.plannedStart || ""); setPhEditPlannedEnd(ph.plannedEnd || ""); }}>
+                                          <Pencil className="h-4 w-4" />
+                                        </Button>
+                                        <AlertDialog>
+                                          <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950">
+                                              <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                          </AlertDialogTrigger>
+                                          <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                              <AlertDialogTitle>Delete Phase</AlertDialogTitle>
+                                              <AlertDialogDescription>Are you sure you want to delete "{ph.name}"? This action cannot be undone.</AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                              <AlertDialogAction onClick={() => deletePhaseMutation.mutate(ph.id)} className="bg-red-600 hover:bg-red-700">Delete</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                          </AlertDialogContent>
+                                        </AlertDialog>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>

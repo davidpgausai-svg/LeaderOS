@@ -59,6 +59,7 @@ import {
   Copy,
   Bell,
   User as UserIcon,
+  LayoutGrid,
 } from "lucide-react";
 import {
   Select,
@@ -169,6 +170,39 @@ type Dependency = {
   targetId: string;
 };
 
+interface ReportWorkstream {
+  id: string; name: string; lead: string | null; sortOrder: number;
+}
+interface ReportPhase {
+  id: string; name: string; sequence: number; plannedStart: string | null; plannedEnd: string | null;
+}
+interface ReportTask {
+  id: string; workstreamId: string; phaseId: string; name: string;
+  isMilestone: string; milestoneType: string | null; percentComplete: number; status: string;
+}
+interface ReportCalculationDataRaw {
+  taskRag: Record<string, string>;
+  workstreamGateRag: Record<string, Record<string, string>>;
+  programGateRag: Record<string, string>;
+  criticalPath: Record<string, { isCritical: boolean; totalFloat: number }>;
+}
+interface ReportCalculationData {
+  taskRags: Record<string, string>;
+  workstreamGateRags: Record<string, string>;
+  programGateRags: Record<string, string>;
+}
+
+const ERP_RAG_COLORS: Record<string, string> = {
+  GREEN: "bg-green-500",
+  AMBER: "bg-amber-500",
+  RED: "bg-red-500",
+};
+
+function ErpRagDot({ status }: { status?: string }) {
+  if (!status) return <span className="w-3 h-3 rounded-full bg-gray-300 inline-block" />;
+  return <span className={`w-3 h-3 rounded-full inline-block ${ERP_RAG_COLORS[status] || "bg-gray-300"}`} />;
+}
+
 export default function Reports() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -179,6 +213,47 @@ export default function Reports() {
     return params.get('tab') || "capacity";
   });
   const reportRef = useRef<HTMLDivElement>(null);
+  const [erpSelectedStrategyId, setErpSelectedStrategyId] = useState<string>("");
+
+  const { data: erpWorkstreams = [] } = useQuery<ReportWorkstream[]>({
+    queryKey: [`/api/workstreams?strategyId=${erpSelectedStrategyId}`],
+    enabled: !!erpSelectedStrategyId,
+  });
+
+  const { data: erpPhases = [] } = useQuery<ReportPhase[]>({
+    queryKey: [`/api/phases?strategyId=${erpSelectedStrategyId}`],
+    enabled: !!erpSelectedStrategyId,
+  });
+
+  const { data: erpTasks = [] } = useQuery<ReportTask[]>({
+    queryKey: [`/api/workstream-tasks?strategyId=${erpSelectedStrategyId}`],
+    enabled: !!erpSelectedStrategyId,
+  });
+
+  const { data: erpCalculations } = useQuery<ReportCalculationDataRaw, Error, ReportCalculationData>({
+    queryKey: [`/api/workstream-calculations?strategyId=${erpSelectedStrategyId}`],
+    enabled: !!erpSelectedStrategyId,
+    select: (raw: ReportCalculationDataRaw): ReportCalculationData => {
+      const workstreamGateRags: Record<string, string> = {};
+      if (raw.workstreamGateRag) {
+        for (const [wsId, phaseMap] of Object.entries(raw.workstreamGateRag)) {
+          for (const [phId, rag] of Object.entries(phaseMap)) {
+            workstreamGateRags[`${wsId}_${phId}`] = rag;
+          }
+        }
+      }
+      return {
+        taskRags: raw.taskRag || {},
+        workstreamGateRags,
+        programGateRags: raw.programGateRag || {},
+      };
+    },
+  });
+
+  const sortedErpPhases = useMemo(() => [...erpPhases].sort((a, b) => a.sequence - b.sequence), [erpPhases]);
+  const sortedErpWorkstreams = useMemo(() => [...erpWorkstreams].sort((a, b) => a.sortOrder - b.sortOrder), [erpWorkstreams]);
+  const erpProgramGateTasks = useMemo(() => erpTasks.filter(t => t.isMilestone === "true" && t.milestoneType === "program_gate"), [erpTasks]);
+  const erpWorkstreamGateTasks = useMemo(() => erpTasks.filter(t => t.isMilestone === "true" && t.milestoneType === "workstream_gate"), [erpTasks]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -868,6 +943,8 @@ export default function Reports() {
                 { value: 'ownership', icon: Users, label: 'Ownership' },
                 { value: 'graph', icon: GitBranch, label: 'Graph' },
                 { value: 'archived', icon: Archive, label: 'Archived Projects' },
+                { value: 'erp-matrix', icon: LayoutGrid, label: 'ERP Matrix' },
+                { value: 'erp-executive', icon: BarChart3, label: 'ERP Executive' },
               ].map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.value;
@@ -979,6 +1056,207 @@ export default function Reports() {
                 users={users}
                 safeDate={safeDate}
               />
+            </TabsContent>
+
+            {/* ERP Matrix Report */}
+            <TabsContent value="erp-matrix" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <LayoutGrid className="w-5 h-5" style={{ color: '#5856D6' }} />
+                      ERP Workstream Matrix
+                    </CardTitle>
+                    <Select value={erpSelectedStrategyId} onValueChange={setErpSelectedStrategyId}>
+                      <SelectTrigger className="w-64">
+                        <SelectValue placeholder="Select a strategy" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {strategies.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {!erpSelectedStrategyId ? (
+                    <div className="py-12 text-center">
+                      <LayoutGrid className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">Select a Strategy</h3>
+                      <p className="text-gray-600">Choose a strategy above to view its workstream × phase matrix.</p>
+                    </div>
+                  ) : sortedErpWorkstreams.length === 0 || sortedErpPhases.length === 0 ? (
+                    <div className="py-12 text-center">
+                      <LayoutGrid className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No workstreams configured</h3>
+                      <p className="text-gray-600">Configure workstreams and phases in Settings first.</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr>
+                            <th className="text-left p-3 bg-gray-100 border border-gray-200 font-semibold text-sm min-w-[200px]">
+                              Workstream
+                            </th>
+                            {sortedErpPhases.map((ph) => (
+                              <th key={ph.id} className="text-center p-3 bg-gray-100 border border-gray-200 font-semibold text-sm min-w-[150px]">
+                                {ph.name}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sortedErpWorkstreams.map((ws) => (
+                            <tr key={ws.id}>
+                              <td className="p-3 border border-gray-200 bg-white font-medium text-sm">
+                                <div className="flex items-center gap-2">
+                                  <span>{ws.name}</span>
+                                  {ws.lead && <Badge variant="outline" className="text-xs">{ws.lead}</Badge>}
+                                </div>
+                              </td>
+                              {sortedErpPhases.map((ph) => {
+                                const cellTaskCount = erpTasks.filter(t => t.workstreamId === ws.id && t.phaseId === ph.id).length;
+                                const gateKey = `${ws.id}_${ph.id}`;
+                                const gateRag = erpCalculations?.workstreamGateRags?.[gateKey];
+                                return (
+                                  <td key={ph.id} className="p-3 border border-gray-200 text-center bg-white">
+                                    <div className="flex items-center justify-center gap-2">
+                                      <span className="text-sm font-medium">{cellTaskCount}</span>
+                                      {cellTaskCount > 0 && <span className="text-xs text-gray-500">tasks</span>}
+                                    </div>
+                                    {gateRag && (
+                                      <div className="flex items-center justify-center gap-1 mt-1">
+                                        <ErpRagDot status={gateRag} />
+                                        <span className="text-xs text-gray-500">Gate</span>
+                                      </div>
+                                    )}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                          <tr>
+                            <td className="p-3 border border-gray-200 bg-gray-50 font-semibold text-sm">
+                              Program Gates
+                            </td>
+                            {sortedErpPhases.map((ph) => {
+                              const programRag = erpCalculations?.programGateRags?.[ph.id];
+                              const gate = erpProgramGateTasks.find(t => t.phaseId === ph.id);
+                              return (
+                                <td key={ph.id} className="p-3 border border-gray-200 bg-gray-50 text-center">
+                                  <div className="flex items-center justify-center gap-2">
+                                    <ErpRagDot status={programRag} />
+                                    {gate && <span className="text-xs text-gray-600 truncate">{gate.name}</span>}
+                                  </div>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* ERP Executive Report */}
+            <TabsContent value="erp-executive" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5" style={{ color: '#5856D6' }} />
+                      ERP Executive Overview
+                    </CardTitle>
+                    <Select value={erpSelectedStrategyId} onValueChange={setErpSelectedStrategyId}>
+                      <SelectTrigger className="w-64">
+                        <SelectValue placeholder="Select a strategy" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {strategies.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardHeader>
+              </Card>
+              {!erpSelectedStrategyId ? (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Select a Strategy</h3>
+                    <p className="text-gray-600">Choose a strategy above to view the executive overview.</p>
+                  </CardContent>
+                </Card>
+              ) : sortedErpPhases.length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No phases configured</h3>
+                    <p className="text-gray-600">Configure phases in Settings to see the executive overview.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                sortedErpPhases.map((phase) => {
+                  const programRag = erpCalculations?.programGateRags?.[phase.id];
+                  const programGate = erpProgramGateTasks.find(t => t.phaseId === phase.id);
+                  const wsGates = erpWorkstreamGateTasks.filter(t => t.phaseId === phase.id);
+
+                  return (
+                    <Card key={phase.id}>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center gap-3">
+                          <ErpRagDot status={programRag} />
+                          <CardTitle className="text-lg">{phase.name}</CardTitle>
+                          {phase.plannedStart && <Badge variant="outline" className="text-xs">{phase.plannedStart} — {phase.plannedEnd}</Badge>}
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div>
+                          <h4 className="text-sm font-semibold text-gray-700 mb-2">Workstream Gate Status</h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                            {wsGates.length === 0 && sortedErpWorkstreams.map((ws) => {
+                              const gateKey = `${ws.id}_${phase.id}`;
+                              const wsRag = erpCalculations?.workstreamGateRags?.[gateKey];
+                              return (
+                                <div key={ws.id} className="flex items-center gap-2 p-2 rounded border bg-gray-50">
+                                  <ErpRagDot status={wsRag} />
+                                  <span className="text-sm">{ws.name}</span>
+                                </div>
+                              );
+                            })}
+                            {wsGates.map((gate) => {
+                              const ws = sortedErpWorkstreams.find(w => w.id === gate.workstreamId);
+                              const gateKey = `${gate.workstreamId}_${phase.id}`;
+                              const wsRag = erpCalculations?.workstreamGateRags?.[gateKey];
+                              return (
+                                <div key={gate.id} className="flex items-center gap-2 p-2 rounded border bg-gray-50">
+                                  <ErpRagDot status={wsRag} />
+                                  <span className="text-sm">{ws?.name || gate.name}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        {programGate && (
+                          <div className="mt-3">
+                            <h4 className="text-sm font-semibold text-gray-700 mb-2">Program Gate</h4>
+                            <div className="flex items-center gap-2 p-2 rounded border bg-gray-50">
+                              <ErpRagDot status={programRag} />
+                              <span className="text-sm font-medium">{programGate.name}</span>
+                              <Badge variant="outline" className="text-xs ml-auto">{programGate.percentComplete}% complete</Badge>
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              )}
             </TabsContent>
           </Tabs>
           </div>
