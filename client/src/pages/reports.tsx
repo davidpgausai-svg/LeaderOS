@@ -973,7 +973,6 @@ export default function Reports() {
                 { value: 'graph', icon: GitBranch, label: 'Graph' },
                 { value: 'archived', icon: Archive, label: 'Archived Projects' },
                 { value: 'erp-matrix', icon: LayoutGrid, label: 'ERP Matrix' },
-                { value: 'erp-executive', icon: BarChart3, label: 'ERP Executive' },
               ].map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.value;
@@ -1194,105 +1193,6 @@ export default function Reports() {
               </Card>
             </TabsContent>
 
-            {/* ERP Executive Report */}
-            <TabsContent value="erp-executive" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <BarChart3 className="w-5 h-5" style={{ color: '#5856D6' }} />
-                      ERP Executive Overview
-                    </CardTitle>
-                    <Select value={erpSelectedStrategyId} onValueChange={setErpSelectedStrategyId}>
-                      <SelectTrigger className="w-64">
-                        <SelectValue placeholder="Select a strategy" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {strategies.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardHeader>
-              </Card>
-              {!erpSelectedStrategyId ? (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Select a Strategy</h3>
-                    <p className="text-gray-600">Choose a strategy above to view the executive overview.</p>
-                  </CardContent>
-                </Card>
-              ) : sortedErpPhases.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No phases configured</h3>
-                    <p className="text-gray-600">Configure phases in Settings to see the executive overview.</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <>
-                <ErpRagLegend />
-                {sortedErpPhases.map((phase) => {
-                  const programRag = erpCalculations?.programGateRags?.[phase.id];
-                  const programGate = erpProgramGateTasks.find(t => t.phaseId === phase.id);
-                  const wsGates = erpWorkstreamGateTasks.filter(t => t.phaseId === phase.id);
-
-                  return (
-                    <Card key={phase.id}>
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center gap-3">
-                          <ErpRagDot status={programRag} />
-                          <CardTitle className="text-lg">{phase.name}</CardTitle>
-                          {phase.plannedStart && <Badge variant="outline" className="text-xs">{phase.plannedStart} — {phase.plannedEnd}</Badge>}
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div>
-                          <h4 className="text-sm font-semibold text-gray-700 mb-2">Workstream Gate Status</h4>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                            {wsGates.length === 0 && sortedErpWorkstreams.map((ws) => {
-                              const gateKey = `${ws.id}_${phase.id}`;
-                              const wsRag = erpCalculations?.workstreamGateRags?.[gateKey];
-                              return (
-                                <div key={ws.id} className="flex items-center gap-2 p-2 rounded border bg-gray-50">
-                                  <ErpRagDot status={wsRag} />
-                                  <span className="text-sm">{ws.name}</span>
-                                </div>
-                              );
-                            })}
-                            {wsGates.map((gate) => {
-                              const ws = sortedErpWorkstreams.find(w => w.id === gate.workstreamId);
-                              const gateKey = `${gate.workstreamId}_${phase.id}`;
-                              const wsRag = erpCalculations?.workstreamGateRags?.[gateKey];
-                              return (
-                                <div key={gate.id} className="flex items-center gap-2 p-2 rounded border bg-gray-50">
-                                  <ErpRagDot status={wsRag} />
-                                  <span className="text-sm">{ws?.name || gate.name}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                        {programGate && (
-                          <div className="mt-3">
-                            <h4 className="text-sm font-semibold text-gray-700 mb-2">Program Gate</h4>
-                            <div className="flex items-center gap-2 p-2 rounded border bg-gray-50">
-                              <ErpRagDot status={programRag} />
-                              <span className="text-sm font-medium">{programGate.name}</span>
-                              <Badge variant="outline" className="text-xs ml-auto">{programGate.percentComplete}% complete</Badge>
-                            </div>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-                </>
-              )}
-            </TabsContent>
           </Tabs>
           </div>
 
