@@ -200,6 +200,7 @@ const ERP_RAG_COLORS: Record<string, string> = {
 
 function ErpRagDot({ status }: { status?: string }) {
   if (!status) return <span className="w-3 h-3 rounded-full bg-gray-300 inline-block" />;
+  if (status === "COMPLETE") return <CheckCircle className="w-3.5 h-3.5 text-green-600 inline-block" />;
   return <span className={`w-3 h-3 rounded-full inline-block ${ERP_RAG_COLORS[status] || "bg-gray-300"}`} />;
 }
 
@@ -208,8 +209,12 @@ function ErpRagLegend() {
     <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5">
       <span className="font-semibold text-gray-700 mr-1">Status Key:</span>
       <span className="flex items-center gap-1.5">
+        <CheckCircle className="w-3.5 h-3.5 text-green-600" />
+        <span>Complete</span>
+      </span>
+      <span className="flex items-center gap-1.5">
         <span className="w-3 h-3 rounded-full bg-green-500 inline-block" />
-        <span>On Track / Complete</span>
+        <span>On Track</span>
       </span>
       <span className="flex items-center gap-1.5">
         <span className="w-3 h-3 rounded-full bg-amber-500 inline-block" />

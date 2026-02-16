@@ -6237,7 +6237,7 @@ ${outputTemplate}`;
       for (const task of tasks) {
         let rag = "GREEN";
         if (task.status === "complete" || task.status === "completed") {
-          rag = "GREEN";
+          rag = "COMPLETE";
         } else if (task.status === "blocked") {
           rag = "RED";
         } else {
@@ -6269,6 +6269,8 @@ ${outputTemplate}`;
               workstreamGateRag[ws.id][phase.id] = "RED";
             } else if (rags.includes("AMBER")) {
               workstreamGateRag[ws.id][phase.id] = "AMBER";
+            } else if (rags.every(r => r === "COMPLETE")) {
+              workstreamGateRag[ws.id][phase.id] = "COMPLETE";
             } else {
               workstreamGateRag[ws.id][phase.id] = "GREEN";
             }
@@ -6294,6 +6296,8 @@ ${outputTemplate}`;
           programGateRag[phase.id] = "RED";
         } else if (wsRags.includes("AMBER")) {
           programGateRag[phase.id] = "AMBER";
+        } else if (wsRags.every(r => r === "COMPLETE") && allCriteria.length > 0 && unmetCriteria.length === 0) {
+          programGateRag[phase.id] = "COMPLETE";
         } else {
           programGateRag[phase.id] = "GREEN";
         }
