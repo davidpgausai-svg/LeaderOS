@@ -282,6 +282,9 @@ export function WorkstreamModal({ open, onOpenChange, strategyId, strategyTitle 
     queryClient.invalidateQueries({ queryKey: [`/api/workstream-tasks?strategyId=${strategyId}`] });
     queryClient.invalidateQueries({ queryKey: [`/api/workstream-dependencies?strategyId=${strategyId}`] });
     queryClient.invalidateQueries({ queryKey: [`/api/workstream-calculations?strategyId=${strategyId}`] });
+    queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
   };
 
   const createTaskMutation = useMutation({

@@ -1064,6 +1064,10 @@ export default function Strategies() {
       queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
+      queryClient.invalidateQueries({ predicate: (query) => {
+        const key = query.queryKey[0];
+        return typeof key === 'string' && (key.startsWith('/api/workstream-tasks') || key.startsWith('/api/workstream-calculations'));
+      }});
       toast({
         title: "Success",
         description: "Action status updated",
@@ -1201,6 +1205,10 @@ export default function Strategies() {
       queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
+      queryClient.invalidateQueries({ predicate: (query) => {
+        const key = query.queryKey[0];
+        return typeof key === 'string' && (key.startsWith('/api/workstream-tasks') || key.startsWith('/api/workstream-calculations'));
+      }});
       toast({
         title: "Success",
         description: "Action deleted",
