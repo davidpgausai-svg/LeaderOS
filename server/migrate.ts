@@ -63,6 +63,18 @@ function runAlterTableMigrations(sqlite: InstanceType<typeof Database>) {
   safeAddColumn(sqlite, "user_team_tags", "created_at", "integer");
   safeAddColumn(sqlite, "project_team_tags", "created_at", "integer");
   safeAddColumn(sqlite, "strategy_executive_goals", "created_at", "integer");
+
+  safeAddColumn(sqlite, "holidays", "description", "text");
+
+  const orphanedTables = ["billing_history", "payment_failures", "processed_stripe_events", "sent_email_notifications"];
+  for (const table of orphanedTables) {
+    try {
+      const exists = sqlite.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`).get(table);
+      if (exists) {
+        sqlite.exec(`DROP TABLE "${table}"`);
+      }
+    } catch {}
+  }
 }
 
 function getCreateTableStatements(): string[] {
