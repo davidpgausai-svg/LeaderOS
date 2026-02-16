@@ -45,6 +45,8 @@ interface CreateActionModalProps {
   onOpenChange: (open: boolean) => void;
   strategyId?: string;
   projectId?: string;
+  workstreamId?: string;
+  isWorkstreamTask?: boolean;
 }
 
 type Strategy = {
@@ -60,7 +62,7 @@ type Project = {
   strategyId: string;
 };
 
-export function CreateActionModal({ open, onOpenChange, strategyId, projectId }: CreateActionModalProps) {
+export function CreateActionModal({ open, onOpenChange, strategyId, projectId, workstreamId, isWorkstreamTask }: CreateActionModalProps) {
   const { currentUser } = useRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -98,6 +100,18 @@ export function CreateActionModal({ open, onOpenChange, strategyId, projectId }:
 
   const createActionMutation = useMutation({
     mutationFn: async (data: InsertAction) => {
+      if (isWorkstreamTask && workstreamId) {
+        const response = await apiRequest("POST", "/api/workstream-tasks", {
+          name: data.title,
+          workstreamId,
+          phaseId: null,
+          projectId: data.projectId,
+          description: data.description,
+          status: data.status,
+          isMilestone: "false",
+        });
+        return response.json();
+      }
       const response = await apiRequest("POST", "/api/actions", data);
       return response.json();
     },
@@ -108,7 +122,7 @@ export function CreateActionModal({ open, onOpenChange, strategyId, projectId }:
       queryClient.invalidateQueries({ queryKey: ["/api/my-todos"] });
       toast({
         title: "Success",
-        description: "Action created successfully",
+        description: isWorkstreamTask ? "Task created successfully" : "Action created successfully",
       });
       form.reset();
       onOpenChange(false);
@@ -116,7 +130,7 @@ export function CreateActionModal({ open, onOpenChange, strategyId, projectId }:
     onError: (error) => {
       toast({
         title: "Error",
-        description: "Failed to create action",
+        description: isWorkstreamTask ? "Failed to create task" : "Failed to create action",
         variant: "destructive",
       });
     },
@@ -161,7 +175,7 @@ export function CreateActionModal({ open, onOpenChange, strategyId, projectId }:
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create New Action</DialogTitle>
+          <DialogTitle>{isWorkstreamTask ? "Create New Task" : "Create New Action"}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -175,9 +189,9 @@ export function CreateActionModal({ open, onOpenChange, strategyId, projectId }:
                   name="title"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Action Title</FormLabel>
+                      <FormLabel>{isWorkstreamTask ? "Task Title" : "Action Title"}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter action title..." {...field} data-testid="input-action-title" />
+                        <Input placeholder={isWorkstreamTask ? "Enter task title..." : "Enter action title..."} {...field} data-testid="input-action-title" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -359,7 +373,7 @@ export function CreateActionModal({ open, onOpenChange, strategyId, projectId }:
                 disabled={createActionMutation.isPending}
                 data-testid="button-create-action"
               >
-                {createActionMutation.isPending ? "Creating..." : "Create Action"}
+                {createActionMutation.isPending ? "Creating..." : isWorkstreamTask ? "Create Task" : "Create Action"}
               </Button>
             </div>
           </form>
