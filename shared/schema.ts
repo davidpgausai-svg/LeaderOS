@@ -316,20 +316,6 @@ export const notifications = sqliteTable("notifications", {
   createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
 
-export const meetingNotes = sqliteTable("meeting_notes", {
-  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
-  title: text("title").notNull(),
-  meetingDate: integer("meeting_date", { mode: "timestamp" }).notNull(),
-  strategyId: text("strategy_id").notNull(),
-  selectedProjectIds: text("selected_project_ids").notNull(),
-  selectedActionIds: text("selected_action_ids").notNull(),
-  notes: text("notes").notNull(),
-  organizationId: text("organization_id"),
-  createdBy: text("created_by").notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-});
-
 export const upsertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
   updatedAt: true,
@@ -431,28 +417,6 @@ export const insertUserStrategyAssignmentSchema = createInsertSchema(userStrateg
   assignedAt: true,
 });
 
-export const insertMeetingNoteSchema = createInsertSchema(meetingNotes).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-}).extend({
-  meetingDate: z.coerce.date(),
-  selectedProjectIds: z.string().transform((str) => {
-    try {
-      return JSON.stringify(JSON.parse(str));
-    } catch {
-      return JSON.stringify([]);
-    }
-  }),
-  selectedActionIds: z.string().transform((str) => {
-    try {
-      return JSON.stringify(JSON.parse(str));
-    } catch {
-      return JSON.stringify([]);
-    }
-  }),
-});
-
 export const insertBarrierSchema = createInsertSchema(barriers).omit({
   id: true,
   createdAt: true,
@@ -490,8 +454,6 @@ export type ActionChecklistItem = typeof actionChecklistItems.$inferSelect;
 export type CreateActionChecklistItem = InsertActionChecklistItem & { actionId: string };
 export type InsertUserStrategyAssignment = z.infer<typeof insertUserStrategyAssignmentSchema>;
 export type UserStrategyAssignment = typeof userStrategyAssignments.$inferSelect;
-export type InsertMeetingNote = z.infer<typeof insertMeetingNoteSchema>;
-export type MeetingNote = typeof meetingNotes.$inferSelect;
 export type InsertBarrier = z.infer<typeof insertBarrierSchema>;
 export type Barrier = typeof barriers.$inferSelect;
 export type InsertProjectSnapshot = z.infer<typeof insertProjectSnapshotSchema>;
@@ -742,35 +704,6 @@ export const insertIntakeSubmissionSchema = createInsertSchema(intakeSubmissions
 
 export type InsertIntakeSubmission = z.infer<typeof insertIntakeSubmissionSchema>;
 export type IntakeSubmission = typeof intakeSubmissions.$inferSelect;
-
-export const reportOutDecks = sqliteTable("report_out_decks", {
-  id: text("id").primaryKey().$defaultFn(() => randomUUID()),
-  title: text("title").notNull(),
-  reportDate: integer("report_date", { mode: "timestamp" }).notNull(),
-  organizationId: text("organization_id").notNull(),
-  createdBy: text("created_by").notNull(),
-  slides: text("slides").notNull().default("[]"),
-  snapshotData: text("snapshot_data").notNull().default("{}"),
-  status: text("status").notNull().default('draft'),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
-});
-
-export const insertReportOutDeckSchema = createInsertSchema(reportOutDecks).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  createdBy: true,
-  organizationId: true,
-}).extend({
-  reportDate: z.coerce.date(),
-  slides: z.string().optional().default("[]"),
-  snapshotData: z.string().optional().default("{}"),
-  status: z.enum(['draft', 'finalized']).optional().default('draft'),
-});
-
-export type InsertReportOutDeck = z.infer<typeof insertReportOutDeckSchema>;
-export type ReportOutDeck = typeof reportOutDecks.$inferSelect;
 
 export const decisions = sqliteTable("decisions", {
   id: text("id").primaryKey().$defaultFn(() => randomUUID()),

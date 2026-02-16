@@ -7,7 +7,6 @@ import { UserInitializer } from "@/components/user-initializer";
 import { useAuth } from "@/hooks/useAuth";
 import Dashboard from "@/pages/dashboard";
 import Strategies from "@/pages/strategies";
-import MeetingNotes from "@/pages/meeting-notes";
 import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
 import Timeline from "@/pages/timeline";
@@ -22,7 +21,6 @@ import ForceChangePassword from "@/pages/force-change-password";
 import IntakeForms from "@/pages/intake-forms";
 import IntakeSubmissions from "@/pages/intake-submissions";
 import PublicIntake from "@/pages/public-intake";
-import ReportOut from "@/pages/report-out";
 import DecisionLog from "@/pages/decision-log";
 
 function Router() {
@@ -61,9 +59,7 @@ function Router() {
         <Route path="/calendar" component={Calendar} />
         {/* Graph moved to Reports tab - redirect for backward compatibility */}
         <Route path="/graph">{() => { window.location.replace('/reports?tab=graph'); return null; }}</Route>
-        <Route path="/meeting-notes" component={MeetingNotes} />
         <Route path="/decision-log" component={DecisionLog} />
-        <Route path="/report-out" component={ReportOut} />
         <Route path="/reports" component={Reports} />
         <Route path="/settings" component={Settings} />
         <Route path="/intake-forms" component={IntakeForms} />

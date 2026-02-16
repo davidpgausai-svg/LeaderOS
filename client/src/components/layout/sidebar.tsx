@@ -17,13 +17,11 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
-  PenLine,
   CalendarDays,
   GanttChart,
   Crown,
   ClipboardList,
   Inbox,
-  Presentation,
   Scale,
 } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/notification-bell";
@@ -39,8 +37,6 @@ const secondaryNavigation = [
   { name: "Timeline", href: "/timeline", icon: GanttChart },
   { name: "Calendar", href: "/calendar", icon: CalendarDays },
   { name: "Reports", href: "/reports", icon: BarChart3 },
-  { name: "Meeting Notes", href: "/meeting-notes", icon: PenLine },
-  { name: "Report Out", href: "/report-out", icon: Presentation },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 

@@ -321,20 +321,6 @@ function getCreateTableStatements(): string[] {
       "created_at" integer
     )`,
 
-    `CREATE TABLE IF NOT EXISTS "meeting_notes" (
-      "id" text PRIMARY KEY,
-      "title" text NOT NULL,
-      "meeting_date" integer NOT NULL,
-      "strategy_id" text NOT NULL,
-      "selected_project_ids" text NOT NULL,
-      "selected_action_ids" text NOT NULL,
-      "notes" text NOT NULL,
-      "organization_id" text,
-      "created_by" text NOT NULL,
-      "created_at" integer,
-      "updated_at" integer
-    )`,
-
     `CREATE TABLE IF NOT EXISTS "dependencies" (
       "id" text PRIMARY KEY,
       "source_type" text NOT NULL,
@@ -450,19 +436,6 @@ function getCreateTableStatements(): string[] {
       "reviewed_at" integer,
       "organization_id" text NOT NULL,
       "submitted_at" integer
-    )`,
-
-    `CREATE TABLE IF NOT EXISTS "report_out_decks" (
-      "id" text PRIMARY KEY,
-      "title" text NOT NULL,
-      "report_date" integer NOT NULL,
-      "organization_id" text NOT NULL,
-      "created_by" text NOT NULL,
-      "slides" text NOT NULL DEFAULT '[]',
-      "snapshot_data" text NOT NULL DEFAULT '{}',
-      "status" text NOT NULL DEFAULT 'draft',
-      "created_at" integer,
-      "updated_at" integer
     )`,
 
     `CREATE TABLE IF NOT EXISTS "decisions" (

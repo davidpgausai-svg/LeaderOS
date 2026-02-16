@@ -5,7 +5,7 @@ import type { IStorage } from './storage';
 import {
   users, strategies, projects, activities, actions, notifications,
   actionDocuments, actionChecklistItems, userStrategyAssignments,
-  meetingNotes, barriers, dependencies, templateTypes,
+  barriers, dependencies, templateTypes,
   organizations, passwordResetTokens, twoFactorCodes, executiveGoals, strategyExecutiveGoals,
   teamTags, projectTeamTags, userTeamTags, projectResourceAssignments, actionPeopleAssignments, ptoEntries, holidays,
   projectSnapshots,
@@ -18,7 +18,6 @@ import {
   type ActionDocument, type InsertActionDocument,
   type ActionChecklistItem, type InsertActionChecklistItem, type CreateActionChecklistItem,
   type UserStrategyAssignment,
-  type MeetingNote, type InsertMeetingNote,
   type Barrier, type InsertBarrier,
   type Dependency, type InsertDependency,
   type TemplateType, type InsertTemplateType,
@@ -37,8 +36,7 @@ import {
   type ProjectSnapshot, type InsertProjectSnapshot,
   type IntakeForm, type InsertIntakeForm,
   type IntakeSubmission, type InsertIntakeSubmission,
-  intakeForms, intakeSubmissions, reportOutDecks,
-  type ReportOutDeck, type InsertReportOutDeck,
+  intakeForms, intakeSubmissions,
   decisions, decisionRaciAssignments,
   type Decision, type InsertDecision,
   type DecisionRaci, type InsertDecisionRaci,
@@ -568,42 +566,6 @@ export class DatabaseStorage implements IStorage {
   async getUserAssignedStrategyIds(userId: string): Promise<string[]> {
     const assignments = await this.getUserStrategyAssignments(userId);
     return assignments.map(a => a.strategyId);
-  }
-
-  async getAllMeetingNotes(): Promise<MeetingNote[]> {
-    return db.select().from(meetingNotes).orderBy(desc(meetingNotes.meetingDate));
-  }
-
-  async getMeetingNotesByOrganization(organizationId: string): Promise<MeetingNote[]> {
-    return db.select().from(meetingNotes)
-      .where(eq(meetingNotes.organizationId, organizationId))
-      .orderBy(desc(meetingNotes.meetingDate));
-  }
-
-  async getMeetingNote(id: string): Promise<MeetingNote | undefined> {
-    const [note] = await db.select().from(meetingNotes).where(eq(meetingNotes.id, id));
-    return note || undefined;
-  }
-
-  async createMeetingNote(insertNote: InsertMeetingNote): Promise<MeetingNote> {
-    const [note] = await db.insert(meetingNotes).values({
-      id: randomUUID(),
-      ...insertNote,
-    }).returning();
-    return note;
-  }
-
-  async updateMeetingNote(id: string, updates: Partial<MeetingNote>): Promise<MeetingNote | undefined> {
-    const [note] = await db.update(meetingNotes)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(meetingNotes.id, id))
-      .returning();
-    return note || undefined;
-  }
-
-  async deleteMeetingNote(id: string): Promise<boolean> {
-    const result = await db.delete(meetingNotes).where(eq(meetingNotes.id, id)).returning();
-    return result.length > 0;
   }
 
   async getBarrier(id: string): Promise<Barrier | undefined> {
@@ -1395,38 +1357,6 @@ export class DatabaseStorage implements IStorage {
     const results = await db.select().from(intakeSubmissions)
       .where(eq(intakeSubmissions.formId, formId));
     return results.length;
-  }
-
-  async getReportOutDecksByOrganization(organizationId: string): Promise<ReportOutDeck[]> {
-    return db.select().from(reportOutDecks)
-      .where(eq(reportOutDecks.organizationId, organizationId))
-      .orderBy(desc(reportOutDecks.reportDate));
-  }
-
-  async getReportOutDeck(id: string): Promise<ReportOutDeck | undefined> {
-    const [deck] = await db.select().from(reportOutDecks).where(eq(reportOutDecks.id, id));
-    return deck || undefined;
-  }
-
-  async createReportOutDeck(deck: InsertReportOutDeck & { createdBy: string; organizationId: string }): Promise<ReportOutDeck> {
-    const [created] = await db.insert(reportOutDecks).values({
-      id: randomUUID(),
-      ...deck,
-    }).returning();
-    return created;
-  }
-
-  async updateReportOutDeck(id: string, updates: Partial<ReportOutDeck>): Promise<ReportOutDeck | undefined> {
-    const [deck] = await db.update(reportOutDecks)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(reportOutDecks.id, id))
-      .returning();
-    return deck || undefined;
-  }
-
-  async deleteReportOutDeck(id: string): Promise<boolean> {
-    const result = await db.delete(reportOutDecks).where(eq(reportOutDecks.id, id)).returning();
-    return result.length > 0;
   }
 
   async getDecisionsByOrganization(organizationId: string): Promise<Decision[]> {

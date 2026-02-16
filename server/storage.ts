@@ -1,4 +1,4 @@
-import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Project, type InsertProject, type Activity, type InsertActivity, type Action, type InsertAction, type Notification, type InsertNotification, type ActionDocument, type InsertActionDocument, type ActionChecklistItem, type InsertActionChecklistItem, type CreateActionChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type MeetingNote, type InsertMeetingNote, type Barrier, type InsertBarrier, type Dependency, type InsertDependency, type TemplateType, type InsertTemplateType, type ExecutiveGoal, type InsertExecutiveGoal, type StrategyExecutiveGoal, type TeamTag, type InsertTeamTag, type ProjectTeamTag, type UserTeamTag, type ProjectResourceAssignment, type InsertProjectResourceAssignment, type ActionPeopleAssignment, type InsertActionPeopleAssignment, type PtoEntry, type InsertPtoEntry, type Holiday, type InsertHoliday, type ProjectSnapshot, type InsertProjectSnapshot, type IntakeForm, type InsertIntakeForm, type IntakeSubmission, type InsertIntakeSubmission, type ReportOutDeck, type InsertReportOutDeck, type Decision, type InsertDecision, type DecisionRaci, type InsertDecisionRaci, type Workstream, type InsertWorkstream, type Phase, type InsertPhase, type WorkstreamDependency, type InsertWorkstreamDependency, type GateCriteria, type InsertGateCriteria } from "@shared/schema";
+import { type User, type UpsertUser, type InsertUser, type Strategy, type InsertStrategy, type Project, type InsertProject, type Activity, type InsertActivity, type Action, type InsertAction, type Notification, type InsertNotification, type ActionDocument, type InsertActionDocument, type ActionChecklistItem, type InsertActionChecklistItem, type CreateActionChecklistItem, type UserStrategyAssignment, type InsertUserStrategyAssignment, type Barrier, type InsertBarrier, type Dependency, type InsertDependency, type TemplateType, type InsertTemplateType, type ExecutiveGoal, type InsertExecutiveGoal, type StrategyExecutiveGoal, type TeamTag, type InsertTeamTag, type ProjectTeamTag, type UserTeamTag, type ProjectResourceAssignment, type InsertProjectResourceAssignment, type ActionPeopleAssignment, type InsertActionPeopleAssignment, type PtoEntry, type InsertPtoEntry, type Holiday, type InsertHoliday, type ProjectSnapshot, type InsertProjectSnapshot, type IntakeForm, type InsertIntakeForm, type IntakeSubmission, type InsertIntakeSubmission, type Decision, type InsertDecision, type DecisionRaci, type InsertDecisionRaci, type Workstream, type InsertWorkstream, type Phase, type InsertPhase, type WorkstreamDependency, type InsertWorkstreamDependency, type GateCriteria, type InsertGateCriteria } from "@shared/schema";
 
 export interface IStorage {
   // User methods
@@ -81,14 +81,6 @@ export interface IStorage {
   assignStrategy(userId: string, strategyId: string, assignedBy: string): Promise<UserStrategyAssignment>;
   unassignStrategy(userId: string, strategyId: string): Promise<boolean>;
   getUserAssignedStrategyIds(userId: string): Promise<string[]>;
-
-  // Meeting Notes methods
-  getAllMeetingNotes(): Promise<MeetingNote[]>;
-  getMeetingNotesByOrganization(organizationId: string): Promise<MeetingNote[]>;
-  getMeetingNote(id: string): Promise<MeetingNote | undefined>;
-  createMeetingNote(note: InsertMeetingNote): Promise<MeetingNote>;
-  updateMeetingNote(id: string, updates: Partial<MeetingNote>): Promise<MeetingNote | undefined>;
-  deleteMeetingNote(id: string): Promise<boolean>;
 
   // Barrier methods
   getBarrier(id: string): Promise<Barrier | undefined>;
@@ -196,13 +188,6 @@ export interface IStorage {
   updateIntakeSubmission(id: string, updates: Partial<IntakeSubmission>): Promise<IntakeSubmission | undefined>;
   countSubmissionsByEmail(formId: string, email: string): Promise<number>;
   countTotalSubmissions(formId: string): Promise<number>;
-
-  // Report Out Deck methods
-  getReportOutDecksByOrganization(organizationId: string): Promise<ReportOutDeck[]>;
-  getReportOutDeck(id: string): Promise<ReportOutDeck | undefined>;
-  createReportOutDeck(deck: InsertReportOutDeck & { createdBy: string; organizationId: string }): Promise<ReportOutDeck>;
-  updateReportOutDeck(id: string, updates: Partial<ReportOutDeck>): Promise<ReportOutDeck | undefined>;
-  deleteReportOutDeck(id: string): Promise<boolean>;
 
   // Decision Log methods
   getDecisionsByOrganization(organizationId: string): Promise<Decision[]>;
