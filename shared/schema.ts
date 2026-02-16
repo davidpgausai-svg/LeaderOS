@@ -266,6 +266,23 @@ export const actions = sqliteTable("actions", {
   organizationId: text("organization_id"),
   createdBy: text("created_by").notNull(),
   createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  phaseId: text("phase_id"),
+  workstreamId: text("workstream_id"),
+  isMilestone: text("is_milestone").notNull().default("false"),
+  milestoneType: text("milestone_type"),
+  plannedStart: integer("planned_start", { mode: "timestamp" }),
+  plannedEnd: integer("planned_end", { mode: "timestamp" }),
+  actualStart: integer("actual_start", { mode: "timestamp" }),
+  actualEnd: integer("actual_end", { mode: "timestamp" }),
+  durationDays: integer("duration_days").notNull().default(1),
+  percentComplete: integer("percent_complete").notNull().default(0),
+  sortOrder: integer("sort_order").notNull().default(0),
+  isCritical: text("is_critical").notNull().default("false"),
+  earlyStart: integer("early_start", { mode: "timestamp" }),
+  earlyEnd: integer("early_end", { mode: "timestamp" }),
+  lateStart: integer("late_start", { mode: "timestamp" }),
+  lateEnd: integer("late_end", { mode: "timestamp" }),
+  totalFloat: integer("total_float"),
 });
 
 export const actionDocuments = sqliteTable("action_documents", {
@@ -371,9 +388,26 @@ export const insertActivitySchema = createInsertSchema(activities).omit({
 export const insertActionSchema = createInsertSchema(actions).omit({
   id: true,
   createdAt: true,
+  isCritical: true,
+  earlyStart: true,
+  earlyEnd: true,
+  lateStart: true,
+  lateEnd: true,
+  totalFloat: true,
 }).extend({
   dueDate: z.coerce.date().optional(),
   documentFolderUrl: z.string().url("Invalid document folder URL format").nullable().optional().or(z.literal('')).transform(val => val || null),
+  phaseId: z.string().nullable().optional(),
+  workstreamId: z.string().nullable().optional(),
+  isMilestone: z.enum(["true", "false"]).default("false"),
+  milestoneType: z.enum(["workstream_gate", "program_gate"]).nullable().optional(),
+  plannedStart: z.coerce.date().optional().nullable(),
+  plannedEnd: z.coerce.date().optional().nullable(),
+  actualStart: z.coerce.date().optional().nullable(),
+  actualEnd: z.coerce.date().optional().nullable(),
+  durationDays: z.number().int().default(1),
+  percentComplete: z.number().int().min(0).max(100).default(0),
+  sortOrder: z.number().int().default(0),
 });
 
 export const insertNotificationSchema = createInsertSchema(notifications).omit({

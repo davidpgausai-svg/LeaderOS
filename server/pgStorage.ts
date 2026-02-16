@@ -314,6 +314,23 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(actions).where(eq(actions.projectId, projectId));
   }
 
+  async getActionsByWorkstream(workstreamId: string): Promise<Action[]> {
+    return db.select().from(actions).where(eq(actions.workstreamId, workstreamId));
+  }
+
+  async getActionsByPhase(phaseId: string): Promise<Action[]> {
+    return db.select().from(actions).where(eq(actions.phaseId, phaseId));
+  }
+
+  async getWorkstreamActionsByStrategy(strategyId: string): Promise<Action[]> {
+    return db.select().from(actions).where(
+      and(
+        eq(actions.strategyId, strategyId),
+        isNotNull(actions.workstreamId)
+      )
+    );
+  }
+
   async createAction(insertAction: InsertAction): Promise<Action> {
     const [action] = await db.insert(actions).values({
       id: randomUUID(),

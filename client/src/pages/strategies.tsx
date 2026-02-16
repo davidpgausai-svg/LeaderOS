@@ -62,7 +62,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ChevronLeft, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen, TrendingUp, AlertTriangle, Users, Megaphone, Link2, ExternalLink, X, Clock, ListChecks, StickyNote, Tag, Indent, Outdent, Hash, List, LayoutGrid, GripVertical, Network } from "lucide-react";
+import { Plus, Search, Trash2, MoreVertical, Edit, Eye, CheckCircle, Archive, ChevronDown, ChevronRight, ChevronUp, ChevronLeft, ArrowRight, Target, Calendar, BarChart3, RefreshCw, Circle, FolderOpen, TrendingUp, AlertTriangle, Users, Megaphone, Link2, ExternalLink, X, Clock, ListChecks, StickyNote, Tag, Indent, Outdent, Hash, List, LayoutGrid, GripVertical, Network, Flag } from "lucide-react";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { PeopleSelector } from "@/components/ui/people-selector";
 import { useLocation, Link } from "wouter";
@@ -202,6 +202,17 @@ export default function Strategies() {
 
   const { data: projectTeamTags = [] } = useQuery<any[]>({
     queryKey: ["/api/project-team-tags"],
+  });
+
+  const { data: phases = [] } = useQuery<any[]>({
+    queryKey: ["/api/phases", selectedStrategy?.id],
+    queryFn: async () => {
+      if (!selectedStrategy?.id) return [];
+      const res = await fetch(`/api/phases?strategyId=${selectedStrategy.id}`, { credentials: 'include' });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!selectedStrategy?.id,
   });
 
   // Fetch resource assignments for the currently open modal project
@@ -1765,18 +1776,17 @@ export default function Strategies() {
                                   <div
                                     className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                                     onClick={(e) => {
-                                      if (project.isWorkstream === 'true') {
-                                        e.stopPropagation();
-                                        setLocation(`/workstreams/${project.strategyId}`);
-                                      } else {
-                                        toggleProjectCollapse(project.id, e);
-                                      }
+                                      toggleProjectCollapse(project.id, e);
                                     }}
                                   >
                                     <div className="flex items-center space-x-3 flex-1 min-w-0">
                                       {/* Expand chevron */}
                                       {project.isWorkstream === 'true' ? (
-                                        <Network className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+                                        isProjectExpanded ? (
+                                          <ChevronDown className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+                                        ) : (
+                                          <ChevronRight className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+                                        )
                                       ) : isProjectExpanded ? (
                                         <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
                                       ) : (
@@ -2023,6 +2033,115 @@ export default function Strategies() {
                                       </div>
                                     </div>
                                   </div>
+
+                                  {/* Expanded Phase-Grouped Actions - for workstream projects */}
+                                  {isProjectExpanded && project.isWorkstream === 'true' && (() => {
+                                    const wsActions = (actions || []).filter((a: any) => a.projectId === project.id && a.workstreamId);
+                                    const strategyPhases = phases.filter((p: any) => p.strategyId === project.strategyId)
+                                      .sort((a: any, b: any) => (a.sequence || 0) - (b.sequence || 0));
+                                    const ungrouped = wsActions.filter((a: any) => !a.phaseId);
+                                    return (
+                                      <div className="border-t border-gray-200 dark:border-gray-700 bg-indigo-50/30 dark:bg-indigo-900/10 px-4 py-3">
+                                        <div className="flex items-center justify-between mb-2">
+                                          <div className="flex items-center gap-2">
+                                            <Badge className="text-[10px] px-1.5 py-0 bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">
+                                              {wsActions.length} workstream action{wsActions.length !== 1 ? 's' : ''}
+                                            </Badge>
+                                            <Link href={`/workstreams/${project.strategyId}`}>
+                                              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-indigo-600 dark:text-indigo-400" onClick={(e) => e.stopPropagation()}>
+                                                Open Full Workstream View
+                                              </Button>
+                                            </Link>
+                                          </div>
+                                        </div>
+                                        {strategyPhases.map((phase: any) => {
+                                          const phaseActions = wsActions.filter((a: any) => a.phaseId === phase.id);
+                                          if (phaseActions.length === 0) return null;
+                                          return (
+                                            <div key={phase.id} className="mb-3">
+                                              <div className="flex items-center gap-2 mb-1.5">
+                                                <div className="w-2 h-2 rounded-full bg-indigo-400" />
+                                                <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">{phase.name}</span>
+                                                <span className="text-xs text-gray-400">({phaseActions.length})</span>
+                                              </div>
+                                              <div className="space-y-1 ml-4">
+                                                {phaseActions.map((action: any) => {
+                                                  const isMilestone = action.isMilestone === 'true';
+                                                  return (
+                                                    <div
+                                                      key={action.id}
+                                                      className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-white/50 dark:hover:bg-gray-800/30 cursor-pointer"
+                                                      onClick={(e) => { e.stopPropagation(); setChecklistModalAction(action); }}
+                                                    >
+                                                      <div className="flex items-center gap-2 min-w-0">
+                                                        {isMilestone ? (
+                                                          <Flag className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                                                        ) : (
+                                                          <Circle className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                                                        )}
+                                                        <span className="text-sm text-gray-800 dark:text-gray-200 truncate">{action.title}</span>
+                                                        {isMilestone && action.milestoneType && (
+                                                          <Badge className="text-[9px] px-1 py-0 bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">
+                                                            {action.milestoneType === 'program_gate' ? 'Gate' : 'Milestone'}
+                                                          </Badge>
+                                                        )}
+                                                      </div>
+                                                      <div className="flex items-center gap-2 flex-shrink-0">
+                                                        <span className="text-xs text-gray-500">{action.percentComplete || 0}%</span>
+                                                        <Badge className={`text-[10px] px-1.5 py-0 ${
+                                                          action.status === 'completed' || action.status === 'complete' ? 'bg-green-100 text-green-700' :
+                                                          action.status === 'blocked' ? 'bg-red-100 text-red-700' :
+                                                          action.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                                                          'bg-gray-100 text-gray-700'
+                                                        }`}>
+                                                          {action.status === 'not_started' ? 'Not Started' :
+                                                           action.status === 'in_progress' ? 'In Progress' :
+                                                           action.status === 'completed' || action.status === 'complete' ? 'Complete' :
+                                                           action.status === 'blocked' ? 'Blocked' : action.status}
+                                                        </Badge>
+                                                      </div>
+                                                    </div>
+                                                  );
+                                                })}
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                        {ungrouped.length > 0 && (
+                                          <div className="mb-3">
+                                            <div className="flex items-center gap-2 mb-1.5">
+                                              <div className="w-2 h-2 rounded-full bg-gray-400" />
+                                              <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Unassigned Phase</span>
+                                              <span className="text-xs text-gray-400">({ungrouped.length})</span>
+                                            </div>
+                                            <div className="space-y-1 ml-4">
+                                              {ungrouped.map((action: any) => (
+                                                <div
+                                                  key={action.id}
+                                                  className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-white/50 dark:hover:bg-gray-800/30 cursor-pointer"
+                                                  onClick={(e) => { e.stopPropagation(); setChecklistModalAction(action); }}
+                                                >
+                                                  <div className="flex items-center gap-2 min-w-0">
+                                                    <Circle className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                                                    <span className="text-sm text-gray-800 dark:text-gray-200 truncate">{action.title}</span>
+                                                  </div>
+                                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                                    <span className="text-xs text-gray-500">{action.percentComplete || 0}%</span>
+                                                    <Badge className={`text-[10px] px-1.5 py-0 bg-gray-100 text-gray-700`}>
+                                                      {action.status}
+                                                    </Badge>
+                                                  </div>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                        {wsActions.length === 0 && (
+                                          <p className="text-sm text-gray-400 dark:text-gray-500 italic py-2">No workstream actions yet. Open the full workstream view to add tasks.</p>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
 
                                   {/* Expanded Actions - only for regular projects */}
                                   {isProjectExpanded && project.isWorkstream !== 'true' && (

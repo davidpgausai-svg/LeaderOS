@@ -5647,7 +5647,7 @@ ${outputTemplate}`;
         return res.status(403).json({ message: "Access denied" });
       }
 
-      let tasks = await storage.getWorkstreamTasksByStrategy(strategyId);
+      let tasks = await storage.getWorkstreamActionsByStrategy(strategyId);
 
       if (workstreamId) {
         tasks = tasks.filter(t => t.workstreamId === workstreamId);
@@ -5656,7 +5656,13 @@ ${outputTemplate}`;
         tasks = tasks.filter(t => t.phaseId === phaseId);
       }
 
-      res.json(tasks);
+      const mapped = tasks.map(a => ({
+        ...a,
+        name: a.title,
+        owner: null,
+      }));
+
+      res.json(mapped);
     } catch (error) {
       logger.error("Failed to fetch workstream tasks", error);
       res.status(500).json({ message: "Failed to fetch workstream tasks" });
@@ -5670,13 +5676,13 @@ ${outputTemplate}`;
       const user = await storage.getUser(userId);
       if (!user) return res.status(401).json({ message: "User not found" });
 
-      const task = await storage.getWorkstreamTask(req.params.id);
-      if (!task) return res.status(404).json({ message: "Task not found" });
-      if (user.isSuperAdmin !== 'true' && user.organizationId !== task.organizationId) {
+      const action = await storage.getAction(req.params.id);
+      if (!action || !action.workstreamId) return res.status(404).json({ message: "Task not found" });
+      if (user.isSuperAdmin !== 'true' && user.organizationId !== action.organizationId) {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      res.json(task);
+      res.json({ ...action, name: action.title, owner: null });
     } catch (error) {
       logger.error("Failed to fetch workstream task", error);
       res.status(500).json({ message: "Failed to fetch workstream task" });
@@ -5694,19 +5700,34 @@ ${outputTemplate}`;
         return res.status(403).json({ message: "Insufficient permissions" });
       }
 
-      const parsed = insertWorkstreamTaskSchema.parse(req.body);
+      const { name, workstreamId, phaseId, ...rest } = req.body;
 
-      const workstream = await storage.getWorkstream(parsed.workstreamId);
+      const workstream = await storage.getWorkstream(workstreamId);
       if (!workstream) return res.status(404).json({ message: "Workstream not found" });
       if (user.isSuperAdmin !== 'true' && user.organizationId !== workstream.organizationId) {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      const task = await storage.createWorkstreamTask({
-        ...parsed,
+      const strategy = await storage.getStrategy(workstream.strategyId);
+      const action = await storage.createAction({
+        title: name || rest.title || "Untitled Task",
+        description: rest.description || "",
+        strategyId: workstream.strategyId,
+        workstreamId,
+        phaseId: phaseId || null,
+        documentFolderUrl: null,
+        isMilestone: rest.isMilestone || "false",
+        milestoneType: rest.milestoneType || null,
+        status: rest.status || "in_progress",
+        durationDays: rest.durationDays || 1,
+        percentComplete: rest.percentComplete || 0,
+        sortOrder: rest.sortOrder || 0,
+        plannedStart: rest.plannedStart || null,
+        plannedEnd: rest.plannedEnd || null,
+        createdBy: userId,
         organizationId: user.organizationId,
       });
-      res.status(201).json(task);
+      res.status(201).json({ ...action, name: action.title, owner: null });
     } catch (error) {
       if (error instanceof ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
@@ -5726,14 +5747,18 @@ ${outputTemplate}`;
         return res.status(403).json({ message: "Insufficient permissions" });
       }
 
-      const existing = await storage.getWorkstreamTask(req.params.id);
-      if (!existing) return res.status(404).json({ message: "Task not found" });
+      const existing = await storage.getAction(req.params.id);
+      if (!existing || !existing.workstreamId) return res.status(404).json({ message: "Task not found" });
       if (user.isSuperAdmin !== 'true' && user.organizationId !== existing.organizationId) {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      const task = await storage.updateWorkstreamTask(req.params.id, req.body);
-      res.json(task);
+      const { name, ...rest } = req.body;
+      const updates: any = { ...rest };
+      if (name !== undefined) updates.title = name;
+
+      const action = await storage.updateAction(req.params.id, updates);
+      res.json(action ? { ...action, name: action.title, owner: null } : action);
     } catch (error) {
       logger.error("Failed to update workstream task", error);
       res.status(500).json({ message: "Failed to update workstream task" });
@@ -5750,13 +5775,13 @@ ${outputTemplate}`;
         return res.status(403).json({ message: "Insufficient permissions" });
       }
 
-      const existing = await storage.getWorkstreamTask(req.params.id);
-      if (!existing) return res.status(404).json({ message: "Task not found" });
+      const existing = await storage.getAction(req.params.id);
+      if (!existing || !existing.workstreamId) return res.status(404).json({ message: "Task not found" });
       if (user.isSuperAdmin !== 'true' && user.organizationId !== existing.organizationId) {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      const deleted = await storage.deleteWorkstreamTask(req.params.id);
+      const deleted = await storage.deleteAction(req.params.id);
       if (!deleted) return res.status(500).json({ message: "Failed to delete task" });
       res.json({ message: "Task deleted" });
     } catch (error) {
@@ -5851,7 +5876,8 @@ ${outputTemplate}`;
       const gateTaskId = req.query.gateTaskId as string;
       if (!gateTaskId) return res.status(400).json({ message: "gateTaskId is required" });
 
-      const task = await storage.getWorkstreamTask(gateTaskId);
+      const action = await storage.getAction(gateTaskId);
+      const task = action || await storage.getWorkstreamTask(gateTaskId);
       if (!task) return res.status(404).json({ message: "Gate task not found" });
       if (user.isSuperAdmin !== 'true' && user.organizationId !== task.organizationId) {
         return res.status(403).json({ message: "Access denied" });
@@ -5877,7 +5903,8 @@ ${outputTemplate}`;
 
       const parsed = insertGateCriteriaSchema.parse(req.body);
 
-      const task = await storage.getWorkstreamTask(parsed.gateTaskId);
+      const action = await storage.getAction(parsed.gateTaskId);
+      const task = action || await storage.getWorkstreamTask(parsed.gateTaskId);
       if (!task) return res.status(404).json({ message: "Gate task not found" });
       if (user.isSuperAdmin !== 'true' && user.organizationId !== task.organizationId) {
         return res.status(403).json({ message: "Access denied" });
@@ -6002,6 +6029,26 @@ ${outputTemplate}`;
         createdPhases.push(phase);
       }
 
+      const createdProjects = [];
+      for (const ws of createdWorkstreams) {
+        const project = await storage.createProject({
+          title: ws.name,
+          description: `ERP workstream project for ${ws.name}`,
+          strategyId,
+          accountableLeaders: "[]",
+          startDate: new Date(),
+          dueDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+          status: "IP",
+          isWorkstream: "true",
+          workstreamId: ws.id,
+          documentFolderUrl: null,
+          communicationUrl: null,
+          createdBy: userId,
+          organizationId: user.organizationId,
+        });
+        createdProjects.push(project);
+      }
+
       const pmGovernanceWorkstream = createdWorkstreams.find(
         ws => ws.name === "Program Management & Governance"
       );
@@ -6061,16 +6108,24 @@ ${outputTemplate}`;
         };
 
         for (const phase of createdPhases) {
-          const gate = await storage.createWorkstreamTask({
+          const pmProject = createdProjects.find(
+            (p: any) => p.workstreamId === pmGovernanceWorkstream.id
+          );
+          const gate = await storage.createAction({
+            title: `${phase.name} Gate`,
+            description: `Program gate milestone for ${phase.name} phase`,
+            strategyId,
+            projectId: pmProject?.id || null,
             workstreamId: pmGovernanceWorkstream.id,
             phaseId: phase.id,
-            name: `${phase.name} Gate`,
             isMilestone: "true",
             milestoneType: "program_gate",
-            status: "not_started",
+            status: "in_progress",
             durationDays: 1,
             percentComplete: 0,
             sortOrder: phase.sequence ?? 0,
+            documentFolderUrl: null,
+            createdBy: userId,
             organizationId: user.organizationId,
           });
           createdGates.push(gate);
@@ -6085,26 +6140,6 @@ ${outputTemplate}`;
             createdCriteria.push(criterion);
           }
         }
-      }
-
-      const createdProjects = [];
-      for (const ws of createdWorkstreams) {
-        const project = await storage.createProject({
-          title: ws.name,
-          description: `ERP workstream project for ${ws.name}`,
-          strategyId,
-          accountableLeaders: "[]",
-          startDate: new Date(),
-          dueDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-          status: "IP",
-          isWorkstream: "true",
-          workstreamId: ws.id,
-          documentFolderUrl: null,
-          communicationUrl: null,
-          createdBy: userId,
-          organizationId: user.organizationId,
-        });
-        createdProjects.push(project);
       }
 
       res.status(201).json({
@@ -6139,7 +6174,7 @@ ${outputTemplate}`;
       }
 
       const [tasks, workstreams, phases, dependencies] = await Promise.all([
-        storage.getWorkstreamTasksByStrategy(strategyId),
+        storage.getWorkstreamActionsByStrategy(strategyId),
         storage.getWorkstreamsByStrategy(strategyId),
         storage.getPhasesByStrategy(strategyId),
         storage.getWorkstreamDependenciesByStrategy(strategyId),
@@ -6151,7 +6186,7 @@ ${outputTemplate}`;
       const taskRag: Record<string, { rag: string; task: any }> = {};
       for (const task of tasks) {
         let rag = "GREEN";
-        if (task.status === "complete") {
+        if (task.status === "complete" || task.status === "completed") {
           rag = "GREEN";
         } else if (task.status === "blocked") {
           rag = "RED";

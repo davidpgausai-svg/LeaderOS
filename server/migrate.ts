@@ -40,6 +40,23 @@ function safeAddColumn(sqlite: InstanceType<typeof Database>, table: string, col
 function runAlterTableMigrations(sqlite: InstanceType<typeof Database>) {
   safeAddColumn(sqlite, "projects", "is_workstream", "text NOT NULL DEFAULT 'false'");
   safeAddColumn(sqlite, "projects", "workstream_id", "text");
+  safeAddColumn(sqlite, "actions", "phase_id", "text");
+  safeAddColumn(sqlite, "actions", "workstream_id", "text");
+  safeAddColumn(sqlite, "actions", "is_milestone", "text NOT NULL DEFAULT 'false'");
+  safeAddColumn(sqlite, "actions", "milestone_type", "text");
+  safeAddColumn(sqlite, "actions", "planned_start", "integer");
+  safeAddColumn(sqlite, "actions", "planned_end", "integer");
+  safeAddColumn(sqlite, "actions", "actual_start", "integer");
+  safeAddColumn(sqlite, "actions", "actual_end", "integer");
+  safeAddColumn(sqlite, "actions", "duration_days", "integer NOT NULL DEFAULT 1");
+  safeAddColumn(sqlite, "actions", "percent_complete", "integer NOT NULL DEFAULT 0");
+  safeAddColumn(sqlite, "actions", "sort_order", "integer NOT NULL DEFAULT 0");
+  safeAddColumn(sqlite, "actions", "is_critical", "text NOT NULL DEFAULT 'false'");
+  safeAddColumn(sqlite, "actions", "early_start", "integer");
+  safeAddColumn(sqlite, "actions", "early_end", "integer");
+  safeAddColumn(sqlite, "actions", "late_start", "integer");
+  safeAddColumn(sqlite, "actions", "late_end", "integer");
+  safeAddColumn(sqlite, "actions", "total_float", "integer");
 }
 
 function getCreateTableStatements(): string[] {
@@ -247,7 +264,24 @@ function getCreateTableStatements(): string[] {
       "notes" text,
       "organization_id" text,
       "created_by" text NOT NULL,
-      "created_at" integer
+      "created_at" integer,
+      "phase_id" text,
+      "workstream_id" text,
+      "is_milestone" text NOT NULL DEFAULT 'false',
+      "milestone_type" text,
+      "planned_start" integer,
+      "planned_end" integer,
+      "actual_start" integer,
+      "actual_end" integer,
+      "duration_days" integer NOT NULL DEFAULT 1,
+      "percent_complete" integer NOT NULL DEFAULT 0,
+      "sort_order" integer NOT NULL DEFAULT 0,
+      "is_critical" text NOT NULL DEFAULT 'false',
+      "early_start" integer,
+      "early_end" integer,
+      "late_start" integer,
+      "late_end" integer,
+      "total_float" integer
     )`,
 
     `CREATE TABLE IF NOT EXISTS "action_documents" (

@@ -42,6 +42,9 @@ export interface IStorage {
   getActionsByOrganization(organizationId: string): Promise<Action[]>;
   getActionsByStrategy(strategyId: string): Promise<Action[]>;
   getActionsByProject(projectId: string): Promise<Action[]>;
+  getActionsByWorkstream(workstreamId: string): Promise<Action[]>;
+  getActionsByPhase(phaseId: string): Promise<Action[]>;
+  getWorkstreamActionsByStrategy(strategyId: string): Promise<Action[]>;
   createAction(action: InsertAction): Promise<Action>;
   updateAction(id: string, updates: Partial<Action>): Promise<Action | undefined>;
   deleteAction(id: string): Promise<boolean>;
