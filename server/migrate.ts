@@ -57,6 +57,12 @@ function runAlterTableMigrations(sqlite: InstanceType<typeof Database>) {
   safeAddColumn(sqlite, "actions", "late_start", "integer");
   safeAddColumn(sqlite, "actions", "late_end", "integer");
   safeAddColumn(sqlite, "actions", "total_float", "integer");
+
+  safeAddColumn(sqlite, "template_types", "description", "text");
+  safeAddColumn(sqlite, "template_types", "created_by", "text NOT NULL DEFAULT ''");
+  safeAddColumn(sqlite, "user_team_tags", "created_at", "integer");
+  safeAddColumn(sqlite, "project_team_tags", "created_at", "integer");
+  safeAddColumn(sqlite, "strategy_executive_goals", "created_at", "integer");
 }
 
 function getCreateTableStatements(): string[] {
