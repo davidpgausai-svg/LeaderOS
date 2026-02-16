@@ -1553,29 +1553,6 @@ export async function clearMustChangePassword(userId: string): Promise<void> {
   await db.update(users).set({ mustChangePassword: 'false' }).where(eq(users.id, userId));
 }
 
-export async function setupSuperAdmin(): Promise<void> {
-  const superAdminEmails = process.env.SUPER_ADMIN_EMAILS?.split(',').map(e => e.trim().toLowerCase()) || [];
-  
-  if (superAdminEmails.length > 0) {
-    for (const email of superAdminEmails) {
-      const [user] = await db.select().from(users).where(eq(users.email, email));
-      if (user) {
-        await db.update(users).set({ isSuperAdmin: 'true' }).where(eq(users.email, email));
-        console.log(`[INFO] Set ${email} as Super Admin`);
-      }
-    }
-  } else {
-    const [existingSuperAdmin] = await db.select().from(users).where(eq(users.isSuperAdmin, 'true'));
-    if (!existingSuperAdmin) {
-      const [firstUser] = await db.select().from(users).orderBy(users.createdAt).limit(1);
-      if (firstUser) {
-        await db.update(users).set({ isSuperAdmin: 'true' }).where(eq(users.id, firstUser.id));
-        console.log(`[INFO] Set first user (${firstUser.email}) as Super Admin (no SUPER_ADMIN_EMAILS configured)`);
-      }
-    }
-  }
-}
-
 // Password Reset Token Functions
 export async function createPasswordResetToken(
   userId: string, 
@@ -1674,39 +1651,3 @@ export async function cleanupExpiredTwoFactorCodes(): Promise<void> {
     .where(sql`${twoFactorCodes.expiresAt} < (strftime('%s','now') * 1000) OR ${twoFactorCodes.usedAt} IS NOT NULL`);
 }
 
-// Super Admin Dashboard Functions
-export interface OrganizationStats {
-  totalOrganizations: number;
-  totalUsers: number;
-}
-
-export async function getOrganizationStats(): Promise<OrganizationStats> {
-  const allOrgs = await getAllOrganizations();
-  const allUsers = await db.select().from(users);
-  
-  return {
-    totalOrganizations: allOrgs.length,
-    totalUsers: allUsers.length,
-  };
-}
-
-export interface OrganizationWithDetails extends Organization {
-  userCount: number;
-  adminEmails: string[];
-}
-
-export async function getAllOrganizationsWithDetails(): Promise<OrganizationWithDetails[]> {
-  const allOrgs = await getAllOrganizations();
-  const allUsers = await db.select().from(users);
-  
-  return allOrgs.map(org => {
-    const orgUsers = allUsers.filter(u => u.organizationId === org.id);
-    const adminEmails = orgUsers.filter(u => u.role === 'administrator').map(u => u.email || '');
-    
-    return {
-      ...org,
-      userCount: orgUsers.length,
-      adminEmails: adminEmails.filter(Boolean),
-    };
-  });
-}

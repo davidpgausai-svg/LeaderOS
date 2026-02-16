@@ -16,7 +16,6 @@ import Landing from "@/pages/landing";
 import Register from "@/pages/register";
 import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
-import SuperAdmin from "@/pages/super-admin";
 import ForceChangePassword from "@/pages/force-change-password";
 import DecisionLog from "@/pages/decision-log";
 
@@ -58,7 +57,6 @@ function Router() {
         <Route path="/decision-log" component={DecisionLog} />
         <Route path="/reports" component={Reports} />
         <Route path="/settings" component={Settings} />
-        <Route path="/super-admin" component={SuperAdmin} />
         <Route component={NotFound} />
       </Switch>
     </>

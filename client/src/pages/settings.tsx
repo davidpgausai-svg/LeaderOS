@@ -1252,7 +1252,7 @@ function HolidaysSettings() {
 }
 
 export default function Settings() {
-  const { currentRole, currentUser, setCurrentUser, canManageUsers, isSuperAdmin } = useRole();
+  const { currentRole, currentUser, setCurrentUser, canManageUsers } = useRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("profile");
@@ -1281,8 +1281,6 @@ export default function Settings() {
   const [isLoadingToken, setIsLoadingToken] = useState(false);
   const [isRotatingToken, setIsRotatingToken] = useState(false);
   const [copiedToken, setCopiedToken] = useState(false);
-  const [newOrgName, setNewOrgName] = useState("");
-  const [copiedOrgToken, setCopiedOrgToken] = useState<string | null>(null);
   const [editingOrgName, setEditingOrgName] = useState(false);
   const [orgNameInput, setOrgNameInput] = useState("");
 
@@ -1327,14 +1325,9 @@ export default function Settings() {
     enabled: currentUser?.role === 'administrator',
   });
 
-  const { data: organizations = [] } = useQuery<Organization[]>({
-    queryKey: ["/api/super-admin/organizations"],
-    enabled: isSuperAdmin(),
-  });
-
   const { data: orgInfo } = useQuery<{ id: string; name: string }>({
     queryKey: ["/api/organizations/current"],
-    enabled: currentUser?.role === 'administrator' && !isSuperAdmin(),
+    enabled: currentUser?.role === 'administrator',
   });
 
   const currentOrg: Organization | undefined = orgInfo ? orgInfo as Organization : undefined;
@@ -1832,89 +1825,6 @@ export default function Settings() {
     },
   });
 
-  const createOrganizationMutation = useMutation({
-    mutationFn: async (name: string) => {
-      const response = await apiRequest("POST", "/api/super-admin/organizations", { name });
-      return await response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Organization created successfully",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/organizations"] });
-      setNewOrgName("");
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create organization",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const deleteOrganizationMutation = useMutation({
-    mutationFn: async (orgId: string) => {
-      await apiRequest("DELETE", `/api/super-admin/organizations/${orgId}`);
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Organization deleted successfully",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/organizations"] });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete organization",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const rotateOrgTokenMutation = useMutation({
-    mutationFn: async (orgId: string) => {
-      const response = await apiRequest("POST", `/api/super-admin/organizations/${orgId}/rotate-token`);
-      return await response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Registration token rotated. The old link is now invalid.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/organizations"] });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to rotate registration token",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const copyOrgRegistrationUrl = async (token: string, orgName: string) => {
-    const baseUrl = window.location.origin;
-    const registrationUrl = `${baseUrl}/register/${token}`;
-    try {
-      await navigator.clipboard.writeText(registrationUrl);
-      setCopiedOrgToken(token);
-      setTimeout(() => setCopiedOrgToken(null), 2000);
-      toast({
-        title: "Copied!",
-        description: `Registration link for ${orgName} copied to clipboard`,
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to copy to clipboard",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleAddTemplateType = () => {
     const trimmedName = newTemplateTypeName.trim();
     if (!trimmedName) {
@@ -2076,7 +1986,7 @@ export default function Settings() {
   };
 
   const isOrgAdministrator = () => {
-    return currentUser?.role === 'administrator' && !isSuperAdmin();
+    return currentUser?.role === 'administrator';
   };
 
   const handleProfileUpdate = (formData: FormData) => {
@@ -2772,8 +2682,7 @@ export default function Settings() {
                 style={{ backgroundColor: 'rgba(0, 0, 0, 0.05)' }}
               >
                 {[
-                  ...(isSuperAdmin() ? [{ value: 'organizations', icon: Building2, label: 'Organizations' }] : []),
-                  ...(!isSuperAdmin() ? [{ value: 'organization', icon: Building2, label: 'Organization' }] : []),
+                  { value: 'organization', icon: Building2, label: 'Organization' },
                   { value: 'user-management', icon: Users, label: 'User Roles' },
                   { value: 'holidays', icon: Star, label: 'Holidays' },
                   { value: 'framework-management', icon: Target, label: 'Framework Order' },
@@ -2806,164 +2715,8 @@ export default function Settings() {
                 })}
               </div>
 
-              {/* Super Admin Organizations Management */}
-              {isSuperAdmin() && (
-                <TabsContent value="organizations" className="space-y-6">
-                  <Card data-testid="card-admin-organizations">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle className="flex items-center">
-                            <Building2 className="mr-2 h-5 w-5" />
-                            Organization Management
-                          </CardTitle>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                            Manage customer organizations. Each organization has its own isolated data and registration link.
-                          </p>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <div className="flex gap-2 mb-4">
-                        <Input
-                          value={newOrgName}
-                          onChange={(e) => setNewOrgName(e.target.value)}
-                          placeholder="New organization name..."
-                          className="max-w-xs"
-                          onKeyDown={(e) => e.key === "Enter" && newOrgName.trim() && createOrganizationMutation.mutate(newOrgName.trim())}
-                          data-testid="input-new-organization"
-                        />
-                        <Button
-                          onClick={() => newOrgName.trim() && createOrganizationMutation.mutate(newOrgName.trim())}
-                          disabled={createOrganizationMutation.isPending || !newOrgName.trim()}
-                          data-testid="button-add-organization"
-                        >
-                          <Plus className="w-4 h-4 mr-2" />
-                          {createOrganizationMutation.isPending ? "Creating..." : "Create Organization"}
-                        </Button>
-                      </div>
-
-                      <div className="space-y-4">
-                        {organizations.length === 0 ? (
-                          <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
-                            No organizations yet. Create one above.
-                          </p>
-                        ) : (
-                          organizations.map((org: Organization) => (
-                            <div
-                              key={org.id}
-                              className="p-4 border dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 space-y-3"
-                              data-testid={`org-item-${org.id}`}
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-3">
-                                  <Building2 className="h-5 w-5 text-gray-500" />
-                                  <div>
-                                    <h4 className="font-medium text-gray-900 dark:text-white">{org.name}</h4>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                                      Created: {org.createdAt ? new Date(org.createdAt).toLocaleDateString() : 'Unknown'}
-                                    </p>
-                                  </div>
-                                </div>
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950"
-                                      data-testid={`button-delete-org-${org.id}`}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>Delete Organization</AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        Are you sure you want to delete "{org.name}"? This will permanently remove all associated users, strategies, projects, and actions. This action cannot be undone.
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction
-                                        onClick={() => deleteOrganizationMutation.mutate(org.id)}
-                                        className="bg-red-600 hover:bg-red-700"
-                                      >
-                                        Delete Organization
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
-                              </div>
-
-                              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                                <div className="flex items-center space-x-2 mb-2">
-                                  <Link className="h-4 w-4 text-blue-600" />
-                                  <h5 className="font-medium text-sm text-blue-800 dark:text-blue-200">
-                                    Registration Link
-                                  </h5>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <Input
-                                    value={`${window.location.origin}/register/${org.registrationToken}`}
-                                    readOnly
-                                    className="font-mono text-xs bg-white dark:bg-gray-800"
-                                    data-testid={`input-org-registration-url-${org.id}`}
-                                  />
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => copyOrgRegistrationUrl(org.registrationToken, org.name)}
-                                    data-testid={`button-copy-org-url-${org.id}`}
-                                  >
-                                    {copiedOrgToken === org.registrationToken ? (
-                                      <Check className="h-4 w-4 text-green-600" />
-                                    ) : (
-                                      <Copy className="h-4 w-4" />
-                                    )}
-                                  </Button>
-                                  <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                      <Button
-                                        variant="outline"
-                                        size="icon"
-                                        className="text-orange-600"
-                                        data-testid={`button-rotate-org-token-${org.id}`}
-                                      >
-                                        <RefreshCw className={`h-4 w-4 ${rotateOrgTokenMutation.isPending ? 'animate-spin' : ''}`} />
-                                      </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle>Rotate Registration Link?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                          This will create a new registration link for "{org.name}" and immediately invalidate the old one. Anyone with the old link will no longer be able to register.
-                                        </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction
-                                          onClick={() => rotateOrgTokenMutation.mutate(org.id)}
-                                          className="bg-orange-600 hover:bg-orange-700"
-                                        >
-                                          Rotate Link
-                                        </AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                                </div>
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              )}
-
-              {/* Regular Admin Organization Settings */}
-              {!isSuperAdmin() && (
+              {/* Organization Settings */}
+              {(
                 <TabsContent value="organization" className="space-y-6">
                   <Card data-testid="card-admin-organization">
                     <CardHeader>

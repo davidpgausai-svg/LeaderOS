@@ -19,7 +19,6 @@ import {
   ChevronRight,
   CalendarDays,
   GanttChart,
-  Crown,
   Scale,
 } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/notification-bell";
@@ -40,7 +39,7 @@ const secondaryNavigation = [
 
 export function Sidebar() {
   const [location] = useLocation();
-  const { currentRole, currentUser, isSuperAdmin } = useRole();
+  const { currentRole, currentUser } = useRole();
   const { user, logout } = useAuth();
 
   const isActiveRoute = (href: string) => {
@@ -243,54 +242,6 @@ export function Sidebar() {
           <NotificationBell isCollapsed={isCollapsed} />
         </div>
         
-        {/* Super Admin Link - Only visible to Super Admins */}
-        {isSuperAdmin() && (() => {
-          const isAdminActive = isActiveRoute("/super-admin");
-          return (
-            <Link href="/super-admin">
-              {isCollapsed ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div
-                      className={`flex items-center justify-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm ${
-                        isAdminActive
-                          ? "shadow-sm"
-                          : "hover:bg-black/5"
-                      }`}
-                      style={{
-                        backgroundColor: isAdminActive ? '#F59E0B' : 'transparent',
-                        color: isAdminActive ? '#FFFFFF' : '#F59E0B',
-                      }}
-                      data-testid="link-super-admin"
-                    >
-                      <Crown className="h-4 w-4" />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">
-                    Super Admin
-                  </TooltipContent>
-                </Tooltip>
-              ) : (
-                <div
-                  className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm ${
-                    isAdminActive
-                      ? "shadow-sm"
-                      : "hover:bg-black/5"
-                  }`}
-                  style={{
-                    backgroundColor: isAdminActive ? '#F59E0B' : 'transparent',
-                    color: isAdminActive ? '#FFFFFF' : '#F59E0B',
-                  }}
-                  data-testid="link-super-admin"
-                >
-                  <Crown className="mr-3 h-4 w-4" />
-                  Super Admin
-                </div>
-              )}
-            </Link>
-          );
-        })()}
-
       </nav>
       
       {/* User Profile */}

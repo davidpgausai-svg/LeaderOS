@@ -4,7 +4,7 @@ import type { Express, RequestHandler, Response } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { storage } from './storage';
 import { logger } from './logger';
-import { getOrganization, getOrganizationByToken, updateOrganizationToken, updateOrganizationName, getAllOrganizations, createOrganization, deleteOrganization, getUserByEmail, updateUserPassword, clearMustChangePassword, createPasswordResetToken, getPasswordResetToken, markPasswordResetTokenUsed, createTwoFactorCode, getTwoFactorCode, incrementTwoFactorAttempts, markTwoFactorCodeUsed, deleteTwoFactorCodes } from './pgStorage';
+import { getOrganization, getOrganizationByToken, updateOrganizationToken, updateOrganizationName, getAllOrganizations, getUserByEmail, updateUserPassword, clearMustChangePassword, createPasswordResetToken, getPasswordResetToken, markPasswordResetTokenUsed, createTwoFactorCode, getTwoFactorCode, incrementTwoFactorAttempts, markTwoFactorCodeUsed, deleteTwoFactorCodes } from './pgStorage';
 import { sendPasswordResetEmail, sendTwoFactorCode } from './email';
 import crypto from 'crypto';
 
@@ -264,80 +264,6 @@ export async function setupAuth(app: Express) {
     } catch (error) {
       logger.error('Error rotating registration token', error);
       res.status(500).json({ error: 'Failed to rotate registration token' });
-    }
-  });
-
-  // Super Admin: Get all organizations
-  app.get('/api/super-admin/organizations', isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.userId);
-      if (!user || user.isSuperAdmin !== 'true') {
-        return res.status(403).json({ error: 'Only super administrators can view all organizations' });
-      }
-
-      const orgs = await getAllOrganizations();
-      res.json(orgs);
-    } catch (error) {
-      logger.error('Error fetching organizations', error);
-      res.status(500).json({ error: 'Failed to fetch organizations' });
-    }
-  });
-
-  // Super Admin: Create new organization
-  app.post('/api/super-admin/organizations', isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.userId);
-      if (!user || user.isSuperAdmin !== 'true') {
-        return res.status(403).json({ error: 'Only super administrators can create organizations' });
-      }
-
-      const { name } = req.body;
-      if (!name || typeof name !== 'string' || name.trim().length === 0) {
-        return res.status(400).json({ error: 'Organization name is required' });
-      }
-
-      const org = await createOrganization(name.trim());
-      logger.info(`Organization ${org.name} created by super admin ${req.user.userId}`);
-      res.status(201).json(org);
-    } catch (error) {
-      logger.error('Error creating organization', error);
-      res.status(500).json({ error: 'Failed to create organization' });
-    }
-  });
-
-  // Super Admin: Delete organization
-  app.delete('/api/super-admin/organizations/:orgId', isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.userId);
-      if (!user || user.isSuperAdmin !== 'true') {
-        return res.status(403).json({ error: 'Only super administrators can delete organizations' });
-      }
-
-      const { orgId } = req.params;
-      await deleteOrganization(orgId);
-      logger.info(`Organization ${orgId} deleted by super admin ${req.user.userId}`);
-      res.json({ message: 'Organization deleted successfully' });
-    } catch (error) {
-      logger.error('Error deleting organization', error);
-      res.status(500).json({ error: 'Failed to delete organization' });
-    }
-  });
-
-  // Super Admin: Rotate token for any organization
-  app.post('/api/super-admin/organizations/:orgId/rotate-token', isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.userId);
-      if (!user || user.isSuperAdmin !== 'true') {
-        return res.status(403).json({ error: 'Only super administrators can rotate organization tokens' });
-      }
-
-      const { orgId } = req.params;
-      const updatedOrg = await updateOrganizationToken(orgId);
-      logger.info(`Registration token for org ${orgId} rotated by super admin ${req.user.userId}`);
-      res.json({ token: updatedOrg?.registrationToken, message: 'Registration token rotated successfully' });
-    } catch (error) {
-      logger.error('Error rotating organization token', error);
-      res.status(500).json({ error: 'Failed to rotate organization token' });
     }
   });
 

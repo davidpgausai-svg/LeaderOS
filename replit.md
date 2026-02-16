@@ -1,7 +1,7 @@
 # StrategyPlan - Strategic Planning Platform
 
 ## Overview
-StrategyPlan is a comprehensive multi-tenant strategic planning platform designed to streamline strategic planning and execution for organizations. It provides a hierarchical system for managing strategies, projects, and actions, enabling executives to define high-level strategies and leaders to implement specific projects with measurable actions. The platform offers role-based views, progress tracking, activity monitoring, and comprehensive reporting. It is intended as a self-hosted internal tool with no billing, subscriptions, or feature limits, offering unlimited strategies, projects, and users.
+StrategyPlan is a comprehensive strategic planning platform designed to streamline strategic planning and execution for a single organization. It provides a hierarchical system for managing strategies, projects, and actions, enabling executives to define high-level strategies and leaders to implement specific projects with measurable actions. The platform offers role-based views, progress tracking, activity monitoring, and comprehensive reporting. It is intended as a self-hosted internal tool with no billing, subscriptions, or feature limits, offering unlimited strategies, projects, and users.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -18,8 +18,8 @@ The backend is an Express.js REST API with TypeScript, featuring an abstracted s
 ### Data Storage
 SQLite (via better-sqlite3) is used for persistent data storage, managed through Drizzle ORM. The database schema is defined in `shared/schema.ts`, with tables created via explicit `CREATE TABLE IF NOT EXISTS` statements.
 
-### Multi-Tenancy Architecture
-The platform supports multiple organizations with complete data isolation on a single database, scoped by `organization_id`. A Super Admin role can manage all organizations. Security is enforced through organization-scoped data loading and role-based access to prevent cross-tenant data access.
+### Data Scoping
+Data is scoped by `organization_id` for security isolation. Role-based access prevents unauthorized data access.
 
 ### Authentication and Authorization
 A JWT email/password authentication system is used, with permissions enforced at the API level based on user roles (Administrator, Co-Lead, View, SME), strategy assignments, and organization membership. SME users cannot log in. Security measures include HTTP-only cookies, CSRF protection, password complexity validation, and security event logging. Email-based 2FA and comprehensive rate limiting are implemented for brute force protection.

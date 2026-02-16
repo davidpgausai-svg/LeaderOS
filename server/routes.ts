@@ -122,8 +122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let users;
       
-      // All users (including Super Admins) see only users in their organization for the main views
-      // Super Admins can see all users via the /api/super-admin/organizations endpoint
+      // All users see only users in their organization
       users = user.organizationId 
         ? await storage.getUsersByOrganization(user.organizationId)
         : [];
@@ -559,8 +558,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let strategies;
       
-      // All users (including Super Admins) see only strategies in their organization for main views
-      // Super Admins can see cross-org data via /api/super-admin/* endpoints
+      // All users see only strategies in their organization
       if (user.role === 'administrator' || user.isSuperAdmin === 'true') {
         // Administrators see all strategies in their organization
         strategies = user.organizationId 
@@ -4095,52 +4093,6 @@ Respond ONLY with a valid JSON object in this exact format:
     } catch (error) {
       logger.error("Failed to delete holiday", error);
       res.status(500).json({ message: "Failed to delete holiday" });
-    }
-  });
-
-  // =================== SUPER ADMIN ROUTES ===================
-  
-  // Get all organizations with details (Super Admin only)
-  app.get("/api/super-admin/organizations", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "User not authenticated" });
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user || user.isSuperAdmin !== 'true') {
-        return res.status(403).json({ message: "Super Admin access required" });
-      }
-
-      const { getAllOrganizationsWithDetails } = await import('./pgStorage');
-      const organizations = await getAllOrganizationsWithDetails();
-      res.json(organizations);
-    } catch (error) {
-      logger.error("Failed to fetch organizations", error);
-      res.status(500).json({ message: "Failed to fetch organizations" });
-    }
-  });
-
-  // Get organization stats (Super Admin only)
-  app.get("/api/super-admin/stats", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "User not authenticated" });
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user || user.isSuperAdmin !== 'true') {
-        return res.status(403).json({ message: "Super Admin access required" });
-      }
-
-      const { getOrganizationStats } = await import('./pgStorage');
-      const stats = await getOrganizationStats();
-      res.json(stats);
-    } catch (error) {
-      logger.error("Failed to fetch organization stats", error);
-      res.status(500).json({ message: "Failed to fetch organization stats" });
     }
   });
 
