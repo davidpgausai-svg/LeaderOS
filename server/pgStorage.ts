@@ -320,7 +320,9 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(actions).where(
       and(
         eq(actions.strategyId, strategyId),
-        isNotNull(actions.workstreamId)
+        isNotNull(actions.workstreamId),
+        isNotNull(actions.projectId),
+        sql`${actions.projectId} != ''`
       )
     );
   }
