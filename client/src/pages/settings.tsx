@@ -1393,6 +1393,7 @@ export default function Settings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/workstreams', wsSelectedStrategyId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       setWsNewName(""); setWsNewLead(""); setWsShowAddForm(false);
       toast({ title: "Success", description: "Workstream created" });
     },
@@ -1407,6 +1408,7 @@ export default function Settings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/workstreams', wsSelectedStrategyId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       setWsEditingId(null);
       toast({ title: "Success", description: "Workstream updated" });
     },
@@ -1420,6 +1422,8 @@ export default function Settings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/workstreams', wsSelectedStrategyId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
       toast({ title: "Success", description: "Workstream deleted" });
     },
     onError: (err: Error) => { toast({ title: "Error", description: err.message, variant: "destructive" }); },
@@ -1433,6 +1437,7 @@ export default function Settings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/phases', wsSelectedStrategyId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/phases"] });
       setPhNewName(""); setPhNewSequence(""); setPhNewPlannedStart(""); setPhNewPlannedEnd(""); setPhShowAddForm(false);
       toast({ title: "Success", description: "Phase created" });
     },
@@ -1447,6 +1452,7 @@ export default function Settings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/phases', wsSelectedStrategyId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/phases"] });
       setPhEditingId(null);
       toast({ title: "Success", description: "Phase updated" });
     },
@@ -1460,6 +1466,7 @@ export default function Settings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/phases', wsSelectedStrategyId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/phases"] });
       toast({ title: "Success", description: "Phase deleted" });
     },
     onError: (err: Error) => { toast({ title: "Error", description: err.message, variant: "destructive" }); },
@@ -1474,6 +1481,10 @@ export default function Settings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/workstreams', wsSelectedStrategyId] });
       queryClient.invalidateQueries({ queryKey: ['/api/phases', wsSelectedStrategyId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/phases"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/strategies"] });
       toast({ title: "Success", description: "ERP program defaults have been seeded" });
     },
     onError: (err: Error) => { toast({ title: "Error", description: err.message, variant: "destructive" }); },
