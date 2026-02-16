@@ -2095,39 +2095,129 @@ export default function Strategies() {
                                               </div>
                                               <div className="space-y-1 ml-4">
                                                 {phaseActions.map((action: any) => {
+                                                  const dueDateDisplay = getActionDueDateDisplay(action);
                                                   const isMilestone = action.isMilestone === 'true';
                                                   return (
                                                     <div
                                                       key={action.id}
-                                                      className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-white/50 dark:hover:bg-gray-800/30 cursor-pointer"
-                                                      onClick={(e) => { e.stopPropagation(); setChecklistModalAction(action); }}
+                                                      className="flex items-center justify-between py-1.5 hover:bg-white/50 dark:hover:bg-gray-800/30 rounded px-2 -mx-2"
+                                                      data-testid={`ws-action-row-${action.id}`}
                                                     >
-                                                      <div className="flex items-center gap-2 min-w-0">
-                                                        {isMilestone ? (
-                                                          <Flag className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                                                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                        {canEditAllStrategies() ? (
+                                                          <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                              <Button variant="ghost" size="sm" className="h-5 px-1 py-0 flex items-center gap-0.5">
+                                                                <div className={`w-2.5 h-2.5 rounded-full ${getActionStatusCircleColor(action.status)}`} />
+                                                                <ChevronDown className="w-2.5 h-2.5 text-gray-500" />
+                                                              </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="start">
+                                                              {actionStatusOptions.map((option) => (
+                                                                <DropdownMenuItem
+                                                                  key={option.value}
+                                                                  onClick={() => updateActionStatusMutation.mutate({ action, status: option.value })}
+                                                                  className="flex items-center gap-2"
+                                                                >
+                                                                  <div className={`w-2.5 h-2.5 rounded-full ${getActionStatusCircleColor(option.value)}`} />
+                                                                  <span>{option.label}</span>
+                                                                  {action.status === option.value && (
+                                                                    <CheckCircle className="w-3 h-3 ml-auto text-green-500" />
+                                                                  )}
+                                                                </DropdownMenuItem>
+                                                              ))}
+                                                            </DropdownMenuContent>
+                                                          </DropdownMenu>
                                                         ) : (
-                                                          <Circle className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                                                          <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${getActionStatusCircleColor(action.status)}`} />
                                                         )}
-                                                        <span className="text-sm text-gray-800 dark:text-gray-200 truncate">{action.title}</span>
+                                                        {isMilestone && (
+                                                          <Flag className="w-3 h-3 text-amber-500 flex-shrink-0" />
+                                                        )}
+                                                        <span
+                                                          className="text-sm text-gray-700 dark:text-gray-300 truncate hover:text-primary cursor-pointer"
+                                                          onClick={() => setChecklistModalAction(action)}
+                                                        >
+                                                          {action.title}
+                                                        </span>
                                                         {isMilestone && action.milestoneType && (
                                                           <Badge className="text-[9px] px-1 py-0 bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">
                                                             {action.milestoneType === 'program_gate' ? 'Gate' : 'Milestone'}
                                                           </Badge>
                                                         )}
                                                       </div>
-                                                      <div className="flex items-center gap-2 flex-shrink-0">
-                                                        <span className="text-xs text-gray-500">{action.percentComplete || 0}%</span>
-                                                        <Badge className={`text-[10px] px-1.5 py-0 ${
-                                                          action.status === 'completed' || action.status === 'complete' ? 'bg-green-100 text-green-700' :
-                                                          action.status === 'blocked' ? 'bg-red-100 text-red-700' :
-                                                          action.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
-                                                          'bg-gray-100 text-gray-700'
-                                                        }`}>
-                                                          {action.status === 'not_started' ? 'Not Started' :
-                                                           action.status === 'in_progress' ? 'In Progress' :
-                                                           action.status === 'completed' || action.status === 'complete' ? 'Complete' :
-                                                           action.status === 'blocked' ? 'Blocked' : action.status}
-                                                        </Badge>
+                                                      <div className="flex items-center gap-1 flex-shrink-0">
+                                                        {dueDateDisplay && (
+                                                          <>
+                                                            <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{dueDateDisplay.date}</span>
+                                                            <Badge
+                                                              className={`text-xs px-1.5 py-0 cursor-pointer ${dueDateDisplay.color}`}
+                                                              onClick={(e) => { e.stopPropagation(); setDueDateModalAction(action); }}
+                                                            >
+                                                              {dueDateDisplay.text}
+                                                            </Badge>
+                                                          </>
+                                                        )}
+                                                        <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={(e) => { e.stopPropagation(); setActionPeopleModalAction(action); }} title="Assign To-Do Actions">
+                                                          <Users className={`w-3 h-3 ${actionHasPeople(action.id) ? 'text-blue-500' : 'text-gray-400'}`} />
+                                                        </Button>
+                                                        <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={(e) => { e.stopPropagation(); setDependenciesModalAction(action); }} title={actionHasDependencies(action.id) ? "View dependencies" : "Add dependency"}>
+                                                          <Link2 className={`w-3 h-3 ${actionHasDependencies(action.id) ? 'text-blue-500' : 'text-gray-400'}`} />
+                                                        </Button>
+                                                        <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={(e) => { e.stopPropagation(); setChecklistModalAction(action); }} title="View checklist">
+                                                          <ListChecks className={`w-3 h-3 ${actionHasIncompleteChecklist(action.id) ? 'text-yellow-500' : getActionChecklistItems(action.id).length > 0 ? 'text-green-500' : 'text-gray-400'}`} />
+                                                        </Button>
+                                                        <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={(e) => { e.stopPropagation(); setActionFolderUrl(action.documentFolderUrl || ""); setActionFolderUrlEditing(!action.documentFolderUrl && canEditAllStrategies()); setFolderUrlModalAction(action); }} title={action.documentFolderUrl ? "View folder link" : "Add folder link"}>
+                                                          <FolderOpen className={`w-3 h-3 ${action.documentFolderUrl ? 'text-blue-500' : 'text-gray-400'}`} />
+                                                        </Button>
+                                                        <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={(e) => { e.stopPropagation(); setNotesModalAction(action); setActionNotes(action.notes || ""); }} title={action.notes ? "View notes" : "Add notes"}>
+                                                          <StickyNote className={`w-3 h-3 ${action.notes ? 'text-blue-500' : 'text-gray-400'}`} />
+                                                        </Button>
+                                                        {canEditAllStrategies() && (
+                                                          <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                              <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={(e) => e.stopPropagation()}>
+                                                                <MoreVertical className="w-3 h-3 text-gray-500" />
+                                                              </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
+                                                              <DropdownMenuItem onClick={() => { setDueDateModalAction(action); }}>
+                                                                <Calendar className="w-3.5 h-3.5 mr-2" />
+                                                                Edit Due Date
+                                                              </DropdownMenuItem>
+                                                              <DropdownMenuItem onClick={() => { setFolderUrlModalAction(action); setActionFolderUrl(action.documentFolderUrl || ""); }}>
+                                                                <FolderOpen className="w-3.5 h-3.5 mr-2" />
+                                                                Edit Folder Link
+                                                              </DropdownMenuItem>
+                                                              <DropdownMenuItem onClick={() => handleEditAction(action)}>
+                                                                <Edit className="w-3.5 h-3.5 mr-2" />
+                                                                Edit Task
+                                                              </DropdownMenuItem>
+                                                              <AlertDialog>
+                                                                <AlertDialogTrigger asChild>
+                                                                  <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-600">
+                                                                    <Trash2 className="w-3.5 h-3.5 mr-2" />
+                                                                    Delete
+                                                                  </DropdownMenuItem>
+                                                                </AlertDialogTrigger>
+                                                                <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                                                                  <AlertDialogHeader>
+                                                                    <AlertDialogTitle>Delete Task</AlertDialogTitle>
+                                                                    <AlertDialogDescription>
+                                                                      Are you sure you want to delete "{action.title}"? This action cannot be undone.
+                                                                    </AlertDialogDescription>
+                                                                  </AlertDialogHeader>
+                                                                  <AlertDialogFooter>
+                                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                    <AlertDialogAction onClick={() => deleteActionMutation.mutate(action.id)} className="bg-red-600 hover:bg-red-700">
+                                                                      Delete
+                                                                    </AlertDialogAction>
+                                                                  </AlertDialogFooter>
+                                                                </AlertDialogContent>
+                                                              </AlertDialog>
+                                                            </DropdownMenuContent>
+                                                          </DropdownMenu>
+                                                        )}
                                                       </div>
                                                     </div>
                                                   );
@@ -2144,29 +2234,147 @@ export default function Strategies() {
                                               <span className="text-xs text-gray-400">({ungrouped.length})</span>
                                             </div>
                                             <div className="space-y-1 ml-4">
-                                              {ungrouped.map((action: any) => (
-                                                <div
-                                                  key={action.id}
-                                                  className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-white/50 dark:hover:bg-gray-800/30 cursor-pointer"
-                                                  onClick={(e) => { e.stopPropagation(); setChecklistModalAction(action); }}
-                                                >
-                                                  <div className="flex items-center gap-2 min-w-0">
-                                                    <Circle className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                                                    <span className="text-sm text-gray-800 dark:text-gray-200 truncate">{action.title}</span>
+                                              {ungrouped.map((action: any) => {
+                                                const dueDateDisplay = getActionDueDateDisplay(action);
+                                                return (
+                                                  <div
+                                                    key={action.id}
+                                                    className="flex items-center justify-between py-1.5 hover:bg-white/50 dark:hover:bg-gray-800/30 rounded px-2 -mx-2"
+                                                    data-testid={`ws-action-row-${action.id}`}
+                                                  >
+                                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                      {canEditAllStrategies() ? (
+                                                        <DropdownMenu>
+                                                          <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="sm" className="h-5 px-1 py-0 flex items-center gap-0.5">
+                                                              <div className={`w-2.5 h-2.5 rounded-full ${getActionStatusCircleColor(action.status)}`} />
+                                                              <ChevronDown className="w-2.5 h-2.5 text-gray-500" />
+                                                            </Button>
+                                                          </DropdownMenuTrigger>
+                                                          <DropdownMenuContent align="start">
+                                                            {actionStatusOptions.map((option) => (
+                                                              <DropdownMenuItem
+                                                                key={option.value}
+                                                                onClick={() => updateActionStatusMutation.mutate({ action, status: option.value })}
+                                                                className="flex items-center gap-2"
+                                                              >
+                                                                <div className={`w-2.5 h-2.5 rounded-full ${getActionStatusCircleColor(option.value)}`} />
+                                                                <span>{option.label}</span>
+                                                                {action.status === option.value && (
+                                                                  <CheckCircle className="w-3 h-3 ml-auto text-green-500" />
+                                                                )}
+                                                              </DropdownMenuItem>
+                                                            ))}
+                                                          </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                      ) : (
+                                                        <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${getActionStatusCircleColor(action.status)}`} />
+                                                      )}
+                                                      <span
+                                                        className="text-sm text-gray-700 dark:text-gray-300 truncate hover:text-primary cursor-pointer"
+                                                        onClick={() => setChecklistModalAction(action)}
+                                                      >
+                                                        {action.title}
+                                                      </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1 flex-shrink-0">
+                                                      {dueDateDisplay && (
+                                                        <>
+                                                          <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{dueDateDisplay.date}</span>
+                                                          <Badge
+                                                            className={`text-xs px-1.5 py-0 cursor-pointer ${dueDateDisplay.color}`}
+                                                            onClick={(e) => { e.stopPropagation(); setDueDateModalAction(action); }}
+                                                          >
+                                                            {dueDateDisplay.text}
+                                                          </Badge>
+                                                        </>
+                                                      )}
+                                                      <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={(e) => { e.stopPropagation(); setActionPeopleModalAction(action); }} title="Assign To-Do Actions">
+                                                        <Users className={`w-3 h-3 ${actionHasPeople(action.id) ? 'text-blue-500' : 'text-gray-400'}`} />
+                                                      </Button>
+                                                      <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={(e) => { e.stopPropagation(); setDependenciesModalAction(action); }} title={actionHasDependencies(action.id) ? "View dependencies" : "Add dependency"}>
+                                                        <Link2 className={`w-3 h-3 ${actionHasDependencies(action.id) ? 'text-blue-500' : 'text-gray-400'}`} />
+                                                      </Button>
+                                                      <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={(e) => { e.stopPropagation(); setChecklistModalAction(action); }} title="View checklist">
+                                                        <ListChecks className={`w-3 h-3 ${actionHasIncompleteChecklist(action.id) ? 'text-yellow-500' : getActionChecklistItems(action.id).length > 0 ? 'text-green-500' : 'text-gray-400'}`} />
+                                                      </Button>
+                                                      <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={(e) => { e.stopPropagation(); setActionFolderUrl(action.documentFolderUrl || ""); setActionFolderUrlEditing(!action.documentFolderUrl && canEditAllStrategies()); setFolderUrlModalAction(action); }} title={action.documentFolderUrl ? "View folder link" : "Add folder link"}>
+                                                        <FolderOpen className={`w-3 h-3 ${action.documentFolderUrl ? 'text-blue-500' : 'text-gray-400'}`} />
+                                                      </Button>
+                                                      <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={(e) => { e.stopPropagation(); setNotesModalAction(action); setActionNotes(action.notes || ""); }} title={action.notes ? "View notes" : "Add notes"}>
+                                                        <StickyNote className={`w-3 h-3 ${action.notes ? 'text-blue-500' : 'text-gray-400'}`} />
+                                                      </Button>
+                                                      {canEditAllStrategies() && (
+                                                        <DropdownMenu>
+                                                          <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={(e) => e.stopPropagation()}>
+                                                              <MoreVertical className="w-3 h-3 text-gray-500" />
+                                                            </Button>
+                                                          </DropdownMenuTrigger>
+                                                          <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem onClick={() => { setDueDateModalAction(action); }}>
+                                                              <Calendar className="w-3.5 h-3.5 mr-2" />
+                                                              Edit Due Date
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => { setFolderUrlModalAction(action); setActionFolderUrl(action.documentFolderUrl || ""); }}>
+                                                              <FolderOpen className="w-3.5 h-3.5 mr-2" />
+                                                              Edit Folder Link
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleEditAction(action)}>
+                                                              <Edit className="w-3.5 h-3.5 mr-2" />
+                                                              Edit Task
+                                                            </DropdownMenuItem>
+                                                            <AlertDialog>
+                                                              <AlertDialogTrigger asChild>
+                                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-600">
+                                                                  <Trash2 className="w-3.5 h-3.5 mr-2" />
+                                                                  Delete
+                                                                </DropdownMenuItem>
+                                                              </AlertDialogTrigger>
+                                                              <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                                                                <AlertDialogHeader>
+                                                                  <AlertDialogTitle>Delete Task</AlertDialogTitle>
+                                                                  <AlertDialogDescription>
+                                                                    Are you sure you want to delete "{action.title}"? This action cannot be undone.
+                                                                  </AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                  <AlertDialogAction onClick={() => deleteActionMutation.mutate(action.id)} className="bg-red-600 hover:bg-red-700">
+                                                                    Delete
+                                                                  </AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                              </AlertDialogContent>
+                                                            </AlertDialog>
+                                                          </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                      )}
+                                                    </div>
                                                   </div>
-                                                  <div className="flex items-center gap-2 flex-shrink-0">
-                                                    <span className="text-xs text-gray-500">{action.percentComplete || 0}%</span>
-                                                    <Badge className={`text-[10px] px-1.5 py-0 bg-gray-100 text-gray-700`}>
-                                                      {action.status}
-                                                    </Badge>
-                                                  </div>
-                                                </div>
-                                              ))}
+                                                );
+                                              })}
                                             </div>
                                           </div>
                                         )}
                                         {wsActions.length === 0 && (
-                                          <p className="text-sm text-gray-400 dark:text-gray-500 italic py-2">No workstream actions yet. Use the Add Task button above to get started.</p>
+                                          <p className="text-sm text-gray-400 dark:text-gray-500 italic py-2">No workstream actions yet. Use the Add Task button to get started.</p>
+                                        )}
+                                        {canEditAllStrategies() && (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="w-full h-7 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 justify-center"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setWsTaskStrategyId(project.strategyId);
+                                              setWsTaskProjectId(project.id);
+                                              setWsTaskWorkstreamId(project.workstreamId);
+                                              setIsCreateWsTaskOpen(true);
+                                            }}
+                                          >
+                                            <Plus className="w-3 h-3 mr-1" />
+                                            Add Task
+                                          </Button>
                                         )}
                                       </div>
                                     );
