@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -40,6 +40,13 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
+type Phase = {
+  id: string;
+  name: string;
+  strategyId: string;
+  orderIndex: number;
+};
+
 interface CreateActionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -66,6 +73,7 @@ export function CreateActionModal({ open, onOpenChange, strategyId, projectId, w
   const { currentUser } = useRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
 
   const { data: strategies } = useQuery({
     queryKey: ["/api/strategies"],
@@ -73,6 +81,17 @@ export function CreateActionModal({ open, onOpenChange, strategyId, projectId, w
 
   const { data: projects } = useQuery({
     queryKey: ["/api/projects"],
+  });
+
+  const { data: phases = [] } = useQuery<Phase[]>({
+    queryKey: ["/api/phases", strategyId],
+    queryFn: async () => {
+      if (!strategyId) return [];
+      const res = await fetch(`/api/phases?strategyId=${strategyId}`, { credentials: 'include' });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!isWorkstreamTask && !!strategyId,
   });
 
   const form = useForm<InsertAction>({
@@ -104,7 +123,7 @@ export function CreateActionModal({ open, onOpenChange, strategyId, projectId, w
         const response = await apiRequest("POST", "/api/workstream-tasks", {
           name: data.title,
           workstreamId,
-          phaseId: null,
+          phaseId: selectedPhaseId || null,
           projectId: data.projectId,
           description: data.description,
           status: data.status,
@@ -125,6 +144,7 @@ export function CreateActionModal({ open, onOpenChange, strategyId, projectId, w
         description: isWorkstreamTask ? "Task created successfully" : "Action created successfully",
       });
       form.reset();
+      setSelectedPhaseId(null);
       onOpenChange(false);
     },
     onError: (error) => {
@@ -282,6 +302,29 @@ export function CreateActionModal({ open, onOpenChange, strategyId, projectId, w
                     </FormItem>
                   )}
                 />
+                {isWorkstreamTask && phases.length > 0 && (
+                  <div>
+                    <FormLabel>Phase</FormLabel>
+                    <Select
+                      onValueChange={(val) => setSelectedPhaseId(val === "no_phase" ? null : val)}
+                      value={selectedPhaseId || "no_phase"}
+                    >
+                      <SelectTrigger data-testid="select-action-phase">
+                        <SelectValue placeholder="Select a phase (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="no_phase">No Phase</SelectItem>
+                        {phases
+                          .sort((a, b) => a.orderIndex - b.orderIndex)
+                          .map((phase) => (
+                            <SelectItem key={phase.id} value={phase.id}>
+                              {phase.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
 
               {/* Status & Timeline */}

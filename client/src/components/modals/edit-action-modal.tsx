@@ -18,6 +18,15 @@ type Action = {
   isArchived: string;
   createdBy: string;
   createdAt: string | Date | null;
+  workstreamId?: string | null;
+  phaseId?: string | null;
+};
+
+type Phase = {
+  id: string;
+  name: string;
+  strategyId: string;
+  orderIndex: number;
 };
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -81,6 +90,9 @@ export function EditActionModal({ open, onOpenChange, action }: EditActionModalP
   const [newDocName, setNewDocName] = useState("");
   const [newDocUrl, setNewDocUrl] = useState("");
   const [newChecklistItem, setNewChecklistItem] = useState("");
+  const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
+
+  const isWorkstreamTask = !!action?.workstreamId;
 
   const { data: strategies } = useQuery({
     queryKey: ["/api/strategies"],
@@ -88,6 +100,17 @@ export function EditActionModal({ open, onOpenChange, action }: EditActionModalP
 
   const { data: projects } = useQuery({
     queryKey: ["/api/projects"],
+  });
+
+  const { data: phases = [] } = useQuery<Phase[]>({
+    queryKey: ["/api/phases", action?.strategyId],
+    queryFn: async () => {
+      if (!action?.strategyId) return [];
+      const res = await fetch(`/api/phases?strategyId=${action.strategyId}`, { credentials: 'include' });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: isWorkstreamTask && !!action?.strategyId,
   });
 
   const { data: documents = [] } = useQuery<ActionDocument[]>({
@@ -113,7 +136,6 @@ export function EditActionModal({ open, onOpenChange, action }: EditActionModalP
     },
   });
 
-  // Update form when action changes
   useEffect(() => {
     if (action) {
       form.reset({
@@ -125,6 +147,7 @@ export function EditActionModal({ open, onOpenChange, action }: EditActionModalP
         dueDate: action.dueDate ? new Date(action.dueDate) : undefined,
         createdBy: action.createdBy,
       });
+      setSelectedPhaseId(action.phaseId || null);
     }
   }, [action, form]);
 
@@ -274,12 +297,14 @@ export function EditActionModal({ open, onOpenChange, action }: EditActionModalP
       return;
     }
 
-    // Filter out empty optional fields
-    const cleanData: InsertAction = {
+    const cleanData: any = {
       ...data,
       projectId: data.projectId === "none" ? undefined : data.projectId || undefined,
       dueDate: data.dueDate || undefined,
     };
+    if (isWorkstreamTask) {
+      cleanData.phaseId = selectedPhaseId || null;
+    }
     updateActionMutation.mutate({ id: action.id, data: cleanData });
   };
 
@@ -319,7 +344,7 @@ export function EditActionModal({ open, onOpenChange, action }: EditActionModalP
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Action</DialogTitle>
+          <DialogTitle>{isWorkstreamTask ? "Edit Task" : "Edit Action"}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -427,6 +452,29 @@ export function EditActionModal({ open, onOpenChange, action }: EditActionModalP
                     </FormItem>
                   )}
                 />
+                {isWorkstreamTask && phases.length > 0 && (
+                  <div>
+                    <FormLabel>Phase</FormLabel>
+                    <Select
+                      onValueChange={(val) => setSelectedPhaseId(val === "no_phase" ? null : val)}
+                      value={selectedPhaseId || "no_phase"}
+                    >
+                      <SelectTrigger data-testid="select-edit-action-phase">
+                        <SelectValue placeholder="Select a phase (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="no_phase">No Phase</SelectItem>
+                        {phases
+                          .sort((a, b) => a.orderIndex - b.orderIndex)
+                          .map((phase) => (
+                            <SelectItem key={phase.id} value={phase.id}>
+                              {phase.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
 
               {/* Documents */}
