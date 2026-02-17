@@ -1,0 +1,175 @@
+# Instructions: Prep StrategyPlan for Railway Deployment
+
+## Context
+This is a self-hosted Node.js + Express + SQLite app (StrategyPlan/LeaderOS). We need to make it deployable to Railway with a one-click "Deploy on Railway" button so non-technical users can spin up their own instance. The app uses SQLite with better-sqlite3 (file at `data/leaderos.db`), Vite for frontend builds, and `tsx` for TypeScript execution.
+
+## Tasks
+
+### 1. Add a health check endpoint
+
+In the main Express server file (likely `src/index.ts` or `server/index.ts`), add this route BEFORE the catch-all/static file serving:
+
+```typescript
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+```
+
+### 2. Create `Dockerfile` in the project root
+
+```dockerfile
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine
+RUN apk add --no-cache sqlite
+WORKDIR /app
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/tsconfig.json ./
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/drizzle ./drizzle
+COPY --from=builder /app/shared ./shared
+
+ENV NODE_ENV=production
+ENV PORT=5000
+EXPOSE 5000
+
+CMD ["node", "--import", "tsx", "src/index.ts"]
+```
+
+**Important:** Check what the actual build output directories are. If there's no `drizzle` or `shared` folder at the root, remove those COPY lines. If there are other folders the runtime needs (like `migrations`, `templates`, `public`, etc.), add COPY lines for those too. The goal is: everything needed at runtime gets into the final image, but source files only needed at build time stay in the builder stage.
+
+Also verify the entry point — confirm the server starts from `src/index.ts`. If it's a different path like `server/index.ts`, update the CMD accordingly.
+
+### 3. Create `.dockerignore` in the project root
+
+```
+node_modules
+.git
+.gitignore
+.env
+.env.*
+data/*.db
+data/*.db-wal
+data/*.db-shm
+*.md
+.replit
+replit.nix
+.config
+```
+
+### 4. Create `railway.toml` in the project root
+
+```toml
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "node --import tsx src/index.ts"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 5
+
+[[mounts]]
+source = "strategyplan-data"
+mountPath = "/app/data"
+```
+
+Again — if the entry point is not `src/index.ts`, update the startCommand to match.
+
+### 5. Make sure the SQLite database path is flexible
+
+Find where the database connection is configured (likely in a `db.ts`, `database.ts`, or `drizzle.config.ts` file). The database path should resolve to `data/leaderos.db` relative to the working directory, NOT an absolute path. It should work whether running locally or in a container. Confirm the code creates the `data/` directory if it doesn't exist. If it doesn't, add:
+
+```typescript
+import { mkdirSync } from 'fs';
+mkdirSync('data', { recursive: true });
+```
+
+...before the database connection is initialized.
+
+### 6. Make sure the app listens on the right host
+
+Find where `app.listen()` is called. It must bind to `0.0.0.0`, not `localhost` or `127.0.0.1`. Railway requires this. It should look like:
+
+```typescript
+app.listen(Number(process.env.PORT) || 5000, '0.0.0.0', () => {
+  console.log(`Server running on port ${process.env.PORT || 5000}`);
+});
+```
+
+### 7. Update the README with deploy instructions
+
+Add this section to the top of README.md (or right after any existing intro):
+
+```markdown
+## Deploy Your Own Instance
+
+### What You Need
+- A GitHub account (free)
+- A Railway account — sign up at https://railway.app (usage-based, typically ~$5/month)
+- 5 minutes
+
+### One-Click Deploy
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/template/TEMPLATE_ID_GOES_HERE)
+
+### Manual Deploy
+1. Fork this repo
+2. Sign up at https://railway.app
+3. New Project → Deploy from GitHub Repo → select your fork
+4. Railway will auto-detect the Dockerfile and build
+5. Go to your service → Settings → add a Volume with mount path `/app/data`
+6. Add these environment variables in the Variables tab:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `JWT_SECRET` | Yes | Any random string — generate one at https://generate-secret.vercel.app |
+| `RESEND_API_KEY` | Yes | For email (2FA, password resets) — free at https://resend.com |
+| `OPENAI_API_KEY` | No | Only needed for AI Change Continuum generation |
+| `GOOGLE_AI_API_KEY` | No | Alternative AI provider |
+
+7. Wait for deploy to finish (~2-3 min)
+8. Click the generated URL to access your instance
+9. Get your registration token: Go to your service → click **Shell** tab → run:
+   ```
+   sqlite3 /app/data/leaderos.db "SELECT registration_token FROM organizations LIMIT 1;"
+   ```
+10. Use that token to register your first account (this becomes the Administrator)
+
+### Your Data
+Each deployment is a completely separate instance. Your data is private to your Railway project. Railway volumes persist across deploys and restarts.
+```
+
+Leave the `TEMPLATE_ID_GOES_HERE` placeholder — that gets filled in later after the first successful Railway deploy when we generate a template.
+
+### 8. Test the Docker build locally
+
+Run these commands to verify it builds and starts:
+
+```bash
+docker build -t strategyplan .
+docker run -p 5000:5000 -v strategyplan-data:/app/data -e JWT_SECRET=test-secret -e NODE_ENV=production strategyplan
+```
+
+Verify:
+- `curl http://localhost:5000/api/health` returns `{"status":"ok",...}`
+- The frontend loads at `http://localhost:5000`
+- The database file is created at `data/leaderos.db` inside the container
+
+If the build fails, check which files/directories are missing from the COPY statements in the Dockerfile and fix accordingly.
+
+## Do NOT do these things
+- Do not add any Railway-specific code to the application logic
+- Do not change the database from SQLite to anything else
+- Do not add docker-compose.yml (Railway doesn't use it)
+- Do not hardcode any secrets or API keys
+- Do not remove or change the existing .env handling
