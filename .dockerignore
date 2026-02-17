@@ -10,5 +10,4 @@ data/*.db-shm
 .replit
 replit.nix
 .config
-attached_assets
 .local
