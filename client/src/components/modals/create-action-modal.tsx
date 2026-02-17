@@ -129,7 +129,7 @@ export function CreateActionModal({ open, onOpenChange, strategyId, projectId, w
       if (isWorkstreamTask && workstreamId) {
         data.workstreamId = workstreamId;
         data.phaseId = selectedPhaseId || null;
-        data.isMilestone = false;
+        data.isMilestone = "false";
       }
       const response = await apiRequest("POST", "/api/actions", data);
       return response.json();
