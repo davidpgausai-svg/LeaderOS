@@ -22,9 +22,20 @@ export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
   const [isValidating, setIsValidating] = useState(true);
   const [isValidToken, setIsValidToken] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   
   const { register, validateRegistrationToken } = useAuth();
   const { toast } = useToast();
+
+  useEffect(() => {
+    fetch("/api/auth/user", { credentials: "include" })
+      .then(res => {
+        if (res.ok) {
+          setIsLoggedIn(true);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const checkToken = async () => {
@@ -85,6 +96,50 @@ export default function Register() {
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
           <p className="text-gray-600 dark:text-gray-400">Validating registration link...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-black flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <Card className="border-gray-200 dark:border-gray-800 shadow-sm">
+            <CardHeader className="text-center">
+              <div className="flex justify-center mb-4">
+                <img src={strategyPlanLogo} alt="StrategyPlan" className="h-12" />
+              </div>
+              <CardTitle className="text-xl">You're already logged in</CardTitle>
+              <CardDescription className="text-gray-600 dark:text-gray-400">
+                This registration link is for new users who don't have an account yet. 
+                Share this link with team members you'd like to invite.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button
+                className="w-full"
+                onClick={() => setLocation('/')}
+                data-testid="button-go-to-dashboard"
+              >
+                Go to Dashboard
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  navigator.clipboard.writeText(window.location.href);
+                  toast({
+                    title: "Link copied!",
+                    description: "Share this registration link with new team members.",
+                  });
+                }}
+                data-testid="button-copy-link"
+              >
+                Copy Link to Share
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
