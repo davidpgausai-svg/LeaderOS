@@ -1,10 +1,10 @@
-import { useState } from "react";
-import { Link } from "wouter";
+import { useState, useEffect } from "react";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, ArrowLeft, Mail } from "lucide-react";
+import { Loader2, ArrowLeft, Mail, UserPlus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import strategyPlanLogo from "@assets/Strategy_Plan_Logo_2.0_1764811966337.png";
@@ -17,8 +17,21 @@ export default function Landing() {
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const [verificationCode, setVerificationCode] = useState("");
   const [isResending, setIsResending] = useState(false);
+  const [needsSetup, setNeedsSetup] = useState(false);
   const { login, verify2FA, resend2FA } = useAuth();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    fetch("/api/setup-status")
+      .then(res => res.json())
+      .then(data => {
+        if (data.needsSetup) {
+          setNeedsSetup(true);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,6 +123,28 @@ export default function Landing() {
             The ERP Operating System
           </p>
         </div>
+
+        {needsSetup && (
+          <Card className="border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 shadow-sm mb-6">
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center text-center gap-3">
+                <UserPlus className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Welcome! No account exists yet.</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                    Create your administrator account to get started.
+                  </p>
+                </div>
+                <Button 
+                  className="w-full py-5 text-base rounded-xl"
+                  onClick={() => setLocation("/setup")}
+                >
+                  Create Admin Account
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {!requires2FA ? (
           <Card className="border-gray-200 dark:border-gray-800 shadow-sm">
