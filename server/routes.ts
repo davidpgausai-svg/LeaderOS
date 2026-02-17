@@ -97,11 +97,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up Replit Auth
   await setupAuth(app);
 
-  // Initialize OpenAI client
-  const openai = new OpenAI({
-    baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-    apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  });
+  let _openai: OpenAI | null = null;
+  function getOpenAI(): OpenAI {
+    if (!_openai) {
+      const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+      if (!apiKey) {
+        throw new Error('AI features are not configured. Set OPENAI_API_KEY environment variable to enable them.');
+      }
+      _openai = new OpenAI({
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+        apiKey,
+      });
+    }
+    return _openai;
+  }
 
   // Initialize database with seed data only in development
   if (process.env.NODE_ENV !== 'production' && storage && 'seedData' in storage) {
@@ -660,7 +669,7 @@ Respond ONLY with a valid JSON object in this exact format:
 }`;
 
       // Use GPT-5 for reasoning-based Change Continuum generation
-      const completion = await openai.chat.completions.create({
+      const completion = await getOpenAI().chat.completions.create({
         model: "gpt-5",
         messages: [
           {
