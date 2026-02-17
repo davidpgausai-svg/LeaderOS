@@ -2971,7 +2971,7 @@ export default function Settings() {
                         )}
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                           Share this secret link with people you want to grant access to the platform. 
-                          The first person to register becomes an Administrator. All others become Co-Leads by default.
+                          New users will be registered as Co-Leads by default. You can change their role after they register.
                         </p>
                         
                         {isLoadingToken ? (

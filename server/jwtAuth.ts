@@ -176,21 +176,14 @@ export async function setupAuth(app: Express) {
       }
 
       const passwordHash = await bcrypt.hash(password, 10);
-      
-      // Check if this is the first user in this organization
-      const orgUsers = existingUsers.filter((u: any) => u.organizationId === org.id);
-      const isFirstUserInOrg = orgUsers.length === 0;
-      
-      // Check if this is the very first user (Super Admin)
-      const isFirstUserEver = existingUsers.length === 0;
 
       const user = await storage.upsertUser({
         email: email.toLowerCase(),
         firstName: firstName || null,
         lastName: lastName || null,
-        role: isFirstUserInOrg ? 'administrator' : 'co_lead',
+        role: 'co_lead',
         organizationId: org.id,
-        isSuperAdmin: isFirstUserEver ? 'true' : 'false',
+        isSuperAdmin: 'false',
       });
 
       // Store password hash in PostgreSQL
