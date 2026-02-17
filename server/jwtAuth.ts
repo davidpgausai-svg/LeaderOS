@@ -47,11 +47,9 @@ const twoFactorLimiter = rateLimit({
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
-  const generated = crypto.randomBytes(64).toString('hex');
-  console.warn('[WARN] JWT_SECRET not set. Generated a random secret. Sessions will not persist across restarts. Set JWT_SECRET environment variable for production use.');
-  process.env.JWT_SECRET = generated;
+  throw new Error('JWT_SECRET environment variable must be set in production');
 }
-const SECRET = process.env.JWT_SECRET || 'development-secret-change-in-production';
+const SECRET = JWT_SECRET || 'development-secret-change-in-production';
 const JWT_EXPIRES_IN = '7d';
 const COOKIE_NAME = 'auth_token';
 const CSRF_COOKIE_NAME = 'csrf_token';

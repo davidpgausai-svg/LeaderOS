@@ -190,6 +190,7 @@ function serveStatic(app: express.Express) {
 }
 
 (async () => {
+  try {
   // Run SQLite migrations via Drizzle
   runMigrations();
 
@@ -230,8 +231,12 @@ function serveStatic(app: express.Express) {
   server.listen({
     port,
     host: "0.0.0.0",
-    reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
   });
+
+  } catch (err) {
+    console.error('[FATAL] Server failed to start:', err);
+    process.exit(1);
+  }
 })();
