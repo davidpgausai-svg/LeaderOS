@@ -1,0 +1,138 @@
+You reached the start of the range
+Feb 16, 2026, 8:08 PM
+scheduling build on Metal builder "builder-wkkdbn"
+scheduling build on Metal builder "builder-wkkdbn"
+[snapshot] received sha256:e52f60e3488635922d785f1be1da7746c5314effc10e6132d52ddc30a4ddb2b5 md5:81bb0669e2cfe44a20946950029cc92b
+receiving snapshot
+56.9 MB
+9.5s
+found 'Dockerfile' at 'Dockerfile'
+found 'railway.toml' at 'railway.toml'
+analyzing snapshot
+56.9 MB
+543ms
+uploading snapshot
+56.9 MB
+1.3s
+fetched snapshot sha256:e52f60e3488635922d785f1be1da7746c5314effc10e6132d52ddc30a4ddb2b5 (60 MB bytes)
+fetching snapshot
+56.9 MB
+2.1s
+unpacking archive
+71.7 MB
+608ms
+
+internal
+load build definition from Dockerfile
+0ms
+
+internal
+load metadata for docker.io/library/node:20-alpine
+520ms
+
+internal
+load .dockerignore
+0ms
+
+builder
+FROM docker.io/library/node:20-alpine@sha256:09e2b3d9726018aecf269bd35325f46bf75046a643a66d28360ec71132750ec8 cached
+15ms
+
+internal
+load build context
+0ms
+
+builder
+WORKDIR /app cached
+0ms
+
+builder
+RUN apk add --no-cache python3 make g++ cached
+0ms
+
+stage-1
+RUN apk add --no-cache sqlite
+1s
+OK: 13.5 MiB in 22 packages
+
+builder
+COPY package*.json ./
+765ms
+
+stage-1
+WORKDIR /app
+254ms
+
+builder
+RUN npm ci
+18s
+npm notice
+
+stage-1
+COPY package*.json ./
+286ms
+
+stage-1
+RUN npm ci --omit=dev && apk add --no-cache python3 make g++ && npm rebuild better-sqlite3 && apk del python3 make g++
+18s
+OK: 13.5 MiB in 22 packages
+
+builder
+COPY . .
+975ms
+
+builder
+RUN npm run build
+26s
+⚡ Done in 22ms
+
+stage-1
+COPY --from=builder /app/dist ./dist
+770ms
+
+stage-1
+COPY --from=builder /app/shared ./shared
+189ms
+
+stage-1
+COPY --from=builder /app/server ./server
+215ms
+
+stage-1
+COPY --from=builder /app/tsconfig.json ./
+177ms
+
+stage-1
+RUN mkdir -p /app/data
+250ms
+
+exporting to docker image format
+8s
+containerimage.config.digest: sha256:bdd09972ca08054f951259d345d4c48465e57fddc8eb6b863723872f745934e9
+containerimage.digest: sha256:ba8747e1564aa578e43d71f5300ff07ed59ef5839931251556d786476cc7df74
+containerimage.descriptor: eyJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvbi92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJkaWdlc3QiOiJzaGEyNTY6YmE4NzQ3ZTE1NjRhYTU3OGU0M2Q3MWY1MzAwZmYwN2VkNTllZjU4Mzk5MzEyNTE1NTZkNzg2NDc2Y2M3ZGY3NCIsInNpemUiOjI3NjQsImFubm90YXRpb25zIjp7Im9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5jcmVhdGVkIjoiMjAyNi0wMi0xN1QwMjoxNDo1OVoifSwicGxhdGZvcm0iOnsiYXJjaGl0ZWN0dXJlIjoiYW1kNjQiLCJvcyI6ImxpbnV4In19
+image push
+258.3 MB / 258.4 MB
+15.1s
+ 
+====================
+Starting Healthcheck
+====================
+Path: /api/health
+Retry window: 5m0s
+ 
+Attempt #1 failed with service unavailable. Continuing to retry for 4m49s
+Attempt #2 failed with service unavailable. Continuing to retry for 4m38s
+Attempt #3 failed with service unavailable. Continuing to retry for 4m26s
+Attempt #4 failed with service unavailable. Continuing to retry for 4m12s
+Attempt #5 failed with service unavailable. Continuing to retry for 3m54s
+Attempt #6 failed with service unavailable. Continuing to retry for 3m28s
+Attempt #7 failed with service unavailable. Continuing to retry for 2m48s
+Attempt #8 failed with service unavailable. Continuing to retry for 2m15s
+Attempt #9 failed with service unavailable. Continuing to retry for 1m35s
+Attempt #10 failed with service unavailable. Continuing to retry for 55s
+Attempt #11 failed with service unavailable. Continuing to retry for 15s
+ 
+1/1 replicas never became healthy!
+
+Healthcheck failed!
