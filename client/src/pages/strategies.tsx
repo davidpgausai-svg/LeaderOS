@@ -2042,25 +2042,139 @@ export default function Strategies() {
                                               {wsActions.length} workstream action{wsActions.length !== 1 ? 's' : ''}
                                             </Badge>
                                           </div>
-                                          {canEditAllStrategies() && (
-                                            <Button
-                                              variant="ghost"
-                                              size="sm"
-                                              className="h-7 px-2 text-xs"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                setWsTaskStrategyId(project.strategyId);
-                                                setWsTaskProjectId(project.id);
-                                                setWsTaskWorkstreamId(project.workstreamId);
-                                                setWsTaskPhaseId(null);
-                                                setIsCreateWsTaskOpen(true);
-                                              }}
-                                            >
-                                              <Plus className="w-3 h-3 mr-1" />
-                                              Add Task
-                                            </Button>
-                                          )}
+                                          <div className="flex items-center gap-2">
+                                            {wsActions.length > 0 && (
+                                              <div className="flex items-center bg-gray-200 dark:bg-gray-700 rounded-lg p-0.5">
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className={`h-6 px-2 py-0 text-xs rounded-md ${!kanbanViewProjects.has(project.id) ? 'bg-white dark:bg-gray-600 shadow-sm' : 'hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setKanbanViewProjects(prev => { const next = new Set(prev); next.delete(project.id); return next; });
+                                                  }}
+                                                >
+                                                  <List className="w-3 h-3 mr-1" />
+                                                  List
+                                                </Button>
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className={`h-6 px-2 py-0 text-xs rounded-md ${kanbanViewProjects.has(project.id) ? 'bg-white dark:bg-gray-600 shadow-sm' : 'hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setKanbanViewProjects(prev => { const next = new Set(prev); next.add(project.id); return next; });
+                                                  }}
+                                                >
+                                                  <LayoutGrid className="w-3 h-3 mr-1" />
+                                                  Board
+                                                </Button>
+                                              </div>
+                                            )}
+                                            {canEditAllStrategies() && (
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-7 px-2 text-xs"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setWsTaskStrategyId(project.strategyId);
+                                                  setWsTaskProjectId(project.id);
+                                                  setWsTaskWorkstreamId(project.workstreamId);
+                                                  setWsTaskPhaseId(null);
+                                                  setIsCreateWsTaskOpen(true);
+                                                }}
+                                              >
+                                                <Plus className="w-3 h-3 mr-1" />
+                                                Add Task
+                                              </Button>
+                                            )}
+                                          </div>
                                         </div>
+
+                                        {kanbanViewProjects.has(project.id) ? (
+                                          <div className="flex gap-2 overflow-x-auto pb-2">
+                                            {actionStatusOptions.map((statusCol) => {
+                                              const columnActions = wsActions.filter((a: any) => (a.status || 'not_started') === statusCol.value);
+                                              return (
+                                                <div
+                                                  key={statusCol.value}
+                                                  className="flex-1 min-w-[160px] max-w-[220px]"
+                                                  onDragOver={(e) => { if (canEditAllStrategies()) { e.preventDefault(); e.currentTarget.classList.add('ring-2', 'ring-blue-400'); } }}
+                                                  onDragLeave={(e) => { e.currentTarget.classList.remove('ring-2', 'ring-blue-400'); }}
+                                                  onDrop={(e) => {
+                                                    e.preventDefault();
+                                                    e.currentTarget.classList.remove('ring-2', 'ring-blue-400');
+                                                    if (draggedActionId && canEditAllStrategies()) {
+                                                      const action = wsActions.find((a: any) => a.id === draggedActionId);
+                                                      if (action && action.status !== statusCol.value) {
+                                                        updateActionStatusMutation.mutate({ action, status: statusCol.value });
+                                                      }
+                                                      setDraggedActionId(null);
+                                                    }
+                                                  }}
+                                                >
+                                                  <div className="flex items-center gap-1.5 mb-2 px-1">
+                                                    <div className={`w-2.5 h-2.5 rounded-full ${getActionStatusCircleColor(statusCol.value)}`} />
+                                                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{statusCol.label}</span>
+                                                    <span className="text-xs text-gray-400 dark:text-gray-500">({columnActions.length})</span>
+                                                  </div>
+                                                  <div className="bg-gray-100 dark:bg-gray-800/50 rounded-lg p-1.5 min-h-[80px] space-y-1.5 transition-all">
+                                                    {columnActions.map((action: any) => {
+                                                      const dueDateDisplay = getActionDueDateDisplay(action);
+                                                      const people = getActionPeople(action.id);
+                                                      const peopleNames = people.map((p: any) => {
+                                                        const user = users?.find((u: any) => u.id === p.userId);
+                                                        return user ? (user.firstName || user.email?.split('@')[0] || '?') : '?';
+                                                      });
+                                                      const phase = strategyPhases.find((p: any) => p.id === action.phaseId);
+                                                      return (
+                                                        <div
+                                                          key={action.id}
+                                                          draggable={canEditAllStrategies()}
+                                                          onDragStart={(e) => {
+                                                            setDraggedActionId(action.id);
+                                                            e.dataTransfer.effectAllowed = 'move';
+                                                          }}
+                                                          onDragEnd={() => setDraggedActionId(null)}
+                                                          className={`bg-white dark:bg-gray-700 rounded-lg p-2 shadow-sm border border-gray-200 dark:border-gray-600 cursor-pointer hover:shadow-md transition-shadow ${
+                                                            draggedActionId === action.id ? 'opacity-50' : ''
+                                                          } ${canEditAllStrategies() ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                                                          onClick={() => setChecklistModalAction(action)}
+                                                        >
+                                                          <p className="text-xs font-medium text-gray-800 dark:text-gray-200 mb-1.5 line-clamp-2">{action.title}</p>
+                                                          {phase && (
+                                                            <div className="mb-1">
+                                                              <Badge className="text-[9px] px-1 py-0 bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">
+                                                                {phase.name}
+                                                              </Badge>
+                                                            </div>
+                                                          )}
+                                                          {dueDateDisplay && (
+                                                            <div className="mb-1.5">
+                                                              <Badge className={`text-[10px] px-1 py-0 ${dueDateDisplay.color}`}>
+                                                                {dueDateDisplay.date}
+                                                              </Badge>
+                                                            </div>
+                                                          )}
+                                                          {peopleNames.length > 0 && (
+                                                            <div className="flex items-center gap-1">
+                                                              <Users className="w-2.5 h-2.5 text-blue-500" />
+                                                              <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
+                                                                {peopleNames.slice(0, 2).join(', ')}{peopleNames.length > 2 ? ` +${peopleNames.length - 2}` : ''}
+                                                              </span>
+                                                            </div>
+                                                          )}
+                                                        </div>
+                                                      );
+                                                    })}
+                                                  </div>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        ) : (
+                                        <>
                                         {strategyPhases.map((phase: any) => {
                                           const phaseActions = wsActions.filter((a: any) => a.phaseId === phase.id);
                                           return (
@@ -2352,6 +2466,8 @@ export default function Strategies() {
                                               })}
                                             </div>
                                           </div>
+                                        )}
+                                        </>
                                         )}
                                         {wsActions.length === 0 && (
                                           <p className="text-sm text-gray-400 dark:text-gray-500 italic py-2">No workstream actions yet. Use the Add Task button to get started.</p>
