@@ -91,7 +91,7 @@ function setAuthCookie(res: Response, token: string) {
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: 'lax',
     maxAge: COOKIE_MAX_AGE,
     path: '/',
   });
@@ -101,7 +101,7 @@ function setCsrfCookie(res: Response, csrfToken: string) {
   res.cookie(CSRF_COOKIE_NAME, csrfToken, {
     httpOnly: false,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: 'lax',
     maxAge: COOKIE_MAX_AGE,
     path: '/',
   });
@@ -111,13 +111,13 @@ function clearAuthCookie(res: Response) {
   res.clearCookie(COOKIE_NAME, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: 'lax',
     path: '/',
   });
   res.clearCookie(CSRF_COOKIE_NAME, {
     httpOnly: false,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: 'lax',
     path: '/',
   });
 }

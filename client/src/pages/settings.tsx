@@ -1542,10 +1542,11 @@ export default function Settings() {
       const response = await apiRequest("GET", "/api/admin/registration-token");
       const data = await response.json();
       setRegistrationToken(data.token);
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Failed to fetch registration token:", error);
       toast({
         title: "Error",
-        description: "Failed to fetch registration token",
+        description: error?.message || "Failed to fetch registration token",
         variant: "destructive",
       });
     } finally {
@@ -1563,10 +1564,11 @@ export default function Settings() {
         title: "Success",
         description: "Registration link has been rotated. The old link is now invalid.",
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Failed to rotate registration token:", error);
       toast({
         title: "Error",
-        description: "Failed to rotate registration token",
+        description: error?.message || "Failed to rotate registration token",
         variant: "destructive",
       });
     } finally {
