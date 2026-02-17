@@ -211,8 +211,8 @@ function serveStatic(app: express.Express) {
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   if (app.get("env") === "development") {
-    // Dynamic import - only loads vite in development
-    const { setupVite } = await import("./vite");
+    const viteMod = "./vite";
+    const { setupVite } = await import(viteMod);
     await setupVite(app, server);
   } else {
     serveStatic(app);
