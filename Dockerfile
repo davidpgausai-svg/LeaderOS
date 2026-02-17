@@ -1,43 +1,33 @@
-# Build stage
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 RUN apk add --no-cache python3 make g++
 
 WORKDIR /app
 
 COPY package*.json ./
-
-# Install ALL dependencies (including devDependencies for TypeScript build)
 RUN npm ci
 
 COPY . .
-
-# Build the application
 RUN npm run build
 
-# Production stage
-FROM node:18-alpine AS production
+FROM node:20-alpine
 
-RUN apk add --no-cache python3 make g++
+RUN apk add --no-cache sqlite
 
 WORKDIR /app
 
 COPY package*.json ./
+RUN npm ci --omit=dev && apk add --no-cache python3 make g++ && npm rebuild better-sqlite3 && apk del python3 make g++
 
-# Install only production dependencies
-RUN npm ci --omit=dev
-
-# Copy built files from builder stage
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/shared ./shared
+COPY --from=builder /app/server ./server
+COPY --from=builder /app/tsconfig.json ./
 
-# Create data directory for SQLite
-RUN mkdir -p /data
+RUN mkdir -p /app/data
 
 ENV NODE_ENV=production
-ENV DATA_DIR=/data
-# INITIAL_REGISTRATION_TOKEN - Set to a secure token (min 16 chars) for predictable registration URLs
-# JWT_SECRET - Required for authentication (set via deployment platform)
-
+ENV PORT=5000
 EXPOSE 5000
 
 CMD ["npm", "start"]

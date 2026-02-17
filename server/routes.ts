@@ -90,6 +90,10 @@ function validateDateRange(startDate: Date, endDate: Date): boolean {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  app.get('/api/health', (_req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
   // Set up Replit Auth
   await setupAuth(app);
 
