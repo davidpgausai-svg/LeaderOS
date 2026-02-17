@@ -191,8 +191,31 @@ function serveStatic(app: express.Express) {
 
 (async () => {
   try {
+  // Detect if this is a remixed/forked Repl and reset database if needed
+  const dataDir = path.resolve(process.cwd(), 'data');
+  const markerPath = path.join(dataDir, '.repl-owner');
+  const currentReplId = process.env.REPL_ID || process.env.REPL_SLUG || '';
+  
+  if (currentReplId && fs.existsSync(markerPath)) {
+    const storedId = fs.readFileSync(markerPath, 'utf-8').trim();
+    if (storedId && storedId !== currentReplId) {
+      console.log('[STARTUP] Detected remixed/forked Repl — resetting database for fresh setup');
+      const dbPath = process.env.DB_PATH || path.join(dataDir, 'leaderos.db');
+      const dbFiles = [dbPath, `${dbPath}-wal`, `${dbPath}-shm`];
+      for (const f of dbFiles) {
+        if (fs.existsSync(f)) fs.unlinkSync(f);
+      }
+    }
+  }
+  
   // Run SQLite migrations via Drizzle
   runMigrations();
+  
+  // Write the current Repl ID marker after migrations
+  if (currentReplId) {
+    fs.mkdirSync(dataDir, { recursive: true });
+    fs.writeFileSync(markerPath, currentReplId, 'utf-8');
+  }
 
   // Ensure a default organization exists (creates one if DB is empty)
   const { ensureDefaultOrganization, getAllOrganizations } = await import('./pgStorage');
