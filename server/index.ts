@@ -195,8 +195,13 @@ function serveStatic(app: express.Express) {
   runMigrations();
 
   // Ensure a default organization exists (creates one if DB is empty)
-  const { ensureDefaultOrganization } = await import('./pgStorage');
+  const { ensureDefaultOrganization, getAllOrganizations } = await import('./pgStorage');
   await ensureDefaultOrganization();
+  
+  const { storage: storageInstance } = await import('./storage');
+  const allUsers = await storageInstance.getAllUsers();
+  const allOrgs = await getAllOrganizations();
+  console.log(`[STARTUP] Found ${allUsers.length} users and ${allOrgs.length} organizations in database`);
   
   const server = await registerRoutes(app);
 

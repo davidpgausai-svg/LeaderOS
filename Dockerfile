@@ -27,5 +27,6 @@ COPY --from=builder /app/tsconfig.json ./
 RUN mkdir -p /app/data
 
 ENV NODE_ENV=production
+ENV DB_PATH=/app/data/leaderos.db
 
 CMD ["npm", "start"]
