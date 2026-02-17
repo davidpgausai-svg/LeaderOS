@@ -94,6 +94,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
+  app.get('/api/setup-status', async (_req, res) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      res.json({ needsSetup: allUsers.length === 0 });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to check setup status' });
+    }
+  });
+
+  app.post('/api/setup', async (req, res) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      if (allUsers.length > 0) {
+        return res.status(403).json({ error: 'Setup has already been completed. Use the registration token to create additional accounts.' });
+      }
+
+      const { name, email, password } = req.body;
+      if (!email || !password || !name) {
+        return res.status(400).json({ error: 'Name, email, and password are required.' });
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ error: 'Invalid email address.' });
+      }
+
+      if (password.length < 8) {
+        return res.status(400).json({ error: 'Password must be at least 8 characters long.' });
+      }
+      if (!/[A-Z]/.test(password)) {
+        return res.status(400).json({ error: 'Password must contain at least one uppercase letter.' });
+      }
+      if (!/[a-z]/.test(password)) {
+        return res.status(400).json({ error: 'Password must contain at least one lowercase letter.' });
+      }
+      if (!/[0-9]/.test(password)) {
+        return res.status(400).json({ error: 'Password must contain at least one number.' });
+      }
+      if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+        return res.status(400).json({ error: 'Password must contain at least one special character.' });
+      }
+
+      const { getAllOrganizations } = await import('./pgStorage');
+      const orgs = await getAllOrganizations();
+      if (orgs.length === 0) {
+        return res.status(500).json({ error: 'No organization found. Please restart the server.' });
+      }
+      const org = orgs[0];
+
+      const bcrypt = await import('bcryptjs');
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      const nameParts = name.trim().split(/\s+/);
+      const firstName = nameParts[0];
+      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : null;
+
+      const user = await storage.upsertUser({
+        email: email.toLowerCase(),
+        firstName,
+        lastName,
+        role: 'administrator',
+        organizationId: org.id,
+        isSuperAdmin: 'true',
+      });
+
+      const { updateUserPassword } = await import('./pgStorage');
+      await updateUserPassword(user.id, passwordHash);
+
+      res.status(201).json({ success: true, message: 'Administrator account created successfully.' });
+    } catch (error) {
+      console.error('[SETUP] First-run setup failed:', error);
+      res.status(500).json({ error: 'Setup failed. Please try again.' });
+    }
+  });
+
   // Set up Replit Auth
   await setupAuth(app);
 

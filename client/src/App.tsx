@@ -1,4 +1,5 @@
-import { Switch, Route } from "wouter";
+import { useState, useEffect } from "react";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -18,18 +19,40 @@ import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
 import ForceChangePassword from "@/pages/force-change-password";
 import DecisionLog from "@/pages/decision-log";
+import Setup from "@/pages/setup";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const [, setLocation] = useLocation();
+  const [setupChecked, setSetupChecked] = useState(false);
+  const [needsSetup, setNeedsSetup] = useState(false);
 
-  if (isLoading) {
+  useEffect(() => {
+    fetch("/api/setup-status")
+      .then(res => res.json())
+      .then(data => {
+        setNeedsSetup(data.needsSetup === true);
+        setSetupChecked(true);
+      })
+      .catch(() => {
+        setSetupChecked(true);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (setupChecked && needsSetup && !isLoading) {
+      setLocation("/setup");
+    }
+  }, [setupChecked, needsSetup, isLoading, setLocation]);
+
+  if (isLoading || !setupChecked) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
 
-  // If not authenticated, show landing (login) page and registration page
   if (!isAuthenticated) {
     return (
       <Switch>
+        <Route path="/setup" component={Setup} />
         <Route path="/register/:token" component={Register} />
         <Route path="/forgot-password" component={ForgotPassword} />
         <Route path="/reset-password" component={ResetPassword} />

@@ -914,7 +914,7 @@ export const validateCsrf: RequestHandler = (req: any, res, next) => {
   // Skip CSRF for auth endpoints (login, register, password reset) as they don't have tokens yet
   // Use originalUrl to get the full path since middleware may be mounted at a sub-path
   const fullPath = req.originalUrl || req.path;
-  if (fullPath.startsWith('/api/auth/')) {
+  if (fullPath.startsWith('/api/auth/') || fullPath === '/api/setup') {
     return next();
   }
   
