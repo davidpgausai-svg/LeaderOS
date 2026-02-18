@@ -2,7 +2,13 @@ import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
 
-const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), "data", "leaderos.db");
+function getDbPath(): string {
+  if (process.env.DB_PATH) return process.env.DB_PATH;
+  if (process.env.NODE_ENV === "production") return path.join("/app", "data", "leaderos.db");
+  return path.join(process.cwd(), "data", "leaderos.db");
+}
+
+const DB_PATH = getDbPath();
 
 export function runMigrations() {
   console.log("[INFO] Running database migrations...");

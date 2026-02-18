@@ -16,7 +16,7 @@ The frontend is built with React 18, TypeScript, Wouter for routing, Zustand for
 The backend is an Express.js REST API with TypeScript, featuring an abstracted storage interface, Zod for schema validation, and centralized error handling.
 
 ### Data Storage
-SQLite (via better-sqlite3) is used for persistent data storage, managed through Drizzle ORM. The database schema is defined in `shared/schema.ts`, with tables created via explicit `CREATE TABLE IF NOT EXISTS` statements.
+SQLite (via better-sqlite3) is used for persistent data storage, managed through Drizzle ORM. The database schema is defined in `shared/schema.ts`, with tables created via explicit `CREATE TABLE IF NOT EXISTS` statements. Database path resolution: `DB_PATH` env var takes priority; in production (`NODE_ENV=production`) defaults to `/app/data/leaderos.db`; in development defaults to `process.cwd()/data/leaderos.db`. Both `server/db.ts` and `server/migrate.ts` use the same `getDbPath()` logic.
 
 ### Data Scoping
 Data is scoped by `organization_id` for security isolation. Role-based access prevents unauthorized data access.

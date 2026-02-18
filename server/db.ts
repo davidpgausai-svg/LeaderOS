@@ -4,7 +4,13 @@ import * as schema from "@shared/schema";
 import path from "path";
 import fs from "fs";
 
-const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data', 'leaderos.db');
+function getDbPath(): string {
+  if (process.env.DB_PATH) return process.env.DB_PATH;
+  if (process.env.NODE_ENV === 'production') return path.join('/app', 'data', 'leaderos.db');
+  return path.join(process.cwd(), 'data', 'leaderos.db');
+}
+
+const DB_PATH = getDbPath();
 
 const dataDir = path.dirname(DB_PATH);
 fs.mkdirSync(dataDir, { recursive: true });
